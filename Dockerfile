@@ -12,12 +12,13 @@ RUN apt-get update && apt-get install -y \
 # Install Poetry
 RUN pip install poetry
 
-# Copy poetry files
-COPY pyproject.toml poetry.lock* ./
+# Copy poetry files (no cache)
+COPY pyproject.toml poetry.lock ./
 
 # Install dependencies
 RUN poetry config virtualenvs.create false \
-    && poetry install --only=main --no-interaction --no-ansi --no-root
+    && poetry install --only=main --no-interaction --no-ansi --no-root \
+    && pip list | grep -i email
 
 # Final stage
 FROM python:3.11-slim
