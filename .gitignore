@@ -82,3 +82,10 @@ instance/
 uploads/
 static/uploads/
 media/
+
+# Secrets and Keys
+key.json
+*.key
+*.pem
+service-account*.json
+gcp-*.json
