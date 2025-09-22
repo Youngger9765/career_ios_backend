@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: career-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/career_db
+      - REDIS_URL=redis://redis:6379/0
+      - MOCK_MODE=true
+      - DEBUG=true
+    volumes:
+      - ./app:/app/app
+      - ./static:/app/static
+    depends_on:
+      - db
+      - redis
+    networks:
+      - career-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: career-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=career_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - career-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: career-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - career-network
+
+volumes:
+  postgres_data:
+
+networks:
+  career-network:
+    driver: bridge

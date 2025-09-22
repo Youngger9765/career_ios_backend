@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>諮商報告 - AI 生成</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .report-header {
+            background: white;
+            border-radius: 15px 15px 0 0;
+            padding: 30px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .report-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .report-title h1 {
+            color: #333;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .report-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .report-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .meta-value {
+            color: #333;
+            font-weight: 500;
+            font-size: 1.1rem;
+        }
+
+        .report-content {
+            background: white;
+            padding: 40px;
+            border-radius: 0 0 15px 15px;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-content {
+            color: #555;
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .highlight-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .highlight-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .list-group {
+            list-style: none;
+            margin: 20px 0;
+        }
+
+        .list-item {
+            padding: 15px;
+            background: #f8f9fa;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .list-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .list-item-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .list-item-desc {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .progress-indicator {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: #fff3cd;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .progress-icon {
+            font-size: 2rem;
+        }
+
+        .progress-text {
+            flex: 1;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #e8ebff;
+            color: #667eea;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin: 2px;
+        }
+
+        .action-items {
+            background: #f0f8ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .action-item {
+            display: flex;
+            align-items: start;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .action-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .action-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #667eea;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .action-checkbox.checked {
+            background: #667eea;
+            color: white;
+        }
+
+        .action-content {
+            flex: 1;
+        }
+
+        .action-priority {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .priority-high {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .priority-medium {
+            background: #feebc8;
+            color: #c05621;
+        }
+
+        .priority-low {
+            background: #e6fffa;
+            color: #234e52;
+        }
+
+        .transcript-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .transcript-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .transcript-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .speaker-counselor {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .speaker-visitor {
+            color: #48bb78;
+            font-weight: 600;
+        }
+
+        .ai-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .footer-actions {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .approval-section {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .approval-status {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            
+            .report-actions,
+            .footer-actions {
+                display: none;
+            }
+        }
+
+        .chart-container {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .emotion-chart {
+            display: flex;
+            justify-content: space-around;
+            align-items: end;
+            height: 200px;
+            margin-top: 20px;
+        }
+
+        .emotion-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bar {
+            width: 60px;
+            background: linear-gradient(to top, #667eea, #764ba2);
+            border-radius: 5px 5px 0 0;
+            transition: all 0.3s;
+        }
+
+        .bar:hover {
+            transform: scaleY(1.05);
+        }
+
+        .bar-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .bar-value {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Report Header -->
+        <div class="report-header">
+            <div class="report-title">
+                <h1>
+                    <span>📊</span>
+                    <span>諮商會談報告</span>
+                    <span class="ai-badge">🤖 AI 生成</span>
+                </h1>
+                <div class="report-actions">
+                    <button class="btn btn-secondary" onclick="window.print()">
+                        🖨️ 列印
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadPDF()">
+                        📥 下載 PDF
+                    </button>
+                    <button class="btn btn-primary" onclick="shareReport()">
+                        📤 分享
+                    </button>
+                </div>
+            </div>
+
+            <div class="report-meta">
+                <div class="meta-item">
+                    <span class="meta-label">會談編號</span>
+                    <span class="meta-value">S2024-0142</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">個案編號</span>
+                    <span class="meta-value">C2024-0087</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">諮商師</span>
+                    <span class="meta-value">張心理師</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">來訪者</span>
+                    <span class="meta-value">V10234</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">會談日期</span>
+                    <span class="meta-value">2024-01-20 14:30</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">會談時長</span>
+                    <span class="meta-value">45分30秒</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">報告生成時間</span>
+                    <span class="meta-value">2024-01-20 15:35</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">AI 模型</span>
+                    <span class="meta-value">GPT-4</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Content -->
+        <div class="report-content">
+            <!-- Executive Summary -->
+            <section class="section">
+                <h2 class="section-title">
+                    <span>📝</span>
+                    <span>會談摘要</span>
+                </h2>
+                <div class="section-content">
+                    <p>本次會談主要聚焦於來訪者的職涯困擾與工作壓力議題。來訪者表達了對目前工作狀況的不滿，特別是工作與生活平衡的挑戰，以及對未來職業發展方向的迷茫。</p>
+                    
+                    <div class="highlight-box">
+                        <div class="highlight-title">🎯 核心議題</div>
+                        <p>來訪者在過去三個月中經歷了顯著的工作壓力增加，主要源於新專案的挑戰性要求和團隊內部的溝通問題。這些壓力已經開始影響其睡眠品質和日常生活。</p>
+                    </div>
+
+                    <p>會談過程中，來訪者展現出良好的自我覺察能力，能夠清楚表達內在感受和需求。透過探索，我們發現其困擾的深層原因可能與完美主義傾向和對失敗的恐懼有關。</p>
+                </div>
+            </section>
+
+            <!-- Emotional Analysis -->
+            <section class="section">
+                <h2 class="section-title">
+                    <span>💭</span>
+                    <span>情緒分析</span>
+                </h2>
+                <div class="chart-container">
+                    <p>會談中識別到的主要情緒狀態分布：</p>
+                    <div class="emotion-chart">
+                        <div class="emotion-bar">
+                            <div class="bar-value">35%</div>
+                            <div class="bar" style="height: 70px;"></div>
+                            <div class="bar-label">焦慮</div>
+                        </div>
+                        <div class="emotion-bar">
+                            <div class="bar-value">25%</div>
+                            <div class="bar" style="height: 50px;"></div>
+                            <div class="bar-label">困惑</div>
+                        </div>
+                        <div class="emotion-bar">
+                            <div class="bar-value">20%</div>
+                            <div class="bar" style="height: 40px;"></div>
+                            <div class="bar-label">壓力</div>
+                        </div>
+                        <div class="emotion-bar">
+                            <div class="bar-value">15%</div>
+                            <div class="bar" style="height: 30px;"></div>
+                            <div class="bar-label">希望</div>
+                        </div>
+                        <div class="emotion-bar">
+                            <div class="bar-value">5%</div>
+                            <div class="bar" style="height: 10px;"></div>
+                            <div class="bar-label">平靜</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Key Themes -->
+            <section class="section">
+                <h2 class="section-title">
+                    <span>🔍</span>
+                    <span>關鍵主題識別</span>
+                </h2>
+                <ul class="list-group">
+                    <li class="list-item">
+                        <div class="list-item-title">工作與生活平衡</div>
+                        <div class="list-item-desc">來訪者提到每週工作超過60小時，幾乎沒有個人時間，導致與家人朋友的關係變得疏遠。</div>
+                    </li>
+                    <li class="list-item">
+                        <div class="list-item-title">職業認同危機</div>
+                        <div class="list-item-desc">對目前從事的工作產生質疑，不確定這是否是適合自己的職業道路。</div>
+                    </li>
+                    <li class="list-item">
+                        <div class="list-item-title">人際關係壓力</div>
+                        <div class="list-item-desc">與主管和同事的關係緊張，特別是在專案合作和意見表達方面。</div>
+                    </li>
+                    <li class="list-item">
+                        <div class="list-item-title">自我價值感</div>
+                        <div class="list-item-desc">將工作表現與個人價值緊密連結，導致過度的自我批判。</div>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Counseling Process -->
+            <section class="section">
+                <h2 class="section-title">
+                    <span>🌱</span>
+                    <span>諮商歷程分析</span>
+                </h2>
+                <div class="section-content">
+                    <p>本次會談採用了認知行為取向結合人本主義的整合approach。諮商師透過積極傾聽和同理反映，協助來訪者探索內在經驗。</p>
+
+                    <div class="highlight-box">
+                        <div class="highlight-title">諮商技術運用</div>
+                        <div style="margin-top: 10px;">
+                            <span class="tag">積極傾聽</span>
+                            <span class="tag">同理反映</span>
+                            <span class="tag">開放式提問</span>
+                            <span class="tag">認知重構</span>
+                            <span class="tag">問題解決導向</span>
+                            <span class="tag">優勢視角</span>
+                        </div>
+                    </div>
+
+                    <p>會談的轉折點出現在第25分鐘，當來訪者意識到自己的完美主義模式時，展現出明顯的情緒釋放和洞察。這個覺察為後續的改變奠定了基礎。</p>
+                </div>
+            </section>
+
+            <!-- Recommendations -->
+            <section class="section">
+                <h2 class="section-title">
+                    <span>💡</span>
+                    <span>專業建議與策略</span>
+                </h2>
+                <div class="action-items">
+                    <div class="action-item">
+                        <div class="action-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="action-content">
+                            <strong>建立工作界限</strong>
+                            <p>協助來訪者設定明確的工作時間界限，學習說「不」的技巧，並制定具體的下班儀式。</p>
+                        </div>
+                        <span class="action-priority priority-high">高優先</span>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="action-content">
+                            <strong>壓力管理技巧訓練</strong>
+                            <p>介紹正念冥想、漸進式肌肉放鬆等技巧，建議每日練習10-15分鐘。</p>
+                        </div>
+                        <span class="action-priority priority-high">高優先</span>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="action-content">
+                            <strong>認知重構練習</strong>
+                            <p>識別並挑戰完美主義思維，發展更平衡和現實的自我評價標準。</p>
+                        </div>
+                        <span class="action-priority priority-medium">中優先</span>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="action-content">
+                            <strong>職涯探索活動</strong>
+                            <p>使用職涯興趣量表和價值觀探索工具，協助釐清職業方向。</p>
+                        </div>
+                        <span class="action-priority priority-medium">中優先</span>
+                    </div>
+                    <div class="action-item">
+                        <div class="action-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="action-content">
+                            <strong>支持系統建立</strong>
+                            <p>鼓勵與信任的朋友或家人分享感受，考慮加入相關支持團體。</p>
+                        </div>
+                        <span class="action-priority priority-low">低優先</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Transcript Sample -->
+            <section class="section">
+                <h2 class="section-title">
+                    <span>📜</span>
+                    <span>重要對話片段</span>
+                </h2>
+                <div class="transcript-section">
+                    <div class="transcript-header">
+                        <span>第 23-28 分鐘 - 關鍵洞察時刻</span>
+                        <button class="btn btn-secondary" onclick="toggleTranscript()">展開全文</button>
+                    </div>
+                    <div class="transcript-content">
+                        <p><span class="speaker-counselor">諮商師：</span>聽起來你對自己的要求很高，每件事都希望做到完美。</p>
+                        <p><span class="speaker-visitor">來訪者：</span>是的，我覺得如果不能做到最好，就等於失敗了。我從小就是這樣...</p>
+                        <p><span class="speaker-counselor">諮商師：</span>這個「不是最好就是失敗」的想法，給你帶來了什麼？</p>
+                        <p><span class="speaker-visitor">來訪者：</span>（停頓）...壓力，很大的壓力。我好像從來沒有真正滿意過自己。</p>
+                        <p><span class="speaker-counselor">諮商師：</span>如果有一個你很在乎的朋友也這樣對待自己，你會對他說什麼？</p>
+                        <p><span class="speaker-visitor">來訪者：</span>（情緒激動）我會告訴他...他已經很努力了，不需要這麼苛刻...(哽咽)</p>
+                        <p><span class="speaker-counselor">諮商師：</span>那麼，你願意試著用同樣的溫柔對待自己嗎？</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Plan -->
+            <section class="section">
+                <h2 class="section-title">
+                    <span>📅</span>
+                    <span>後續計畫</span>
+                </h2>
+                <div class="section-content">
+                    <div class="highlight-box">
+                        <div class="highlight-title">下次會談重點</div>
+                        <ul style="margin-top: 10px; margin-left: 20px;">
+                            <li>回顧本週壓力管理技巧的實踐情況</li>
+                            <li>深入探索完美主義形成的原因</li>
+                            <li>討論工作界限設定的具體執行策略</li>
+                            <li>評估是否需要職涯諮詢的專業協助</li>
+                        </ul>
+                    </div>
+
+                    <p style="margin-top: 20px;"><strong>建議會談頻率：</strong>每週一次，持續4-6週後評估進展</p>
+                    <p><strong>家庭作業：</strong>每日情緒日記、練習正念呼吸、記錄完美主義思維出現的情境</p>
+                </div>
+            </section>
+
+            <!-- Risk Assessment -->
+            <section class="section">
+                <h2 class="section-title">
+                    <span>⚠️</span>
+                    <span>風險評估</span>
+                </h2>
+                <div class="section-content">
+                    <div style="padding: 15px; background: #fef5e7; border-radius: 8px; border-left: 4px solid #f39c12;">
+                        <p><strong>自傷風險：</strong>低</p>
+                        <p><strong>功能受損程度：</strong>中度（工作效率下降、睡眠問題）</p>
+                        <p><strong>支持系統：</strong>中等（有家人但較少聯繫）</p>
+                        <p><strong>需要注意的警訊：</strong>睡眠持續惡化、社交完全退縮、工作缺席</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="footer-actions">
+            <div class="approval-section">
+                <span class="approval-status status-pending">待審核</span>
+                <button class="btn btn-success" onclick="approveReport()">
+                    ✅ 核准報告
+                </button>
+                <button class="btn btn-secondary" onclick="requestRevision()">
+                    ✏️ 要求修改
+                </button>
+            </div>
+            <div>
+                <button class="btn btn-primary" onclick="backToList()">
+                    ← 返回列表
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleCheck(element) {
+            element.classList.toggle('checked');
+            if (element.classList.contains('checked')) {
+                element.innerHTML = '✓';
+            } else {
+                element.innerHTML = '';
+            }
+        }
+
+        function toggleTranscript() {
+            const content = document.querySelector('.transcript-content');
+            const button = event.target;
+            if (content.style.maxHeight === 'none') {
+                content.style.maxHeight = '300px';
+                button.textContent = '展開全文';
+            } else {
+                content.style.maxHeight = 'none';
+                button.textContent = '收合';
+            }
+        }
+
+        function downloadPDF() {
+            alert('正在生成 PDF...\n\n報告將在幾秒後開始下載。');
+        }
+
+        function shareReport() {
+            alert('分享功能開發中...\n\n您可以選擇：\n1. 發送郵件給督導\n2. 匯出到雲端\n3. 生成分享連結');
+        }
+
+        function approveReport() {
+            const status = document.querySelector('.approval-status');
+            status.className = 'approval-status status-approved';
+            status.textContent = '已核准';
+            alert('報告已核准！\n\n已通知相關人員，報告已歸檔。');
+        }
+
+        function requestRevision() {
+            const reason = prompt('請說明需要修改的原因：');
+            if (reason) {
+                alert(`修改請求已發送！\n\n修改原因：${reason}`);
+            }
+        }
+
+        function backToList() {
+            window.location.href = '/static/index.html';
+        }
+
+        // Get session from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session');
+        if (sessionId) {
+            document.querySelector('.meta-value').textContent = sessionId;
+        }
+
+        // Animate elements on load
+        window.addEventListener('load', () => {
+            const bars = document.querySelectorAll('.bar');
+            bars.forEach((bar, index) => {
+                setTimeout(() => {
+                    bar.style.transform = 'scaleY(1)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>

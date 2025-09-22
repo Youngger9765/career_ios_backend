@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>諮商會談處理流程視覺化</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        .pipeline {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .pipeline::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 5%;
+            right: 5%;
+            height: 4px;
+            background: #e0e0e0;
+            z-index: 0;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .step-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 15px;
+            background: #f5f5f5;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            border: 4px solid #e0e0e0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .step.completed .step-icon {
+            background: #4caf50;
+            border-color: #4caf50;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .step.processing .step-icon {
+            background: #ff9800;
+            border-color: #ff9800;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .step.pending .step-icon {
+            background: #f5f5f5;
+            border-color: #e0e0e0;
+            color: #999;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7);
+            }
+            70% {
+                transform: scale(1.1);
+                box-shadow: 0 0 0 10px rgba(255, 152, 0, 0);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 152, 0, 0);
+            }
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .step-status {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .progress-bar {
+            background: #f0f0f0;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #66bb6a);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .detail-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .detail-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 0.95rem;
+        }
+
+        .detail-label {
+            color: #666;
+        }
+
+        .detail-value {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-indicator.active {
+            background: #4caf50;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 諮商會談處理流程</h1>
+        <p class="subtitle">從錄音上傳到報告生成的即時追蹤</p>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar">
+                <span id="progressText">65%</span>
+            </div>
+        </div>
+
+        <div class="pipeline" id="pipeline">
+            <div class="step completed" data-step="1">
+                <div class="step-icon">📤</div>
+                <div class="step-title">音訊上傳</div>
+                <div class="step-status">完成</div>
+            </div>
+            <div class="step completed" data-step="2">
+                <div class="step-icon">🎙️</div>
+                <div class="step-title">語音轉文字</div>
+                <div class="step-status">完成</div>
+            </div>
+            <div class="step completed" data-step="3">
+                <div class="step-icon">🔒</div>
+                <div class="step-title">文字脫敏</div>
+                <div class="step-status">完成</div>
+            </div>
+            <div class="step processing" data-step="4">
+                <div class="step-icon">🤖</div>
+                <div class="step-title">AI 分析</div>
+                <div class="step-status">處理中 75%</div>
+            </div>
+            <div class="step pending" data-step="5">
+                <div class="step-icon">📊</div>
+                <div class="step-title">報告生成</div>
+                <div class="step-status">等待中</div>
+            </div>
+        </div>
+
+        <div class="details-grid">
+            <div class="detail-card">
+                <h3>📁 會談資訊</h3>
+                <div class="detail-item">
+                    <span class="detail-label">會談編號：</span>
+                    <span class="detail-value">S2024-0142</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">個案編號：</span>
+                    <span class="detail-value">C2024-0087</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">諮商師：</span>
+                    <span class="detail-value">張諮商師</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">會談時長：</span>
+                    <span class="detail-value">45分30秒</span>
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <h3>⚙️ 處理狀態</h3>
+                <div class="detail-item">
+                    <span class="detail-label">開始時間：</span>
+                    <span class="detail-value">14:30:15</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">已用時間：</span>
+                    <span class="detail-value">4分32秒</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">預計完成：</span>
+                    <span class="detail-value">14:35:00</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">狀態：</span>
+                    <span class="detail-value">
+                        <span class="status-indicator active"></span>
+                        處理中
+                    </span>
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <h3>📈 處理統計</h3>
+                <div class="detail-item">
+                    <span class="detail-label">音訊大小：</span>
+                    <span class="detail-value">45 MB</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">轉錄字數：</span>
+                    <span class="detail-value">5,420 字</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">脫敏項目：</span>
+                    <span class="detail-value">3 項</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">AI Token：</span>
+                    <span class="detail-value">3,200</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="refreshStatus()">
+                🔄 更新狀態
+            </button>
+            <button class="btn btn-secondary" onclick="viewDetails()">
+                📋 查看詳情
+            </button>
+            <button class="btn btn-secondary" onclick="downloadReport()">
+                📥 下載報告
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Mock data for demonstration
+        let currentProgress = 65;
+        let currentStep = 4;
+
+        // Simulate progress updates
+        function simulateProgress() {
+            const interval = setInterval(() => {
+                if (currentProgress < 100) {
+                    currentProgress += Math.random() * 5;
+                    if (currentProgress > 100) currentProgress = 100;
+                    
+                    updateProgress(currentProgress);
+                    
+                    // Update step status
+                    if (currentProgress > 80 && currentStep === 4) {
+                        completeStep(4);
+                        startStep(5);
+                        currentStep = 5;
+                    }
+                    
+                    if (currentProgress === 100) {
+                        completeStep(5);
+                        clearInterval(interval);
+                        showCompletionMessage();
+                    }
+                }
+            }, 2000);
+        }
+
+        function updateProgress(percent) {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            progressBar.style.width = percent + '%';
+            progressText.textContent = Math.round(percent) + '%';
+        }
+
+        function completeStep(stepNum) {
+            const step = document.querySelector(`[data-step="${stepNum}"]`);
+            step.classList.remove('processing', 'pending');
+            step.classList.add('completed');
+            step.querySelector('.step-status').textContent = '完成';
+        }
+
+        function startStep(stepNum) {
+            const step = document.querySelector(`[data-step="${stepNum}"]`);
+            step.classList.remove('pending');
+            step.classList.add('processing');
+            step.querySelector('.step-status').textContent = '處理中';
+        }
+
+        function refreshStatus() {
+            fetch('/api/v1/pipeline/demo')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Pipeline status:', data);
+                    alert('狀態已更新！');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('模擬更新成功！');
+                });
+        }
+
+        function viewDetails() {
+            alert('詳細資訊功能開發中...');
+        }
+
+        function downloadReport() {
+            alert('報告下載功能開發中...');
+        }
+
+        function showCompletionMessage() {
+            setTimeout(() => {
+                alert('✅ 處理完成！報告已生成。');
+                const sessions = getSessionFromURL();
+                if (sessions.length > 0) {
+                    window.location.href = `/static/report.html?session=${sessions[0]}`;
+                }
+            }, 500);
+        }
+
+        // Get session info from URL
+        function getSessionFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessions = urlParams.get('sessions');
+            return sessions ? sessions.split(',') : [];
+        }
+
+        // Start simulation when page loads
+        window.addEventListener('load', () => {
+            const sessions = getSessionFromURL();
+            if (sessions.length > 0) {
+                document.querySelector('.detail-value').textContent = sessions[0];
+                console.log('Processing sessions:', sessions);
+            }
+            setTimeout(simulateProgress, 1000);
+        });
+
+        // Add click handlers for steps
+        document.querySelectorAll('.step').forEach(step => {
+            step.addEventListener('click', function() {
+                const stepNum = this.getAttribute('data-step');
+                const stepNames = ['音訊上傳', '語音轉文字', '文字脫敏', 'AI 分析', '報告生成'];
+                alert(`步驟 ${stepNum}: ${stepNames[stepNum-1]}\n狀態: ${this.querySelector('.step-status').textContent}`);
+            });
+        });
+    </script>
+</body>
+</html>
