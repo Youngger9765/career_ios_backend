@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Career Platform - 諮商平台 API 展示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 3rem;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.95;
+        }
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        .demo-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .demo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        .demo-title {
+            font-size: 1.5rem;
+            color: #764ba2;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        .demo-icon {
+            margin-right: 0.5rem;
+            font-size: 1.8rem;
+        }
+        .demo-description {
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+        .demo-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: opacity 0.3s;
+        }
+        .demo-button:hover {
+            opacity: 0.9;
+        }
+        .demo-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .api-response {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        .api-response.show {
+            display: block;
+        }
+        .pipeline-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+        .pipeline-title {
+            font-size: 2rem;
+            color: #764ba2;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .pipeline-stages {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .stage {
+            flex: 1;
+            min-width: 150px;
+            padding: 1rem;
+            background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+            border-radius: 8px;
+            text-align: center;
+            position: relative;
+        }
+        .stage.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        .stage-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .stage-name {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #764ba2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 2rem;
+            opacity: 0.9;
+        }
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Career Platform API</h1>
+            <p class="subtitle">智慧諮商輔助系統 - 技術展示平台</p>
+        </div>
+
+        <div class="note">
+            <strong>⚠️ 注意：</strong>由於組織政策限制，API 需要身份驗證。以下展示使用模擬數據來呈現系統功能。
+        </div>
+
+        <!-- Pipeline Section -->
+        <div class="pipeline-section">
+            <h2 class="pipeline-title">📊 5階段處理流程</h2>
+            <div class="pipeline-stages" id="pipelineStages">
+                <div class="stage" data-stage="1">
+                    <div class="stage-number">1</div>
+                    <div class="stage-name">📤 音訊上傳</div>
+                </div>
+                <div class="stage" data-stage="2">
+                    <div class="stage-number">2</div>
+                    <div class="stage-name">🎙️ 語音轉文字</div>
+                </div>
+                <div class="stage" data-stage="3">
+                    <div class="stage-number">3</div>
+                    <div class="stage-name">🔒 文字脫敏</div>
+                </div>
+                <div class="stage" data-stage="4">
+                    <div class="stage-number">4</div>
+                    <div class="stage-name">🤖 AI 分析</div>
+                </div>
+                <div class="stage" data-stage="5">
+                    <div class="stage-number">5</div>
+                    <div class="stage-name">📋 報告生成</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo Cards -->
+        <div class="demo-grid">
+            <div class="demo-card">
+                <h3 class="demo-title">
+                    <span class="demo-icon">📱</span>
+                    系統狀態檢查
+                </h3>
+                <p class="demo-description">
+                    檢查 API 服務是否正常運行，包含版本資訊與健康狀態。
+                </p>
+                <button class="demo-button" onclick="checkHealth()">
+                    檢查系統狀態
+                </button>
+                <div class="api-response" id="health-response"></div>
+            </div>
+
+            <div class="demo-card">
+                <h3 class="demo-title">
+                    <span class="demo-icon">📝</span>
+                    諮商會談列表
+                </h3>
+                <p class="demo-description">
+                    獲取所有諮商會談記錄，包含諮商師、個案資訊與會談狀態。
+                </p>
+                <button class="demo-button" onclick="getSessions()">
+                    取得會談列表
+                </button>
+                <div class="api-response" id="sessions-response"></div>
+            </div>
+
+            <div class="demo-card">
+                <h3 class="demo-title">
+                    <span class="demo-icon">🎤</span>
+                    模擬音訊上傳
+                </h3>
+                <p class="demo-description">
+                    示範上傳諮商錄音檔案，啟動自動處理流程。
+                </p>
+                <button class="demo-button" onclick="simulateUpload()">
+                    模擬上傳錄音
+                </button>
+                <div class="api-response" id="upload-response"></div>
+            </div>
+
+            <div class="demo-card">
+                <h3 class="demo-title">
+                    <span class="demo-icon">⚙️</span>
+                    處理進度追蹤
+                </h3>
+                <p class="demo-description">
+                    即時追蹤音訊處理的5個階段進度。
+                </p>
+                <button class="demo-button" onclick="trackProgress()">
+                    查看處理進度
+                </button>
+                <div class="api-response" id="progress-response"></div>
+            </div>
+
+            <div class="demo-card">
+                <h3 class="demo-title">
+                    <span class="demo-icon">📊</span>
+                    AI 分析報告
+                </h3>
+                <p class="demo-description">
+                    查看 AI 生成的諮商分析報告範例。
+                </p>
+                <button class="demo-button" onclick="getReport()">
+                    查看分析報告
+                </button>
+                <div class="api-response" id="report-response"></div>
+            </div>
+
+            <div class="demo-card">
+                <h3 class="demo-title">
+                    <span class="demo-icon">👥</span>
+                    個案管理
+                </h3>
+                <p class="demo-description">
+                    管理個案資料，包含基本資訊與諮商歷史。
+                </p>
+                <button class="demo-button" onclick="getCases()">
+                    查看個案列表
+                </button>
+                <div class="api-response" id="cases-response"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>© 2025 Career Platform - 智慧諮商輔助系統</p>
+            <p>🔧 Powered by FastAPI + Google Cloud Run</p>
+        </div>
+    </div>
+
+    <script>
+        // 模擬 API 端點（實際使用時需要後端支援 CORS）
+        const API_BASE = 'https://career-app-api-kxaznpplqq-uc.a.run.app';
+        
+        // 使用模擬數據展示功能
+        const mockData = {
+            health: {
+                status: "healthy",
+                version: "1.0.0",
+                timestamp: new Date().toISOString(),
+                environment: "production",
+                services: {
+                    database: "connected",
+                    storage: "ready",
+                    ai_engine: "operational"
+                }
+            },
+            sessions: [
+                {
+                    id: 1,
+                    counselor_name: "張諮商師",
+                    client_name: "個案A",
+                    date: "2025-01-23",
+                    status: "completed",
+                    duration: "50 分鐘"
+                },
+                {
+                    id: 2,
+                    counselor_name: "李諮商師",
+                    client_name: "個案B",
+                    date: "2025-01-22",
+                    status: "processing",
+                    duration: "45 分鐘"
+                }
+            ],
+            upload: {
+                status: "processing",
+                job_id: "job_" + Math.random().toString(36).substr(2, 9),
+                message: "音訊檔案已上傳，開始處理...",
+                estimated_time: "5-10 分鐘"
+            },
+            progress: {
+                job_id: "job_abc123",
+                current_stage: 3,
+                stages: [
+                    { stage: 1, name: "音訊上傳", status: "completed" },
+                    { stage: 2, name: "語音轉文字", status: "completed" },
+                    { stage: 3, name: "文字脫敏", status: "processing" },
+                    { stage: 4, name: "AI 分析", status: "pending" },
+                    { stage: 5, name: "報告生成", status: "pending" }
+                ]
+            },
+            report: {
+                session_id: 1,
+                generated_at: new Date().toISOString(),
+                summary: "本次諮商會談主要討論了個案的職涯發展困擾...",
+                key_points: [
+                    "職涯方向不明確",
+                    "工作壓力管理",
+                    "人際關係改善"
+                ],
+                recommendations: [
+                    "建議進行職涯興趣探索",
+                    "學習壓力調適技巧",
+                    "加強溝通能力訓練"
+                ]
+            },
+            cases: [
+                {
+                    id: 1,
+                    name: "個案A",
+                    age: 28,
+                    sessions_count: 5,
+                    last_session: "2025-01-23",
+                    status: "active"
+                },
+                {
+                    id: 2,
+                    name: "個案B",
+                    age: 35,
+                    sessions_count: 3,
+                    last_session: "2025-01-22",
+                    status: "active"
+                }
+            ]
+        };
+
+        function showResponse(elementId, data, success = true) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            element.classList.add('show');
+            
+            // 添加狀態標籤
+            const badge = document.createElement('div');
+            badge.className = `status-badge ${success ? 'status-success' : 'status-error'}`;
+            badge.textContent = success ? '✓ 成功' : '✗ 錯誤';
+            element.prepend(badge);
+        }
+
+        function showLoading(button) {
+            const originalText = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = originalText + '<span class="loading"></span>';
+            return () => {
+                button.disabled = false;
+                button.innerHTML = originalText;
+            };
+        }
+
+        async function checkHealth() {
+            const button = event.target;
+            const stopLoading = showLoading(button);
+            
+            setTimeout(() => {
+                showResponse('health-response', mockData.health, true);
+                stopLoading();
+            }, 1000);
+        }
+
+        async function getSessions() {
+            const button = event.target;
+            const stopLoading = showLoading(button);
+            
+            setTimeout(() => {
+                showResponse('sessions-response', mockData.sessions, true);
+                stopLoading();
+            }, 1000);
+        }
+
+        async function simulateUpload() {
+            const button = event.target;
+            const stopLoading = showLoading(button);
+            
+            // 模擬上傳動畫
+            animatePipeline();
+            
+            setTimeout(() => {
+                showResponse('upload-response', mockData.upload, true);
+                stopLoading();
+            }, 1500);
+        }
+
+        async function trackProgress() {
+            const button = event.target;
+            const stopLoading = showLoading(button);
+            
+            setTimeout(() => {
+                showResponse('progress-response', mockData.progress, true);
+                // 更新 pipeline 視覺化
+                updatePipelineStages(mockData.progress.current_stage);
+                stopLoading();
+            }, 1000);
+        }
+
+        async function getReport() {
+            const button = event.target;
+            const stopLoading = showLoading(button);
+            
+            setTimeout(() => {
+                showResponse('report-response', mockData.report, true);
+                stopLoading();
+            }, 1000);
+        }
+
+        async function getCases() {
+            const button = event.target;
+            const stopLoading = showLoading(button);
+            
+            setTimeout(() => {
+                showResponse('cases-response', mockData.cases, true);
+                stopLoading();
+            }, 1000);
+        }
+
+        function updatePipelineStages(currentStage) {
+            const stages = document.querySelectorAll('.stage');
+            stages.forEach((stage, index) => {
+                if (index < currentStage) {
+                    stage.classList.add('active');
+                } else {
+                    stage.classList.remove('active');
+                }
+            });
+        }
+
+        function animatePipeline() {
+            let stage = 1;
+            const interval = setInterval(() => {
+                updatePipelineStages(stage);
+                stage++;
+                if (stage > 5) {
+                    clearInterval(interval);
+                    // 重置
+                    setTimeout(() => {
+                        updatePipelineStages(0);
+                    }, 2000);
+                }
+            }, 500);
+        }
+
+        // 頁面載入時的動畫
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                updatePipelineStages(2);
+            }, 500);
+        });
+    </script>
+</body>
+</html>
