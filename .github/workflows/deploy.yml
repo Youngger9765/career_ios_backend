@@ -11,11 +11,11 @@ on:
       - master
 
 env:
-  PROJECT_ID: career-backed
-  SERVICE_NAME: career-backend-api
+  PROJECT_ID: career-app-473015
+  SERVICE_NAME: career-app-backend
   REGION: us-central1
   REGISTRY: us-central1-docker.pkg.dev
-  IMAGE_NAME: career-backend/app
+  IMAGE_NAME: career-app-backend/app
 
 jobs:
   deploy:
@@ -61,12 +61,14 @@ jobs:
         region: ${{ env.REGION }}
         image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
         flags: |
-          --allow-unauthenticated
+          --no-allow-unauthenticated
           --port=8080
-          --memory=1Gi
+          --memory=128Mi
           --cpu=1
           --min-instances=0
-          --max-instances=10
+          --max-instances=1
+          --concurrency=1000
+          --cpu-throttling
           --set-env-vars=MOCK_MODE=true,DEBUG=false,GCS_PROJECT=${{ env.PROJECT_ID }}
 
     - name: Show service URL
