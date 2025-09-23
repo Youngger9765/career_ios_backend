@@ -11,11 +11,11 @@ on:
       - master
 
 env:
-  PROJECT_ID: career-app-473015
-  SERVICE_NAME: career-app-backend
+  PROJECT_ID: groovy-iris-473015-h3
+  SERVICE_NAME: career-backend-api
   REGION: us-central1
   REGISTRY: us-central1-docker.pkg.dev
-  IMAGE_NAME: career-app-backend/app
+  IMAGE_NAME: career-backend/app
 
 jobs:
   deploy:
