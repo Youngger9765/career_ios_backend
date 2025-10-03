@@ -92,8 +92,9 @@ jobs:
           --region=us-central1 \
           --project=groovy-iris-473015-h3 \
           --service-account=career-app-sa@groovy-iris-473015-h3.iam.gserviceaccount.com \
-          --memory=128Mi \
+          --memory=512Mi \
           --cpu=1 \
+          --timeout=300 \
           --min-instances=0 \
           --max-instances=1 \
           --concurrency=1000 \
