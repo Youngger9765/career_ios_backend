@@ -1,5 +1,7 @@
 # Multi-stage build for smaller image
-FROM python:3.11-slim as builder
+
+# Stage 1: Build Python Dependencies
+FROM python:3.11-slim as python-builder
 
 # Set working directory
 WORKDIR /app
@@ -20,14 +22,14 @@ RUN poetry config virtualenvs.create false \
     && poetry install --only=main --no-interaction --no-ansi --no-root \
     && pip list | grep -i email
 
-# Final stage
+# Stage 2: Final Runtime
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy installed packages from builder
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+# Copy installed packages from python-builder
+COPY --from=python-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=python-builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY . .

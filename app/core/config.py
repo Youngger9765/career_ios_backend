@@ -37,7 +37,27 @@ class Settings(BaseSettings):
     
     # OpenAI
     OPENAI_API_KEY: Optional[str] = None
-    OPENAI_MODEL: str = "gpt-4"
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
+
+    # Supabase
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_ANON_KEY: Optional[str] = None
+    SUPABASE_SERVICE_KEY: Optional[str] = None
+    SUPABASE_BUCKET: str = "documents"
+    STORAGE_TYPE: str = "supabase"
+
+    # RAG Settings
+    VECTOR_DIMENSIONS: int = 1536
+    DEFAULT_TOP_K: int = 5
+    DEFAULT_CHUNK_SIZE: int = 400
+    DEFAULT_CHUNK_OVERLAP: int = 80
+    MAX_FILE_SIZE_MB: int = 30
+    PIPELINE_TIMEOUT_SECONDS: int = 180
+
+    # Application
+    ENVIRONMENT: str = "development"
+    API_ADMIN_KEY: Optional[str] = None
     
     # Google Cloud Storage
     GCS_BUCKET: Optional[str] = None
