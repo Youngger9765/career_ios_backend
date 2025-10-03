@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     PORT: int = 8000
     
     # Database
-    DATABASE_URL: str = "postgresql://user:password@localhost:5432/career_db"
+    DATABASE_URL: str = "postgresql://CHANGE_ME:CHANGE_ME@localhost:5432/career_db"
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 0
     
