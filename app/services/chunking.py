@@ -75,15 +75,35 @@ class ChunkingService:
         return chunks
 
     def _adjust_to_sentence_boundary(self, text: str, start: int, end: int) -> int:
-        """Adjust end position to nearest sentence boundary"""
+        """Adjust end position to nearest sentence boundary
+
+        Args:
+            text: Full text
+            start: Start position in text (absolute)
+            end: End position in text (absolute)
+
+        Returns:
+            Adjusted end position (absolute) at a sentence boundary
+        """
         # Look for sentence endings (. ! ?) within the chunk
         chunk = text[start:end]
-        sentence_endings = [m.end() for m in re.finditer(r"[.!?]\s+", chunk)]
+        # Match sentence endings followed by space, newline, or end of text
+        sentence_endings = [m.end() for m in re.finditer(r"[.!?](?:\s|$)", chunk)]
 
         if sentence_endings:
-            # Use the last sentence ending
-            return start + sentence_endings[-1]
+            # Convert relative positions to absolute positions
+            absolute_endings = [start + pos for pos in sentence_endings]
 
+            # Filter out sentence endings that are too close to the start
+            # (within overlap distance) to avoid reusing the same sentence ending
+            min_distance = self.overlap if hasattr(self, 'overlap') else 0
+            valid_endings = [pos for pos in absolute_endings if pos > start + min_distance]
+
+            if valid_endings:
+                # Use the last valid sentence ending
+                return valid_endings[-1]
+
+        # If no valid sentence ending found, use original end (don't adjust)
         return end
 
     def _adjust_to_word_boundary(self, text: str, start: int, end: int) -> int:

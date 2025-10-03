@@ -2,13 +2,7 @@
 
 import os
 from typing import Optional
-
-try:
-    from supabase import Client, create_client
-
-    SUPABASE_AVAILABLE = True
-except ImportError:
-    SUPABASE_AVAILABLE = False
+import httpx
 
 # Import settings when available
 try:
@@ -26,20 +20,19 @@ except ImportError:
 
 
 class StorageService:
-    """Storage service for file uploads"""
+    """Storage service for file uploads using direct HTTP"""
 
     def __init__(self):
-        if STORAGE_TYPE == "supabase" and SUPABASE_AVAILABLE and SUPABASE_URL and SUPABASE_SERVICE_KEY:
-            try:
-                self.supabase: Optional[Client] = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-                self.bucket = SUPABASE_BUCKET
-            except Exception as e:
-                print(f"Warning: Failed to initialize Supabase client: {e}")
-                self.supabase = None
-                self.bucket = SUPABASE_BUCKET
+        self.supabase_url = SUPABASE_URL
+        self.supabase_key = SUPABASE_SERVICE_KEY
+        self.bucket = SUPABASE_BUCKET
+
+        if STORAGE_TYPE == "supabase" and self.supabase_url and self.supabase_key:
+            self.enabled = True
+            print(f"✓ Storage service initialized for bucket: {self.bucket}")
         else:
-            self.supabase = None
-            self.bucket = SUPABASE_BUCKET
+            self.enabled = False
+            print("✗ Storage service disabled - missing configuration")
 
     async def upload_file(
         self, file_content: bytes, file_path: str, content_type: str = "application/pdf"
@@ -55,19 +48,24 @@ class StorageService:
         Returns:
             Public URL or signed URL
         """
-        if not self.supabase:
+        if not self.enabled:
             raise Exception("Supabase client not initialized. Check STORAGE_TYPE and credentials.")
 
         try:
-            # Upload to Supabase Storage
-            self.supabase.storage.from_(self.bucket).upload(
-                path=file_path,
-                file=file_content,
-                file_options={"content-type": content_type},
-            )
+            # Direct HTTP upload to Supabase Storage API
+            url = f"{self.supabase_url}/storage/v1/object/{self.bucket}/{file_path}"
+            headers = {
+                "Authorization": f"Bearer {self.supabase_key}",
+                "apikey": self.supabase_key,
+                "Content-Type": content_type,
+            }
 
-            # Get public URL (bucket must be public) or create signed URL
-            url = self.supabase.storage.from_(self.bucket).get_public_url(file_path)
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, content=file_content, headers=headers, timeout=60.0)
+                response.raise_for_status()
+
+            # Return public URL
+            url = f"{self.supabase_url}/storage/v1/object/public/{self.bucket}/{file_path}"
 
             return url
         except Exception as e:
@@ -75,23 +73,41 @@ class StorageService:
 
     async def download_file(self, file_path: str) -> bytes:
         """Download file from Supabase Storage"""
-        if not self.supabase:
-            raise Exception("Supabase client not initialized")
+        if not self.enabled:
+            raise Exception("Supabase client not initialized. Check STORAGE_TYPE and credentials.")
 
         try:
-            response = self.supabase.storage.from_(self.bucket).download(file_path)
-            return response
+            # Direct HTTP download from Supabase Storage API
+            url = f"{self.supabase_url}/storage/v1/object/{self.bucket}/{file_path}"
+            headers = {
+                "Authorization": f"Bearer {self.supabase_key}",
+                "apikey": self.supabase_key,
+            }
+
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, headers=headers, timeout=60.0)
+                response.raise_for_status()
+                return response.content
         except Exception as e:
             raise Exception(f"Failed to download file: {str(e)}") from e
 
     async def delete_file(self, file_path: str) -> bool:
         """Delete file from Supabase Storage"""
-        if not self.supabase:
-            raise Exception("Supabase client not initialized")
+        if not self.enabled:
+            raise Exception("Supabase client not initialized. Check STORAGE_TYPE and credentials.")
 
         try:
-            self.supabase.storage.from_(self.bucket).remove([file_path])
-            return True
+            # Direct HTTP delete from Supabase Storage API
+            url = f"{self.supabase_url}/storage/v1/object/{self.bucket}/{file_path}"
+            headers = {
+                "Authorization": f"Bearer {self.supabase_key}",
+                "apikey": self.supabase_key,
+            }
+
+            async with httpx.AsyncClient() as client:
+                response = await client.delete(url, headers=headers, timeout=60.0)
+                response.raise_for_status()
+                return True
         except Exception as e:
             raise Exception(f"Failed to delete file: {str(e)}") from e
 
@@ -106,13 +122,23 @@ class StorageService:
         Returns:
             Signed URL
         """
-        if not self.supabase:
-            raise Exception("Supabase client not initialized")
+        if not self.enabled:
+            raise Exception("Supabase client not initialized. Check STORAGE_TYPE and credentials.")
 
         try:
-            response = self.supabase.storage.from_(self.bucket).create_signed_url(
-                path=file_path, expires_in=expires_in
-            )
-            return response["signedURL"]
+            # Direct HTTP request to create signed URL
+            url = f"{self.supabase_url}/storage/v1/object/sign/{self.bucket}/{file_path}"
+            headers = {
+                "Authorization": f"Bearer {self.supabase_key}",
+                "apikey": self.supabase_key,
+                "Content-Type": "application/json",
+            }
+            data = {"expiresIn": expires_in}
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, json=data, timeout=60.0)
+                response.raise_for_status()
+                result = response.json()
+                return result.get("signedURL", "")
         except Exception as e:
             raise Exception(f"Failed to create signed URL: {str(e)}") from e

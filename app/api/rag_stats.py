@@ -18,6 +18,8 @@ class DocumentStats(BaseModel):
     pages: int
     bytes: int
     chunks_count: int
+    text_length: int  # Original extracted text length
+    total_text_chars: int  # Sum of all chunk text lengths
     created_at: str
 
 
@@ -46,18 +48,20 @@ def get_database_stats(db: Session = Depends(get_db)):
     embeddings_count = db.execute(text("SELECT COUNT(*) FROM embeddings")).scalar()
     total_bytes = db.execute(text("SELECT COALESCE(SUM(bytes), 0) FROM documents")).scalar()
 
-    # Get document details with chunk counts
+    # Get document details with chunk counts and total text length
     query = text("""
         SELECT
             d.id,
             d.title,
             d.pages,
             d.bytes,
+            d.text_length,
             d.created_at,
-            COUNT(c.id) as chunks_count
+            COUNT(c.id) as chunks_count,
+            COALESCE(SUM(LENGTH(c.text)), 0) as total_text_chars
         FROM documents d
         LEFT JOIN chunks c ON d.id = c.doc_id
-        GROUP BY d.id, d.title, d.pages, d.bytes, d.created_at
+        GROUP BY d.id, d.title, d.pages, d.bytes, d.text_length, d.created_at
         ORDER BY d.created_at DESC
     """)
 
@@ -71,6 +75,8 @@ def get_database_stats(db: Session = Depends(get_db)):
             pages=row.pages or 0,
             bytes=row.bytes or 0,
             chunks_count=row.chunks_count or 0,
+            text_length=row.text_length or 0,
+            total_text_chars=row.total_text_chars or 0,
             created_at=str(row.created_at),
         )
         for row in rows

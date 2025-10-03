@@ -50,6 +50,7 @@
                     <th class="py-3 px-4 text-gray-400 font-medium">文件名稱</th>
                     <th class="py-3 px-4 text-gray-400 font-medium">頁數</th>
                     <th class="py-3 px-4 text-gray-400 font-medium">Chunks</th>
+                    <th class="py-3 px-4 text-gray-400 font-medium">健康度</th>
                     <th class="py-3 px-4 text-gray-400 font-medium">大小</th>
                     <th class="py-3 px-4 text-gray-400 font-medium">上傳時間</th>
                     <th class="py-3 px-4 text-gray-400 font-medium">操作</th>
@@ -57,7 +58,7 @@
             </thead>
             <tbody id="docsList">
                 <tr>
-                    <td colspan="6" class="text-gray-400 text-center py-8">載入中...</td>
+                    <td colspan="7" class="text-gray-400 text-center py-8">載入中...</td>
                 </tr>
             </tbody>
         </table>
@@ -101,11 +102,20 @@ async function loadStats() {
         const docsList = document.getElementById('docsList');
         if (data.documents && data.documents.length > 0) {
             console.log('Rendering', data.documents.length, 'documents');
-            docsList.innerHTML = data.documents.map(doc => `
+            docsList.innerHTML = data.documents.map(doc => {
+                const health = calculateHealth(doc);
+                return `
                 <tr class="border-b border-gray-700 hover:bg-gray-700/50 transition">
                     <td class="py-4 px-4 text-white">${doc.title}</td>
                     <td class="py-4 px-4 text-gray-300">${doc.pages}</td>
                     <td class="py-4 px-4 text-gray-300">${doc.chunks_count}</td>
+                    <td class="py-4 px-4">
+                        <div class="flex items-center gap-2">
+                            <span class="${health.color}">${health.icon}</span>
+                            <span class="${health.color} text-sm">${health.label}</span>
+                            <span class="text-gray-500 text-xs">(${health.ratio}%)</span>
+                        </div>
+                    </td>
                     <td class="py-4 px-4 text-gray-300">${formatBytes(doc.bytes)}</td>
                     <td class="py-4 px-4 text-gray-400 text-sm">${new Date(doc.created_at).toLocaleString('zh-TW')}</td>
                     <td class="py-4 px-4">
@@ -113,26 +123,80 @@ async function loadStats() {
                             <button onclick="viewChunks(${doc.id}, '${doc.title}')" class="text-blue-400 hover:text-blue-300 px-2 py-1 rounded text-sm">
                                 查看
                             </button>
+                            <button onclick="rebuildDoc(${doc.id}, '${doc.title}')" class="text-yellow-400 hover:text-yellow-300 px-2 py-1 rounded text-sm">
+                                重建
+                            </button>
                             <button onclick="deleteDoc(${doc.id})" class="text-red-400 hover:text-red-300 px-2 py-1 rounded text-sm">
                                 刪除
                             </button>
                         </div>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         } else {
             console.log('No documents found in response');
-            docsList.innerHTML = '<tr><td colspan="6" class="text-gray-400 text-center py-8">尚無文件</td></tr>';
+            docsList.innerHTML = '<tr><td colspan="7" class="text-gray-400 text-center py-8">尚無文件</td></tr>';
         }
     } catch (error) {
         console.error('Failed to load stats:', error);
         console.error('Error stack:', error.stack);
-        document.getElementById('docsList').innerHTML = '<tr><td colspan="6" class="text-red-400 text-center py-8">載入失敗: ' + error.message + '</td></tr>';
+        document.getElementById('docsList').innerHTML = '<tr><td colspan="7" class="text-red-400 text-center py-8">載入失敗: ' + error.message + '</td></tr>';
         // Also update stats to show error
         document.getElementById('totalDocs').textContent = 'Error';
         document.getElementById('totalChunks').textContent = 'Error';
         document.getElementById('totalEmbeddings').textContent = 'Error';
         document.getElementById('totalSize').textContent = 'Error';
+    }
+}
+
+function calculateHealth(doc) {
+    // Calculate expected chunk total with overlap
+    // Expected total = original_text + (num_chunks - 1) * overlap
+    // This accounts for the fact that each chunk overlaps with the previous one
+
+    if (!doc.text_length || doc.text_length === 0) {
+        // Old documents without text_length - needs rebuild
+        return {
+            icon: '🔧',
+            label: '需重建',
+            color: 'text-orange-400',
+            ratio: '請點重建'
+        };
+    }
+
+    const overlap = 80; // chunk overlap size
+    const expectedTotal = doc.text_length + (doc.chunks_count - 1) * overlap;
+    const ratio = doc.total_text_chars / expectedTotal;
+    const percentage = Math.round(ratio * 100);
+
+    if (ratio >= 0.95 && ratio <= 1.05) {
+        return {
+            icon: '✅',
+            label: '健康',
+            color: 'text-green-400',
+            ratio: percentage + '%'
+        };
+    } else if (ratio >= 0.85 && ratio < 0.95) {
+        return {
+            icon: '⚠️',
+            label: '偏低',
+            color: 'text-yellow-400',
+            ratio: percentage + '%'
+        };
+    } else if (ratio > 1.05 && ratio <= 1.15) {
+        return {
+            icon: '⚠️',
+            label: '偏高',
+            color: 'text-yellow-400',
+            ratio: percentage + '%'
+        };
+    } else {
+        return {
+            icon: '❌',
+            label: '異常',
+            color: 'text-red-400',
+            ratio: percentage + '%'
+        };
     }
 }
 
@@ -219,6 +283,46 @@ async function uploadFiles() {
             progressContainer.innerHTML = '';
         }, 3000);
     }, 1000);
+}
+
+async function rebuildDoc(docId, docTitle) {
+    if (!confirm(`確定要重建「${docTitle}」的 chunks 嗎？\n\n這將會：\n1. 刪除現有的所有 chunks\n2. 重新下載 PDF\n3. 重新切分文字\n4. 重新生成 embeddings\n\n過程可能需要幾分鐘。`)) return;
+
+    try {
+        // Show loading indicator
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = '重建中...';
+        button.disabled = true;
+
+        const response = await fetch(`/api/rag/ingest/reprocess/${docId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                chunk_size: 400,
+                overlap: 80
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            alert(`重建成功！\n\n舊 chunks: ${data.old_chunks_deleted}\n新 chunks: ${data.new_chunks_created}`);
+            loadStats();
+        } else {
+            const error = await response.json();
+            alert('重建失敗: ' + (error.detail || '未知錯誤'));
+        }
+    } catch (error) {
+        alert('重建失敗: ' + error.message);
+    } finally {
+        // Restore button state
+        if (button) {
+            button.textContent = originalText;
+            button.disabled = false;
+        }
+    }
 }
 
 async function deleteDoc(docId) {

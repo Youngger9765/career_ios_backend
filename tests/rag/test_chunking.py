@@ -78,3 +78,75 @@ class TestChunkingService:
             words = chunk.strip().split()
             # Each word should be complete (no trailing/leading non-space)
             assert all(word.strip() == word for word in words if word)
+
+    def test_long_text_with_sentence_boundaries(self):
+        """Test chunking of long text with sentence boundaries - regression test for infinite loop bug"""
+        service = ChunkingService(chunk_size=400, overlap=80)
+
+        # Create a realistic long text with sentences (simulate academic paper)
+        sentences = [
+            "This is the first sentence of a research paper.",
+            "It discusses various important topics in the field.",
+            "The methodology section describes the experimental setup.",
+            "Results were analyzed using statistical methods.",
+            "Discussion of findings reveals interesting patterns.",
+        ]
+        # Repeat to create a text long enough to trigger the bug
+        text = " ".join(sentences * 50)  # ~250 chars per repetition * 50 = ~12,500 chars
+
+        chunks = service.split_text(text, split_by_sentence=True, preserve_words=True)
+
+        # Should create many chunks, not just 1-2
+        expected_min_chunks = len(text) // (service.chunk_size - service.overlap) // 2
+        assert len(chunks) >= expected_min_chunks, f"Expected at least {expected_min_chunks} chunks, got {len(chunks)}"
+
+        # All chunks should have reasonable size
+        for i, chunk in enumerate(chunks[:-1]):  # Exclude last chunk which might be shorter
+            assert len(chunk) > 100, f"Chunk {i} is too short ({len(chunk)} chars): likely infinite loop bug"
+
+        # Verify overlap between consecutive chunks
+        for i in range(len(chunks) - 1):
+            # The end of one chunk should overlap with the start of the next
+            overlap_text = chunks[i][-service.overlap:]
+            next_start = chunks[i+1][:service.overlap]
+            # They should have some overlap (might not be exact due to sentence boundaries)
+            assert len(set(overlap_text.split()) & set(next_start.split())) > 0, \
+                f"No overlap found between chunk {i} and {i+1}"
+
+    def test_sparse_sentence_boundaries_bug(self):
+        """Regression test for bug where sparse sentence endings cause infinite loop
+
+        The bug occurs when:
+        1. First chunk finds a sentence ending near position 369 (within 400 char chunk)
+        2. Second chunk starts at 289 (369 - 80 overlap)
+        3. Second chunk (289-689) finds the SAME sentence ending at absolute position 369
+        4. This causes next_start to equal current start (289 == 289), triggering break
+        """
+        service = ChunkingService(chunk_size=400, overlap=80)
+
+        # Simulate academic paper header with sparse sentence endings
+        # First sentence ending should be around position 369
+        text = (
+            "Impact of customer focus on technology\n"
+            "leadership via technology development\n"
+            "capability –a moderated mediation model\n"
+            "Zafar Husain\n"
+            "College of Business, Al Ain University, United Arab Emirates\n"
+            "Mumin Dayan\n"
+            "United Arab Emirates University, Al Ain, United Arab Emirates\n"
+            "Sushil\n"
+            "Department of Management Studies, Indian Institute of Technology Delhi, New Delhi, India, and\n"
+            "C. Anthony Di Benedetto\n"
+            # Continue with more text to create a large document
+            "Marketing and Supply Chain Management, Temple University, Philadelphia, Pennsylvania, USA\n"
+            "Abstract\n"
+            "Purpose. This study aims to develop and empirically examine a model.\n"
+        ) * 200  # Create a 60KB+ document
+
+        chunks = service.split_text(text, split_by_sentence=True, preserve_words=True)
+
+        # Should create approximately (len(text) / (chunk_size - overlap)) chunks
+        expected_chunks = len(text) // (service.chunk_size - service.overlap)
+        assert len(chunks) > 10, f"Only got {len(chunks)} chunks for {len(text)} chars - infinite loop bug detected"
+        assert len(chunks) >= expected_chunks * 0.5, \
+            f"Expected ~{expected_chunks} chunks, got {len(chunks)} - chunking is broken"

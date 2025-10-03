@@ -23,4 +23,4 @@ class User(Base, BaseModel):
     
     # Relationships
     cases = relationship("Case", back_populates="counselor")
-    reports = relationship("Report", back_populates="created_by")
+    reports = relationship("Report", foreign_keys="[Report.created_by_id]", back_populates="created_by")

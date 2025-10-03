@@ -138,7 +138,7 @@ async def generate_report_stream(
             bindparam("top_k", type_=Integer),
         )
 
-        result = await db.execute(
+        result = db.execute(
             query_sql,
             {
                 "query_embedding": embedding_str,

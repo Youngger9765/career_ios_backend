@@ -86,6 +86,7 @@ async def ingest_file(
             title=file.filename,
             bytes=len(file_content),
             pages=metadata.get("pages", 0),
+            text_length=len(text),  # Save original text length
             meta_json=metadata,
         )
         db.add(document)
@@ -187,10 +188,19 @@ async def reprocess_document(
 
         parsed_url = urllib.parse.urlparse(datasource.source_uri)
         # Extract path after bucket name
+        # URL format: .../storage/v1/object/public/{bucket}/{file_path}
         path_parts = parsed_url.path.split("/")
-        if "documents" in path_parts:
+
+        # Find 'public' or bucket name and get everything after it
+        if "public" in path_parts:
+            idx = path_parts.index("public")
+            # Skip bucket name (next after 'public') and get the rest
+            file_path = "/".join(path_parts[idx + 2:])
+        elif "documents" in path_parts:
+            # Find the last occurrence of 'documents' (the bucket name)
+            # and take everything after it
             idx = path_parts.index("documents")
-            file_path = "/".join(path_parts[idx:])
+            file_path = "/".join(path_parts[idx + 1:])
         else:
             file_path = path_parts[-1]
 
@@ -207,6 +217,11 @@ async def reprocess_document(
         # 4. Extract text from PDF
         pdf_service = PDFService()
         text = pdf_service.extract_text(file_content)
+
+        # Update document with text_length
+        document.text_length = len(text)
+        db.add(document)
+        db.flush()
 
         # 5. Re-chunk with new parameters
         chunking_service = ChunkingService(chunk_size=request.chunk_size, overlap=request.overlap)
