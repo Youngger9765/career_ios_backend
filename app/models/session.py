@@ -15,10 +15,14 @@ class Session(Base, BaseModel):
     room_number = Column(String)
     
     # File paths/URLs
-    audio_file_path = Column(String)
-    transcript_file_path = Column(String)
-    
-    # Content
+    audio_path = Column(String)  # 音訊檔路徑（模式1）
+
+    # Transcript content
+    transcript_text = Column(Text)  # 逐字稿內容
+    transcript_sanitized = Column(Text)  # 脫敏後逐字稿
+    source_type = Column(String(10))  # 'audio' or 'text' - 輸入來源
+
+    # Additional content
     notes = Column(Text)
     key_points = Column(Text)
     
