@@ -6,47 +6,47 @@
     <title>{% block page_title %}RAG Console{% endblock %} - RAG Console</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900">
+<body class="bg-gray-50">
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <div class="w-80 bg-gray-800 p-6 flex flex-col">
-            <h1 class="text-2xl font-bold mb-8 text-white">RAG Console</h1>
+        <div class="w-80 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg">
+            <h1 class="text-2xl font-bold mb-8 text-gray-800">RAG Console</h1>
 
             <!-- Navigation Items -->
             <nav class="flex-1 space-y-2">
                 <!-- Dashboard -->
-                <a href="/rag" class="flex items-center px-4 py-3 rounded-lg text-white {% if request.path == '/rag' %}bg-gray-700{% else %}hover:bg-gray-700{% endif %} transition">
+                <a href="/rag" class="flex items-center px-4 py-3 rounded-lg text-gray-700 {% if request.path == '/rag' %}bg-blue-50 border-l-4 border-blue-500{% else %}hover:bg-gray-100{% endif %} transition">
                     <span class="text-2xl mr-3">🏠</span>
                     <span class="text-lg">Dashboard</span>
                 </a>
 
                 <!-- 資料庫統計 -->
-                <a href="/rag/stats" class="flex items-center px-4 py-3 rounded-lg text-white {% if '/rag/stats' in request.path %}bg-gray-700{% else %}hover:bg-gray-700{% endif %} transition">
+                <a href="/rag/stats" class="flex items-center px-4 py-3 rounded-lg text-gray-700 {% if '/rag/stats' in request.path %}bg-blue-50 border-l-4 border-blue-500{% else %}hover:bg-gray-100{% endif %} transition">
                     <span class="text-2xl mr-3">📊</span>
                     <span class="text-lg">資料庫統計</span>
                 </a>
 
                 <!-- AI 對話 -->
-                <a href="/rag/chat" class="flex items-center px-4 py-3 rounded-lg text-white {% if '/rag/chat' in request.path %}bg-gray-700{% else %}hover:bg-gray-700{% endif %} transition">
+                <a href="/rag/chat" class="flex items-center px-4 py-3 rounded-lg text-gray-700 {% if '/rag/chat' in request.path %}bg-blue-50 border-l-4 border-blue-500{% else %}hover:bg-gray-100{% endif %} transition">
                     <span class="text-2xl mr-3">💬</span>
                     <span class="text-lg">AI 對話</span>
                 </a>
 
                 <!-- 個案報告生成 -->
-                <a href="/rag/report" class="flex items-center px-4 py-3 rounded-lg text-white {% if request.path == '/rag/report' %}bg-gray-700{% else %}hover:bg-gray-700{% endif %} transition">
+                <a href="/rag/report" class="flex items-center px-4 py-3 rounded-lg text-gray-700 {% if request.path == '/rag/report' %}bg-blue-50 border-l-4 border-blue-500{% else %}hover:bg-gray-100{% endif %} transition">
                     <span class="text-2xl mr-3">📋</span>
                     <span class="text-lg">個案報告生成</span>
                 </a>
             </nav>
 
             <!-- Footer -->
-            <div class="mt-auto pt-4 border-t border-gray-700">
-                <p class="text-sm text-gray-400">RAG Agent Ops Console v1.0</p>
+            <div class="mt-auto pt-4 border-t border-gray-200">
+                <p class="text-sm text-gray-500">RAG Agent Ops Console v1.0</p>
             </div>
         </div>
 
         <!-- Main Content -->
-        <div class="flex-1 p-8 overflow-auto bg-gray-900">
+        <div class="flex-1 p-8 overflow-auto bg-gray-50">
             <div class="max-w-6xl mx-auto">
                 {% block page_content %}{% endblock %}
             </div>

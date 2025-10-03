@@ -4,36 +4,36 @@
 
 {% block page_content %}
 <div class="mb-6">
-    <h2 class="text-2xl font-bold text-white mb-2">資料庫統計</h2>
-    <p class="text-gray-400">查看已 chunk 的資料列表</p>
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">資料庫統計</h2>
+    <p class="text-gray-600">查看已 chunk 的資料列表</p>
 </div>
 
 <!-- Stats Cards -->
 <div class="grid grid-cols-4 gap-4 mb-8">
-    <div class="bg-gray-800 rounded-lg p-4">
-        <div class="text-gray-400 text-sm mb-1">文件總數</div>
-        <div class="text-3xl font-bold text-blue-400" id="totalDocs">-</div>
+    <div class="bg-white rounded-lg p-4 shadow-md border border-gray-200">
+        <div class="text-gray-600 text-sm mb-1">文件總數</div>
+        <div class="text-3xl font-bold text-blue-600" id="totalDocs">-</div>
     </div>
-    <div class="bg-gray-800 rounded-lg p-4">
-        <div class="text-gray-400 text-sm mb-1">Chunk 總數</div>
-        <div class="text-3xl font-bold text-green-400" id="totalChunks">-</div>
+    <div class="bg-white rounded-lg p-4 shadow-md border border-gray-200">
+        <div class="text-gray-600 text-sm mb-1">Chunk 總數</div>
+        <div class="text-3xl font-bold text-green-600" id="totalChunks">-</div>
     </div>
-    <div class="bg-gray-800 rounded-lg p-4">
-        <div class="text-gray-400 text-sm mb-1">Embeddings</div>
-        <div class="text-3xl font-bold text-purple-400" id="totalEmbeddings">-</div>
+    <div class="bg-white rounded-lg p-4 shadow-md border border-gray-200">
+        <div class="text-gray-600 text-sm mb-1">Embeddings</div>
+        <div class="text-3xl font-bold text-purple-600" id="totalEmbeddings">-</div>
     </div>
-    <div class="bg-gray-800 rounded-lg p-4">
-        <div class="text-gray-400 text-sm mb-1">總大小</div>
-        <div class="text-2xl font-bold text-yellow-400" id="totalSize">-</div>
+    <div class="bg-white rounded-lg p-4 shadow-md border border-gray-200">
+        <div class="text-gray-600 text-sm mb-1">總大小</div>
+        <div class="text-2xl font-bold text-orange-600" id="totalSize">-</div>
     </div>
 </div>
 
 <!-- Upload Section -->
-<div class="bg-gray-800 rounded-lg p-6 mb-6">
-    <h3 class="text-xl font-semibold text-white mb-4">上傳新文件</h3>
+<div class="bg-white rounded-lg p-6 mb-6 shadow-md border border-gray-200">
+    <h3 class="text-xl font-semibold text-gray-800 mb-4">上傳新文件</h3>
     <div class="flex gap-4">
-        <input type="file" id="fileInput" accept=".pdf" multiple class="flex-1 bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
-        <button onclick="uploadFiles()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
+        <input type="file" id="fileInput" accept=".pdf" multiple class="flex-1 bg-white text-gray-800 rounded-lg px-4 py-2 border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+        <button onclick="uploadFiles()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition shadow-sm">
             上傳 PDF
         </button>
     </div>
@@ -41,24 +41,24 @@
 </div>
 
 <!-- Documents List -->
-<div class="bg-gray-800 rounded-lg p-6">
-    <h3 class="text-xl font-semibold text-white mb-4">已處理文件</h3>
+<div class="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+    <h3 class="text-xl font-semibold text-gray-800 mb-4">已處理文件</h3>
     <div class="overflow-x-auto">
         <table class="w-full text-left">
             <thead>
-                <tr class="border-b border-gray-700">
-                    <th class="py-3 px-4 text-gray-400 font-medium">文件名稱</th>
-                    <th class="py-3 px-4 text-gray-400 font-medium">頁數</th>
-                    <th class="py-3 px-4 text-gray-400 font-medium">Chunks</th>
-                    <th class="py-3 px-4 text-gray-400 font-medium">健康度</th>
-                    <th class="py-3 px-4 text-gray-400 font-medium">大小</th>
-                    <th class="py-3 px-4 text-gray-400 font-medium">上傳時間</th>
-                    <th class="py-3 px-4 text-gray-400 font-medium">操作</th>
+                <tr class="border-b-2 border-gray-200">
+                    <th class="py-3 px-4 text-gray-700 font-semibold">文件名稱</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">頁數</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">Chunks</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">健康度</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">大小</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">上傳時間</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">操作</th>
                 </tr>
             </thead>
             <tbody id="docsList">
                 <tr>
-                    <td colspan="7" class="text-gray-400 text-center py-8">載入中...</td>
+                    <td colspan="7" class="text-gray-500 text-center py-8">載入中...</td>
                 </tr>
             </tbody>
         </table>
@@ -67,13 +67,13 @@
 
 <!-- Modal for viewing chunks -->
 <div id="chunksModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+    <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto shadow-2xl">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-semibold text-white" id="modalTitle">Chunks 詳細資料</h3>
-            <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            <h3 class="text-xl font-semibold text-gray-800" id="modalTitle">Chunks 詳細資料</h3>
+            <button onclick="closeModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
         </div>
         <div id="chunksContent" class="space-y-3">
-            <div class="text-gray-400 text-center py-8">載入中...</div>
+            <div class="text-gray-500 text-center py-8">載入中...</div>
         </div>
     </div>
 </div>
@@ -105,28 +105,28 @@ async function loadStats() {
             docsList.innerHTML = data.documents.map(doc => {
                 const health = calculateHealth(doc);
                 return `
-                <tr class="border-b border-gray-700 hover:bg-gray-700/50 transition">
-                    <td class="py-4 px-4 text-white">${doc.title}</td>
-                    <td class="py-4 px-4 text-gray-300">${doc.pages}</td>
-                    <td class="py-4 px-4 text-gray-300">${doc.chunks_count}</td>
+                <tr class="border-b border-gray-200 hover:bg-blue-50 transition">
+                    <td class="py-4 px-4 text-gray-800 font-medium">${doc.title}</td>
+                    <td class="py-4 px-4 text-gray-600">${doc.pages}</td>
+                    <td class="py-4 px-4 text-gray-600">${doc.chunks_count}</td>
                     <td class="py-4 px-4">
                         <div class="flex items-center gap-2">
                             <span class="${health.color}">${health.icon}</span>
-                            <span class="${health.color} text-sm">${health.label}</span>
+                            <span class="${health.color} text-sm font-medium">${health.label}</span>
                             <span class="text-gray-500 text-xs">(${health.ratio}%)</span>
                         </div>
                     </td>
-                    <td class="py-4 px-4 text-gray-300">${formatBytes(doc.bytes)}</td>
-                    <td class="py-4 px-4 text-gray-400 text-sm">${new Date(doc.created_at).toLocaleString('zh-TW')}</td>
+                    <td class="py-4 px-4 text-gray-600">${formatBytes(doc.bytes)}</td>
+                    <td class="py-4 px-4 text-gray-500 text-sm">${new Date(doc.created_at).toLocaleString('zh-TW')}</td>
                     <td class="py-4 px-4">
                         <div class="flex gap-2">
-                            <button onclick="viewChunks(${doc.id}, '${doc.title}')" class="text-blue-400 hover:text-blue-300 px-2 py-1 rounded text-sm">
+                            <button onclick="viewChunks(${doc.id}, '${doc.title}')" class="text-blue-600 hover:text-blue-800 hover:bg-blue-100 px-3 py-1 rounded text-sm transition">
                                 查看
                             </button>
-                            <button onclick="rebuildDoc(${doc.id}, '${doc.title}')" class="text-yellow-400 hover:text-yellow-300 px-2 py-1 rounded text-sm">
+                            <button onclick="rebuildDoc(${doc.id}, '${doc.title}')" class="text-orange-600 hover:text-orange-800 hover:bg-orange-100 px-3 py-1 rounded text-sm transition">
                                 重建
                             </button>
-                            <button onclick="deleteDoc(${doc.id})" class="text-red-400 hover:text-red-300 px-2 py-1 rounded text-sm">
+                            <button onclick="deleteDoc(${doc.id})" class="text-red-600 hover:text-red-800 hover:bg-red-100 px-3 py-1 rounded text-sm transition">
                                 刪除
                             </button>
                         </div>
@@ -135,12 +135,12 @@ async function loadStats() {
             `}).join('');
         } else {
             console.log('No documents found in response');
-            docsList.innerHTML = '<tr><td colspan="7" class="text-gray-400 text-center py-8">尚無文件</td></tr>';
+            docsList.innerHTML = '<tr><td colspan="7" class="text-gray-500 text-center py-8">尚無文件</td></tr>';
         }
     } catch (error) {
         console.error('Failed to load stats:', error);
         console.error('Error stack:', error.stack);
-        document.getElementById('docsList').innerHTML = '<tr><td colspan="7" class="text-red-400 text-center py-8">載入失敗: ' + error.message + '</td></tr>';
+        document.getElementById('docsList').innerHTML = '<tr><td colspan="7" class="text-red-600 text-center py-8">載入失敗: ' + error.message + '</td></tr>';
         // Also update stats to show error
         document.getElementById('totalDocs').textContent = 'Error';
         document.getElementById('totalChunks').textContent = 'Error';
@@ -159,7 +159,7 @@ function calculateHealth(doc) {
         return {
             icon: '🔧',
             label: '需重建',
-            color: 'text-orange-400',
+            color: 'text-orange-600',
             ratio: '請點重建'
         };
     }
@@ -173,28 +173,28 @@ function calculateHealth(doc) {
         return {
             icon: '✅',
             label: '健康',
-            color: 'text-green-400',
+            color: 'text-green-600',
             ratio: percentage + '%'
         };
     } else if (ratio >= 0.85 && ratio < 0.95) {
         return {
             icon: '⚠️',
             label: '偏低',
-            color: 'text-yellow-400',
+            color: 'text-yellow-600',
             ratio: percentage + '%'
         };
     } else if (ratio > 1.05 && ratio <= 1.15) {
         return {
             icon: '⚠️',
             label: '偏高',
-            color: 'text-yellow-400',
+            color: 'text-yellow-600',
             ratio: percentage + '%'
         };
     } else {
         return {
             icon: '❌',
             label: '異常',
-            color: 'text-red-400',
+            color: 'text-red-600',
             ratio: percentage + '%'
         };
     }
@@ -213,7 +213,7 @@ async function uploadFiles() {
     const progressContainer = document.getElementById('uploadProgress');
 
     if (!input.files || input.files.length === 0) {
-        progressContainer.innerHTML = '<div class="text-red-400 text-sm">請選擇文件</div>';
+        progressContainer.innerHTML = '<div class="text-red-600 text-sm">請選擇文件</div>';
         return;
     }
 
@@ -228,13 +228,13 @@ async function uploadFiles() {
         // Create progress UI for this file
         const fileProgress = document.createElement('div');
         fileProgress.id = fileId;
-        fileProgress.className = 'bg-gray-700 rounded-lg p-3';
+        fileProgress.className = 'bg-gray-100 rounded-lg p-3 border border-gray-200';
         fileProgress.innerHTML = `
             <div class="flex justify-between items-center mb-2">
-                <span class="text-white text-sm">${file.name}</span>
-                <span class="text-gray-400 text-xs" id="${fileId}-status">等待中...</span>
+                <span class="text-gray-800 text-sm font-medium">${file.name}</span>
+                <span class="text-gray-500 text-xs" id="${fileId}-status">等待中...</span>
             </div>
-            <div class="w-full bg-gray-600 rounded-full h-2">
+            <div class="w-full bg-gray-300 rounded-full h-2">
                 <div id="${fileId}-bar" class="bg-blue-500 h-2 rounded-full transition-all" style="width: 0%"></div>
             </div>
         `;
@@ -255,20 +255,20 @@ async function uploadFiles() {
 
             if (response.ok) {
                 const data = await response.json();
-                document.getElementById(`${fileId}-status`).innerHTML = '<span class="text-green-400">✓ 完成 (' + data.chunks_created + ' chunks)</span>';
+                document.getElementById(`${fileId}-status`).innerHTML = '<span class="text-green-600 font-medium">✓ 完成 (' + data.chunks_created + ' chunks)</span>';
                 document.getElementById(`${fileId}-bar`).style.width = '100%';
                 document.getElementById(`${fileId}-bar`).classList.remove('bg-blue-500');
                 document.getElementById(`${fileId}-bar`).classList.add('bg-green-500');
             } else {
                 const error = await response.json();
                 const errorMsg = error.detail || '未知錯誤';
-                document.getElementById(`${fileId}-status`).innerHTML = `<span class="text-red-400">✗ ${errorMsg}</span>`;
+                document.getElementById(`${fileId}-status`).innerHTML = `<span class="text-red-600 font-medium">✗ ${errorMsg}</span>`;
                 document.getElementById(`${fileId}-bar`).classList.remove('bg-blue-500');
                 document.getElementById(`${fileId}-bar`).classList.add('bg-red-500');
                 console.error('Upload failed:', error);
             }
         } catch (error) {
-            document.getElementById(`${fileId}-status`).innerHTML = '<span class="text-red-400">✗ 錯誤</span>';
+            document.getElementById(`${fileId}-status`).innerHTML = '<span class="text-red-600 font-medium">✗ 錯誤</span>';
             document.getElementById(`${fileId}-bar`).classList.remove('bg-blue-500');
             document.getElementById(`${fileId}-bar`).classList.add('bg-red-500');
         }
@@ -278,7 +278,7 @@ async function uploadFiles() {
     input.value = '';
     setTimeout(() => {
         loadStats();
-        progressContainer.innerHTML = '<div class="text-green-400 text-sm">✓ 全部上傳完成</div>';
+        progressContainer.innerHTML = '<div class="text-green-600 text-sm font-medium">✓ 全部上傳完成</div>';
         setTimeout(() => {
             progressContainer.innerHTML = '';
         }, 3000);
@@ -360,20 +360,20 @@ async function viewChunks(docId, docTitle) {
 
         if (chunks && chunks.length > 0) {
             document.getElementById('chunksContent').innerHTML = chunks.map((chunk, idx) => `
-                <div class="bg-gray-700 rounded-lg p-4">
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-blue-400 font-mono text-sm">Chunk #${chunk.ordinal + 1}</span>
+                        <span class="text-blue-600 font-mono text-sm font-semibold">Chunk #${chunk.ordinal + 1}</span>
                         <span class="text-gray-500 text-xs">${chunk.text.length} 字元</span>
                     </div>
-                    <div class="text-gray-300 text-sm whitespace-pre-wrap">${chunk.text}</div>
+                    <div class="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">${chunk.text}</div>
                 </div>
             `).join('');
         } else {
-            document.getElementById('chunksContent').innerHTML = '<div class="text-gray-400 text-center py-8">此文件尚無 chunks</div>';
+            document.getElementById('chunksContent').innerHTML = '<div class="text-gray-500 text-center py-8">此文件尚無 chunks</div>';
         }
     } catch (error) {
         console.error('Failed to load chunks:', error);
-        document.getElementById('chunksContent').innerHTML = '<div class="text-red-400 text-center py-8">載入失敗</div>';
+        document.getElementById('chunksContent').innerHTML = '<div class="text-red-600 text-center py-8">載入失敗</div>';
     }
 }
 
