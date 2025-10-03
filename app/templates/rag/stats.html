@@ -51,8 +51,17 @@
 <script>
 async function loadStats() {
     try {
+        console.log('Fetching stats from /api/rag/stats/...');
         const response = await fetch('/api/rag/stats/');
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
         const data = await response.json();
+        console.log('Received data:', data);
+        console.log('Documents count:', data.documents ? data.documents.length : 0);
 
         document.getElementById('totalDocs').textContent = data.total_documents || 0;
         document.getElementById('totalChunks').textContent = data.total_chunks || 0;
@@ -62,6 +71,7 @@ async function loadStats() {
         // Display documents
         const docsList = document.getElementById('docsList');
         if (data.documents && data.documents.length > 0) {
+            console.log('Rendering', data.documents.length, 'documents');
             docsList.innerHTML = data.documents.map(doc => `
                 <div class="bg-gray-700 rounded-lg p-4 flex justify-between items-center hover:bg-gray-600 transition">
                     <div class="flex-1">
@@ -82,11 +92,18 @@ async function loadStats() {
                 </div>
             `).join('');
         } else {
+            console.log('No documents found in response');
             docsList.innerHTML = '<div class="text-gray-400 text-center py-8">尚無文件</div>';
         }
     } catch (error) {
         console.error('Failed to load stats:', error);
+        console.error('Error stack:', error.stack);
         document.getElementById('docsList').innerHTML = '<div class="text-red-400 text-center py-8">載入失敗: ' + error.message + '</div>';
+        // Also update stats to show error
+        document.getElementById('totalDocs').textContent = 'Error';
+        document.getElementById('totalChunks').textContent = 'Error';
+        document.getElementById('totalEmbeddings').textContent = 'Error';
+        document.getElementById('totalSize').textContent = 'Error';
     }
 }
 
