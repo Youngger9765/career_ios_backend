@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Documents - RAG Ops Console{% endblock %}
+
+{% block nav_title %}RAG Ops Console{% endblock %}
+
+{% block nav_items %}
+<a href="/rag/agents" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    Agents
+</a>
+<a href="/rag/documents" class="border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    Documents
+</a>
+<a href="/rag/upload" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    Upload
+</a>
+<a href="/rag/test" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    Test Bench
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">Documents</h2>
+
+    <!-- Search & Filter -->
+    <div class="bg-white shadow sm:rounded-lg p-4 mb-4">
+        <div class="flex gap-4">
+            <input type="text" id="searchQuery" placeholder="搜尋文件..."
+                class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            <button onclick="searchDocuments()" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                搜尋
+            </button>
+        </div>
+    </div>
+
+    <!-- Documents List -->
+    <div id="documentsList" class="bg-white shadow overflow-hidden sm:rounded-md">
+        <div class="p-6 text-center text-gray-500">載入中...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function loadDocuments(query = '') {
+    try {
+        const url = query ? `/api/rag/documents?q=${encodeURIComponent(query)}` : '/api/rag/documents';
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const documentsList = document.getElementById('documentsList');
+
+        if (data.documents && data.documents.length > 0) {
+            documentsList.innerHTML = `
+                <ul class="divide-y divide-gray-200">
+                    ${data.documents.map(doc => `
+                        <li class="p-4 hover:bg-gray-50">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-medium text-gray-900">${doc.title}</h3>
+                                    <div class="mt-2 flex items-center gap-4 text-sm text-gray-500">
+                                        <span>📄 ${doc.pages || 0} 頁</span>
+                                        <span>✂️ ${doc.chunks_count || 0} chunks</span>
+                                        <span>📦 ${(doc.bytes / 1024).toFixed(1)} KB</span>
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">
+                                        上傳於 ${new Date(doc.created_at).toLocaleDateString('zh-TW')}
+                                    </p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="reembed(${doc.id})" class="text-indigo-600 hover:text-indigo-900 text-sm">重新嵌入</button>
+                                    <button onclick="deleteDoc(${doc.id})" class="text-red-600 hover:text-red-900 text-sm">刪除</button>
+                                </div>
+                            </div>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+        } else {
+            documentsList.innerHTML = '<div class="p-6 text-center text-gray-500">尚無文件</div>';
+        }
+    } catch (error) {
+        document.getElementById('documentsList').innerHTML = `<div class="p-6 text-center text-red-500">載入失敗: ${error.message}</div>`;
+    }
+}
+
+function searchDocuments() {
+    const query = document.getElementById('searchQuery').value;
+    loadDocuments(query);
+}
+
+function reembed(id) {
+    if (!confirm('確定要重新嵌入此文件？')) return;
+
+    fetch(`/api/rag/documents/${id}/reembed`, { method: 'POST' })
+        .then(res => res.json())
+        .then(() => {
+            alert('重新嵌入任務已啟動！');
+            loadDocuments();
+        })
+        .catch(err => alert('操作失敗: ' + err.message));
+}
+
+function deleteDoc(id) {
+    if (!confirm('確定要刪除此文件？此操作無法復原！')) return;
+
+    fetch(`/api/rag/documents/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(() => {
+            alert('刪除成功！');
+            loadDocuments();
+        })
+        .catch(err => alert('刪除失敗: ' + err.message));
+}
+
+// Load documents on page load
+loadDocuments();
+</script>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends "rag/base_sidebar.html" %}
+
+{% block page_title %}資料庫統計{% endblock %}
+
+{% block page_content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-white mb-2">資料庫統計</h2>
+    <p class="text-gray-400">查看已 chunk 的資料列表</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-4 gap-4 mb-8">
+    <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-gray-400 text-sm mb-1">文件總數</div>
+        <div class="text-3xl font-bold text-blue-400" id="totalDocs">-</div>
+    </div>
+    <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-gray-400 text-sm mb-1">Chunk 總數</div>
+        <div class="text-3xl font-bold text-green-400" id="totalChunks">-</div>
+    </div>
+    <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-gray-400 text-sm mb-1">Embeddings</div>
+        <div class="text-3xl font-bold text-purple-400" id="totalEmbeddings">-</div>
+    </div>
+    <div class="bg-gray-800 rounded-lg p-4">
+        <div class="text-gray-400 text-sm mb-1">總大小</div>
+        <div class="text-2xl font-bold text-yellow-400" id="totalSize">-</div>
+    </div>
+</div>
+
+<!-- Upload Section -->
+<div class="bg-gray-800 rounded-lg p-6 mb-6">
+    <h3 class="text-xl font-semibold text-white mb-4">上傳新文件</h3>
+    <div class="flex gap-4">
+        <input type="file" id="fileInput" accept=".pdf" class="flex-1 bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+        <button onclick="uploadFile()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
+            上傳 PDF
+        </button>
+    </div>
+    <div id="uploadStatus" class="mt-4 text-sm"></div>
+</div>
+
+<!-- Documents List -->
+<div class="bg-gray-800 rounded-lg p-6">
+    <h3 class="text-xl font-semibold text-white mb-4">已處理文件</h3>
+    <div id="docsList" class="space-y-2">
+        <div class="text-gray-400 text-center py-8">載入中...</div>
+    </div>
+</div>
+
+<script>
+async function loadStats() {
+    try {
+        const response = await fetch('/api/rag/stats/');
+        const data = await response.json();
+
+        document.getElementById('totalDocs').textContent = data.total_documents || 0;
+        document.getElementById('totalChunks').textContent = data.total_chunks || 0;
+        document.getElementById('totalEmbeddings').textContent = data.total_embeddings || 0;
+        document.getElementById('totalSize').textContent = formatBytes(data.total_bytes || 0);
+
+        // Display documents
+        const docsList = document.getElementById('docsList');
+        if (data.documents && data.documents.length > 0) {
+            docsList.innerHTML = data.documents.map(doc => `
+                <div class="bg-gray-700 rounded-lg p-4 flex justify-between items-center hover:bg-gray-600 transition">
+                    <div class="flex-1">
+                        <h4 class="text-white font-medium">${doc.title}</h4>
+                        <div class="text-sm text-gray-400 mt-1">
+                            ${doc.pages} 頁 | ${doc.chunks_count} chunks | ${formatBytes(doc.bytes)}
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">${new Date(doc.created_at).toLocaleString('zh-TW')}</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="viewChunks(${doc.id})" class="text-blue-400 hover:text-blue-300 px-3 py-1 rounded">
+                            查看 Chunks
+                        </button>
+                        <button onclick="deleteDoc(${doc.id})" class="text-red-400 hover:text-red-300 px-3 py-1 rounded">
+                            刪除
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            docsList.innerHTML = '<div class="text-gray-400 text-center py-8">尚無文件</div>';
+        }
+    } catch (error) {
+        console.error('Failed to load stats:', error);
+        document.getElementById('docsList').innerHTML = '<div class="text-red-400 text-center py-8">載入失敗: ' + error.message + '</div>';
+    }
+}
+
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+async function uploadFile() {
+    const input = document.getElementById('fileInput');
+    const status = document.getElementById('uploadStatus');
+
+    if (!input.files || input.files.length === 0) {
+        status.innerHTML = '<span class="text-red-400">請選擇文件</span>';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', input.files[0]);
+
+    status.innerHTML = '<span class="text-blue-400">上傳中...</span>';
+
+    try {
+        const response = await fetch('/api/rag/ingest', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            status.innerHTML = '<span class="text-green-400">✓ 上傳成功！' + data.chunks + ' chunks 已建立</span>';
+            input.value = '';
+            setTimeout(() => {
+                loadStats();
+                status.innerHTML = '';
+            }, 2000);
+        } else {
+            const error = await response.json();
+            status.innerHTML = '<span class="text-red-400">上傳失敗: ' + (error.detail || 'Unknown error') + '</span>';
+        }
+    } catch (error) {
+        status.innerHTML = '<span class="text-red-400">上傳失敗: ' + error.message + '</span>';
+    }
+}
+
+async function deleteDoc(docId) {
+    if (!confirm('確定要刪除此文件及其所有 chunks 嗎？')) return;
+
+    try {
+        const response = await fetch(`/api/rag/stats/documents/${docId}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            alert('刪除成功');
+            loadStats();
+        } else {
+            alert('刪除失敗');
+        }
+    } catch (error) {
+        alert('刪除失敗: ' + error.message);
+    }
+}
+
+function viewChunks(docId) {
+    window.location.href = `/rag/chunks/${docId}`;
+}
+
+// Load on page load
+loadStats();
+</script>
+{% endblock %}

@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}RAG Console{% endblock %}
+
+{% block nav_title %}RAG Console{% endblock %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-900 text-white">
+    <!-- Sidebar -->
+    <div class="w-80 bg-gray-800 p-6 flex flex-col">
+        <h1 class="text-2xl font-bold mb-8">RAG Console</h1>
+
+        <!-- Navigation Items -->
+        <nav class="flex-1 space-y-2">
+            <!-- 首頁 -->
+            <a href="/rag" class="flex items-center px-4 py-3 rounded-lg bg-gray-700 text-white">
+                <span class="text-2xl mr-3">🏠</span>
+                <span class="text-lg">首頁</span>
+            </a>
+
+            <!-- 資料庫統計 -->
+            <a href="/rag/stats" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 transition">
+                <span class="text-2xl mr-3">📊</span>
+                <span class="text-lg">資料庫統計</span>
+            </a>
+
+            <!-- AI 對話 -->
+            <a href="/rag/chat" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-700 transition">
+                <span class="text-2xl mr-3">💬</span>
+                <span class="text-lg">AI 對話</span>
+            </a>
+
+            <!-- 個案報告生成 -->
+            <a href="/rag/report" class="flex items-center px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 transition">
+                <span class="text-2xl mr-3">📋</span>
+                <span class="text-lg">個案報告生成</span>
+            </a>
+        </nav>
+
+        <!-- Footer -->
+        <div class="mt-auto pt-4 border-t border-gray-700">
+            <p class="text-sm text-gray-400">RAG Agent Ops Console v1.0</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 p-8 overflow-auto">
+        <div class="max-w-4xl">
+            <h2 class="text-3xl font-bold mb-6">歡迎使用 RAG Console</h2>
+
+            <div class="grid grid-cols-2 gap-6 mb-8">
+                <!-- Stats Card 1 -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <div class="text-4xl mb-3">📚</div>
+                    <h3 class="text-xl font-semibold mb-2">文件數量</h3>
+                    <p class="text-3xl font-bold text-blue-400" id="docCount">-</p>
+                </div>
+
+                <!-- Stats Card 2 -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <div class="text-4xl mb-3">🧩</div>
+                    <h3 class="text-xl font-semibold mb-2">Chunk 數量</h3>
+                    <p class="text-3xl font-bold text-green-400" id="chunkCount">-</p>
+                </div>
+
+                <!-- Stats Card 3 -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <div class="text-4xl mb-3">🔢</div>
+                    <h3 class="text-xl font-semibold mb-2">Embeddings</h3>
+                    <p class="text-3xl font-bold text-purple-400" id="agentCount">-</p>
+                </div>
+
+                <!-- Stats Card 4 -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <div class="text-4xl mb-3">📊</div>
+                    <h3 class="text-xl font-semibold mb-2">資料來源</h3>
+                    <p class="text-3xl font-bold text-yellow-400" id="chatCount">-</p>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-xl font-semibold mb-4">快速操作</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <a href="/rag/stats" class="bg-blue-600 hover:bg-blue-700 rounded-lg p-4 text-center transition">
+                        <div class="text-2xl mb-2">📊</div>
+                        <div>查看資料庫</div>
+                    </a>
+                    <a href="/rag/chat" class="bg-green-600 hover:bg-green-700 rounded-lg p-4 text-center transition">
+                        <div class="text-2xl mb-2">💬</div>
+                        <div>開始對話</div>
+                    </a>
+                    <a href="/rag/report" class="bg-purple-600 hover:bg-purple-700 rounded-lg p-4 text-center transition">
+                        <div class="text-2xl mb-2">📋</div>
+                        <div>生成報告</div>
+                    </a>
+                    <a href="/rag/upload" class="bg-yellow-600 hover:bg-yellow-700 rounded-lg p-4 text-center transition">
+                        <div class="text-2xl mb-2">⬆️</div>
+                        <div>上傳文件</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load stats
+async function loadStats() {
+    try {
+        const response = await fetch('/api/rag/stats/');
+        const data = await response.json();
+
+        document.getElementById('docCount').textContent = data.total_documents || 0;
+        document.getElementById('chunkCount').textContent = data.total_chunks || 0;
+        document.getElementById('agentCount').textContent = data.total_embeddings || 0;
+        document.getElementById('chatCount').textContent = data.total_datasources || 0;
+    } catch (error) {
+        console.error('Failed to load stats:', error);
+        // Set to 0 on error
+        document.getElementById('docCount').textContent = '0';
+        document.getElementById('chunkCount').textContent = '0';
+        document.getElementById('agentCount').textContent = '0';
+        document.getElementById('chatCount').textContent = '0';
+    }
+}
+
+loadStats();
+</script>
+{% endblock %}

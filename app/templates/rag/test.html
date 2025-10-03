@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Test Bench - RAG Ops Console{% endblock %}
+
+{% block nav_title %}RAG Ops Console{% endblock %}
+
+{% block nav_items %}
+<a href="/rag/agents" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    Agents
+</a>
+<a href="/rag/documents" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    Documents
+</a>
+<a href="/rag/upload" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    Upload
+</a>
+<a href="/rag/test" class="border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    Test Bench
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">RAG 測試台</h2>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Left: Input -->
+        <div class="bg-white shadow sm:rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">測試問題</h3>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">選擇 Agent</label>
+                <select id="agentSelect" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="">載入中...</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">測試問題</label>
+                <textarea id="questionInput" rows="6" placeholder="輸入測試問題..."
+                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="testSearch()" class="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                    向量檢索
+                </button>
+                <button onclick="testChat()" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                    RAG 問答
+                </button>
+            </div>
+        </div>
+
+        <!-- Right: Output -->
+        <div class="bg-white shadow sm:rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">測試結果</h3>
+
+            <div id="testResult" class="space-y-4">
+                <div class="text-center text-gray-500 py-8">
+                    測試結果將顯示在這裡
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Load agents for selection
+async function loadAgents() {
+    try {
+        const response = await fetch('/api/rag/agents');
+        const data = await response.json();
+
+        const select = document.getElementById('agentSelect');
+
+        if (data.agents && data.agents.length > 0) {
+            select.innerHTML = '<option value="">選擇 Agent...</option>' +
+                data.agents.map(agent => `<option value="${agent.id}">${agent.name}</option>`).join('');
+        } else {
+            select.innerHTML = '<option value="">尚無可用 Agent</option>';
+        }
+    } catch (error) {
+        document.getElementById('agentSelect').innerHTML = '<option value="">載入失敗</option>';
+    }
+}
+
+async function testSearch() {
+    const question = document.getElementById('questionInput').value.trim();
+    if (!question) {
+        alert('請輸入問題');
+        return;
+    }
+
+    document.getElementById('testResult').innerHTML = '<div class="text-gray-500">檢索中...</div>';
+
+    try {
+        const response = await fetch('/api/rag/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: question, top_k: 5 })
+        });
+
+        const data = await response.json();
+
+        if (data.results && data.results.length > 0) {
+            document.getElementById('testResult').innerHTML = `
+                <div class="space-y-3">
+                    <p class="text-sm text-gray-600">找到 ${data.results.length} 個相關片段：</p>
+                    ${data.results.map((result, i) => `
+                        <div class="border border-gray-200 rounded p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-medium text-gray-500">#${i + 1}</span>
+                                <span class="text-xs text-indigo-600">相似度: ${(result.score * 100).toFixed(1)}%</span>
+                            </div>
+                            <p class="text-sm text-gray-700">${result.text}</p>
+                            <p class="text-xs text-gray-500 mt-2">來源: ${result.document}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            document.getElementById('testResult').innerHTML = '<div class="text-gray-500">沒有找到相關結果</div>';
+        }
+    } catch (error) {
+        document.getElementById('testResult').innerHTML = `<div class="text-red-500">檢索失敗: ${error.message}</div>`;
+    }
+}
+
+async function testChat() {
+    const agentId = document.getElementById('agentSelect').value;
+    const question = document.getElementById('questionInput').value.trim();
+
+    if (!agentId) {
+        alert('請選擇 Agent');
+        return;
+    }
+
+    if (!question) {
+        alert('請輸入問題');
+        return;
+    }
+
+    document.getElementById('testResult').innerHTML = '<div class="text-gray-500">生成中...</div>';
+
+    try {
+        const response = await fetch('/api/rag/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question, agent_id: agentId })
+        });
+
+        const data = await response.json();
+
+        document.getElementById('testResult').innerHTML = `
+            <div class="space-y-4">
+                <div class="bg-blue-50 border border-blue-200 rounded p-4">
+                    <h4 class="font-medium text-blue-900 mb-2">回答</h4>
+                    <p class="text-sm text-blue-800 whitespace-pre-wrap">${data.answer}</p>
+                </div>
+
+                ${data.citations && data.citations.length > 0 ? `
+                    <div>
+                        <h4 class="font-medium text-gray-900 mb-2">引用來源</h4>
+                        <div class="space-y-2">
+                            ${data.citations.map((citation, i) => `
+                                <div class="text-sm border-l-4 border-indigo-400 pl-3">
+                                    <p class="text-gray-700">[${i + 1}] ${citation.text}</p>
+                                    <p class="text-xs text-gray-500 mt-1">來源: ${citation.document}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    } catch (error) {
+        document.getElementById('testResult').innerHTML = `<div class="text-red-500">問答失敗: ${error.message}</div>`;
+    }
+}
+
+// Load agents on page load
+loadAgents();
+</script>
+{% endblock %}

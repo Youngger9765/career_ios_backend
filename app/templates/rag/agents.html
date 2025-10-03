@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Agents - RAG Ops Console{% endblock %}
+
+{% block nav_title %}RAG Ops Console{% endblock %}
+
+{% block nav_items %}
+<a href="/rag/agents" class="border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    Agents
+</a>
+<a href="/rag/documents" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    Documents
+</a>
+<a href="/rag/upload" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    Upload
+</a>
+<a href="/rag/test" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    Test Bench
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Agents</h2>
+        <button onclick="createAgent()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+            + 建立 Agent
+        </button>
+    </div>
+
+    <!-- Agents List -->
+    <div id="agentsList" class="bg-white shadow overflow-hidden sm:rounded-md">
+        <div class="p-6 text-center text-gray-500">載入中...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function loadAgents() {
+    try {
+        const response = await fetch('/api/rag/agents');
+        const data = await response.json();
+
+        const agentsList = document.getElementById('agentsList');
+
+        if (data.agents && data.agents.length > 0) {
+            agentsList.innerHTML = `
+                <ul class="divide-y divide-gray-200">
+                    ${data.agents.map(agent => `
+                        <li class="p-4 hover:bg-gray-50">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-medium text-gray-900">${agent.name}</h3>
+                                    <p class="text-sm text-gray-500">${agent.slug}</p>
+                                    <p class="text-sm text-gray-600 mt-1">${agent.description || ''}</p>
+                                    <div class="mt-2 flex items-center gap-2">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                            agent.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                        }">
+                                            ${agent.status}
+                                        </span>
+                                        <span class="text-xs text-gray-500">版本: ${agent.active_version_id || 'N/A'}</span>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="editAgent(${agent.id})" class="text-indigo-600 hover:text-indigo-900 text-sm">編輯</button>
+                                    <button onclick="viewVersions(${agent.id})" class="text-gray-600 hover:text-gray-900 text-sm">版本</button>
+                                </div>
+                            </div>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+        } else {
+            agentsList.innerHTML = '<div class="p-6 text-center text-gray-500">尚無 Agent</div>';
+        }
+    } catch (error) {
+        document.getElementById('agentsList').innerHTML = `<div class="p-6 text-center text-red-500">載入失敗: ${error.message}</div>`;
+    }
+}
+
+function createAgent() {
+    const name = prompt('Agent 名稱:');
+    if (!name) return;
+
+    const slug = prompt('Agent Slug (英文):');
+    if (!slug) return;
+
+    const description = prompt('描述 (選填):') || '';
+
+    fetch('/api/rag/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, slug, description })
+    })
+    .then(res => res.json())
+    .then(() => {
+        alert('建立成功！');
+        loadAgents();
+    })
+    .catch(err => alert('建立失敗: ' + err.message));
+}
+
+function editAgent(id) {
+    alert('編輯功能開發中... Agent ID: ' + id);
+}
+
+function viewVersions(id) {
+    alert('版本管理開發中... Agent ID: ' + id);
+}
+
+// Load agents on page load
+loadAgents();
+</script>
+{% endblock %}

@@ -1,0 +1,209 @@
+{% extends "rag/base_sidebar.html" %}
+
+{% block page_title %}個案報告生成{% endblock %}
+
+{% block page_content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-white mb-2">個案報告生成</h2>
+    <p class="text-gray-400">根據對話記錄與參考資料，自動生成職涯諮詢報告</p>
+</div>
+
+<!-- Report Form -->
+<div class="bg-gray-800 rounded-lg p-6 mb-6">
+    <h3 class="text-xl font-semibold text-white mb-4">個案資訊</h3>
+
+    <div class="space-y-4">
+        <div>
+            <label class="block text-gray-300 text-sm mb-2">個案編號</label>
+            <input
+                type="text"
+                id="caseId"
+                placeholder="例如：CASE-2025-001"
+                class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+            >
+        </div>
+
+        <div>
+            <label class="block text-gray-300 text-sm mb-2">諮詢主題</label>
+            <input
+                type="text"
+                id="topic"
+                placeholder="例如：職業興趣探索"
+                class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+            >
+        </div>
+
+        <div>
+            <label class="block text-gray-300 text-sm mb-2">對話內容 / 個案描述</label>
+            <textarea
+                id="content"
+                rows="8"
+                placeholder="輸入與個案的對話記錄或個案描述..."
+                class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+            ></textarea>
+        </div>
+
+        <div>
+            <label class="block text-gray-300 text-sm mb-2">報告類型</label>
+            <select id="reportType" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                <option value="assessment">評估報告</option>
+                <option value="consultation">諮詢報告</option>
+                <option value="follow-up">追蹤報告</option>
+                <option value="summary">總結報告</option>
+            </select>
+        </div>
+
+        <div class="flex gap-3">
+            <button
+                onclick="generateReport()"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition"
+            >
+                生成報告
+            </button>
+            <button
+                onclick="clearForm()"
+                class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition"
+            >
+                清空
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading -->
+<div id="loadingSection" class="hidden bg-gray-800 rounded-lg p-6 mb-6">
+    <div class="flex items-center gap-3">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+        <span class="text-white">正在生成報告...</span>
+    </div>
+</div>
+
+<!-- Report Output -->
+<div id="reportSection" class="hidden bg-gray-800 rounded-lg p-6">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-semibold text-white">生成的報告</h3>
+        <div class="flex gap-2">
+            <button
+                onclick="copyReport()"
+                class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition text-sm"
+            >
+                複製
+            </button>
+            <button
+                onclick="downloadReport()"
+                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition text-sm"
+            >
+                下載
+            </button>
+        </div>
+    </div>
+
+    <div id="reportContent" class="bg-gray-900 rounded-lg p-6 text-gray-200 whitespace-pre-wrap font-mono text-sm">
+    </div>
+
+    <!-- Sources -->
+    <div id="sourcesSection" class="mt-6 pt-6 border-t border-gray-700">
+        <h4 class="text-lg font-semibold text-white mb-3">參考資料來源</h4>
+        <div id="sourcesList" class="space-y-2">
+        </div>
+    </div>
+</div>
+
+<script>
+async function generateReport() {
+    const caseId = document.getElementById('caseId').value.trim();
+    const topic = document.getElementById('topic').value.trim();
+    const content = document.getElementById('content').value.trim();
+    const reportType = document.getElementById('reportType').value;
+
+    if (!caseId || !topic || !content) {
+        alert('請填寫所有必填欄位');
+        return;
+    }
+
+    // Show loading
+    document.getElementById('loadingSection').classList.remove('hidden');
+    document.getElementById('reportSection').classList.add('hidden');
+
+    try {
+        const response = await fetch('/api/rag/report/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                case_id: caseId,
+                topic: topic,
+                content: content,
+                report_type: reportType
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('報告生成失敗');
+        }
+
+        const data = await response.json();
+
+        // Display report
+        document.getElementById('reportContent').textContent = data.report;
+
+        // Display sources
+        const sourcesList = document.getElementById('sourcesList');
+        if (data.sources && data.sources.length > 0) {
+            sourcesList.innerHTML = data.sources.map(src => `
+                <div class="bg-gray-700 rounded-lg p-3">
+                    <div class="text-white font-medium">${src.document_title}</div>
+                    <div class="text-sm text-gray-400 mt-1">
+                        Chunk #${src.ordinal} | 相似度: ${(src.similarity * 100).toFixed(1)}%
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            sourcesList.innerHTML = '<div class="text-gray-400">無參考資料</div>';
+        }
+
+        // Show report section
+        document.getElementById('reportSection').classList.remove('hidden');
+
+    } catch (error) {
+        console.error('Report generation error:', error);
+        alert('報告生成失敗: ' + error.message);
+    } finally {
+        document.getElementById('loadingSection').classList.add('hidden');
+    }
+}
+
+function clearForm() {
+    document.getElementById('caseId').value = '';
+    document.getElementById('topic').value = '';
+    document.getElementById('content').value = '';
+    document.getElementById('reportType').value = 'assessment';
+    document.getElementById('reportSection').classList.add('hidden');
+}
+
+function copyReport() {
+    const reportContent = document.getElementById('reportContent').textContent;
+    navigator.clipboard.writeText(reportContent).then(() => {
+        alert('報告已複製到剪貼簿');
+    }).catch(err => {
+        console.error('複製失敗:', err);
+        alert('複製失敗');
+    });
+}
+
+function downloadReport() {
+    const reportContent = document.getElementById('reportContent').textContent;
+    const caseId = document.getElementById('caseId').value;
+    const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `report_${caseId}_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}
