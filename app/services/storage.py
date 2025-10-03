@@ -116,7 +116,3 @@ class StorageService:
             return response["signedURL"]
         except Exception as e:
             raise Exception(f"Failed to create signed URL: {str(e)}") from e
-
-
-# Singleton instance
-storage_service = StorageService()

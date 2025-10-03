@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.document import Chunk, Datasource, Document, Embedding
@@ -31,7 +31,7 @@ async def ingest_file(
     file: UploadFile = File(...),
     chunk_size: int = 400,
     overlap: int = 80,
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
     """
     Upload and process a PDF file:
@@ -79,7 +79,7 @@ async def ingest_file(
         # 3. Create datasource and document records
         datasource = Datasource(type="pdf", source_uri=storage_url)
         db.add(datasource)
-        await db.flush()
+        db.flush()
 
         document = Document(
             datasource_id=datasource.id,
@@ -89,7 +89,7 @@ async def ingest_file(
             meta_json=metadata,
         )
         db.add(document)
-        await db.flush()
+        db.flush()
 
         # 4. Chunk the text
         chunking_service = ChunkingService(chunk_size=chunk_size, overlap=overlap)
@@ -102,7 +102,7 @@ async def ingest_file(
             # Create chunk record
             chunk = Chunk(doc_id=document.id, ordinal=idx, text=chunk_text, meta_json={})
             db.add(chunk)
-            await db.flush()
+            db.flush()
 
             # Generate embedding
             embedding_vector = await openai_service.create_embedding(chunk_text)
@@ -111,7 +111,7 @@ async def ingest_file(
             embedding = Embedding(chunk_id=chunk.id, embedding=embedding_vector)
             db.add(embedding)
 
-        await db.commit()
+        db.commit()
 
         return IngestResponse(
             datasource_id=datasource.id,
@@ -124,8 +124,18 @@ async def ingest_file(
     except HTTPException:
         raise
     except Exception as e:
-        await db.rollback()
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}") from e
+
+
+# Also add a simpler endpoint for the frontend at /api/rag/ingest
+@router.post("", response_model=IngestResponse)
+async def ingest_file_simple(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Simplified upload endpoint for frontend compatibility"""
+    return await ingest_file(file=file, chunk_size=400, overlap=80, db=db)
 
 
 class ReprocessRequest(BaseModel):
@@ -143,7 +153,7 @@ class ReprocessResponse(BaseModel):
 
 @router.post("/reprocess/{doc_id}", response_model=ReprocessResponse)
 async def reprocess_document(
-    doc_id: int, request: ReprocessRequest, db: AsyncSession = Depends(get_db)
+    doc_id: int, request: ReprocessRequest, db: Session = Depends(get_db)
 ):
     """
     Reprocess an existing document with new chunking parameters
@@ -158,14 +168,14 @@ async def reprocess_document(
     """
     try:
         # 1. Get document
-        result = await db.execute(select(Document).where(Document.id == doc_id))
+        result = db.execute(select(Document).where(Document.id == doc_id))
         document = result.scalar_one_or_none()
 
         if not document:
             raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
 
         # Get datasource for storage URL
-        result = await db.execute(select(Datasource).where(Datasource.id == document.datasource_id))
+        result = db.execute(select(Datasource).where(Datasource.id == document.datasource_id))
         datasource = result.scalar_one_or_none()
 
         if not datasource or not datasource.source_uri:
@@ -187,12 +197,12 @@ async def reprocess_document(
         file_content = await storage_service.download_file(file_path)
 
         # 3. Count and delete old chunks
-        result = await db.execute(select(Chunk).where(Chunk.doc_id == doc_id))
+        result = db.execute(select(Chunk).where(Chunk.doc_id == doc_id))
         old_chunks = result.scalars().all()
         old_chunks_count = len(old_chunks)
 
-        await db.execute(delete(Chunk).where(Chunk.doc_id == doc_id))
-        await db.flush()
+        db.execute(delete(Chunk).where(Chunk.doc_id == doc_id))
+        db.flush()
 
         # 4. Extract text from PDF
         pdf_service = PDFService()
@@ -209,7 +219,7 @@ async def reprocess_document(
             # Create chunk record
             chunk = Chunk(doc_id=document.id, ordinal=idx, text=chunk_text, meta_json={})
             db.add(chunk)
-            await db.flush()
+            db.flush()
 
             # Generate embedding
             embedding_vector = await openai_service.create_embedding(chunk_text)
@@ -218,7 +228,7 @@ async def reprocess_document(
             embedding = Embedding(chunk_id=chunk.id, embedding=embedding_vector)
             db.add(embedding)
 
-        await db.commit()
+        db.commit()
 
         return ReprocessResponse(
             document_id=doc_id,
@@ -231,7 +241,7 @@ async def reprocess_document(
     except HTTPException:
         raise
     except Exception as e:
-        await db.rollback()
+        db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Failed to reprocess document: {str(e)}"
         ) from e

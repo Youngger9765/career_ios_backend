@@ -10,46 +10,35 @@
 
 <!-- Report Form -->
 <div class="bg-gray-800 rounded-lg p-6 mb-6">
-    <h3 class="text-xl font-semibold text-white mb-4">個案資訊</h3>
+    <h3 class="text-xl font-semibold text-white mb-4">逐字稿輸入</h3>
 
     <div class="space-y-4">
         <div>
-            <label class="block text-gray-300 text-sm mb-2">個案編號</label>
-            <input
-                type="text"
-                id="caseId"
-                placeholder="例如：CASE-2025-001"
-                class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
-            >
-        </div>
-
-        <div>
-            <label class="block text-gray-300 text-sm mb-2">諮詢主題</label>
-            <input
-                type="text"
-                id="topic"
-                placeholder="例如：職業興趣探索"
-                class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
-            >
-        </div>
-
-        <div>
-            <label class="block text-gray-300 text-sm mb-2">對話內容 / 個案描述</label>
+            <div class="flex justify-between items-center mb-2">
+                <label class="block text-gray-300 text-sm">晤談逐字稿</label>
+                <button
+                    onclick="loadSampleTranscript()"
+                    class="text-blue-400 hover:text-blue-300 text-xs underline"
+                >
+                    📝 載入範例逐字稿
+                </button>
+            </div>
             <textarea
-                id="content"
-                rows="8"
-                placeholder="輸入與個案的對話記錄或個案描述..."
-                class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
+                id="transcript"
+                rows="12"
+                placeholder="貼上晤談逐字稿內容，AI 會自動分析並生成個案報告..."
+                class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 font-mono text-sm"
             ></textarea>
+            <p class="text-gray-400 text-xs mt-2">💡 支援任何格式的對話記錄，AI 會自動識別說話者與關鍵資訊</p>
         </div>
 
         <div>
-            <label class="block text-gray-300 text-sm mb-2">報告類型</label>
-            <select id="reportType" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
-                <option value="assessment">評估報告</option>
-                <option value="consultation">諮詢報告</option>
-                <option value="follow-up">追蹤報告</option>
-                <option value="summary">總結報告</option>
+            <label class="block text-gray-300 text-sm mb-2">參與人數</label>
+            <select id="numParticipants" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                <option value="2">2人（諮詢師 + 個案）</option>
+                <option value="3">3人</option>
+                <option value="4">4人</option>
+                <option value="5">5人</option>
             </select>
         </div>
 
@@ -58,7 +47,7 @@
                 onclick="generateReport()"
                 class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition"
             >
-                生成報告
+                🤖 AI 生成報告
             </button>
             <button
                 onclick="clearForm()"
@@ -70,121 +59,247 @@
     </div>
 </div>
 
-<!-- Loading -->
-<div id="loadingSection" class="hidden bg-gray-800 rounded-lg p-6 mb-6">
-    <div class="flex items-center gap-3">
-        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-        <span class="text-white">正在生成報告...</span>
+<!-- Progress Section -->
+<div id="progressSection" class="hidden bg-gray-800 rounded-lg p-6 mb-6">
+    <h3 class="text-xl font-semibold text-white mb-4">生成進度</h3>
+    <div id="progressSteps" class="space-y-3">
+        <!-- Progress steps will be dynamically added here -->
     </div>
 </div>
 
 <!-- Report Output -->
-<div id="reportSection" class="hidden bg-gray-800 rounded-lg p-6">
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="text-xl font-semibold text-white">生成的報告</h3>
-        <div class="flex gap-2">
-            <button
-                onclick="copyReport()"
-                class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition text-sm"
-            >
-                複製
-            </button>
-            <button
-                onclick="downloadReport()"
-                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition text-sm"
-            >
-                下載
-            </button>
+<div id="reportSection" class="hidden space-y-6">
+    <!-- Client Info -->
+    <div class="bg-gray-800 rounded-lg p-6">
+        <h3 class="text-xl font-semibold text-white mb-4">個案基本資料</h3>
+        <div id="clientInfo" class="grid grid-cols-2 gap-4 text-sm">
+            <!-- Will be populated by JS -->
         </div>
     </div>
 
-    <div id="reportContent" class="bg-gray-900 rounded-lg p-6 text-gray-200 whitespace-pre-wrap font-mono text-sm">
+    <!-- Key Dialogues -->
+    <div class="bg-gray-800 rounded-lg p-6">
+        <h3 class="text-xl font-semibold text-white mb-4">關鍵對話摘錄</h3>
+        <div id="dialogueExcerpts" class="space-y-3">
+            <!-- Will be populated by JS -->
+        </div>
     </div>
 
-    <!-- Sources -->
-    <div id="sourcesSection" class="mt-6 pt-6 border-t border-gray-700">
-        <h4 class="text-lg font-semibold text-white mb-3">參考資料來源</h4>
-        <div id="sourcesList" class="space-y-2">
+    <!-- Report Content -->
+    <div class="bg-gray-800 rounded-lg p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-white">個案概念化</h3>
+            <div class="flex gap-2">
+                <button
+                    onclick="copyReport()"
+                    class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition text-sm"
+                >
+                    📋 複製
+                </button>
+                <button
+                    onclick="downloadReport()"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition text-sm"
+                >
+                    💾 下載
+                </button>
+            </div>
+        </div>
+        <div id="reportContent" class="bg-gray-900 rounded-lg p-6 text-gray-200 whitespace-pre-wrap leading-relaxed">
+        </div>
+    </div>
+
+    <!-- Theories -->
+    <div class="bg-gray-800 rounded-lg p-6">
+        <h3 class="text-xl font-semibold text-white mb-4">參考理論文獻</h3>
+        <div id="theoriesList" class="space-y-3">
+            <!-- Will be populated by JS -->
         </div>
     </div>
 </div>
 
 <script>
-async function generateReport() {
-    const caseId = document.getElementById('caseId').value.trim();
-    const topic = document.getElementById('topic').value.trim();
-    const content = document.getElementById('content').value.trim();
-    const reportType = document.getElementById('reportType').value;
+let reportData = null;
 
-    if (!caseId || !topic || !content) {
-        alert('請填寫所有必填欄位');
+async function loadSampleTranscript() {
+    try {
+        const response = await fetch('/static/sample_transcript.txt');
+        const text = await response.text();
+        document.getElementById('transcript').value = text;
+        alert('✅ 範例逐字稿已載入！');
+    } catch (error) {
+        console.error('Failed to load sample transcript:', error);
+        alert('❌ 無法載入範例逐字稿');
+    }
+}
+
+async function generateReport() {
+    const transcript = document.getElementById('transcript').value.trim();
+    const numParticipants = parseInt(document.getElementById('numParticipants').value);
+
+    if (!transcript) {
+        alert('請輸入晤談逐字稿');
         return;
     }
 
-    // Show loading
-    document.getElementById('loadingSection').classList.remove('hidden');
+    // Reset and show progress
+    document.getElementById('progressSection').classList.remove('hidden');
     document.getElementById('reportSection').classList.add('hidden');
+    document.getElementById('progressSteps').innerHTML = '';
 
     try {
-        const response = await fetch('/api/rag/report/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                case_id: caseId,
-                topic: topic,
-                content: content,
-                report_type: reportType
-            })
-        });
+        // Use EventSource for SSE streaming (agent decides top_k automatically)
+        const url = `/api/report/generate?transcript=${encodeURIComponent(transcript)}&num_participants=${numParticipants}`;
+        const eventSource = new EventSource(url);
 
-        if (!response.ok) {
-            throw new Error('報告生成失敗');
-        }
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
 
-        const data = await response.json();
+            if (data.status === 'error') {
+                alert('錯誤: ' + data.message);
+                eventSource.close();
+                return;
+            }
 
-        // Display report
-        document.getElementById('reportContent').textContent = data.report;
+            // Update progress
+            updateProgress(data);
 
-        // Display sources
-        const sourcesList = document.getElementById('sourcesList');
-        if (data.sources && data.sources.length > 0) {
-            sourcesList.innerHTML = data.sources.map(src => `
-                <div class="bg-gray-700 rounded-lg p-3">
-                    <div class="text-white font-medium">${src.document_title}</div>
-                    <div class="text-sm text-gray-400 mt-1">
-                        Chunk #${src.ordinal} | 相似度: ${(src.similarity * 100).toFixed(1)}%
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            sourcesList.innerHTML = '<div class="text-gray-400">無參考資料</div>';
-        }
+            // If final step completed
+            if (data.step === 5 && data.status === 'completed' && data.data?.report) {
+                reportData = data.data.report;
+                displayReport(reportData);
+                document.getElementById('reportSection').classList.remove('hidden');
+            }
 
-        // Show report section
-        document.getElementById('reportSection').classList.remove('hidden');
+            // Close on completion
+            if (data.step === 6 && data.status === 'completed') {
+                eventSource.close();
+            }
+        };
+
+        eventSource.onerror = function(error) {
+            console.error('EventSource error:', error);
+            alert('連線錯誤，請重試');
+            eventSource.close();
+            document.getElementById('progressSection').classList.add('hidden');
+        };
 
     } catch (error) {
         console.error('Report generation error:', error);
         alert('報告生成失敗: ' + error.message);
-    } finally {
-        document.getElementById('loadingSection').classList.add('hidden');
+        document.getElementById('progressSection').classList.add('hidden');
+    }
+}
+
+function updateProgress(data) {
+    const stepMessages = {
+        1: '分析逐字稿結構',
+        2: '識別關鍵議題',
+        3: '檢索相關理論',
+        4: '生成個案報告',
+        5: '提取關鍵對話',
+        6: '完成'
+    };
+
+    const progressSteps = document.getElementById('progressSteps');
+    let stepDiv = document.getElementById(`step-${data.step}`);
+
+    if (!stepDiv) {
+        stepDiv = document.createElement('div');
+        stepDiv.id = `step-${data.step}`;
+        stepDiv.className = 'flex items-center gap-3';
+        progressSteps.appendChild(stepDiv);
+    }
+
+    const icon = data.status === 'completed' ? '✅' :
+                 data.status === 'processing' ? '⏳' : '❌';
+
+    stepDiv.innerHTML = `
+        <span class="text-2xl">${icon}</span>
+        <div class="flex-1">
+            <div class="text-white font-medium">${stepMessages[data.step] || data.message}</div>
+            <div class="text-sm text-gray-400">${data.message}</div>
+        </div>
+    `;
+}
+
+function displayReport(report) {
+    // Client Info
+    const clientInfo = document.getElementById('clientInfo');
+    const info = report.client_info;
+    clientInfo.innerHTML = `
+        <div><span class="text-gray-400">姓名：</span><span class="text-white">${info.name}</span></div>
+        <div><span class="text-gray-400">性別：</span><span class="text-white">${info.gender}</span></div>
+        <div><span class="text-gray-400">年齡：</span><span class="text-white">${info.age}</span></div>
+        <div><span class="text-gray-400">職業/科系：</span><span class="text-white">${info.occupation}</span></div>
+        <div><span class="text-gray-400">學歷：</span><span class="text-white">${info.education}</span></div>
+        <div><span class="text-gray-400">現居地：</span><span class="text-white">${info.location}</span></div>
+        <div class="col-span-2"><span class="text-gray-400">家庭關係：</span><span class="text-white">${info.family_relations}</span></div>
+    `;
+
+    // Dialogue Excerpts
+    const dialogueExcerpts = document.getElementById('dialogueExcerpts');
+    if (report.dialogue_excerpts && report.dialogue_excerpts.length > 0) {
+        dialogueExcerpts.innerHTML = report.dialogue_excerpts.map(d => {
+            const speakerLabel = d.speaker === 'speaker1' ? '諮詢師' : '個案';
+            const bgColor = d.speaker === 'speaker1' ? 'bg-blue-900/30' : 'bg-green-900/30';
+            return `
+                <div class="${bgColor} rounded-lg p-3">
+                    <div class="text-xs text-gray-400 mb-1">${speakerLabel}</div>
+                    <div class="text-gray-200">${d.text}</div>
+                </div>
+            `;
+        }).join('');
+    } else {
+        dialogueExcerpts.innerHTML = '<div class="text-gray-400">無對話摘錄</div>';
+    }
+
+    // Report Content
+    document.getElementById('reportContent').textContent = report.conceptualization;
+
+    // Theories
+    const theoriesList = document.getElementById('theoriesList');
+    if (report.theories && report.theories.length > 0) {
+        theoriesList.innerHTML = report.theories.map((theory, idx) => `
+            <div class="bg-gray-700 rounded-lg p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-blue-400 font-mono text-sm">[${idx + 1}]</span>
+                    <span class="text-gray-400 text-xs">${(theory.score * 100).toFixed(1)}% 相似度</span>
+                </div>
+                <div class="text-white text-sm mb-2">${theory.document}</div>
+                <div class="text-gray-300 text-sm">${theory.text}</div>
+            </div>
+        `).join('');
+    } else {
+        theoriesList.innerHTML = '<div class="text-gray-400">無參考理論</div>';
     }
 }
 
 function clearForm() {
-    document.getElementById('caseId').value = '';
-    document.getElementById('topic').value = '';
-    document.getElementById('content').value = '';
-    document.getElementById('reportType').value = 'assessment';
+    document.getElementById('transcript').value = '';
+    document.getElementById('numParticipants').value = '2';
     document.getElementById('reportSection').classList.add('hidden');
+    document.getElementById('progressSection').classList.add('hidden');
+    reportData = null;
 }
 
 function copyReport() {
-    const reportContent = document.getElementById('reportContent').textContent;
-    navigator.clipboard.writeText(reportContent).then(() => {
+    if (!reportData) return;
+
+    const fullReport = `
+【個案基本資料】
+姓名：${reportData.client_info.name}
+性別：${reportData.client_info.gender}
+年齡：${reportData.client_info.age}
+職業/科系：${reportData.client_info.occupation}
+學歷：${reportData.client_info.education}
+現居地：${reportData.client_info.location}
+家庭關係：${reportData.client_info.family_relations}
+
+【個案概念化】
+${reportData.conceptualization}
+    `.trim();
+
+    navigator.clipboard.writeText(fullReport).then(() => {
         alert('報告已複製到剪貼簿');
     }).catch(err => {
         console.error('複製失敗:', err);
@@ -193,13 +308,30 @@ function copyReport() {
 }
 
 function downloadReport() {
-    const reportContent = document.getElementById('reportContent').textContent;
-    const caseId = document.getElementById('caseId').value;
-    const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+    if (!reportData) return;
+
+    const fullReport = `
+【個案基本資料】
+姓名：${reportData.client_info.name}
+性別：${reportData.client_info.gender}
+年齡：${reportData.client_info.age}
+職業/科系：${reportData.client_info.occupation}
+學歷：${reportData.client_info.education}
+現居地：${reportData.client_info.location}
+家庭關係：${reportData.client_info.family_relations}
+
+【個案概念化】
+${reportData.conceptualization}
+
+【參考理論】
+${reportData.theories.map((t, i) => `[${i+1}] ${t.document}\n${t.text}`).join('\n\n')}
+    `.trim();
+
+    const blob = new Blob([fullReport], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `report_${caseId}_${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `case_report_${new Date().toISOString().split('T')[0]}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

@@ -137,7 +137,7 @@ async function uploadFile() {
 
         if (response.ok) {
             const data = await response.json();
-            status.innerHTML = '<span class="text-green-400">✓ 上傳成功！' + data.chunks + ' chunks 已建立</span>';
+            status.innerHTML = '<span class="text-green-400">✓ 上傳成功！' + data.chunks_created + ' chunks 已建立</span>';
             input.value = '';
             setTimeout(() => {
                 loadStats();
