@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}報告管理 - 諮商前台{% endblock %}
+
+{% block nav_title %}諮商前台{% endblock %}
+
+{% block nav_items %}
+<a href="/console/cases" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    個案管理
+</a>
+<a href="/console/reports" class="border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    報告管理
+</a>
+<a href="/console/reminders" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    提醒事項
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">報告管理</h2>
+
+    <!-- Filter -->
+    <div class="bg-white shadow sm:rounded-lg p-4 mb-4">
+        <div class="flex gap-4">
+            <select id="statusFilter" onchange="loadReports()" class="rounded-md border-gray-300 shadow-sm">
+                <option value="">全部狀態</option>
+                <option value="draft">草稿</option>
+                <option value="pending_review">待審核</option>
+                <option value="approved">已通過</option>
+                <option value="rejected">已退回</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Reports List -->
+    <div id="reportsList" class="bg-white shadow overflow-hidden sm:rounded-md">
+        <div class="p-6 text-center text-gray-500">載入中...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const statusMap = {
+    'draft': { label: '草稿', class: 'bg-gray-100 text-gray-800' },
+    'pending_review': { label: '待審核', class: 'bg-yellow-100 text-yellow-800' },
+    'approved': { label: '已通過', class: 'bg-green-100 text-green-800' },
+    'rejected': { label: '已退回', class: 'bg-red-100 text-red-800' }
+};
+
+async function loadReports() {
+    const status = document.getElementById('statusFilter').value;
+    const url = status ? `/api/v1/reports?status=${status}` : '/api/v1/reports';
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const reportsList = document.getElementById('reportsList');
+
+        if (data && data.length > 0) {
+            reportsList.innerHTML = `
+                <ul class="divide-y divide-gray-200">
+                    ${data.map(r => {
+                        const statusInfo = statusMap[r.status] || { label: r.status, class: 'bg-gray-100 text-gray-800' };
+                        return `
+                            <li class="p-4 hover:bg-gray-50 cursor-pointer" onclick="viewReport('${r.id}')">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <h3 class="text-lg font-medium text-gray-900">報告 #${r.id.slice(0, 8)}</h3>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.class}">
+                                                ${statusInfo.label}
+                                            </span>
+                                        </div>
+                                        <p class="text-sm text-gray-500 mt-1">${r.summary || '個案報告'}</p>
+                                        <div class="mt-2 flex items-center gap-4 text-sm text-gray-400">
+                                            <span>版本 ${r.version || 1}</span>
+                                            <span>${new Date(r.created_at).toLocaleDateString('zh-TW')}</span>
+                                        </div>
+                                    </div>
+                                    ${r.status === 'pending_review' ? `
+                                        <div class="flex gap-2">
+                                            <button onclick="event.stopPropagation(); reviewReport('${r.id}', 'approve')"
+                                                class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+                                                通過
+                                            </button>
+                                            <button onclick="event.stopPropagation(); reviewReport('${r.id}', 'reject')"
+                                                class="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+                                                退回
+                                            </button>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </li>
+                        `;
+                    }).join('')}
+                </ul>
+            `;
+        } else {
+            reportsList.innerHTML = '<div class="p-6 text-center text-gray-500">尚無報告</div>';
+        }
+    } catch (error) {
+        document.getElementById('reportsList').innerHTML = `<div class="p-6 text-center text-red-500">載入失敗: ${error.message}</div>`;
+    }
+}
+
+function viewReport(reportId) {
+    window.location.href = `/console/reports/${reportId}`;
+}
+
+async function reviewReport(reportId, action) {
+    const notes = action === 'reject' ? prompt('退回原因:') : null;
+
+    try {
+        const url = `/api/v1/reports/${reportId}/review?action=${action}` + (notes ? `&review_notes=${encodeURIComponent(notes)}` : '');
+        const response = await fetch(url, { method: 'PATCH' });
+
+        if (response.ok) {
+            alert(action === 'approve' ? '已通過' : '已退回');
+            loadReports();
+        } else {
+            alert('操作失敗');
+        }
+    } catch (error) {
+        alert('操作失敗: ' + error.message);
+    }
+}
+
+// Load on page load
+loadReports();
+</script>
+{% endblock %}

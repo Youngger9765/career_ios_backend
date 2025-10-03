@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}諮商前台 - 職涯諮詢平台{% endblock %}
+
+{% block nav_title %}職涯諮詢平台{% endblock %}
+
+{% block nav_items %}
+<a href="/console/cases" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    個案管理
+</a>
+<a href="/console/reports" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    報告管理
+</a>
+<a href="/console/reminders" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+    提醒事項
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <div class="text-center mb-8">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">諮商管理後台</h2>
+        <p class="text-gray-600">管理個案、會談與報告</p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-8">
+        <!-- Cases Card -->
+        <a href="/console/cases" class="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition">
+            <div class="p-6">
+                <div class="text-3xl mb-3">👥</div>
+                <h3 class="text-lg font-medium text-gray-900">個案管理</h3>
+                <p class="mt-2 text-sm text-gray-500">管理來訪者與個案資料</p>
+            </div>
+        </a>
+
+        <!-- Sessions Card -->
+        <a href="/console/sessions" class="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition">
+            <div class="p-6">
+                <div class="text-3xl mb-3">💬</div>
+                <h3 class="text-lg font-medium text-gray-900">會談紀錄</h3>
+                <p class="mt-2 text-sm text-gray-500">查看會談與逐字稿</p>
+            </div>
+        </a>
+
+        <!-- Reports Card -->
+        <a href="/console/reports" class="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition">
+            <div class="p-6">
+                <div class="text-3xl mb-3">📋</div>
+                <h3 class="text-lg font-medium text-gray-900">報告管理</h3>
+                <p class="mt-2 text-sm text-gray-500">查看與審核報告</p>
+            </div>
+        </a>
+
+        <!-- Reminders Card -->
+        <a href="/console/reminders" class="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition">
+            <div class="p-6">
+                <div class="text-3xl mb-3">🔔</div>
+                <h3 class="text-lg font-medium text-gray-900">提醒事項</h3>
+                <p class="mt-2 text-sm text-gray-500">回訪提醒與追蹤</p>
+            </div>
+        </a>
+
+        <!-- Upload Audio Card -->
+        <a href="/console/upload" class="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition">
+            <div class="p-6">
+                <div class="text-3xl mb-3">🎤</div>
+                <h3 class="text-lg font-medium text-gray-900">上傳音訊</h3>
+                <p class="mt-2 text-sm text-gray-500">上傳會談錄音檔</p>
+            </div>
+        </a>
+
+        <!-- Generate Report Card -->
+        <a href="/console/generate-report" class="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition">
+            <div class="p-6">
+                <div class="text-3xl mb-3">✨</div>
+                <h3 class="text-lg font-medium text-gray-900">生成報告</h3>
+                <p class="mt-2 text-sm text-gray-500">AI 自動生成報告</p>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}
