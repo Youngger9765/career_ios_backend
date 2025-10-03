@@ -8,8 +8,9 @@
     <p class="text-gray-400">與 AI 對話，自動搜尋相關文件內容</p>
 </div>
 
+<div class="grid grid-cols-3 gap-6" style="height: calc(100vh - 200px);">
 <!-- Chat Container -->
-<div class="bg-gray-800 rounded-lg p-6 flex flex-col" style="height: calc(100vh - 200px);">
+<div class="col-span-2 bg-gray-800 rounded-lg p-6 flex flex-col">
     <!-- Messages Area -->
     <div id="chatMessages" class="flex-1 overflow-y-auto mb-4 space-y-4">
         <div class="text-gray-400 text-center py-8">
@@ -40,8 +41,131 @@
     </div>
 </div>
 
+<!-- Settings Panel -->
+<div class="bg-gray-800 rounded-lg p-6 overflow-y-auto">
+    <h3 class="text-lg font-semibold text-white mb-4">⚙️ 參數設定</h3>
+
+    <div class="space-y-4">
+        <!-- Top K -->
+        <div>
+            <label class="block text-gray-300 text-sm mb-2">
+                檢索文獻數量 (top_k)
+                <span class="text-gray-500 text-xs ml-1" id="topKValue">7</span>
+            </label>
+            <input
+                type="range"
+                id="topK"
+                min="1"
+                max="15"
+                value="7"
+                class="w-full"
+                oninput="document.getElementById('topKValue').textContent = this.value"
+            >
+            <p class="text-gray-500 text-xs mt-1">搜尋最相關的前 N 篇文獻</p>
+        </div>
+
+        <!-- Similarity Threshold -->
+        <div>
+            <label class="block text-gray-300 text-sm mb-2">
+                相似度門檻 (similarity_threshold)
+                <span class="text-gray-500 text-xs ml-1" id="similarityValue">0.35</span>
+            </label>
+            <input
+                type="range"
+                id="similarityThreshold"
+                min="0"
+                max="1"
+                step="0.05"
+                value="0.35"
+                class="w-full"
+                oninput="document.getElementById('similarityValue').textContent = parseFloat(this.value).toFixed(2)"
+            >
+            <p class="text-gray-500 text-xs mt-1">只使用相似度高於此值的文獻</p>
+        </div>
+
+        <!-- Temperature -->
+        <div>
+            <label class="block text-gray-300 text-sm mb-2">
+                創意度 (temperature)
+                <span class="text-gray-500 text-xs ml-1" id="temperatureValue">0.6</span>
+            </label>
+            <input
+                type="range"
+                id="temperature"
+                min="0"
+                max="1"
+                step="0.1"
+                value="0.6"
+                class="w-full"
+                oninput="document.getElementById('temperatureValue').textContent = parseFloat(this.value).toFixed(1)"
+            >
+            <p class="text-gray-500 text-xs mt-1">0=保守準確, 1=創意發散</p>
+        </div>
+
+        <!-- System Prompt -->
+        <div>
+            <label class="block text-gray-300 text-sm mb-2">系統指令 (System Prompt)</label>
+            <textarea
+                id="systemPrompt"
+                rows="8"
+                class="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 text-xs font-mono"
+                placeholder="輸入自訂系統指令..."
+            >你是一位專業的職涯諮詢助理。請根據提供的文本來回答問題。
+
+回答時請遵循：
+1. 主要根據文本內容並用 [1]、[2] 標註來源
+2. 保持專業、客觀且具同理心的語氣
+3. 如果文本中沒有相關資訊，請明確說明
+4. 適當引用關鍵概念、理論和最佳實踐
+5. 考慮個別差異和多元觀點
+6. 使用與問題相同的語言回答（繁體中文或英文）</textarea>
+            <button
+                onclick="resetSystemPrompt()"
+                class="mt-2 text-xs text-blue-400 hover:text-blue-300"
+            >
+                ↻ 重置為預設值
+            </button>
+        </div>
+
+        <!-- Reset All -->
+        <div class="pt-4 border-t border-gray-700">
+            <button
+                onclick="resetAllSettings()"
+                class="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition text-sm"
+            >
+                重置所有設定
+            </button>
+        </div>
+    </div>
+</div>
+</div>
+
 <script>
 let messageHistory = [];
+
+const DEFAULT_SYSTEM_PROMPT = `你是一位專業的職涯諮詢助理。請根據提供的文本來回答問題。
+
+回答時請遵循：
+1. 主要根據文本內容並用 [1]、[2] 標註來源
+2. 保持專業、客觀且具同理心的語氣
+3. 如果文本中沒有相關資訊，請明確說明
+4. 適當引用關鍵概念、理論和最佳實踐
+5. 考慮個別差異和多元觀點
+6. 使用與問題相同的語言回答（繁體中文或英文）`;
+
+function resetSystemPrompt() {
+    document.getElementById('systemPrompt').value = DEFAULT_SYSTEM_PROMPT;
+}
+
+function resetAllSettings() {
+    document.getElementById('topK').value = 7;
+    document.getElementById('topKValue').textContent = '7';
+    document.getElementById('similarityThreshold').value = 0.35;
+    document.getElementById('similarityValue').textContent = '0.35';
+    document.getElementById('temperature').value = 0.6;
+    document.getElementById('temperatureValue').textContent = '0.6';
+    resetSystemPrompt();
+}
 
 function addMessage(role, content, sources = []) {
     const messagesDiv = document.getElementById('chatMessages');
@@ -58,10 +182,10 @@ function addMessage(role, content, sources = []) {
     if (sources && sources.length > 0) {
         sourcesHtml = `
             <div class="mt-3 pt-3 border-t border-gray-600">
-                <div class="text-xs text-gray-400 mb-2">📚 參考來源：</div>
-                ${sources.map(src => `
+                <div class="text-xs text-gray-400 mb-2">📚 參考來源 (${sources.length})：</div>
+                ${sources.map((src, idx) => `
                     <div class="text-xs text-blue-400 mb-1">
-                        • ${src.document_title} (chunk #${src.ordinal}, 相似度: ${(src.similarity * 100).toFixed(1)}%)
+                        [${idx + 1}] ${src.document_title} (相似度: ${(src.similarity_score * 100).toFixed(1)}%)
                     </div>
                 `).join('')}
             </div>
@@ -102,15 +226,24 @@ async function sendMessage() {
     document.getElementById('loadingIndicator').classList.remove('hidden');
 
     try {
+        // Get settings from UI
+        const topK = parseInt(document.getElementById('topK').value);
+        const similarityThreshold = parseFloat(document.getElementById('similarityThreshold').value);
+        const temperature = parseFloat(document.getElementById('temperature').value);
+        const systemPrompt = document.getElementById('systemPrompt').value.trim() || null;
+
         // Call chat API
-        const response = await fetch('/api/rag/chat', {
+        const response = await fetch('/api/rag/chat/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                message: message,
-                history: messageHistory.slice(-10) // Last 10 messages for context
+                question: message,
+                top_k: topK,
+                similarity_threshold: similarityThreshold,
+                temperature: temperature,
+                system_prompt: systemPrompt
             })
         });
 
@@ -121,8 +254,8 @@ async function sendMessage() {
         const data = await response.json();
 
         // Add AI response
-        addMessage('assistant', data.response, data.sources || []);
-        messageHistory.push({ role: 'assistant', content: data.response });
+        addMessage('assistant', data.answer, data.citations || []);
+        messageHistory.push({ role: 'assistant', content: data.answer });
 
     } catch (error) {
         console.error('Chat error:', error);
