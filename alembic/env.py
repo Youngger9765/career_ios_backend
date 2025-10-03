@@ -25,6 +25,7 @@ from app.models.document import Document, Chunk, Embedding, Datasource
 from app.models.collection import Collection, CollectionItem
 from app.models.chat import ChatLog
 from app.models.pipeline import PipelineRun
+from app.models.evaluation import EvaluationExperiment, EvaluationResult, EvaluationTestSet, DocumentQualityMetric
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

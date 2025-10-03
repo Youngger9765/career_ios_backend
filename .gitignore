@@ -89,3 +89,10 @@ key.json
 *.pem
 service-account*.json
 gcp-*.json
+
+# MLflow
+mlruns/
+
+# Test scripts
+test_*.py
+fix_*.py

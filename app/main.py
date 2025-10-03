@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from app.core.config import settings
 from app.api import router as api_router
 # RAG API routers
-from app.api import rag_ingest, rag_search, rag_chat, rag_agents, rag_stats, rag_report
+from app.api import rag_ingest, rag_search, rag_chat, rag_agents, rag_stats, rag_report, rag_evaluation, rag_evaluation_ui, evaluation_testsets, rag_evaluation_testsets_ui
 
 # Templates
 templates = Jinja2Templates(directory="app/templates")
@@ -39,6 +39,10 @@ app.include_router(rag_chat.router)
 app.include_router(rag_agents.router)
 app.include_router(rag_stats.router)
 app.include_router(rag_report.router)
+app.include_router(rag_evaluation.router)
+app.include_router(rag_evaluation_ui.router)
+app.include_router(evaluation_testsets.router)
+app.include_router(rag_evaluation_testsets_ui.router)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

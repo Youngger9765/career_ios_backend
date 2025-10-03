@@ -86,6 +86,7 @@ async def ingest_file(
             title=file.filename,
             bytes=len(file_content),
             pages=metadata.get("pages", 0),
+            content=text,  # Save original extracted text
             text_length=len(text),  # Save original text length
             meta_json=metadata,
         )
@@ -218,7 +219,8 @@ async def reprocess_document(
         pdf_service = PDFService()
         text = pdf_service.extract_text(file_content)
 
-        # Update document with text_length
+        # Update document with content and text_length
+        document.content = text
         document.text_length = len(text)
         db.add(document)
         db.flush()

@@ -1,0 +1,1007 @@
+{% extends "rag/base_sidebar.html" %}
+
+{% block page_title %}RAG 評估系統{% endblock %}
+
+{% block page_content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">RAG 評估系統</h2>
+        <p class="text-gray-600">使用 RAGAS 評估 RAG 系統品質，追蹤實驗結果</p>
+    </div>
+    <button onclick="document.getElementById('quickStartGuide').classList.toggle('hidden')"
+            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2">
+        <span>🚀</span>
+        <span>快速開始</span>
+    </button>
+</div>
+
+<!-- Quick Start Guide -->
+<div id="quickStartGuide" class="hidden bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 mb-6 border border-blue-200">
+    <div class="flex items-start gap-4">
+        <div class="text-4xl">🚀</div>
+        <div class="flex-1">
+            <h3 class="text-xl font-bold text-gray-800 mb-3">開始你的第一個評估實驗</h3>
+            <p class="text-gray-700 mb-4">選擇一個實驗模板快速開始，或自行設定參數</p>
+
+            <div class="grid grid-cols-3 gap-4 mb-4">
+                <!-- Template 1: Baseline -->
+                <div class="bg-white rounded-lg p-4 border-2 border-blue-300 hover:border-blue-500 cursor-pointer transition" onclick="applyTemplate('baseline')">
+                    <div class="text-2xl mb-2">📊</div>
+                    <h4 class="font-bold text-gray-800 mb-2">基準測試</h4>
+                    <p class="text-sm text-gray-600 mb-3">使用預設參數建立基準線，評估當前系統表現</p>
+                    <div class="text-xs text-gray-500">
+                        <div>• Chunk: 400 / Overlap: 80</div>
+                        <div>• 使用所有啟用的測試集</div>
+                    </div>
+                </div>
+
+                <!-- Template 2: Chunking Optimization -->
+                <div class="bg-white rounded-lg p-4 border-2 border-green-300 hover:border-green-500 cursor-pointer transition" onclick="applyTemplate('chunking')">
+                    <div class="text-2xl mb-2">🔬</div>
+                    <h4 class="font-bold text-gray-800 mb-2">Chunk 大小優化</h4>
+                    <p class="text-sm text-gray-600 mb-3">比較不同 chunk size，找出最佳配置</p>
+                    <div class="text-xs text-gray-500">
+                        <div>• 測試 200/400/600/800</div>
+                        <div>• 自動批次建立實驗</div>
+                    </div>
+                </div>
+
+                <!-- Template 3: Advanced -->
+                <div class="bg-white rounded-lg p-4 border-2 border-purple-300 hover:border-purple-500 cursor-pointer transition" onclick="applyTemplate('advanced')">
+                    <div class="text-2xl mb-2">⚡</div>
+                    <h4 class="font-bold text-gray-800 mb-2">進階評估</h4>
+                    <p class="text-sm text-gray-600 mb-3">完整評估 chunking + retrieval + generation</p>
+                    <div class="text-xs text-gray-500">
+                        <div>• End-to-End 測試</div>
+                        <div>• 包含所有 RAGAS 指標</div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="closeQuickStart()" class="text-sm text-gray-500 hover:text-gray-700">略過，手動建立 →</button>
+        </div>
+    </div>
+</div>
+
+<!-- Smart Recommendations -->
+<div id="smartRecommendations" class="hidden bg-yellow-50 rounded-lg p-4 mb-6 border border-yellow-200">
+    <div class="flex items-start gap-3">
+        <div class="text-2xl">💡</div>
+        <div class="flex-1">
+            <h4 class="font-bold text-gray-800 mb-2">智能建議</h4>
+            <div id="recommendationsContent"></div>
+        </div>
+        <button onclick="document.getElementById('smartRecommendations').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">✕</button>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-lg p-4 shadow-md border border-gray-200">
+        <div class="text-gray-600 text-sm mb-1">總實驗數</div>
+        <div class="text-3xl font-bold text-blue-600" id="totalExperiments">-</div>
+    </div>
+    <div class="bg-white rounded-lg p-4 shadow-md border border-gray-200">
+        <div class="text-gray-600 text-sm mb-1">運行中</div>
+        <div class="text-3xl font-bold text-orange-600" id="runningExperiments">-</div>
+    </div>
+    <div class="bg-white rounded-lg p-4 shadow-md border border-gray-200">
+        <div class="text-gray-600 text-sm mb-1">已完成</div>
+        <div class="text-3xl font-bold text-green-600" id="completedExperiments">-</div>
+    </div>
+    <div class="bg-white rounded-lg p-4 shadow-md border border-gray-200">
+        <div class="text-gray-600 text-sm mb-1">失敗</div>
+        <div class="text-3xl font-bold text-red-600" id="failedExperiments">-</div>
+    </div>
+</div>
+
+<!-- Create Experiment Section -->
+<div class="bg-white rounded-lg p-6 mb-6 shadow-md border border-gray-200">
+    <h3 class="text-xl font-semibold text-gray-800 mb-4">建立新實驗</h3>
+
+    <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">實驗名稱</label>
+            <input type="text" id="expName" placeholder="例如: chunk_size_400_test"
+                class="w-full bg-white text-gray-800 rounded-lg px-4 py-2 border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+        </div>
+        <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">實驗類型</label>
+            <select id="expType" class="w-full bg-white text-gray-800 rounded-lg px-4 py-2 border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                <option value="chunking">Chunking</option>
+                <option value="retrieval">Retrieval</option>
+                <option value="generation">Generation</option>
+                <option value="end_to_end" selected>End-to-End</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4 mb-4">
+        <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">Chunking 方法</label>
+            <select id="chunkingMethod" class="w-full bg-white text-gray-800 rounded-lg px-4 py-2 border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                <option value="fixed">Fixed Size</option>
+                <option value="recursive">Recursive</option>
+                <option value="semantic">Semantic</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">Chunk Size</label>
+            <input type="number" id="chunkSize" value="400"
+                class="w-full bg-white text-gray-800 rounded-lg px-4 py-2 border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+        </div>
+        <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">Overlap</label>
+            <input type="number" id="chunkOverlap" value="80"
+                class="w-full bg-white text-gray-800 rounded-lg px-4 py-2 border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-medium mb-2">描述 (選填)</label>
+        <textarea id="expDescription" rows="2" placeholder="實驗目的和預期結果..."
+            class="w-full bg-white text-gray-800 rounded-lg px-4 py-2 border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"></textarea>
+    </div>
+
+    <button onclick="createExperiment()"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition shadow-sm">
+        建立實驗
+    </button>
+</div>
+
+<!-- Experiments List -->
+<div class="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-semibold text-gray-800">實驗列表</h3>
+        <div class="flex gap-2">
+            <select id="filterStatus" onchange="loadExperiments()"
+                class="bg-white text-gray-800 rounded-lg px-3 py-1 border border-gray-300 text-sm">
+                <option value="">所有狀態</option>
+                <option value="pending">待執行</option>
+                <option value="running">運行中</option>
+                <option value="completed">已完成</option>
+                <option value="failed">失敗</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="border-b-2 border-gray-200">
+                    <th class="py-3 px-4 text-gray-700 font-semibold">實驗名稱</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">類型</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">Chunking</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">狀態</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">Faithfulness</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">Answer Relevancy</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">建立時間</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">操作</th>
+                </tr>
+            </thead>
+            <tbody id="experimentsList">
+                <tr>
+                    <td colspan="8" class="text-gray-500 text-center py-8">載入中...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Run Evaluation Modal -->
+<div id="runModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto shadow-2xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800">執行評估</h3>
+            <button onclick="closeRunModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+        </div>
+
+        <div id="runModalContent">
+            <!-- Tab 選擇 -->
+            <div class="flex gap-4 mb-4 border-b">
+                <button onclick="switchTab('testset')" id="testsetTab"
+                    class="px-4 py-2 border-b-2 border-blue-500 text-blue-600 font-medium">
+                    選擇測試集
+                </button>
+                <button onclick="switchTab('manual')" id="manualTab"
+                    class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                    手動輸入
+                </button>
+            </div>
+
+            <!-- 測試集選擇 -->
+            <div id="testsetContent" class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-2">選擇測試集</label>
+                    <select id="testsetSelect" onchange="loadTestSetPreview()" class="w-full bg-white text-gray-800 rounded-lg px-4 py-2 border border-gray-300">
+                        <option value="">載入中...</option>
+                    </select>
+                </div>
+                <div id="testsetPreview" class="hidden bg-gray-50 rounded-lg p-4 border">
+                    <div class="text-sm text-gray-600 mb-2">測試集預覽：</div>
+                    <div id="testsetInfo" class="text-sm"></div>
+                </div>
+
+                <!-- Progress Indicator -->
+                <div id="evaluationProgress" class="hidden bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <div class="flex items-center gap-3">
+                        <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <div class="flex-1">
+                            <div id="progressText" class="text-sm font-medium text-blue-900"></div>
+                            <div id="progressDetail" class="text-xs text-blue-700 mt-1"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="runEvalBtn" onclick="runEvaluationWithTestSet()"
+                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    使用此測試集執行評估
+                </button>
+            </div>
+
+            <!-- 手動輸入 -->
+            <div id="manualContent" class="hidden space-y-4">
+                <p class="text-gray-600 mb-4">請輸入測試案例 (JSON 格式)：</p>
+                <textarea id="testCasesJson" rows="10"
+                    class="w-full bg-white text-gray-800 rounded-lg px-4 py-2 border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 font-mono text-sm"
+                    placeholder='[
+  {
+    "question": "如何準備軟體工程師面試？",
+    "answer": "...",
+    "contexts": ["...", "..."],
+    "ground_truth": "..." (optional)
+  }
+]'></textarea>
+
+                <div class="flex gap-3">
+                    <button onclick="runEvaluation()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition">
+                        執行評估
+                    </button>
+                    <button onclick="loadSampleTestCases()"
+                        class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition">
+                        載入範例
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Details Modal -->
+<div id="detailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[85vh] overflow-y-auto shadow-2xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800">實驗詳情</h3>
+            <button onclick="closeDetailsModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+        </div>
+
+        <div id="detailsContent" class="space-y-4">
+            <!-- Content will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+let currentExperimentId = null;
+let currentTestSets = [];
+let selectedTestSet = null;
+
+async function loadExperiments() {
+    try {
+        const statusFilter = document.getElementById('filterStatus').value;
+        const params = new URLSearchParams();
+        if (statusFilter) params.append('status', statusFilter);
+
+        const response = await fetch(`/api/rag/evaluation/experiments?${params}`);
+        if (!response.ok) throw new Error('Failed to load experiments');
+
+        const experiments = await response.json();
+
+        // Update stats
+        const total = experiments.length;
+        const running = experiments.filter(e => e.status === 'running').length;
+        const completed = experiments.filter(e => e.status === 'completed').length;
+        const failed = experiments.filter(e => e.status === 'failed').length;
+
+        document.getElementById('totalExperiments').textContent = total;
+        document.getElementById('runningExperiments').textContent = running;
+        document.getElementById('completedExperiments').textContent = completed;
+        document.getElementById('failedExperiments').textContent = failed;
+
+        // Display experiments
+        const list = document.getElementById('experimentsList');
+        if (experiments.length > 0) {
+            list.innerHTML = experiments.map(exp => {
+                const status = getStatusBadge(exp.status);
+                const chunking = exp.chunking_method ? `${exp.chunking_method} (${exp.chunk_size}/${exp.chunk_overlap})` : '-';
+
+                return `
+                <tr class="border-b border-gray-200 hover:bg-blue-50 transition">
+                    <td class="py-4 px-4">
+                        <div class="text-gray-800 font-medium">${exp.name}</div>
+                        ${exp.description ? `<div class="text-gray-500 text-xs mt-1">${exp.description}</div>` : ''}
+                    </td>
+                    <td class="py-4 px-4 text-gray-600">${exp.experiment_type}</td>
+                    <td class="py-4 px-4 text-gray-600 text-sm">${chunking}</td>
+                    <td class="py-4 px-4">${status}</td>
+                    <td class="py-4 px-4 text-gray-600">${formatMetric(exp.avg_faithfulness)}</td>
+                    <td class="py-4 px-4 text-gray-600">${formatMetric(exp.avg_answer_relevancy)}</td>
+                    <td class="py-4 px-4 text-gray-500 text-sm">${new Date(exp.created_at).toLocaleString('zh-TW')}</td>
+                    <td class="py-4 px-4">
+                        <div class="flex gap-2">
+                            ${exp.status === 'pending' || exp.status === 'failed' ? `
+                                <button onclick="openRunModal('${exp.id}')"
+                                    class="text-green-600 hover:text-green-800 hover:bg-green-100 px-3 py-1 rounded text-sm transition">
+                                    ${exp.status === 'failed' ? '重新執行' : '執行'}
+                                </button>
+                            ` : ''}
+                            ${exp.status === 'completed' || exp.status === 'failed' ? `
+                                <button onclick="viewExperimentDetails('${exp.id}')"
+                                    class="text-blue-600 hover:text-blue-800 hover:bg-blue-100 px-3 py-1 rounded text-sm transition">
+                                    查看
+                                </button>
+                            ` : ''}
+                            ${exp.mlflow_run_id && exp.status === 'completed' ? `
+                                <a href="http://127.0.0.1:5000/#/experiments/${exp.mlflow_experiment_id}/runs/${exp.mlflow_run_id}"
+                                    target="_blank"
+                                    class="text-purple-600 hover:text-purple-800 hover:bg-purple-100 px-3 py-1 rounded text-sm transition">
+                                    MLflow
+                                </a>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        } else {
+            list.innerHTML = '<tr><td colspan="8" class="text-gray-500 text-center py-8">尚無實驗</td></tr>';
+        }
+    } catch (error) {
+        console.error('Failed to load experiments:', error);
+        document.getElementById('experimentsList').innerHTML =
+            '<tr><td colspan="8" class="text-red-600 text-center py-8">載入失敗: ' + error.message + '</td></tr>';
+    }
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'pending': '<span class="px-2 py-1 bg-gray-200 text-gray-700 rounded-full text-xs font-medium">待執行</span>',
+        'running': '<span class="px-2 py-1 bg-orange-200 text-orange-700 rounded-full text-xs font-medium">運行中</span>',
+        'completed': '<span class="px-2 py-1 bg-green-200 text-green-700 rounded-full text-xs font-medium">已完成</span>',
+        'failed': '<span class="px-2 py-1 bg-red-200 text-red-700 rounded-full text-xs font-medium">失敗</span>'
+    };
+    return badges[status] || status;
+}
+
+function formatMetric(value) {
+    return value ? value.toFixed(3) : '-';
+}
+
+async function createExperiment() {
+    const name = document.getElementById('expName').value.trim();
+    const description = document.getElementById('expDescription').value.trim();
+    const experimentType = document.getElementById('expType').value;
+    const chunkingMethod = document.getElementById('chunkingMethod').value;
+    const chunkSize = parseInt(document.getElementById('chunkSize').value);
+    const chunkOverlap = parseInt(document.getElementById('chunkOverlap').value);
+
+    if (!name) {
+        alert('請輸入實驗名稱');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/rag/evaluation/experiments', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                name,
+                description: description || null,
+                experiment_type: experimentType,
+                chunking_method: chunkingMethod,
+                chunk_size: chunkSize,
+                chunk_overlap: chunkOverlap
+            })
+        });
+
+        if (response.ok) {
+            alert('實驗建立成功！');
+            // Clear form
+            document.getElementById('expName').value = '';
+            document.getElementById('expDescription').value = '';
+            loadExperiments();
+        } else {
+            const error = await response.json();
+            alert('建立失敗: ' + (error.detail || '未知錯誤'));
+        }
+    } catch (error) {
+        alert('建立失敗: ' + error.message);
+    }
+}
+
+function openRunModal(experimentId) {
+    currentExperimentId = experimentId;
+    document.getElementById('runModal').classList.remove('hidden');
+    // Load test sets when modal opens
+    loadTestSets();
+}
+
+function closeRunModal() {
+    document.getElementById('runModal').classList.add('hidden');
+    currentExperimentId = null;
+}
+
+function loadSampleTestCases() {
+    const sample = [
+        {
+            "question": "如何準備軟體工程師面試？",
+            "answer": "準備軟體工程師面試需要：1. 熟悉演算法和資料結構 2. 練習解題 3. 準備系統設計 4. 了解公司文化",
+            "contexts": [
+                "軟體工程師面試通常包含演算法題、系統設計和行為面試",
+                "LeetCode 是很好的練習平台"
+            ],
+            "ground_truth": "需要演算法、系統設計和行為面試的準備"
+        },
+        {
+            "question": "轉職到科技業需要什麼準備？",
+            "answer": "轉職到科技業需要：1. 學習程式語言 2. 建立作品集 3. 參加社群活動 4. 準備面試",
+            "contexts": [
+                "轉職者可以透過線上課程學習",
+                "GitHub 作品集很重要"
+            ]
+        }
+    ];
+    document.getElementById('testCasesJson').value = JSON.stringify(sample, null, 2);
+}
+
+async function runEvaluation() {
+    if (!currentExperimentId) return;
+
+    const testCasesText = document.getElementById('testCasesJson').value.trim();
+    if (!testCasesText) {
+        alert('請輸入測試案例');
+        return;
+    }
+
+    try {
+        const testCases = JSON.parse(testCasesText);
+
+        const response = await fetch(`/api/rag/evaluation/experiments/${currentExperimentId}/run`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                test_cases: testCases,
+                include_ground_truth: testCases.some(tc => tc.ground_truth)
+            })
+        });
+
+        if (response.ok) {
+            alert('評估執行成功！');
+            closeRunModal();
+            loadExperiments();
+        } else {
+            const error = await response.json();
+            alert('執行失敗: ' + (error.detail || '未知錯誤'));
+        }
+    } catch (error) {
+        alert('執行失敗: ' + error.message);
+    }
+}
+
+// Test Set Management
+function switchTab(tab) {
+    if (tab === 'testset') {
+        document.getElementById('testsetContent').classList.remove('hidden');
+        document.getElementById('manualContent').classList.add('hidden');
+        document.getElementById('testsetTab').className = 'px-4 py-2 border-b-2 border-blue-500 text-blue-600 font-medium';
+        document.getElementById('manualTab').className = 'px-4 py-2 text-gray-600 hover:text-gray-800';
+        loadTestSets();
+    } else {
+        document.getElementById('testsetContent').classList.add('hidden');
+        document.getElementById('manualContent').classList.remove('hidden');
+        document.getElementById('testsetTab').className = 'px-4 py-2 text-gray-600 hover:text-gray-800';
+        document.getElementById('manualTab').className = 'px-4 py-2 border-b-2 border-blue-500 text-blue-600 font-medium';
+    }
+}
+
+async function loadTestSets() {
+    const select = document.getElementById('testsetSelect');
+    select.innerHTML = '<option value="">載入中...</option>';
+
+    try {
+        const response = await fetch('/api/rag/evaluation/testsets/?is_active=true');
+        if (!response.ok) throw new Error('Failed to load test sets');
+
+        currentTestSets = await response.json();
+
+        if (currentTestSets.length > 0) {
+            select.innerHTML = '<option value="">選擇測試集...</option>' +
+                currentTestSets.map(ts => `<option value="${ts.id}">${ts.name} (${ts.total_cases} 個問題)</option>`).join('');
+        } else {
+            select.innerHTML = '<option value="">尚無測試集</option>';
+        }
+    } catch (error) {
+        console.error('Failed to load test sets:', error);
+        select.innerHTML = '<option value="">載入失敗</option>';
+    }
+}
+
+async function loadTestSetPreview() {
+    const testsetId = document.getElementById('testsetSelect').value;
+    if (!testsetId) {
+        document.getElementById('testsetPreview').classList.add('hidden');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/rag/evaluation/testsets/${testsetId}`);
+        if (!response.ok) throw new Error('Failed to load test set');
+
+        selectedTestSet = await response.json();
+        document.getElementById('testsetInfo').innerHTML = `
+            <div><strong>名稱：</strong>${selectedTestSet.name}</div>
+            <div><strong>描述：</strong>${selectedTestSet.description || '無'}</div>
+            <div><strong>問題數：</strong>${selectedTestSet.total_cases}</div>
+            <div><strong>分類：</strong>${selectedTestSet.category || '無'}</div>
+        `;
+        document.getElementById('testsetPreview').classList.remove('hidden');
+    } catch (error) {
+        console.error('Failed to load test set preview:', error);
+        alert('載入測試集失敗');
+    }
+}
+
+// Helper functions for progress indicator
+function showProgress(mainText, detailText = '') {
+    document.getElementById('evaluationProgress').classList.remove('hidden');
+    document.getElementById('progressText').textContent = mainText;
+    document.getElementById('progressDetail').textContent = detailText;
+    document.getElementById('runEvalBtn').disabled = true;
+}
+
+function hideProgress() {
+    document.getElementById('evaluationProgress').classList.add('hidden');
+    document.getElementById('runEvalBtn').disabled = false;
+}
+
+async function runEvaluationWithTestSet() {
+    if (!selectedTestSet) {
+        alert('請選擇測試集');
+        return;
+    }
+
+    // Step 1: Create experiment automatically
+    const expName = document.getElementById('expName').value.trim() ||
+                    `${selectedTestSet.name} - ${new Date().toISOString().split('T')[0]}`;
+    const expType = document.getElementById('expType').value;
+    const chunkingMethod = document.getElementById('chunkingMethod').value;
+    const chunkSize = parseInt(document.getElementById('chunkSize').value);
+    const chunkOverlap = parseInt(document.getElementById('chunkOverlap').value);
+    const expDescription = document.getElementById('expDescription').value.trim() ||
+                           `使用測試集「${selectedTestSet.name}」進行評估`;
+
+    try {
+        // Step 1: Generate answers for test cases if missing
+        const needsAnswers = selectedTestSet.test_cases.filter(tc => !tc.answer || tc.answer === '');
+
+        if (needsAnswers.length > 0) {
+            showProgress('正在透過 RAG 系統生成答案...', `準備生成 ${needsAnswers.length} 個答案`);
+        }
+
+        const testCasesWithAnswers = [];
+        let answersGenerated = 0;
+
+        for (const testCase of selectedTestSet.test_cases) {
+            if (!testCase.answer || testCase.answer === '') {
+                answersGenerated++;
+                showProgress(
+                    '正在透過 RAG 系統生成答案...',
+                    `正在生成答案 ${answersGenerated}/${needsAnswers.length}: ${testCase.question.substring(0, 40)}...`
+                );
+
+                // Generate answer via RAG API
+                const ragResponse = await fetch('/api/rag/chat/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        question: testCase.question,
+                        top_k: 3
+                    })
+                });
+
+                if (ragResponse.ok) {
+                    const ragResult = await ragResponse.json();
+                    testCasesWithAnswers.push({
+                        ...testCase,
+                        answer: ragResult.answer,
+                        contexts: testCase.contexts && testCase.contexts.length > 0
+                            ? testCase.contexts
+                            : ragResult.citations.map(c => c.text)
+                    });
+                } else {
+                    throw new Error(`生成答案失敗: ${testCase.question}`);
+                }
+            } else {
+                testCasesWithAnswers.push(testCase);
+            }
+        }
+
+        // Step 2: Create experiment
+        showProgress('正在建立實驗...', `實驗名稱: ${expName}`);
+
+        const createResponse = await fetch('/api/rag/evaluation/experiments', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                name: expName,
+                description: expDescription,
+                experiment_type: expType,
+                chunking_method: chunkingMethod,
+                chunk_size: chunkSize,
+                chunk_overlap: chunkOverlap
+            })
+        });
+
+        if (!createResponse.ok) {
+            const error = await createResponse.json();
+            hideProgress();
+            alert('建立實驗失敗: ' + (error.detail || '未知錯誤'));
+            return;
+        }
+
+        const experiment = await createResponse.json();
+        const experimentId = experiment.id;
+
+        // Step 3: Run evaluation with complete test cases
+        showProgress(
+            '正在執行 RAGAS 評估...',
+            `評估 ${testCasesWithAnswers.length} 個測試案例，這可能需要幾分鐘...`
+        );
+
+        const runResponse = await fetch(`/api/rag/evaluation/experiments/${experimentId}/run`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                test_cases: testCasesWithAnswers,
+                include_ground_truth: testCasesWithAnswers.some(tc => tc.ground_truth)
+            })
+        });
+
+        hideProgress();
+
+        if (runResponse.ok) {
+            const result = await runResponse.json();
+            alert(`✅ 評估執行成功！\n\n` +
+                  `- 總查詢數: ${result.total_queries}\n` +
+                  `- Faithfulness: ${result.avg_faithfulness?.toFixed(3) || 'N/A'}\n` +
+                  `- Answer Relevancy: ${result.avg_answer_relevancy?.toFixed(3) || 'N/A'}\n` +
+                  `- Context Recall: ${result.avg_context_recall?.toFixed(3) || 'N/A'}\n` +
+                  `- Context Precision: ${result.avg_context_precision?.toFixed(3) || 'N/A'}`
+            );
+            closeRunModal();
+            loadExperiments();
+        } else {
+            const error = await runResponse.json();
+            const errorMsg = typeof error.detail === 'string'
+                ? error.detail
+                : JSON.stringify(error.detail || error);
+            alert('執行失敗: ' + errorMsg);
+            console.error('Evaluation error:', error);
+        }
+    } catch (error) {
+        hideProgress();
+        alert('執行失敗: ' + error.message);
+        console.error('Evaluation exception:', error);
+    }
+}
+
+// ========== View Details Modal ==========
+
+async function viewExperimentDetails(experimentId) {
+    try {
+        // Fetch experiment details
+        const expResponse = await fetch(`/api/rag/evaluation/experiments/${experimentId}`);
+        if (!expResponse.ok) throw new Error('Failed to load experiment');
+        const experiment = await expResponse.json();
+
+        // Fetch results if completed or failed
+        let results = [];
+        if (experiment.status === 'completed' || experiment.status === 'failed') {
+            const resultsResponse = await fetch(`/api/rag/evaluation/experiments/${experimentId}/results`);
+            if (resultsResponse.ok) {
+                results = await resultsResponse.json();
+            }
+        }
+
+        // Build content
+        let content = `
+            <div class="bg-gray-50 rounded-lg p-4 border space-y-3">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <span class="text-sm text-gray-600">實驗名稱：</span>
+                        <span class="font-medium">${experiment.name}</span>
+                    </div>
+                    <div>
+                        <span class="text-sm text-gray-600">狀態：</span>
+                        ${getStatusBadge(experiment.status)}
+                    </div>
+                    <div>
+                        <span class="text-sm text-gray-600">類型：</span>
+                        <span>${experiment.experiment_type}</span>
+                    </div>
+                    <div>
+                        <span class="text-sm text-gray-600">Chunking：</span>
+                        <span>${experiment.chunking_method || 'N/A'} (${experiment.chunk_size}/${experiment.chunk_overlap})</span>
+                    </div>
+                </div>
+                ${experiment.description ? `
+                    <div>
+                        <span class="text-sm text-gray-600">描述：</span>
+                        <span>${experiment.description}</span>
+                    </div>
+                ` : ''}
+                ${experiment.status === 'failed' && experiment.error_message ? `
+                    <div class="bg-red-50 border border-red-200 rounded p-3">
+                        <div class="text-sm font-medium text-red-900 mb-1">錯誤訊息：</div>
+                        <div class="text-sm text-red-700 font-mono">${experiment.error_message}</div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        if (experiment.status === 'completed') {
+            content += `
+                <div class="bg-white rounded-lg border p-4">
+                    <h4 class="font-medium text-gray-800 mb-3">評估指標</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600">${formatMetric(experiment.avg_faithfulness)}</div>
+                            <div class="text-sm text-gray-600">Faithfulness</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600">${formatMetric(experiment.avg_answer_relevancy)}</div>
+                            <div class="text-sm text-gray-600">Answer Relevancy</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-600">${formatMetric(experiment.avg_context_recall)}</div>
+                            <div class="text-sm text-gray-600">Context Recall</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-orange-600">${formatMetric(experiment.avg_context_precision)}</div>
+                            <div class="text-sm text-gray-600">Context Precision</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (results.length > 0) {
+                content += `
+                    <div class="bg-white rounded-lg border p-4">
+                        <h4 class="font-medium text-gray-800 mb-3">詳細結果 (${results.length} 個測試案例)</h4>
+                        <div class="space-y-3 max-h-96 overflow-y-auto">
+                            ${results.map((result, idx) => `
+                                <div class="border rounded p-3 bg-gray-50">
+                                    <div class="font-medium text-gray-800 mb-2">${idx + 1}. ${result.question}</div>
+                                    <div class="grid grid-cols-4 gap-2 text-sm">
+                                        <div>
+                                            <span class="text-gray-600">Faithfulness:</span>
+                                            <span class="font-medium">${formatMetric(result.faithfulness)}</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">Relevancy:</span>
+                                            <span class="font-medium">${formatMetric(result.answer_relevancy)}</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">Recall:</span>
+                                            <span class="font-medium">${formatMetric(result.context_recall)}</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">Precision:</span>
+                                            <span class="font-medium">${formatMetric(result.context_precision)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        document.getElementById('detailsContent').innerHTML = content;
+        document.getElementById('detailsModal').classList.remove('hidden');
+
+    } catch (error) {
+        alert('載入詳情失敗: ' + error.message);
+        console.error('Failed to load details:', error);
+    }
+}
+
+function closeDetailsModal() {
+    document.getElementById('detailsModal').classList.add('hidden');
+}
+
+// ========== Smart Features ==========
+
+// Template configurations
+const templates = {
+    baseline: {
+        name: '基準測試',
+        description: '使用預設參數建立系統效能基準線',
+        type: 'end_to_end',
+        chunking_method: 'fixed',
+        chunk_size: 400,
+        chunk_overlap: 80
+    },
+    chunking: {
+        name: 'Chunk 大小優化',
+        description: '比較不同 chunk size 的效能',
+        experiments: [
+            { size: 200, overlap: 40 },
+            { size: 400, overlap: 80 },
+            { size: 600, overlap: 120 },
+            { size: 800, overlap: 160 }
+        ],
+        type: 'chunking',
+        chunking_method: 'fixed'
+    },
+    advanced: {
+        name: '進階端到端評估',
+        description: '完整評估 RAG 系統所有環節',
+        type: 'end_to_end',
+        chunking_method: 'semantic',
+        chunk_size: 400,
+        chunk_overlap: 80
+    }
+};
+
+function applyTemplate(templateName) {
+    const template = templates[templateName];
+
+    if (templateName === 'chunking') {
+        // Batch creation
+        if (confirm(`將建立 ${template.experiments.length} 個實驗，比較不同 chunk size。確定要繼續？`)) {
+            createChunkingExperiments(template);
+        }
+    } else {
+        // Single experiment
+        document.getElementById('expName').value = template.name + ' - ' + new Date().toISOString().split('T')[0];
+        document.getElementById('expType').value = template.type;
+        document.getElementById('chunkingMethod').value = template.chunking_method;
+        document.getElementById('chunkSize').value = template.chunk_size;
+        document.getElementById('chunkOverlap').value = template.chunk_overlap;
+        document.getElementById('expDescription').value = template.description;
+
+        closeQuickStart();
+        document.getElementById('expName').scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+async function createChunkingExperiments(template) {
+    try {
+        for (const config of template.experiments) {
+            const data = {
+                name: `Chunk ${config.size} - ${new Date().toISOString().split('T')[0]}`,
+                description: `測試 chunk size ${config.size} 與 overlap ${config.overlap} 的效能`,
+                experiment_type: template.type,
+                chunking_method: template.chunking_method,
+                chunk_size: config.size,
+                chunk_overlap: config.overlap
+            };
+
+            const response = await fetch('/api/rag/evaluation/experiments', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) throw new Error(`建立實驗失敗: Chunk ${config.size}`);
+        }
+
+        alert('成功建立 ' + template.experiments.length + ' 個實驗！');
+        closeQuickStart();
+        loadExperiments();
+    } catch (error) {
+        alert('批次建立失敗: ' + error.message);
+    }
+}
+
+function closeQuickStart() {
+    document.getElementById('quickStartGuide').classList.add('hidden');
+}
+
+// Smart recommendations based on existing experiments
+async function analyzeAndRecommend() {
+    try {
+        const response = await fetch('/api/rag/evaluation/experiments');
+        const experiments = await response.json();
+
+        if (experiments.length === 0) return;
+
+        const completed = experiments.filter(e => e.status === 'completed');
+        if (completed.length === 0) return;
+
+        const recommendations = [];
+
+        // Check if baseline exists
+        const hasBaseline = completed.some(e => e.name.includes('基準') || e.name.includes('Baseline'));
+        if (!hasBaseline) {
+            recommendations.push({
+                icon: '📊',
+                title: '建立基準線',
+                description: '尚未建立效能基準線，建議先執行基準測試作為參考'
+            });
+        }
+
+        // Check chunk size variety
+        const chunkSizes = [...new Set(completed.map(e => e.chunk_size).filter(Boolean))];
+        if (chunkSizes.length < 3) {
+            recommendations.push({
+                icon: '🔬',
+                title: 'Chunk 大小優化',
+                description: '目前只測試過 ' + chunkSizes.length + ' 種 chunk size，建議測試更多配置'
+            });
+        }
+
+        // Check for low performance
+        const avgFaithfulness = completed.reduce((sum, e) => sum + (e.avg_faithfulness || 0), 0) / completed.length;
+        if (avgFaithfulness < 0.7) {
+            recommendations.push({
+                icon: '⚠️',
+                title: '效能偏低',
+                description: `平均 Faithfulness 只有 ${avgFaithfulness.toFixed(2)}，建議調整 chunking 策略或檢索參數`
+            });
+        }
+
+        // Check for recent failures
+        const recentFailed = experiments.filter(e => e.status === 'failed').slice(-3);
+        if (recentFailed.length >= 2) {
+            recommendations.push({
+                icon: '🔴',
+                title: '多次實驗失敗',
+                description: '最近有多個實驗失敗，請檢查測試集格式和系統配置'
+            });
+        }
+
+        // Display recommendations
+        if (recommendations.length > 0) {
+            const content = recommendations.map(rec => `
+                <div class="flex items-start gap-3 mb-3 last:mb-0">
+                    <div class="text-xl">${rec.icon}</div>
+                    <div>
+                        <div class="font-medium text-gray-800">${rec.title}</div>
+                        <div class="text-sm text-gray-600">${rec.description}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('recommendationsContent').innerHTML = content;
+            document.getElementById('smartRecommendations').classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('分析失敗:', error);
+    }
+}
+
+// Enhanced loadExperiments with smart recommendations
+const originalLoadExperiments = loadExperiments;
+loadExperiments = async function() {
+    await originalLoadExperiments();
+
+    // Always analyze and show recommendations if there are completed experiments
+    const response = await fetch('/api/rag/evaluation/experiments');
+    const experiments = await response.json();
+
+    if (experiments.length > 0) {
+        analyzeAndRecommend();
+    }
+};
+
+// Load on page load
+loadExperiments();
+</script>
+{% endblock %}
