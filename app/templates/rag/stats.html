@@ -32,19 +32,48 @@
 <div class="bg-gray-800 rounded-lg p-6 mb-6">
     <h3 class="text-xl font-semibold text-white mb-4">上傳新文件</h3>
     <div class="flex gap-4">
-        <input type="file" id="fileInput" accept=".pdf" class="flex-1 bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
-        <button onclick="uploadFile()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
+        <input type="file" id="fileInput" accept=".pdf" multiple class="flex-1 bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+        <button onclick="uploadFiles()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
             上傳 PDF
         </button>
     </div>
-    <div id="uploadStatus" class="mt-4 text-sm"></div>
+    <div id="uploadProgress" class="mt-4 space-y-2"></div>
 </div>
 
 <!-- Documents List -->
 <div class="bg-gray-800 rounded-lg p-6">
     <h3 class="text-xl font-semibold text-white mb-4">已處理文件</h3>
-    <div id="docsList" class="space-y-2">
-        <div class="text-gray-400 text-center py-8">載入中...</div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="border-b border-gray-700">
+                    <th class="py-3 px-4 text-gray-400 font-medium">文件名稱</th>
+                    <th class="py-3 px-4 text-gray-400 font-medium">頁數</th>
+                    <th class="py-3 px-4 text-gray-400 font-medium">Chunks</th>
+                    <th class="py-3 px-4 text-gray-400 font-medium">大小</th>
+                    <th class="py-3 px-4 text-gray-400 font-medium">上傳時間</th>
+                    <th class="py-3 px-4 text-gray-400 font-medium">操作</th>
+                </tr>
+            </thead>
+            <tbody id="docsList">
+                <tr>
+                    <td colspan="6" class="text-gray-400 text-center py-8">載入中...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal for viewing chunks -->
+<div id="chunksModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-white" id="modalTitle">Chunks 詳細資料</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div id="chunksContent" class="space-y-3">
+            <div class="text-gray-400 text-center py-8">載入中...</div>
+        </div>
     </div>
 </div>
 
@@ -73,32 +102,32 @@ async function loadStats() {
         if (data.documents && data.documents.length > 0) {
             console.log('Rendering', data.documents.length, 'documents');
             docsList.innerHTML = data.documents.map(doc => `
-                <div class="bg-gray-700 rounded-lg p-4 flex justify-between items-center hover:bg-gray-600 transition">
-                    <div class="flex-1">
-                        <h4 class="text-white font-medium">${doc.title}</h4>
-                        <div class="text-sm text-gray-400 mt-1">
-                            ${doc.pages} 頁 | ${doc.chunks_count} chunks | ${formatBytes(doc.bytes)}
+                <tr class="border-b border-gray-700 hover:bg-gray-700/50 transition">
+                    <td class="py-4 px-4 text-white">${doc.title}</td>
+                    <td class="py-4 px-4 text-gray-300">${doc.pages}</td>
+                    <td class="py-4 px-4 text-gray-300">${doc.chunks_count}</td>
+                    <td class="py-4 px-4 text-gray-300">${formatBytes(doc.bytes)}</td>
+                    <td class="py-4 px-4 text-gray-400 text-sm">${new Date(doc.created_at).toLocaleString('zh-TW')}</td>
+                    <td class="py-4 px-4">
+                        <div class="flex gap-2">
+                            <button onclick="viewChunks(${doc.id}, '${doc.title}')" class="text-blue-400 hover:text-blue-300 px-2 py-1 rounded text-sm">
+                                查看
+                            </button>
+                            <button onclick="deleteDoc(${doc.id})" class="text-red-400 hover:text-red-300 px-2 py-1 rounded text-sm">
+                                刪除
+                            </button>
                         </div>
-                        <div class="text-xs text-gray-500 mt-1">${new Date(doc.created_at).toLocaleString('zh-TW')}</div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="viewChunks(${doc.id})" class="text-blue-400 hover:text-blue-300 px-3 py-1 rounded">
-                            查看 Chunks
-                        </button>
-                        <button onclick="deleteDoc(${doc.id})" class="text-red-400 hover:text-red-300 px-3 py-1 rounded">
-                            刪除
-                        </button>
-                    </div>
-                </div>
+                    </td>
+                </tr>
             `).join('');
         } else {
             console.log('No documents found in response');
-            docsList.innerHTML = '<div class="text-gray-400 text-center py-8">尚無文件</div>';
+            docsList.innerHTML = '<tr><td colspan="6" class="text-gray-400 text-center py-8">尚無文件</td></tr>';
         }
     } catch (error) {
         console.error('Failed to load stats:', error);
         console.error('Error stack:', error.stack);
-        document.getElementById('docsList').innerHTML = '<div class="text-red-400 text-center py-8">載入失敗: ' + error.message + '</div>';
+        document.getElementById('docsList').innerHTML = '<tr><td colspan="6" class="text-red-400 text-center py-8">載入失敗: ' + error.message + '</td></tr>';
         // Also update stats to show error
         document.getElementById('totalDocs').textContent = 'Error';
         document.getElementById('totalChunks').textContent = 'Error';
@@ -115,41 +144,81 @@ function formatBytes(bytes) {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
-async function uploadFile() {
+async function uploadFiles() {
     const input = document.getElementById('fileInput');
-    const status = document.getElementById('uploadStatus');
+    const progressContainer = document.getElementById('uploadProgress');
 
     if (!input.files || input.files.length === 0) {
-        status.innerHTML = '<span class="text-red-400">請選擇文件</span>';
+        progressContainer.innerHTML = '<div class="text-red-400 text-sm">請選擇文件</div>';
         return;
     }
 
-    const formData = new FormData();
-    formData.append('file', input.files[0]);
+    const files = Array.from(input.files);
+    progressContainer.innerHTML = '';
 
-    status.innerHTML = '<span class="text-blue-400">上傳中...</span>';
+    // Upload files sequentially to avoid overwhelming the server
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileId = `file-${i}`;
 
-    try {
-        const response = await fetch('/api/rag/ingest', {
-            method: 'POST',
-            body: formData
-        });
+        // Create progress UI for this file
+        const fileProgress = document.createElement('div');
+        fileProgress.id = fileId;
+        fileProgress.className = 'bg-gray-700 rounded-lg p-3';
+        fileProgress.innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-white text-sm">${file.name}</span>
+                <span class="text-gray-400 text-xs" id="${fileId}-status">等待中...</span>
+            </div>
+            <div class="w-full bg-gray-600 rounded-full h-2">
+                <div id="${fileId}-bar" class="bg-blue-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+            </div>
+        `;
+        progressContainer.appendChild(fileProgress);
 
-        if (response.ok) {
-            const data = await response.json();
-            status.innerHTML = '<span class="text-green-400">✓ 上傳成功！' + data.chunks_created + ' chunks 已建立</span>';
-            input.value = '';
-            setTimeout(() => {
-                loadStats();
-                status.innerHTML = '';
-            }, 2000);
-        } else {
-            const error = await response.json();
-            status.innerHTML = '<span class="text-red-400">上傳失敗: ' + (error.detail || 'Unknown error') + '</span>';
+        try {
+            // Update status
+            document.getElementById(`${fileId}-status`).textContent = '上傳中...';
+            document.getElementById(`${fileId}-bar`).style.width = '30%';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch('/api/rag/ingest', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById(`${fileId}-status`).innerHTML = '<span class="text-green-400">✓ 完成 (' + data.chunks_created + ' chunks)</span>';
+                document.getElementById(`${fileId}-bar`).style.width = '100%';
+                document.getElementById(`${fileId}-bar`).classList.remove('bg-blue-500');
+                document.getElementById(`${fileId}-bar`).classList.add('bg-green-500');
+            } else {
+                const error = await response.json();
+                const errorMsg = error.detail || '未知錯誤';
+                document.getElementById(`${fileId}-status`).innerHTML = `<span class="text-red-400">✗ ${errorMsg}</span>`;
+                document.getElementById(`${fileId}-bar`).classList.remove('bg-blue-500');
+                document.getElementById(`${fileId}-bar`).classList.add('bg-red-500');
+                console.error('Upload failed:', error);
+            }
+        } catch (error) {
+            document.getElementById(`${fileId}-status`).innerHTML = '<span class="text-red-400">✗ 錯誤</span>';
+            document.getElementById(`${fileId}-bar`).classList.remove('bg-blue-500');
+            document.getElementById(`${fileId}-bar`).classList.add('bg-red-500');
         }
-    } catch (error) {
-        status.innerHTML = '<span class="text-red-400">上傳失敗: ' + error.message + '</span>';
     }
+
+    // Clear input and reload stats after all uploads
+    input.value = '';
+    setTimeout(() => {
+        loadStats();
+        progressContainer.innerHTML = '<div class="text-green-400 text-sm">✓ 全部上傳完成</div>';
+        setTimeout(() => {
+            progressContainer.innerHTML = '';
+        }, 3000);
+    }, 1000);
 }
 
 async function deleteDoc(docId) {
@@ -171,8 +240,41 @@ async function deleteDoc(docId) {
     }
 }
 
-function viewChunks(docId) {
-    window.location.href = `/rag/chunks/${docId}`;
+async function viewChunks(docId, docTitle) {
+    // Show modal
+    document.getElementById('chunksModal').classList.remove('hidden');
+    document.getElementById('modalTitle').textContent = `Chunks 詳細資料 - ${docTitle}`;
+    document.getElementById('chunksContent').innerHTML = '<div class="text-gray-400 text-center py-8">載入中...</div>';
+
+    try {
+        const response = await fetch(`/api/rag/stats/chunks/${docId}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch chunks');
+        }
+
+        const chunks = await response.json();
+
+        if (chunks && chunks.length > 0) {
+            document.getElementById('chunksContent').innerHTML = chunks.map((chunk, idx) => `
+                <div class="bg-gray-700 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-blue-400 font-mono text-sm">Chunk #${chunk.ordinal + 1}</span>
+                        <span class="text-gray-500 text-xs">${chunk.text.length} 字元</span>
+                    </div>
+                    <div class="text-gray-300 text-sm whitespace-pre-wrap">${chunk.text}</div>
+                </div>
+            `).join('');
+        } else {
+            document.getElementById('chunksContent').innerHTML = '<div class="text-gray-400 text-center py-8">此文件尚無 chunks</div>';
+        }
+    } catch (error) {
+        console.error('Failed to load chunks:', error);
+        document.getElementById('chunksContent').innerHTML = '<div class="text-red-400 text-center py-8">載入失敗</div>';
+    }
+}
+
+function closeModal() {
+    document.getElementById('chunksModal').classList.add('hidden');
 }
 
 // Load on page load
