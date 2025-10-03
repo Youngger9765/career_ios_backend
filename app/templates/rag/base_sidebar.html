@@ -33,7 +33,7 @@
                 </a>
 
                 <!-- 個案報告生成 -->
-                <a href="/rag/report" class="flex items-center px-4 py-3 rounded-lg text-white {% if '/rag/report' in request.path %}bg-gray-700{% else %}hover:bg-gray-700{% endif %} transition">
+                <a href="/rag/report" class="flex items-center px-4 py-3 rounded-lg text-white {% if request.path == '/rag/report' %}bg-gray-700{% else %}hover:bg-gray-700{% endif %} transition">
                     <span class="text-2xl mr-3">📋</span>
                     <span class="text-lg">個案報告生成</span>
                 </a>

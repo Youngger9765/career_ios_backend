@@ -67,52 +67,184 @@
     </div>
 </div>
 
-<!-- Report Output -->
+<!-- Report Output - TABLE FORMAT -->
 <div id="reportSection" class="hidden space-y-6">
-    <!-- Client Info -->
     <div class="bg-gray-800 rounded-lg p-6">
-        <h3 class="text-xl font-semibold text-white mb-4">個案基本資料</h3>
-        <div id="clientInfo" class="grid grid-cols-2 gap-4 text-sm">
-            <!-- Will be populated by JS -->
-        </div>
-    </div>
+        <h3 class="text-xl font-semibold text-white mb-4">職游創新職涯發展與諮詢 - 個案報告</h3>
 
-    <!-- Key Dialogues -->
-    <div class="bg-gray-800 rounded-lg p-6">
-        <h3 class="text-xl font-semibold text-white mb-4">關鍵對話摘錄</h3>
-        <div id="dialogueExcerpts" class="space-y-3">
-            <!-- Will be populated by JS -->
+        <!-- Tab Navigation -->
+        <div class="flex gap-2 mb-6 border-b border-gray-700">
+            <button onclick="switchTab('html')" id="tab-html" class="px-6 py-3 text-white font-semibold border-b-2 border-blue-500 transition">
+                HTML 表格
+            </button>
+            <button onclick="switchTab('json')" id="tab-json" class="px-6 py-3 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600 transition">
+                JSON
+            </button>
+            <button onclick="switchTab('markdown')" id="tab-markdown" class="px-6 py-3 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600 transition">
+                Markdown
+            </button>
         </div>
-    </div>
 
-    <!-- Report Content -->
-    <div class="bg-gray-800 rounded-lg p-6">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-semibold text-white">個案概念化</h3>
-            <div class="flex gap-2">
-                <button
-                    onclick="copyReport()"
-                    class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition text-sm"
-                >
-                    📋 複製
-                </button>
-                <button
-                    onclick="downloadReport()"
-                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition text-sm"
-                >
-                    💾 下載
-                </button>
+        <!-- Tab Content: HTML -->
+        <div id="content-html" class="tab-content">
+
+        <!-- Header Info Table -->
+        <div class="mb-6">
+            <table class="w-full border-collapse border border-gray-600">
+                <tr class="bg-gray-700">
+                    <td class="border border-gray-600 px-4 py-2 text-gray-300 font-semibold w-1/3">諮詢練習生</td>
+                    <td id="counselor_name_display" class="border border-gray-600 px-4 py-2 text-white">-</td>
+                </tr>
+                <tr class="bg-gray-700">
+                    <td class="border border-gray-600 px-4 py-2 text-gray-300 font-semibold">完成撰寫日期</td>
+                    <td id="completion_date_display" class="border border-gray-600 px-4 py-2 text-white">-</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 一、案主基本資料 -->
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold text-white mb-3">一、案主基本資料</h4>
+            <table class="w-full border-collapse border border-gray-600">
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold w-1/4">1. 姓名(化名)</td>
+                    <td id="client_name" class="border border-gray-600 px-4 py-2 text-white">-</td>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold w-1/4">2. 性別</td>
+                    <td id="client_gender" class="border border-gray-600 px-4 py-2 text-white">-</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">3. 年紀</td>
+                    <td id="client_age" class="border border-gray-600 px-4 py-2 text-white">-</td>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">4. 部門/職業(學校科系)</td>
+                    <td id="client_occupation" class="border border-gray-600 px-4 py-2 text-white">-</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">5. 學歷</td>
+                    <td id="client_education" class="border border-gray-600 px-4 py-2 text-white">-</td>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">6. 現居地</td>
+                    <td id="client_location" class="border border-gray-600 px-4 py-2 text-white">-</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">7. 經濟狀況</td>
+                    <td id="client_economic" colspan="3" class="border border-gray-600 px-4 py-2 text-white">-</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">8. 家庭關係</td>
+                    <td id="client_family" colspan="3" class="border border-gray-600 px-4 py-2 text-white">-</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">9. 其他重要資訊</td>
+                    <td id="client_other" colspan="3" class="border border-gray-600 px-4 py-2 text-white whitespace-pre-wrap">-</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 二、歷程分析 -->
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold text-white mb-3">二、歷程分析</h4>
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse border border-gray-600">
+                    <thead>
+                        <tr class="bg-gray-700">
+                            <th class="border border-gray-600 px-4 py-2 text-white">次數/晤談時間</th>
+                            <th class="border border-gray-600 px-4 py-2 text-white">晤談內容概述</th>
+                            <th class="border border-gray-600 px-4 py-2 text-white">諮詢師自評</th>
+                        </tr>
+                    </thead>
+                    <tbody id="session_history">
+                        <tr>
+                            <td colspan="3" class="border border-gray-600 px-4 py-2 text-gray-400 text-center">尚無資料</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-        <div id="reportContent" class="bg-gray-900 rounded-lg p-6 text-gray-200 whitespace-pre-wrap leading-relaxed">
-        </div>
-    </div>
 
-    <!-- Theories -->
-    <div class="bg-gray-800 rounded-lg p-6">
-        <h3 class="text-xl font-semibold text-white mb-4">參考理論文獻</h3>
-        <div id="theoriesList" class="space-y-3">
-            <!-- Will be populated by JS -->
+        <!-- 三、概念化分析 -->
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold text-white mb-3">三、概念化分析</h4>
+            <table class="w-full border-collapse border border-gray-600">
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold w-1/4">主訴問題</td>
+                    <td id="main_issue" class="border border-gray-600 px-4 py-2 text-white whitespace-pre-wrap">-</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">成因分析</td>
+                    <td id="cause_analysis" class="border border-gray-600 px-4 py-2 text-white whitespace-pre-wrap">-</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">晤談目標</td>
+                    <td id="counseling_goal" class="border border-gray-600 px-4 py-2 text-white whitespace-pre-wrap">-</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">介入策略</td>
+                    <td id="intervention" class="border border-gray-600 px-4 py-2 text-white whitespace-pre-wrap">-</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">目前成效評估</td>
+                    <td id="effectiveness" class="border border-gray-600 px-4 py-2 text-white whitespace-pre-wrap">-</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 四、個人化分析 -->
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold text-white mb-3">四、個人化分析</h4>
+            <table class="w-full border-collapse border border-gray-600">
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold w-1/3">我和這個人工作的感受是？</td>
+                    <td id="counselor_feeling" class="border border-gray-600 px-4 py-2 text-white whitespace-pre-wrap">-</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">這個感受的原因是？</td>
+                    <td id="feeling_reason" class="border border-gray-600 px-4 py-2 text-white whitespace-pre-wrap">-</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">目前跟這個人工作的困難</td>
+                    <td id="difficulties" class="border border-gray-600 px-4 py-2 text-white whitespace-pre-wrap">-</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-4 py-2 bg-gray-700 text-gray-300 font-semibold">我會想找督導討論的問題是？</td>
+                    <td id="supervision_topic" class="border border-gray-600 px-4 py-2 text-white whitespace-pre-wrap">-</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 關鍵對話摘錄 -->
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold text-white mb-3">關鍵對話摘錄</h4>
+            <div id="dialogueExcerpts" class="space-y-3">
+                <div class="text-gray-400">尚無對話摘錄</div>
+            </div>
+        </div>
+
+        <!-- 參考理論文獻 -->
+        <div>
+            <h4 class="text-lg font-semibold text-white mb-3">參考理論文獻</h4>
+            <div id="theoriesList" class="space-y-3">
+                <div class="text-gray-400">載入中...</div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Tab Content: JSON -->
+        <div id="content-json" class="tab-content hidden">
+            <div class="flex justify-end mb-4">
+                <button onclick="downloadJSON()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
+                    📥 下載 JSON
+                </button>
+            </div>
+            <pre id="jsonOutput" class="bg-gray-900 text-green-400 p-6 rounded-lg overflow-auto max-h-[800px] font-mono text-sm"></pre>
+        </div>
+
+        <!-- Tab Content: Markdown -->
+        <div id="content-markdown" class="tab-content hidden">
+            <div class="flex justify-end mb-4">
+                <button onclick="downloadMarkdown()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition">
+                    📄 下載 Markdown
+                </button>
+            </div>
+            <pre id="markdownOutput" class="bg-gray-900 text-gray-300 p-6 rounded-lg overflow-auto max-h-[800px] font-mono text-sm whitespace-pre-wrap"></pre>
         </div>
     </div>
 </div>
@@ -125,10 +257,8 @@ async function loadSampleTranscript() {
         const response = await fetch('/static/sample_transcript.txt');
         const text = await response.text();
         document.getElementById('transcript').value = text;
-        alert('✅ 範例逐字稿已載入！');
     } catch (error) {
         console.error('Failed to load sample transcript:', error);
-        alert('❌ 無法載入範例逐字稿');
     }
 }
 
@@ -147,7 +277,6 @@ async function generateReport() {
     document.getElementById('progressSteps').innerHTML = '';
 
     try {
-        // Use EventSource for SSE streaming (agent decides top_k automatically)
         const url = `/api/report/generate?transcript=${encodeURIComponent(transcript)}&num_participants=${numParticipants}`;
         const eventSource = new EventSource(url);
 
@@ -160,17 +289,14 @@ async function generateReport() {
                 return;
             }
 
-            // Update progress
             updateProgress(data);
 
-            // If final step completed
             if (data.step === 5 && data.status === 'completed' && data.data?.report) {
                 reportData = data.data.report;
-                displayReport(reportData);
+                displayReportInTable(reportData);
                 document.getElementById('reportSection').classList.remove('hidden');
             }
 
-            // Close on completion
             if (data.step === 6 && data.status === 'completed') {
                 eventSource.close();
             }
@@ -222,19 +348,74 @@ function updateProgress(data) {
     `;
 }
 
-function displayReport(report) {
-    // Client Info
-    const clientInfo = document.getElementById('clientInfo');
+function switchTab(tabName) {
+    // Update tab buttons
+    ['html', 'json', 'markdown'].forEach(tab => {
+        const button = document.getElementById(`tab-${tab}`);
+        const content = document.getElementById(`content-${tab}`);
+
+        if (tab === tabName) {
+            button.classList.remove('text-gray-400', 'border-transparent');
+            button.classList.add('text-white', 'border-blue-500');
+            content.classList.remove('hidden');
+        } else {
+            button.classList.remove('text-white', 'border-blue-500');
+            button.classList.add('text-gray-400', 'border-transparent');
+            content.classList.add('hidden');
+        }
+    });
+
+    // Update JSON and Markdown content when switching to those tabs
+    if (tabName === 'json' && reportData) {
+        document.getElementById('jsonOutput').textContent = JSON.stringify(reportData, null, 2);
+    } else if (tabName === 'markdown' && reportData) {
+        document.getElementById('markdownOutput').textContent = generateMarkdownText();
+    }
+}
+
+function displayReportInTable(report) {
     const info = report.client_info;
-    clientInfo.innerHTML = `
-        <div><span class="text-gray-400">姓名：</span><span class="text-white">${info.name}</span></div>
-        <div><span class="text-gray-400">性別：</span><span class="text-white">${info.gender}</span></div>
-        <div><span class="text-gray-400">年齡：</span><span class="text-white">${info.age}</span></div>
-        <div><span class="text-gray-400">職業/科系：</span><span class="text-white">${info.occupation}</span></div>
-        <div><span class="text-gray-400">學歷：</span><span class="text-white">${info.education}</span></div>
-        <div><span class="text-gray-400">現居地：</span><span class="text-white">${info.location}</span></div>
-        <div class="col-span-2"><span class="text-gray-400">家庭關係：</span><span class="text-white">${info.family_relations}</span></div>
+
+    // Header
+    document.getElementById('counselor_name_display').textContent = '-';
+    document.getElementById('completion_date_display').textContent = new Date().toLocaleDateString('zh-TW');
+
+    // Client Info
+    document.getElementById('client_name').textContent = info.name || '-';
+    document.getElementById('client_gender').textContent = info.gender || '-';
+    document.getElementById('client_age').textContent = info.age || '-';
+    document.getElementById('client_occupation').textContent = info.occupation || '-';
+    document.getElementById('client_education').textContent = info.education || '-';
+    document.getElementById('client_location').textContent = info.location || '-';
+    document.getElementById('client_economic').textContent = info.economic_status || '-';
+    document.getElementById('client_family').textContent = info.family_relations || '-';
+    document.getElementById('client_other').textContent = Array.isArray(info.other_info) ? info.other_info.join('\n') : (info.other_info || '-');
+
+    // Session History (currently empty from API, but structure is ready)
+    const sessionTable = document.getElementById('session_history');
+    sessionTable.innerHTML = `
+        <tr>
+            <td class="border border-gray-600 px-4 py-2 text-white">第一次晤談</td>
+            <td class="border border-gray-600 px-4 py-2 text-white">${report.session_summary?.content || '從逐字稿自動生成'}</td>
+            <td class="border border-gray-600 px-4 py-2 text-white">${report.session_summary?.self_evaluation || '-'}</td>
+        </tr>
     `;
+
+    // Parse conceptualization into sections
+    const conceptText = report.conceptualization;
+    const sections = parseConceptualization(conceptText);
+
+    document.getElementById('main_issue').textContent = sections.main_issue || (report.main_concerns ? report.main_concerns.join('、') : '-');
+    document.getElementById('cause_analysis').textContent = sections.cause_analysis || '-';
+    document.getElementById('counseling_goal').textContent = sections.counseling_goal || (report.counseling_goals ? report.counseling_goals.join('、') : '-');
+    document.getElementById('intervention').textContent = sections.intervention || (report.techniques ? report.techniques.join('、') : '-');
+    document.getElementById('effectiveness').textContent = sections.effectiveness || '-';
+
+    // Personal Analysis (not in current API, set defaults)
+    document.getElementById('counselor_feeling').textContent = '-';
+    document.getElementById('feeling_reason').textContent = '-';
+    document.getElementById('difficulties').textContent = '-';
+    document.getElementById('supervision_topic').textContent = '-';
 
     // Dialogue Excerpts
     const dialogueExcerpts = document.getElementById('dialogueExcerpts');
@@ -253,14 +434,11 @@ function displayReport(report) {
         dialogueExcerpts.innerHTML = '<div class="text-gray-400">無對話摘錄</div>';
     }
 
-    // Report Content
-    document.getElementById('reportContent').textContent = report.conceptualization;
-
     // Theories
     const theoriesList = document.getElementById('theoriesList');
     if (report.theories && report.theories.length > 0) {
         theoriesList.innerHTML = report.theories.map((theory, idx) => `
-            <div class="bg-gray-700 rounded-lg p-4">
+            <div class="bg-gray-700 rounded-lg p-4 border border-gray-600">
                 <div class="flex justify-between items-start mb-2">
                     <span class="text-blue-400 font-mono text-sm">[${idx + 1}]</span>
                     <span class="text-gray-400 text-xs">${(theory.score * 100).toFixed(1)}% 相似度</span>
@@ -270,8 +448,33 @@ function displayReport(report) {
             </div>
         `).join('');
     } else {
-        theoriesList.innerHTML = '<div class="text-gray-400">無參考理論</div>';
+        theoriesList.innerHTML = '<div class="text-yellow-400 p-4 bg-yellow-900/20 rounded-lg">⚠️ 未找到相關參考理論文獻（建議在逐字稿中包含更多職涯相關關鍵字）</div>';
     }
+}
+
+function parseConceptualization(text) {
+    const sections = {
+        main_issue: '',
+        cause_analysis: '',
+        counseling_goal: '',
+        intervention: '',
+        effectiveness: ''
+    };
+
+    // Try to parse sections marked with 【】
+    const mainIssueMatch = text.match(/【主訴問題】\s*([\s\S]*?)(?=【|$)/);
+    const causeMatch = text.match(/【成因分析】\s*([\s\S]*?)(?=【|$)/);
+    const goalMatch = text.match(/【晤談目標】\s*([\s\S]*?)(?=【|$)/);
+    const interventionMatch = text.match(/【介入策略】\s*([\s\S]*?)(?=【|$)/);
+    const effectivenessMatch = text.match(/【目前成效評估】\s*([\s\S]*?)(?=【|$)/);
+
+    if (mainIssueMatch) sections.main_issue = mainIssueMatch[1].trim();
+    if (causeMatch) sections.cause_analysis = causeMatch[1].trim();
+    if (goalMatch) sections.counseling_goal = goalMatch[1].trim();
+    if (interventionMatch) sections.intervention = interventionMatch[1].trim();
+    if (effectivenessMatch) sections.effectiveness = effectivenessMatch[1].trim();
+
+    return sections;
 }
 
 function clearForm() {
@@ -282,60 +485,192 @@ function clearForm() {
     reportData = null;
 }
 
-function copyReport() {
-    if (!reportData) return;
+function downloadJSON() {
+    if (!reportData) {
+        alert('請先生成報告');
+        return;
+    }
 
-    const fullReport = `
-【個案基本資料】
-姓名：${reportData.client_info.name}
-性別：${reportData.client_info.gender}
-年齡：${reportData.client_info.age}
-職業/科系：${reportData.client_info.occupation}
-學歷：${reportData.client_info.education}
-現居地：${reportData.client_info.location}
-家庭關係：${reportData.client_info.family_relations}
-
-【個案概念化】
-${reportData.conceptualization}
-    `.trim();
-
-    navigator.clipboard.writeText(fullReport).then(() => {
-        alert('報告已複製到剪貼簿');
-    }).catch(err => {
-        console.error('複製失敗:', err);
-        alert('複製失敗');
-    });
-}
-
-function downloadReport() {
-    if (!reportData) return;
-
-    const fullReport = `
-【個案基本資料】
-姓名：${reportData.client_info.name}
-性別：${reportData.client_info.gender}
-年齡：${reportData.client_info.age}
-職業/科系：${reportData.client_info.occupation}
-學歷：${reportData.client_info.education}
-現居地：${reportData.client_info.location}
-家庭關係：${reportData.client_info.family_relations}
-
-【個案概念化】
-${reportData.conceptualization}
-
-【參考理論】
-${reportData.theories.map((t, i) => `[${i+1}] ${t.document}\n${t.text}`).join('\n\n')}
-    `.trim();
-
-    const blob = new Blob([fullReport], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `case_report_${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `case_report_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+function generateMarkdownText() {
+    if (!reportData) return '';
+
+    const info = reportData.client_info;
+    let markdown = `# 職游創新職涯發展與諮詢 - 個案報告
+
+**諮詢練習生**：-
+**完成撰寫日期**：${new Date().toLocaleDateString('zh-TW')}
+
+---
+
+## 一、案主基本資料
+
+| 項目 | 內容 |
+|-----|------|
+| 1. 姓名(化名) | ${info.name || '-'} |
+| 2. 性別 | ${info.gender || '-'} |
+| 3. 年紀 | ${info.age || '-'} |
+| 4. 部門/職業(學校科系) | ${info.occupation || '-'} |
+| 5. 學歷 | ${info.education || '-'} |
+| 6. 現居地 | ${info.location || '-'} |
+| 7. 經濟狀況 | ${info.economic_status || '-'} |
+| 8. 家庭關係 | ${info.family_relations || '-'} |
+| 9. 其他重要資訊 | ${Array.isArray(info.other_info) ? info.other_info.join('; ') : (info.other_info || '-')} |
+
+---
+
+## 二、歷程分析
+
+| 次數/晤談時間 | 晤談內容概述 | 諮詢師自評 |
+|--------------|-------------|-----------|
+| 第一次晤談 | ${reportData.session_summary?.content || '從逐字稿自動生成'} | ${reportData.session_summary?.self_evaluation || '-'} |
+
+---
+
+## 三、概念化分析
+
+`;
+
+    const sections = parseConceptualization(reportData.conceptualization);
+
+    markdown += `### 主訴問題
+${sections.main_issue || (reportData.main_concerns ? reportData.main_concerns.join('、') : '-')}
+
+### 成因分析
+${sections.cause_analysis || '-'}
+
+### 晤談目標(移動主訴)
+${sections.counseling_goal || (reportData.counseling_goals ? reportData.counseling_goals.join('、') : '-')}
+
+### 介入策略
+${sections.intervention || (reportData.techniques ? reportData.techniques.join('、') : '-')}
+
+### 目前成效評估
+${sections.effectiveness || '-'}
+
+---
+
+## 四、個人化分析
+
+### 我和這個人工作的感受是？
+-
+
+### 這個感受的原因是？
+-
+
+### 目前跟這個人工作的困難
+-
+
+### 我會想找督導討論的問題是？
+-
+
+---
+
+## 關鍵對話摘錄
+
+`;
+
+    if (reportData.dialogue_excerpts && reportData.dialogue_excerpts.length > 0) {
+        reportData.dialogue_excerpts.forEach(d => {
+            const speaker = d.speaker === 'speaker1' ? '諮詢師' : '個案';
+            markdown += `**${speaker}**: ${d.text}\n\n`;
+        });
+    } else {
+        markdown += '無對話摘錄\n\n';
+    }
+
+    markdown += `---
+
+## 參考理論文獻
+
+`;
+
+    if (reportData.theories && reportData.theories.length > 0) {
+        reportData.theories.forEach((t, i) => {
+            markdown += `**[${i+1}]** ${t.document} (相似度: ${(t.score * 100).toFixed(1)}%)\n\n${t.text}\n\n`;
+        });
+    } else {
+        markdown += '無參考理論\n\n';
+    }
+
+    markdown += `---\n\n*報告生成時間：${new Date().toLocaleString('zh-TW')}*\n`;
+
+    return markdown;
+}
+
+function downloadMarkdown() {
+    if (!reportData) {
+        alert('請先生成報告');
+        return;
+    }
+
+    const markdown = generateMarkdownText();
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `case_report_${new Date().toISOString().split('T')[0]}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function copyReport() {
+    if (!reportData) {
+        alert('請先生成報告');
+        return;
+    }
+
+    const info = reportData.client_info;
+    const sections = parseConceptualization(reportData.conceptualization);
+
+    const fullReport = `職游創新職涯發展與諮詢 - 個案報告
+
+一、案主基本資料
+姓名：${info.name || '-'}
+性別：${info.gender || '-'}
+年齡：${info.age || '-'}
+職業/科系：${info.occupation || '-'}
+學歷：${info.education || '-'}
+現居地：${info.location || '-'}
+經濟狀況：${info.economic_status || '-'}
+家庭關係：${info.family_relations || '-'}
+
+三、概念化分析
+
+主訴問題：
+${sections.main_issue || (reportData.main_concerns ? reportData.main_concerns.join('、') : '-')}
+
+成因分析：
+${sections.cause_analysis || '-'}
+
+晤談目標：
+${sections.counseling_goal || (reportData.counseling_goals ? reportData.counseling_goals.join('、') : '-')}
+
+介入策略：
+${sections.intervention || (reportData.techniques ? reportData.techniques.join('、') : '-')}
+
+成效評估：
+${sections.effectiveness || '-'}
+    `.trim();
+
+    navigator.clipboard.writeText(fullReport).then(() => {
+        alert('✅ 報告已複製到剪貼簿');
+    }).catch(err => {
+        console.error('複製失敗:', err);
+        alert('❌ 複製失敗');
+    });
 }
 </script>
 {% endblock %}
