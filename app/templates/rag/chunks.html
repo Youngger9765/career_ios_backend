@@ -1,0 +1,449 @@
+{% extends "rag/base_sidebar.html" %}
+
+{% block page_title %}Chunk 策略管理{% endblock %}
+
+{% block page_content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">📦 Chunk 策略管理</h2>
+    <p class="text-gray-600">管理不同的文本切割策略，用於評估實驗</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-lg p-4 shadow-md border border-gray-200">
+        <div class="text-gray-600 text-sm mb-1">總策略數</div>
+        <div class="text-3xl font-bold text-blue-600" id="totalStrategies">0</div>
+    </div>
+    <div class="bg-white rounded-lg p-4 shadow-md border border-gray-200">
+        <div class="text-gray-600 text-sm mb-1">預設策略</div>
+        <div class="text-3xl font-bold text-green-600" id="defaultStrategies">0</div>
+    </div>
+    <div class="bg-white rounded-lg p-4 shadow-md border border-gray-200">
+        <div class="text-gray-600 text-sm mb-1">自訂策略</div>
+        <div class="text-3xl font-bold text-purple-600" id="customStrategies">0</div>
+    </div>
+    <div class="bg-white rounded-lg p-4 shadow-md border border-gray-200">
+        <div class="text-gray-600 text-sm mb-1">使用中</div>
+        <div class="text-3xl font-bold text-orange-600" id="activeStrategies">0</div>
+    </div>
+</div>
+
+<!-- Create New Strategy Section -->
+<div class="bg-white rounded-lg shadow-md border border-gray-200 mb-6">
+    <div class="p-6 border-b border-gray-200 flex justify-between items-center cursor-pointer" onclick="toggleSection('createSection')">
+        <div>
+            <h3 class="text-xl font-bold text-gray-800">建立新策略</h3>
+            <p class="text-sm text-gray-600 mt-1">定義新的 chunk 切割策略</p>
+        </div>
+        <span id="createSectionIcon" class="text-gray-400 text-2xl">▼</span>
+    </div>
+
+    <div id="createSection" class="hidden p-6">
+        <div class="grid grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">策略名稱 *</label>
+                <input type="text" id="strategyName"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                       placeholder="例：中等大小策略">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">切割演算法 *</label>
+                <select id="strategyType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="recursive">Recursive（遞迴切割）</option>
+                    <option value="parent_child">Parent-Child（父子文檔）</option>
+                    <option value="normal">Normal（一般切割）</option>
+                    <option value="semantic">Semantic（語義切割）</option>
+                    <option value="sliding_window">Sliding Window（滑動窗口）</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Chunk Size *</label>
+                <input type="number" id="chunkSize" value="400"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                       placeholder="400">
+                <p class="text-xs text-gray-500 mt-1">建議範圍：200-1000 字元</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Chunk Overlap</label>
+                <input type="number" id="chunkOverlap" value="80"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                       placeholder="80">
+                <p class="text-xs text-gray-500 mt-1">通常為 chunk size 的 20%</p>
+            </div>
+
+            <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">描述</label>
+                <textarea id="strategyDescription" rows="3"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          placeholder="描述這個策略的用途和特點..."></textarea>
+            </div>
+
+            <div class="col-span-2 flex items-center gap-2">
+                <input type="checkbox" id="isDefault" class="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500">
+                <label for="isDefault" class="text-sm text-gray-700">設為預設策略（會在新實驗中自動使用）</label>
+            </div>
+        </div>
+
+        <div class="mt-6 flex gap-4">
+            <button onclick="createStrategy()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition font-semibold">
+                建立策略
+            </button>
+            <button onclick="resetForm()"
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg transition">
+                重置
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Strategies List -->
+<div class="bg-white rounded-lg shadow-md border border-gray-200">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-xl font-bold text-gray-800">策略列表</h3>
+    </div>
+
+    <div class="p-6">
+        <div id="strategiesList" class="space-y-4">
+            <!-- Strategies will be loaded here -->
+            <div class="text-center text-gray-500 py-8">
+                載入中...
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="hidden fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transition-opacity">
+    <span id="toastMessage"></span>
+</div>
+
+<script>
+let strategies = [];
+
+// Toggle section visibility
+function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    const icon = document.getElementById(sectionId + 'Icon');
+
+    if (section.classList.contains('hidden')) {
+        section.classList.remove('hidden');
+        icon.textContent = '▲';
+    } else {
+        section.classList.add('hidden');
+        icon.textContent = '▼';
+    }
+}
+
+// Show toast notification
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+
+    toastMessage.textContent = message;
+    toast.classList.remove('hidden', 'bg-green-600', 'bg-red-600', 'bg-blue-600');
+
+    if (type === 'success') {
+        toast.classList.add('bg-green-600');
+    } else if (type === 'error') {
+        toast.classList.add('bg-red-600');
+    } else {
+        toast.classList.add('bg-blue-600');
+    }
+
+    setTimeout(() => {
+        toast.classList.add('hidden');
+    }, 3000);
+}
+
+// Load strategies
+async function loadStrategies() {
+    try {
+        const response = await fetch('/api/rag/evaluation/chunk-strategies/');
+
+        if (response.ok) {
+            strategies = await response.json();
+            renderStrategies();
+            updateStats();
+        } else {
+            // If endpoint doesn't exist yet, show sample data
+            strategies = getSampleStrategies();
+            renderStrategies();
+            updateStats();
+        }
+    } catch (error) {
+        console.error('Failed to load strategies:', error);
+        // Show sample data on error
+        strategies = getSampleStrategies();
+        renderStrategies();
+        updateStats();
+    }
+}
+
+// Get sample strategies (temporary)
+function getSampleStrategies() {
+    return [
+        {
+            id: '1',
+            name: 'Recursive-小型',
+            type: 'recursive',
+            chunk_size: 200,
+            chunk_overlap: 40,
+            description: '遞迴切割，適合精細檢索',
+            is_default: false,
+            created_at: new Date().toISOString()
+        },
+        {
+            id: '2',
+            name: 'Recursive-中型（預設）',
+            type: 'recursive',
+            chunk_size: 400,
+            chunk_overlap: 80,
+            description: '遞迴切割，平衡大小，適合大多數場景',
+            is_default: true,
+            created_at: new Date().toISOString()
+        },
+        {
+            id: '3',
+            name: 'Recursive-大型',
+            type: 'recursive',
+            chunk_size: 800,
+            chunk_overlap: 160,
+            description: '遞迴切割，保留更多上下文',
+            is_default: false,
+            created_at: new Date().toISOString()
+        },
+        {
+            id: '4',
+            name: 'Parent-Child-標準',
+            type: 'parent_child',
+            chunk_size: 400,
+            chunk_overlap: 0,
+            description: '父子文檔結構，適合階層式檢索',
+            is_default: false,
+            created_at: new Date().toISOString()
+        },
+        {
+            id: '5',
+            name: 'Normal-快速',
+            type: 'normal',
+            chunk_size: 300,
+            chunk_overlap: 50,
+            description: '一般切割，處理速度快',
+            is_default: false,
+            created_at: new Date().toISOString()
+        },
+        {
+            id: '6',
+            name: 'Semantic-智能',
+            type: 'semantic',
+            chunk_size: 500,
+            chunk_overlap: 100,
+            description: '基於語義切割，保持語意完整性',
+            is_default: false,
+            created_at: new Date().toISOString()
+        }
+    ];
+}
+
+// Render strategies list
+function renderStrategies() {
+    const container = document.getElementById('strategiesList');
+
+    if (strategies.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-500 py-8">尚無策略，請建立第一個策略</div>';
+        return;
+    }
+
+    container.innerHTML = strategies.map(strategy => `
+        <div class="border border-gray-200 rounded-lg p-5 hover:border-blue-400 hover:shadow-md transition">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                        <h4 class="font-bold text-lg text-gray-800">${strategy.name}</h4>
+                        ${strategy.is_default ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-medium">預設</span>' : ''}
+                        <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium">${getTypeLabel(strategy.type)}</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">${strategy.description || '無描述'}</p>
+                    <p class="text-xs text-gray-500 italic">${getTypeDescription(strategy.type)}</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="editStrategy('${strategy.id}')"
+                            class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        ✏️ 編輯
+                    </button>
+                    <button onclick="deleteStrategy('${strategy.id}')"
+                            class="text-red-600 hover:text-red-800 text-sm font-medium">
+                        🗑️ 刪除
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100">
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 text-sm">📏 Chunk Size:</span>
+                    <span class="font-bold text-blue-600">${strategy.chunk_size}</span>
+                    <span class="text-xs text-gray-400">字元</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 text-sm">🔗 Overlap:</span>
+                    <span class="font-bold text-purple-600">${strategy.chunk_overlap}</span>
+                    <span class="text-xs text-gray-400">(${Math.round(strategy.chunk_overlap / strategy.chunk_size * 100)}%)</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Update stats
+function updateStats() {
+    document.getElementById('totalStrategies').textContent = strategies.length;
+    document.getElementById('defaultStrategies').textContent = strategies.filter(s => s.is_default).length;
+    document.getElementById('customStrategies').textContent = strategies.filter(s => !s.is_default).length;
+    document.getElementById('activeStrategies').textContent = strategies.length;
+}
+
+// Get type label
+function getTypeLabel(type) {
+    const labels = {
+        'recursive': 'Recursive',
+        'parent_child': 'Parent-Child',
+        'normal': 'Normal',
+        'semantic': 'Semantic',
+        'sliding_window': 'Sliding Window'
+    };
+    return labels[type] || type;
+}
+
+// Get type description
+function getTypeDescription(type) {
+    const descriptions = {
+        'recursive': '遞迴切割 - 智能分段，保持結構完整',
+        'parent_child': '父子文檔 - 階層式結構，便於上下文檢索',
+        'normal': '一般切割 - 簡單快速，適合大量文本',
+        'semantic': '語義切割 - 基於語義邊界，保持語意完整',
+        'sliding_window': '滑動窗口 - 重疊切割，提高覆蓋率'
+    };
+    return descriptions[type] || '';
+}
+
+// Create strategy
+async function createStrategy() {
+    const name = document.getElementById('strategyName').value.trim();
+    const type = document.getElementById('strategyType').value;
+    const chunkSize = parseInt(document.getElementById('chunkSize').value);
+    const chunkOverlap = parseInt(document.getElementById('chunkOverlap').value);
+    const description = document.getElementById('strategyDescription').value.trim();
+    const isDefault = document.getElementById('isDefault').checked;
+
+    if (!name) {
+        showToast('請輸入策略名稱', 'error');
+        return;
+    }
+
+    if (!chunkSize || chunkSize < 50) {
+        showToast('Chunk size 必須大於 50', 'error');
+        return;
+    }
+
+    const data = {
+        name,
+        type,
+        chunk_size: chunkSize,
+        chunk_overlap: chunkOverlap,
+        description,
+        is_default: isDefault
+    };
+
+    try {
+        const response = await fetch('/rag/api/evaluation/chunk-strategies', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            showToast('策略建立成功！', 'success');
+            resetForm();
+            await loadStrategies();
+        } else {
+            const error = await response.json();
+            showToast('建立失敗：' + (error.detail || '未知錯誤'), 'error');
+        }
+    } catch (error) {
+        console.error('Failed to create strategy:', error);
+        showToast('建立失敗：' + error.message, 'error');
+    }
+}
+
+// Reset form
+function resetForm() {
+    document.getElementById('strategyName').value = '';
+    document.getElementById('strategyType').value = 'fixed';
+    document.getElementById('chunkSize').value = '400';
+    document.getElementById('chunkOverlap').value = '80';
+    document.getElementById('strategyDescription').value = '';
+    document.getElementById('isDefault').checked = false;
+}
+
+// Edit strategy
+function editStrategy(id) {
+    const strategy = strategies.find(s => s.id === id);
+    if (!strategy) return;
+
+    document.getElementById('strategyName').value = strategy.name;
+    document.getElementById('strategyType').value = strategy.type;
+    document.getElementById('chunkSize').value = strategy.chunk_size;
+    document.getElementById('chunkOverlap').value = strategy.chunk_overlap;
+    document.getElementById('strategyDescription').value = strategy.description || '';
+    document.getElementById('isDefault').checked = strategy.is_default;
+
+    // Expand create section
+    const section = document.getElementById('createSection');
+    const icon = document.getElementById('createSectionIcon');
+    section.classList.remove('hidden');
+    icon.textContent = '▲';
+
+    // Scroll to form
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Delete strategy
+async function deleteStrategy(id) {
+    if (!confirm('確定要刪除此策略嗎？')) return;
+
+    try {
+        const response = await fetch(`/rag/api/evaluation/chunk-strategies/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            showToast('策略已刪除', 'success');
+            await loadStrategies();
+        } else {
+            const error = await response.json();
+            showToast('刪除失敗：' + (error.detail || '未知錯誤'), 'error');
+        }
+    } catch (error) {
+        console.error('Failed to delete strategy:', error);
+        showToast('刪除失敗：' + error.message, 'error');
+    }
+}
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadStrategies();
+
+    // Collapse create section by default
+    const section = document.getElementById('createSection');
+    const icon = document.getElementById('createSectionIcon');
+    section.classList.add('hidden');
+    icon.textContent = '▼';
+});
+</script>
+{% endblock %}

@@ -248,91 +248,65 @@ async def get_evaluation_matrix(
 ):
     """Get evaluation matrix data for heatmap visualization
 
-    Returns a matrix of experiments grouped by:
-    - Rows: chunk_strategy (rec_256_50, rec_400_80, rec_512_100, rec_1024_200, rec_2048_400)
-    - Columns: test set name
-
-    Each cell contains:
-    - avg_faithfulness, avg_answer_relevancy
-    - experiment_id, status
-    - instruction_version, document_count
+    Returns a matrix combining:
+    - Test Sets (from evaluation_testsets table)
+    - Prompt Versions (from experiments)
+    - Chunk Strategies (from chunk_strategies API)
+    - Experiments results
     """
     from collections import defaultdict
+    from app.models.evaluation import EvaluationTestSet
+    from app.api.chunk_strategies import list_chunk_strategies
 
-    # Get all completed experiments
-    experiments = db.query(EvaluationExperiment).filter(
-        EvaluationExperiment.status == "completed",
-        EvaluationExperiment.chunk_strategy.isnot(None)
+    # Get all testsets
+    testsets_db = db.query(EvaluationTestSet).filter(
+        EvaluationTestSet.is_active == True
     ).all()
+    testsets = [{"id": str(ts.id), "name": ts.name} for ts in testsets_db]
 
-    # Define strategies and test sets
-    strategies = ["rec_256_50", "rec_400_80", "rec_512_100", "rec_1024_200", "rec_2048_400"]
+    # Get all chunk strategies from API
+    chunk_strategies_data = await list_chunk_strategies()
+    # chunk_strategies_data is already a list of dicts
+    chunk_strategies = chunk_strategies_data
 
-    # Get unique test set names from experiments
-    test_sets = set()
+    # Get all prompt versions
+    prompts_list = await list_prompt_versions(db)
+    prompts = [{"version": p["version"]} for p in prompts_list]
+
+    # Get all experiments
+    experiments = db.query(EvaluationExperiment).all()
+
+    # Build matrix: strategy -> prompt -> testset -> experiment
+    matrix = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: None)))
+
+    # For now, create a simpler matrix structure
+    # Future: add testset_id to EvaluationExperiment model
+    experiments_list = []
     for exp in experiments:
-        # Extract test set name from experiment name or description
-        # Format: "矩陣評估 - 優質模式 (512字) × 職涯興趣與熱情探索"
-        name_parts = exp.name.split("×")
-        if len(name_parts) == 2:
-            test_set = name_parts[1].strip()
-            test_sets.add(test_set)
-
-    test_sets = sorted(list(test_sets)) if test_sets else ["Default Test Set"]
-
-    # Build matrix
-    matrix = defaultdict(lambda: defaultdict(lambda: None))
-
-    for exp in experiments:
-        strategy = exp.chunk_strategy
-
-        # Extract test set from experiment name
-        test_set = "Default Test Set"
-        name_parts = exp.name.split("×")
-        if len(name_parts) == 2:
-            test_set = name_parts[1].strip()
-
-        # Get document count from config_json
-        doc_count = 0
-        if exp.config_json and 'total_documents' in exp.config_json:
-            doc_count = exp.config_json['total_documents']
-
-        cell_data = {
+        experiments_list.append({
             "experiment_id": str(exp.id),
             "name": exp.name,
             "status": exp.status,
+            "chunk_strategy": exp.chunk_strategy,
+            "instruction_version": exp.instruction_version,
             "avg_faithfulness": safe_float(exp.avg_faithfulness),
             "avg_answer_relevancy": safe_float(exp.avg_answer_relevancy),
             "avg_context_recall": safe_float(exp.avg_context_recall),
             "avg_context_precision": safe_float(exp.avg_context_precision),
             "total_queries": exp.total_queries or 0,
-            "instruction_version": exp.instruction_version,
-            "document_count": doc_count,
             "created_at": exp.created_at.isoformat() if exp.created_at else None,
             "chunking_method": exp.chunking_method,
             "chunk_size": exp.chunk_size,
             "chunk_overlap": exp.chunk_overlap,
-        }
+        })
 
-        # Store in matrix (if multiple experiments, keep the most recent)
-        existing = matrix[strategy][test_set]
-        if existing is None or (exp.created_at and existing.get("created_at") and
-                                exp.created_at.isoformat() > existing["created_at"]):
-            matrix[strategy][test_set] = cell_data
-
-    # Convert to list format for frontend
-    matrix_data = {
-        "strategies": strategies,
-        "test_sets": test_sets,
-        "cells": {}
+    # Convert to structured format for frontend
+    return {
+        "testsets": testsets,
+        "prompts": prompts,
+        "chunk_strategies": chunk_strategies,
+        "experiments": experiments_list  # Return the list, not the matrix dict
     }
-
-    for strategy in strategies:
-        matrix_data["cells"][strategy] = {}
-        for test_set in test_sets:
-            matrix_data["cells"][strategy][test_set] = matrix[strategy][test_set]
-
-    return matrix_data
 
 
 @router.get("/experiments/{experiment_id}", response_model=ExperimentResponse)
@@ -525,6 +499,45 @@ async def get_experiments_by_prompt_version(
         }
         for exp in experiments
     ]
+
+
+@router.delete("/prompts/{version}")
+async def delete_prompt_version(
+    version: str,
+    force: bool = False,
+    db: Session = Depends(get_db),
+):
+    """Delete a prompt version and optionally its experiments"""
+    # Get all experiments using this version
+    experiments = db.query(EvaluationExperiment).filter(
+        EvaluationExperiment.instruction_version == version
+    ).all()
+
+    experiments_count = len(experiments)
+
+    if experiments_count > 0:
+        if not force:
+            raise HTTPException(
+                status_code=400,
+                detail=f"無法刪除：此 Prompt 版本被 {experiments_count} 個實驗使用中。如要刪除所有相關實驗，請使用 force=true"
+            )
+
+        # Delete all related experiments
+        for exp in experiments:
+            db.delete(exp)
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Prompt 版本 {version} 及其 {experiments_count} 個實驗已刪除"
+        }
+
+    # No experiments using this version
+    return {
+        "success": True,
+        "message": f"Prompt 版本 {version} 未被使用，已移除"
+    }
 
 
 @router.get("/prompts/compare")

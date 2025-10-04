@@ -49,15 +49,15 @@
                     <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">品質管控</div>
                 </div>
 
-                <a href="/rag/evaluation" class="flex items-center px-4 py-2.5 rounded-lg text-gray-700 {% if request.path == '/rag/evaluation' %}bg-blue-50 border-l-4 border-blue-500{% else %}hover:bg-gray-100{% endif %} transition">
-                    <span class="text-xl mr-3">📈</span>
-                    <span class="text-base">RAG 評估系統</span>
+                <a href="/rag/evaluation/matrix" class="flex items-center px-4 py-2.5 rounded-lg text-gray-700 {% if '/matrix' in request.path %}bg-blue-50 border-l-4 border-blue-500{% else %}hover:bg-gray-100{% endif %} transition">
+                    <span class="text-xl mr-3">📊</span>
+                    <span class="text-base">評估矩陣總覽</span>
                 </a>
 
-                <a href="/rag/evaluation/matrix" class="flex items-center px-4 py-2.5 rounded-lg text-gray-700 {% if '/matrix' in request.path %}bg-blue-50 border-l-4 border-blue-500{% else %}hover:bg-gray-100{% endif %} transition">
-                    <span class="text-xl mr-3">🔥</span>
-                    <span class="text-base">評估矩陣 Heatmap</span>
-                </a>
+                <!-- Section: 實驗素材 -->
+                <div class="pt-4 pb-1">
+                    <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">實驗素材</div>
+                </div>
 
                 <a href="/rag/evaluation/testsets" class="flex items-center px-4 py-2.5 rounded-lg text-gray-700 {% if '/testsets' in request.path %}bg-blue-50 border-l-4 border-blue-500{% else %}hover:bg-gray-100{% endif %} transition">
                     <span class="text-xl mr-3">📝</span>
@@ -67,6 +67,11 @@
                 <a href="/rag/evaluation/prompts" class="flex items-center px-4 py-2.5 rounded-lg text-gray-700 {% if '/prompts' in request.path %}bg-blue-50 border-l-4 border-blue-500{% else %}hover:bg-gray-100{% endif %} transition">
                     <span class="text-xl mr-3">🔖</span>
                     <span class="text-base">Prompt 版本管理</span>
+                </a>
+
+                <a href="/rag/evaluation/chunks" class="flex items-center px-4 py-2.5 rounded-lg text-gray-700 {% if '/chunks' in request.path %}bg-blue-50 border-l-4 border-blue-500{% else %}hover:bg-gray-100{% endif %} transition">
+                    <span class="text-xl mr-3">📦</span>
+                    <span class="text-base">Chunk 策略管理</span>
                 </a>
             </nav>
 

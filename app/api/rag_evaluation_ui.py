@@ -1,7 +1,7 @@
 """UI routes for RAG evaluation system"""
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 router = APIRouter(prefix="/rag/evaluation", tags=["rag-evaluation-ui"])
@@ -10,11 +10,8 @@ templates = Jinja2Templates(directory="app/templates")
 
 @router.get("", response_class=HTMLResponse)
 async def evaluation_dashboard(request: Request):
-    """Evaluation dashboard page"""
-    return templates.TemplateResponse(
-        "rag/evaluation.html",
-        {"request": request}
-    )
+    """Redirect to evaluation matrix (old evaluation page deprecated)"""
+    return RedirectResponse(url="/rag/evaluation/matrix", status_code=302)
 
 
 @router.get("/matrix", response_class=HTMLResponse)
@@ -40,5 +37,14 @@ async def prompts_management(request: Request):
     """Prompt version management page"""
     return templates.TemplateResponse(
         "rag/prompts.html",
+        {"request": request}
+    )
+
+
+@router.get("/chunks", response_class=HTMLResponse)
+async def chunks_management(request: Request):
+    """Chunk strategy management page"""
+    return templates.TemplateResponse(
+        "rag/chunks.html",
         {"request": request}
     )

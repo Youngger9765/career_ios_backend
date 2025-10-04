@@ -163,6 +163,89 @@ class EvaluationService:
             })
             experiment.config_json = config
 
+            # STEP 1: Generate answers using RAG for each test case
+            from app.services.openai_service import OpenAIService
+            from sqlalchemy import String, bindparam
+
+            openai_service = OpenAIService()
+
+            for idx, case in enumerate(test_cases):
+                # Skip if answer already provided
+                if case.get("answer"):
+                    continue
+
+                question = case["question"]
+
+                # Perform RAG search - Generate embedding for question
+                question_embedding = await openai_service.create_embedding(question)
+                embedding_str = "[" + ",".join(map(str, question_embedding)) + "]"
+
+                # Build SQL query - JOIN embeddings table for vector search
+                if experiment.chunk_strategy:
+                    query = text("""
+                        SELECT
+                            c.id as chunk_id,
+                            c.doc_id,
+                            d.title AS document_title,
+                            c.text,
+                            1 - (e.embedding <=> CAST(:query_embedding AS vector)) AS similarity
+                        FROM chunks c
+                        JOIN embeddings e ON c.id = e.chunk_id
+                        JOIN documents d ON c.doc_id = d.id
+                        WHERE c.chunk_strategy = :chunk_strategy
+                        ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
+                        LIMIT 7
+                    """).bindparams(
+                        bindparam("query_embedding", type_=String),
+                        bindparam("chunk_strategy", type_=String)
+                    )
+                    result = db.execute(query, {
+                        "query_embedding": embedding_str,
+                        "chunk_strategy": experiment.chunk_strategy
+                    })
+                else:
+                    query = text("""
+                        SELECT
+                            c.id as chunk_id,
+                            c.doc_id,
+                            d.title AS document_title,
+                            c.text,
+                            1 - (e.embedding <=> CAST(:query_embedding AS vector)) AS similarity
+                        FROM chunks c
+                        JOIN embeddings e ON c.id = e.chunk_id
+                        JOIN documents d ON c.doc_id = d.id
+                        ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
+                        LIMIT 7
+                    """).bindparams(bindparam("query_embedding", type_=String))
+                    result = db.execute(query, {"query_embedding": embedding_str})
+
+                chunks = result.fetchall()
+
+                # Extract contexts
+                contexts = [chunk.text for chunk in chunks]
+                case["contexts"] = contexts
+
+                # Generate answer using OpenAI with retrieved contexts
+                system_prompt = experiment.instruction_template or """你是一位專業的職涯諮詢師，根據提供的文件內容回答問題。
+
+請遵循以下原則：
+1. 僅使用提供的文件內容回答
+2. 如果文件中沒有相關資訊，請誠實說明
+3. 保持專業、友善的語氣
+4. 提供具體、可操作的建議"""
+
+                context_text = "\n\n".join([f"[文件 {i+1}]\n{chunk}" for i, chunk in enumerate(contexts)])
+
+                answer = await openai_service.chat_completion(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": f"參考文件：\n{context_text}\n\n問題：{question}"}
+                    ],
+                    temperature=0.7
+                )
+
+                case["answer"] = answer
+
             # Start MLflow run
             with mlflow.start_run(
                 experiment_id=experiment.mlflow_experiment_id,
@@ -320,6 +403,9 @@ class EvaluationService:
             experiment.status = "failed"
             experiment.error_message = str(e)
             db.commit()
+            # Ensure MLflow run is ended even if error occurs
+            if mlflow.active_run():
+                mlflow.end_run()
             raise
 
         return experiment
