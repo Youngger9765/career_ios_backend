@@ -1,0 +1,562 @@
+{% extends "rag/base_sidebar.html" %}
+
+{% block page_title %}評估矩陣 Heatmap{% endblock %}
+
+{% block page_content %}
+<div class="mb-6">
+    <h2 class="text-3xl font-bold text-gray-800 mb-2">📊 評估矩陣總覽</h2>
+    <p class="text-gray-600">視覺化比較不同 Chunk 策略與測試集的評估結果</p>
+</div>
+
+<!-- Loading State -->
+<div id="loadingState" class="flex justify-center items-center py-20">
+    <div class="text-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+        <p class="text-gray-600">載入評估矩陣數據中...</p>
+    </div>
+</div>
+
+<!-- Matrix Container -->
+<div id="matrixContainer" class="hidden">
+    <!-- Filters and Controls -->
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <!-- Prompt Version Filter -->
+        <div class="mb-4">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">篩選 Prompt 版本</h3>
+            <div class="flex gap-2 flex-wrap" id="promptFilters">
+                <button onclick="filterPromptVersion('all')"
+                        class="prompt-filter-btn px-4 py-2 rounded-lg font-medium transition active"
+                        data-version="all">
+                    全部版本
+                </button>
+                <!-- Dynamic prompt version buttons will be added here -->
+            </div>
+        </div>
+
+        <!-- Metric Selector -->
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-gray-700">選擇評估指標</h3>
+            <div class="flex gap-2">
+                <button onclick="refreshMatrix()" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition text-sm">
+                    🔄 重新載入
+                </button>
+            </div>
+        </div>
+        <div class="flex gap-3 flex-wrap">
+            <button onclick="setMetric('avg_faithfulness')"
+                    class="metric-btn px-4 py-2 rounded-lg font-medium transition text-sm"
+                    data-metric="avg_faithfulness">
+                Faithfulness
+            </button>
+            <button onclick="setMetric('avg_answer_relevancy')"
+                    class="metric-btn px-4 py-2 rounded-lg font-medium transition active text-sm"
+                    data-metric="avg_answer_relevancy">
+                Answer Relevancy
+            </button>
+            <button onclick="setMetric('avg_context_recall')"
+                    class="metric-btn px-4 py-2 rounded-lg font-medium transition text-sm"
+                    data-metric="avg_context_recall">
+                Context Recall
+            </button>
+            <button onclick="setMetric('avg_context_precision')"
+                    class="metric-btn px-4 py-2 rounded-lg font-medium transition text-sm"
+                    data-metric="avg_context_precision">
+                Context Precision
+            </button>
+        </div>
+    </div>
+
+    <!-- Heatmap Matrix -->
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-sm" id="heatmapTable">
+                <thead>
+                    <tr class="border-b-2 border-gray-300">
+                        <th class="p-3 text-left font-bold text-gray-700 sticky left-0 bg-white z-10 w-32">
+                            Chunk 策略
+                        </th>
+                        <th class="p-3 text-center font-bold text-gray-700 bg-white z-10 w-24">
+                            Prompt
+                        </th>
+                        <!-- Test set headers will be inserted here -->
+                        <th class="p-3 text-center font-bold text-gray-700 bg-white z-10 w-28">
+                            操作
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="heatmapBody">
+                    <!-- Matrix rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4">
+        <h4 class="font-semibold text-gray-800 mb-3">📖 圖例說明</h4>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-4 h-4 rounded" style="background: linear-gradient(to right, #fee2e2, #dc2626)"></div>
+                    <span class="text-sm text-gray-700">顏色深淺：分數高低 (綠色=高分, 紅色=低分)</span>
+                </div>
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-4 h-4 bg-gray-100 border-2 border-dashed border-gray-400 rounded"></div>
+                    <span class="text-sm text-gray-700">虛線框：無評估數據</span>
+                </div>
+            </div>
+            <div>
+                <div class="text-sm text-gray-700 mb-1">
+                    <strong>點擊格子：</strong>查看實驗詳情
+                </div>
+                <div class="text-sm text-gray-700">
+                    <strong>Instruction Version：</strong>Prompt 版本編號
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Summary -->
+    <div class="mt-6 grid grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-600 mb-1">總實驗數</div>
+            <div class="text-2xl font-bold text-gray-800" id="totalExperiments">-</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-600 mb-1">最佳策略</div>
+            <div class="text-2xl font-bold text-green-600" id="bestStrategy">-</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-600 mb-1">平均分數</div>
+            <div class="text-2xl font-bold text-blue-600" id="avgScore">-</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-600 mb-1">完成度</div>
+            <div class="text-2xl font-bold text-indigo-600" id="completionRate">-</div>
+        </div>
+    </div>
+</div>
+
+<!-- Error State -->
+<div id="errorState" class="hidden bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+    <div class="text-4xl mb-4">⚠️</div>
+    <h3 class="text-xl font-semibold text-red-800 mb-2">載入失敗</h3>
+    <p class="text-red-600 mb-4" id="errorMessage">無法載入評估矩陣數據</p>
+    <button onclick="loadMatrix()" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+        重試
+    </button>
+</div>
+
+<script>
+let matrixData = null;
+let currentMetric = 'avg_answer_relevancy';
+let currentPromptFilter = 'all';
+
+// Color scale for heatmap
+function getColor(value) {
+    if (value === null || value === undefined) return '#f3f4f6'; // gray-100
+
+    // Green (high) to Red (low) scale
+    const normalized = value; // Assuming 0-1 scale
+    if (normalized >= 0.8) return '#10b981'; // green-500
+    if (normalized >= 0.6) return '#84cc16'; // lime-500
+    if (normalized >= 0.4) return '#fbbf24'; // amber-400
+    if (normalized >= 0.2) return '#f97316'; // orange-500
+    return '#ef4444'; // red-500
+}
+
+// Format metric value
+function formatMetric(value) {
+    if (value === null || value === undefined) return 'N/A';
+    return value.toFixed(3);
+}
+
+// Load matrix data from API
+async function loadMatrix() {
+    try {
+        document.getElementById('loadingState').classList.remove('hidden');
+        document.getElementById('matrixContainer').classList.add('hidden');
+        document.getElementById('errorState').classList.add('hidden');
+
+        const response = await fetch('/api/rag/evaluation/experiments/matrix');
+        if (!response.ok) throw new Error('Failed to load matrix data');
+
+        matrixData = await response.json();
+        initializePromptFilters();
+        renderMatrix();
+
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('matrixContainer').classList.remove('hidden');
+    } catch (error) {
+        console.error('Error loading matrix:', error);
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('errorState').classList.remove('hidden');
+        document.getElementById('errorMessage').textContent = error.message;
+    }
+}
+
+// Initialize prompt version filter buttons
+function initializePromptFilters() {
+    if (!matrixData) return;
+
+    const { cells } = matrixData;
+    const promptVersions = new Set();
+
+    // Collect all unique prompt versions
+    Object.values(cells).forEach(strategyData => {
+        Object.values(strategyData).forEach(testSetData => {
+            if (testSetData && testSetData.instruction_version) {
+                promptVersions.add(testSetData.instruction_version);
+            }
+        });
+    });
+
+    // Create filter buttons
+    const filtersContainer = document.getElementById('promptFilters');
+    const sortedVersions = Array.from(promptVersions).sort();
+
+    sortedVersions.forEach(version => {
+        const btn = document.createElement('button');
+        btn.className = 'prompt-filter-btn px-4 py-2 rounded-lg font-medium transition bg-gray-100 text-gray-700';
+        btn.dataset.version = version;
+        btn.textContent = `v${version}`;
+        btn.onclick = () => filterPromptVersion(version);
+        filtersContainer.appendChild(btn);
+    });
+}
+
+// Filter by prompt version
+function filterPromptVersion(version) {
+    currentPromptFilter = version;
+
+    // Update button styles
+    document.querySelectorAll('.prompt-filter-btn').forEach(btn => {
+        if (btn.dataset.version === version) {
+            btn.classList.add('active', 'bg-indigo-600', 'text-white');
+            btn.classList.remove('bg-gray-100', 'text-gray-700');
+        } else {
+            btn.classList.remove('active', 'bg-indigo-600', 'text-white');
+            btn.classList.add('bg-gray-100', 'text-gray-700');
+        }
+    });
+
+    renderMatrix();
+}
+
+// Render heatmap matrix with 3 dimensions: Chunk Strategy | Prompt | Test Sets
+function renderMatrix() {
+    if (!matrixData) return;
+
+    const { strategies, test_sets, cells } = matrixData;
+
+    // Render table headers: Chunk Strategy | Prompt | Test Set 1 | Test Set 2 | ... | 操作
+    const thead = document.querySelector('#heatmapTable thead tr');
+    thead.innerHTML = `
+        <th class="p-3 text-left font-bold text-gray-700 border-b-2 border-gray-300 sticky left-0 bg-white z-10 w-32">
+            Chunk 策略
+        </th>
+        <th class="p-3 text-center font-bold text-gray-700 border-b-2 border-gray-300 bg-white z-10 w-24">
+            Prompt
+        </th>
+    `;
+
+    test_sets.forEach(testSet => {
+        thead.innerHTML += `
+            <th class="p-3 text-center font-bold text-gray-700 border-b-2 border-gray-300 min-w-[150px]">
+                ${testSet}
+            </th>
+        `;
+    });
+
+    thead.innerHTML += `
+        <th class="p-3 text-center font-bold text-gray-700 border-b-2 border-gray-300 bg-white z-10 w-28">
+            操作
+        </th>
+    `;
+
+    // Collect all strategy-prompt combinations
+    const combinations = [];
+    strategies.forEach(strategy => {
+        const promptVersions = new Set();
+        test_sets.forEach(testSet => {
+            const cell = cells[strategy][testSet];
+            if (cell && cell.instruction_version) {
+                promptVersions.add(cell.instruction_version);
+            }
+        });
+
+        // Create a row for each prompt version within this strategy
+        if (promptVersions.size > 0) {
+            Array.from(promptVersions).sort().forEach(version => {
+                combinations.push({ strategy, version });
+            });
+        } else {
+            // If no prompt version found, still add the strategy
+            combinations.push({ strategy, version: null });
+        }
+    });
+
+    // Render table body
+    const tbody = document.getElementById('heatmapBody');
+    tbody.innerHTML = '';
+
+    let totalCells = 0;
+    let completedCells = 0;
+    let sumScores = 0;
+    let scoreCount = 0;
+    const strategyScores = {};
+
+    combinations.forEach(({ strategy, version }) => {
+        // Apply prompt version filter
+        if (currentPromptFilter !== 'all' && version !== currentPromptFilter) {
+            return;
+        }
+
+        const row = document.createElement('tr');
+        row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+        // Chunk Strategy column
+        row.innerHTML = `
+            <td class="p-3 font-medium text-gray-800 border-r border-gray-200 sticky left-0 bg-white z-10">
+                ${strategy}
+            </td>
+        `;
+
+        // Prompt Version column
+        row.innerHTML += `
+            <td class="p-2 text-center font-medium text-indigo-600 border-r border-gray-200 bg-white z-10">
+                ${version ? `v${version}` : '-'}
+            </td>
+        `;
+
+        // Test Set columns
+        let firstExperimentId = null;
+        test_sets.forEach(testSet => {
+            const cell = cells[strategy][testSet];
+            totalCells++;
+
+            // Check if this cell matches the current prompt version
+            const cellMatches = cell && (version === null || cell.instruction_version === version);
+
+            if (cellMatches) {
+                completedCells++;
+                const metricValue = cell[currentMetric];
+                const color = getColor(metricValue);
+
+                if (metricValue !== null && metricValue !== undefined) {
+                    sumScores += metricValue;
+                    scoreCount++;
+
+                    const key = `${strategy}_v${version}`;
+                    if (!strategyScores[key]) strategyScores[key] = [];
+                    strategyScores[key].push(metricValue);
+                }
+
+                // Store first experiment ID for re-run action
+                if (!firstExperimentId) firstExperimentId = cell.experiment_id;
+
+                const cellHtml = `
+                    <td class="p-2 text-center cursor-pointer transition hover:shadow-lg"
+                        style="background-color: ${color}; color: ${metricValue > 0.5 ? 'white' : '#1f2937'}"
+                        onclick="showExperimentDetail('${cell.experiment_id}')">
+                        <div class="font-bold text-lg mb-1">${formatMetric(metricValue)}</div>
+                        <div class="text-xs opacity-80">
+                            ${cell.total_queries} queries
+                        </div>
+                        <div class="text-xs opacity-70 mt-1">${cell.document_count} docs</div>
+                    </td>
+                `;
+                row.innerHTML += cellHtml;
+            } else {
+                row.innerHTML += `
+                    <td class="p-2 text-center bg-gray-100 border-2 border-dashed border-gray-300">
+                        <div class="text-gray-400 text-sm">未評估</div>
+                    </td>
+                `;
+            }
+        });
+
+        // Add action column with re-run button
+        row.innerHTML += `
+            <td class="p-2 text-center">
+                <button onclick="rerunExperiments('${strategy}', '${version || ''}')"
+                        class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs hover:bg-indigo-700 transition disabled:bg-gray-300"
+                        id="rerun-${strategy}-${version || 'none'}"
+                        title="重新執行此策略+Prompt的所有測試集">
+                    🔄 重新執行
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(row);
+    });
+
+    // Update statistics
+    document.getElementById('totalExperiments').textContent = completedCells;
+    document.getElementById('avgScore').textContent = scoreCount > 0 ? (sumScores / scoreCount).toFixed(3) : 'N/A';
+    document.getElementById('completionRate').textContent = `${Math.round((completedCells / totalCells) * 100)}%`;
+
+    // Find best strategy+prompt combination
+    let bestStrategy = '';
+    let bestAvg = -1;
+    Object.entries(strategyScores).forEach(([key, scores]) => {
+        const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+        if (avg > bestAvg) {
+            bestAvg = avg;
+            bestStrategy = key.replace('_', ' ');
+        }
+    });
+    document.getElementById('bestStrategy').textContent = bestStrategy || 'N/A';
+}
+
+// Set active metric
+function setMetric(metric) {
+    currentMetric = metric;
+
+    // Update button styles
+    document.querySelectorAll('.metric-btn').forEach(btn => {
+        if (btn.dataset.metric === metric) {
+            btn.classList.add('active', 'bg-indigo-600', 'text-white');
+            btn.classList.remove('bg-gray-100', 'text-gray-700');
+        } else {
+            btn.classList.remove('active', 'bg-indigo-600', 'text-white');
+            btn.classList.add('bg-gray-100', 'text-gray-700');
+        }
+    });
+
+    renderMatrix();
+}
+
+// Show experiment detail
+function showExperimentDetail(experimentId) {
+    window.location.href = `/rag/evaluation/experiments/${experimentId}`;
+}
+
+// Refresh matrix
+function refreshMatrix() {
+    loadMatrix();
+}
+
+// Re-run experiments for a specific strategy + prompt combination
+async function rerunExperiments(strategy, promptVersion) {
+    const btnId = `rerun-${strategy}-${promptVersion || 'none'}`;
+    const btn = document.getElementById(btnId);
+
+    if (!confirm(`確定要重新執行「${strategy}${promptVersion ? ' (v' + promptVersion + ')' : ''}」的所有測試集嗎？\n\n這將會：\n✓ 執行所有 4 個測試集的評估\n✓ 包含所有 4 個 RAGAS 指標\n✓ 可能需要幾分鐘時間`)) {
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ 執行中...';
+
+    const { test_sets, cells } = matrixData;
+    const results = [];
+
+    try {
+        // For each test set, re-run the evaluation
+        for (const testSet of test_sets) {
+            const cell = cells[strategy][testSet];
+
+            if (!cell) {
+                console.log(`Skipping ${testSet} - no existing experiment`);
+                continue;
+            }
+
+            // Get the experiment details to extract test cases
+            const expResponse = await fetch(`/api/rag/evaluation/experiments/${cell.experiment_id}/results`);
+            if (!expResponse.ok) {
+                throw new Error(`Failed to load experiment ${cell.experiment_id}`);
+            }
+
+            const testCases = await expResponse.json();
+
+            // Create new experiment
+            const createResponse = await fetch('/api/rag/evaluation/experiments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: `[重新執行] ${cell.name}`,
+                    description: `重新執行評估，包含所有 4 個 RAGAS 指標`,
+                    experiment_type: 'end_to_end',
+                    chunking_method: cell.chunking_method || 'recursive',
+                    chunk_size: cell.chunk_size || 256,
+                    chunk_overlap: cell.chunk_overlap || 50,
+                    chunk_strategy: strategy,
+                    instruction_version: promptVersion || '2.0'
+                })
+            });
+
+            if (!createResponse.ok) {
+                throw new Error(`Failed to create experiment for ${testSet}`);
+            }
+
+            const newExp = await createResponse.json();
+
+            // Run evaluation with all metrics
+            const evalResponse = await fetch(`/api/rag/evaluation/experiments/${newExp.id}/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    test_cases: testCases.map(tc => ({
+                        question: tc.question,
+                        answer: tc.answer,
+                        contexts: tc.contexts,
+                        ground_truth: tc.ground_truth
+                    })),
+                    include_ground_truth: true
+                })
+            });
+
+            if (!evalResponse.ok) {
+                throw new Error(`Failed to run evaluation for ${testSet}`);
+            }
+
+            const result = await evalResponse.json();
+            results.push(result);
+
+            btn.textContent = `⏳ ${results.length}/${test_sets.length}`;
+        }
+
+        btn.textContent = '✅ 完成';
+        btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+        btn.classList.add('bg-green-600');
+
+        setTimeout(() => {
+            alert(`✅ 重新執行完成！\n\n已完成 ${results.length} 個測試集的評估\n頁面將自動重新載入`);
+            location.reload();
+        }, 500);
+
+    } catch (error) {
+        console.error('Re-run failed:', error);
+        btn.textContent = '❌ 失敗';
+        btn.classList.remove('bg-indigo-600');
+        btn.classList.add('bg-red-600');
+        alert(`重新執行失敗：${error.message}`);
+
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.textContent = '🔄 重新執行';
+            btn.classList.remove('bg-red-600');
+            btn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+        }, 2000);
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    loadMatrix();
+});
+</script>
+
+<style>
+.metric-btn.active {
+    background-color: #4f46e5;
+    color: white;
+}
+.prompt-filter-btn.active {
+    background-color: #4f46e5;
+    color: white;
+}
+</style>
+
+{% endblock %}

@@ -24,7 +24,13 @@ class EvaluationExperiment(Base, BaseModel):
     chunking_method = Column(String(50), nullable=True)  # fixed, recursive, semantic, etc.
     chunk_size = Column(Integer, nullable=True)
     chunk_overlap = Column(Integer, nullable=True)
+    chunk_strategy = Column(String(100), nullable=True)  # NEW: strategy filter for evaluation
     config_json = Column(JSON, nullable=True)  # Additional config parameters
+
+    # Instruction Prompt Versioning
+    instruction_version = Column(String(50), nullable=True)  # e.g., "v2.0", "v2.1"
+    instruction_template = Column(Text, nullable=True)  # Full prompt template
+    instruction_hash = Column(String(64), nullable=True)  # SHA256 hash for quick comparison
 
     # Status
     status = Column(

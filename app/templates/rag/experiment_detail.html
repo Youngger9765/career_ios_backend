@@ -87,7 +87,10 @@
                 <tr class="border-b-2 border-gray-200">
                     <th class="py-3 px-3 text-gray-700 font-semibold">#</th>
                     <th class="py-3 px-3 text-gray-700 font-semibold">問題</th>
-                    <th class="py-3 px-3 text-gray-700 font-semibold">答案</th>
+                    <th class="py-3 px-3 text-gray-700 font-semibold">
+                        Agent 答案
+                        <span class="text-xs text-gray-500 font-normal block">(系統生成)</span>
+                    </th>
                     <th class="py-3 px-3 text-gray-700 font-semibold">Faithfulness</th>
                     <th class="py-3 px-3 text-gray-700 font-semibold">Relevancy</th>
                     <th class="py-3 px-3 text-gray-700 font-semibold">Recall</th>
@@ -230,8 +233,11 @@ function viewDetail(idx) {
                 <div class="bg-gray-50 rounded-lg p-3 text-gray-800">${result.question}</div>
             </div>
             <div>
-                <h4 class="text-sm font-semibold text-gray-700 mb-2">答案</h4>
-                <div class="bg-gray-50 rounded-lg p-3 text-gray-800">${result.answer}</div>
+                <h4 class="text-sm font-semibold text-gray-700 mb-2">
+                    Agent 答案
+                    <span class="text-xs text-gray-500 font-normal">(系統生成)</span>
+                </h4>
+                <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-3 text-gray-800">${result.answer}</div>
             </div>
             <div>
                 <h4 class="text-sm font-semibold text-gray-700 mb-2">檢索到的上下文 (${result.contexts.length} 個)</h4>
@@ -246,8 +252,11 @@ function viewDetail(idx) {
             </div>
             ${result.ground_truth ? `
                 <div>
-                    <h4 class="text-sm font-semibold text-gray-700 mb-2">標準答案</h4>
-                    <div class="bg-green-50 rounded-lg p-3 text-gray-800">${result.ground_truth}</div>
+                    <h4 class="text-sm font-semibold text-gray-700 mb-2">
+                        標準答案 (Ground Truth)
+                        <span class="text-xs text-gray-500 font-normal">(用於評估比對)</span>
+                    </h4>
+                    <div class="bg-green-50 border-l-4 border-green-500 rounded-lg p-3 text-gray-800">${result.ground_truth}</div>
                 </div>
             ` : ''}
             <div>

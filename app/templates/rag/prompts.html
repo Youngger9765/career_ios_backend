@@ -1,0 +1,301 @@
+{% extends "rag/base_sidebar.html" %}
+
+{% block page_title %}Prompt 版本管理{% endblock %}
+
+{% block page_content %}
+<div class="mb-6">
+    <h2 class="text-3xl font-bold text-gray-800 mb-2">📝 Prompt 版本管理</h2>
+    <p class="text-gray-600">管理與比較不同的 Instruction Prompt 版本</p>
+</div>
+
+<!-- Loading State -->
+<div id="loadingState" class="flex justify-center items-center py-20">
+    <div class="text-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+        <p class="text-gray-600">載入 Prompt 版本數據中...</p>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div id="mainContent" class="hidden">
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-600 mb-1">總版本數</div>
+            <div class="text-2xl font-bold text-gray-800" id="totalVersions">-</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-600 mb-1">總實驗數</div>
+            <div class="text-2xl font-bold text-blue-600" id="totalExperiments">-</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-600 mb-1">最常用版本</div>
+            <div class="text-2xl font-bold text-green-600" id="mostUsedVersion">-</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-sm text-gray-600 mb-1">最新版本</div>
+            <div class="text-2xl font-bold text-purple-600" id="latestVersion">-</div>
+        </div>
+    </div>
+
+    <!-- Version List -->
+    <div class="bg-white rounded-lg shadow-lg">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-semibold text-gray-800">Prompt 版本列表</h3>
+                <button onclick="refreshVersions()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                    🔄 重新載入
+                </button>
+            </div>
+        </div>
+
+        <div id="versionsList" class="divide-y divide-gray-200">
+            <!-- Version cards will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Compare Modal -->
+    <div id="compareModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8">
+        <div class="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="text-2xl font-bold text-gray-800">版本比對</h3>
+                <button onclick="closeCompareModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+                    ✕
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                <div class="grid grid-cols-2 gap-6" id="compareContent">
+                    <!-- Comparison content will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error State -->
+<div id="errorState" class="hidden bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+    <div class="text-4xl mb-4">⚠️</div>
+    <h3 class="text-xl font-semibold text-red-800 mb-2">載入失敗</h3>
+    <p class="text-red-600 mb-4" id="errorMessage">無法載入 Prompt 版本數據</p>
+    <button onclick="loadVersions()" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+        重試
+    </button>
+</div>
+
+<script>
+let versionsData = [];
+let selectedVersions = [];
+
+// Load versions from API
+async function loadVersions() {
+    try {
+        document.getElementById('loadingState').classList.remove('hidden');
+        document.getElementById('mainContent').classList.add('hidden');
+        document.getElementById('errorState').classList.add('hidden');
+
+        const response = await fetch('/api/rag/evaluation/prompts');
+        if (!response.ok) throw new Error('Failed to load prompt versions');
+
+        versionsData = await response.json();
+        renderVersions();
+        updateStatistics();
+
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+    } catch (error) {
+        console.error('Error loading versions:', error);
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('errorState').classList.remove('hidden');
+        document.getElementById('errorMessage').textContent = error.message;
+    }
+}
+
+// Update statistics cards
+function updateStatistics() {
+    if (versionsData.length === 0) return;
+
+    document.getElementById('totalVersions').textContent = versionsData.length;
+
+    const totalExps = versionsData.reduce((sum, v) => sum + v.experiments_count, 0);
+    document.getElementById('totalExperiments').textContent = totalExps;
+
+    const mostUsed = versionsData.reduce((max, v) =>
+        v.experiments_count > max.experiments_count ? v : max
+    );
+    document.getElementById('mostUsedVersion').textContent = mostUsed.version;
+
+    const latest = versionsData.reduce((latest, v) =>
+        (v.last_used || v.first_used) > (latest.last_used || latest.first_used) ? v : latest
+    );
+    document.getElementById('latestVersion').textContent = latest.version;
+}
+
+// Render version cards
+function renderVersions() {
+    const container = document.getElementById('versionsList');
+    container.innerHTML = '';
+
+    // Sort by last_used descending
+    const sorted = [...versionsData].sort((a, b) => {
+        const dateA = new Date(a.last_used || a.first_used || 0);
+        const dateB = new Date(b.last_used || b.first_used || 0);
+        return dateB - dateA;
+    });
+
+    sorted.forEach(version => {
+        const card = createVersionCard(version);
+        container.appendChild(card);
+    });
+}
+
+// Create version card element
+function createVersionCard(version) {
+    const div = document.createElement('div');
+    div.className = 'p-6 hover:bg-gray-50 transition';
+
+    const isSelected = selectedVersions.includes(version.version);
+
+    div.innerHTML = `
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <div class="flex items-center gap-3 mb-3">
+                    <h4 class="text-xl font-bold text-gray-800">${version.version}</h4>
+                    <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                        ${version.experiments_count} 個實驗
+                    </span>
+                    ${isSelected ? '<span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">✓ 已選擇</span>' : ''}
+                </div>
+
+                <div class="bg-gray-50 rounded-lg p-4 mb-3">
+                    <div class="text-xs text-gray-500 mb-1 font-medium">Prompt Template:</div>
+                    <pre class="text-sm text-gray-700 whitespace-pre-wrap font-mono max-h-32 overflow-y-auto">${version.template || 'N/A'}</pre>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <div class="text-gray-500 mb-1">Hash (前16位)</div>
+                        <div class="font-mono text-gray-700">${version.hash ? version.hash.substring(0, 16) : 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-500 mb-1">首次使用</div>
+                        <div class="text-gray-700">${version.first_used ? formatDate(version.first_used) : 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-500 mb-1">最後使用</div>
+                        <div class="text-gray-700">${version.last_used ? formatDate(version.last_used) : 'N/A'}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ml-6 flex flex-col gap-2">
+                <button
+                    onclick="toggleSelectVersion('${version.version}')"
+                    class="px-4 py-2 ${isSelected ? 'bg-green-600' : 'bg-indigo-600'} text-white rounded-lg hover:opacity-90 transition whitespace-nowrap">
+                    ${isSelected ? '✓ 已選擇' : '選擇比對'}
+                </button>
+                <button
+                    onclick="viewVersionExperiments('${version.version}')"
+                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition whitespace-nowrap">
+                    📊 查看實驗
+                </button>
+            </div>
+        </div>
+    `;
+
+    return div;
+}
+
+// Toggle version selection for comparison
+function toggleSelectVersion(versionName) {
+    const index = selectedVersions.indexOf(versionName);
+
+    if (index > -1) {
+        selectedVersions.splice(index, 1);
+    } else {
+        if (selectedVersions.length >= 2) {
+            alert('最多只能選擇 2 個版本進行比對');
+            return;
+        }
+        selectedVersions.push(versionName);
+    }
+
+    renderVersions();
+
+    if (selectedVersions.length === 2) {
+        compareVersions();
+    }
+}
+
+// Compare two versions
+function compareVersions() {
+    if (selectedVersions.length !== 2) return;
+
+    const v1 = versionsData.find(v => v.version === selectedVersions[0]);
+    const v2 = versionsData.find(v => v.version === selectedVersions[1]);
+
+    const content = document.getElementById('compareContent');
+    content.innerHTML = `
+        <div>
+            <div class="bg-blue-50 rounded-lg p-4 mb-4">
+                <h4 class="text-lg font-bold text-blue-800 mb-2">${v1.version}</h4>
+                <div class="text-sm text-blue-700">
+                    <div class="mb-1">實驗數: ${v1.experiments_count}</div>
+                    <div class="mb-1">首次使用: ${formatDate(v1.first_used)}</div>
+                    <div>最後使用: ${formatDate(v1.last_used)}</div>
+                </div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-xs text-gray-500 mb-2 font-medium">Prompt Template:</div>
+                <pre class="text-sm text-gray-700 whitespace-pre-wrap font-mono max-h-96 overflow-y-auto">${v1.template || 'N/A'}</pre>
+            </div>
+        </div>
+
+        <div>
+            <div class="bg-purple-50 rounded-lg p-4 mb-4">
+                <h4 class="text-lg font-bold text-purple-800 mb-2">${v2.version}</h4>
+                <div class="text-sm text-purple-700">
+                    <div class="mb-1">實驗數: ${v2.experiments_count}</div>
+                    <div class="mb-1">首次使用: ${formatDate(v2.first_used)}</div>
+                    <div>最後使用: ${formatDate(v2.last_used)}</div>
+                </div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-xs text-gray-500 mb-2 font-medium">Prompt Template:</div>
+                <pre class="text-sm text-gray-700 whitespace-pre-wrap font-mono max-h-96 overflow-y-auto">${v2.template || 'N/A'}</pre>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('compareModal').classList.remove('hidden');
+}
+
+// Close compare modal
+function closeCompareModal() {
+    document.getElementById('compareModal').classList.add('hidden');
+    selectedVersions = [];
+    renderVersions();
+}
+
+// View experiments for a version
+async function viewVersionExperiments(version) {
+    window.location.href = `/rag/evaluation?prompt_version=${encodeURIComponent(version)}`;
+}
+
+// Format date
+function formatDate(dateStr) {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('zh-TW') + ' ' + date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Refresh versions
+function refreshVersions() {
+    loadVersions();
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    loadVersions();
+});
+</script>
+{% endblock %}

@@ -19,6 +19,7 @@ class ChatRequest(BaseModel):
     similarity_threshold: float = 0.55
     system_prompt: Optional[str] = None
     temperature: float = 0.6
+    chunk_strategy: Optional[str] = None  # NEW: filter by chunk strategy
 
 
 class Citation(BaseModel):
@@ -143,35 +144,62 @@ needs_search = false if:
         query_embedding = await openai_service.create_embedding(request.question)
         embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
 
-        query_sql = text(
-            """
-            SELECT
-                c.id as chunk_id,
-                c.doc_id,
-                c.text,
-                d.title as document_title,
-                1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
-            FROM chunks c
-            JOIN embeddings e ON c.id = e.chunk_id
-            JOIN documents d ON c.doc_id = d.id
-            WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
-            ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
-            LIMIT :top_k
-        """
-        ).bindparams(
-            bindparam("query_embedding", type_=String),
-            bindparam("threshold", type_=Float),
-            bindparam("top_k", type_=Integer),
-        )
+        # Build SQL query based on chunk_strategy filter
+        params = {
+            "query_embedding": embedding_str,
+            "threshold": request.similarity_threshold,
+            "top_k": request.top_k,
+        }
 
-        result = db.execute(
-            query_sql,
-            {
-                "query_embedding": embedding_str,
-                "threshold": request.similarity_threshold,
-                "top_k": request.top_k,
-            },
-        )
+        if request.chunk_strategy:
+            # Query with strategy filter
+            query_sql = text(
+                """
+                SELECT
+                    c.id as chunk_id,
+                    c.doc_id,
+                    c.text,
+                    d.title as document_title,
+                    1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
+                FROM chunks c
+                JOIN embeddings e ON c.id = e.chunk_id
+                JOIN documents d ON c.doc_id = d.id
+                WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
+                    AND c.chunk_strategy = :chunk_strategy
+                ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
+                LIMIT :top_k
+            """
+            ).bindparams(
+                bindparam("query_embedding", type_=String),
+                bindparam("threshold", type_=Float),
+                bindparam("top_k", type_=Integer),
+                bindparam("chunk_strategy", type_=String),
+            )
+            params["chunk_strategy"] = request.chunk_strategy
+        else:
+            # Query without strategy filter
+            query_sql = text(
+                """
+                SELECT
+                    c.id as chunk_id,
+                    c.doc_id,
+                    c.text,
+                    d.title as document_title,
+                    1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
+                FROM chunks c
+                JOIN embeddings e ON c.id = e.chunk_id
+                JOIN documents d ON c.doc_id = d.id
+                WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
+                ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
+                LIMIT :top_k
+            """
+            ).bindparams(
+                bindparam("query_embedding", type_=String),
+                bindparam("threshold", type_=Float),
+                bindparam("top_k", type_=Integer),
+            )
+
+        result = db.execute(query_sql, params)
 
         rows = result.fetchall()
 

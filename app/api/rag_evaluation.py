@@ -1,6 +1,8 @@
 """API endpoints for RAG evaluation system"""
 
+import math
 import uuid
+from datetime import datetime
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,9 +10,19 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.models.evaluation import EvaluationExperiment
 from app.services.evaluation_service import EvaluationService
 
 router = APIRouter(prefix="/api/rag/evaluation", tags=["rag-evaluation"])
+
+
+def safe_float(value: Optional[float]) -> Optional[float]:
+    """Convert NaN to None for JSON serialization"""
+    if value is None:
+        return None
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    return value
 
 
 # Pydantic models for request/response
@@ -21,6 +33,10 @@ class CreateExperimentRequest(BaseModel):
     chunking_method: Optional[str] = None
     chunk_size: Optional[int] = None
     chunk_overlap: Optional[int] = None
+    chunk_strategy: Optional[str] = None  # NEW: strategy to use for evaluation
+    instruction_version: Optional[str] = None  # NEW: instruction prompt version
+    instruction_template: Optional[str] = None  # NEW: instruction prompt template
+    instruction_hash: Optional[str] = None  # NEW: instruction prompt hash
     config: Optional[dict[str, Any]] = None
 
 
@@ -35,28 +51,32 @@ class TestCase(BaseModel):
 
 class RunEvaluationRequest(BaseModel):
     test_cases: list[TestCase]
-    include_ground_truth: bool = False
+    include_ground_truth: bool = True  # Changed default to True to enable all RAGAS metrics
 
 
 class ExperimentResponse(BaseModel):
     id: str
     name: str
-    description: Optional[str]
+    description: Optional[str] = None
     experiment_type: str
-    chunking_method: Optional[str]
-    chunk_size: Optional[int]
-    chunk_overlap: Optional[int]
+    chunking_method: Optional[str] = None
+    chunk_size: Optional[int] = None
+    chunk_overlap: Optional[int] = None
+    chunk_strategy: Optional[str] = None  # Allow None for backward compatibility
+    instruction_version: Optional[str] = None  # NEW
+    instruction_template: Optional[str] = None  # NEW
+    instruction_hash: Optional[str] = None  # NEW
     status: str
-    total_queries: int
-    avg_faithfulness: Optional[float]
-    avg_answer_relevancy: Optional[float]
-    avg_context_recall: Optional[float]
-    avg_context_precision: Optional[float]
-    avg_latency_ms: Optional[float]
-    mlflow_experiment_id: Optional[str]
-    mlflow_run_id: Optional[str]
-    created_at: str
-    updated_at: Optional[str]
+    total_queries: int = 0
+    avg_faithfulness: Optional[float] = None
+    avg_answer_relevancy: Optional[float] = None
+    avg_context_recall: Optional[float] = None
+    avg_context_precision: Optional[float] = None
+    avg_latency_ms: Optional[float] = None
+    mlflow_experiment_id: Optional[str] = None  # Allow None for backward compatibility
+    mlflow_run_id: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 
 class ResultResponse(BaseModel):
@@ -90,6 +110,10 @@ async def create_experiment(
         chunking_method=request.chunking_method,
         chunk_size=request.chunk_size,
         chunk_overlap=request.chunk_overlap,
+        chunk_strategy=request.chunk_strategy,  # NEW
+        instruction_version=request.instruction_version,  # NEW
+        instruction_template=request.instruction_template,  # NEW
+        instruction_hash=request.instruction_hash,  # NEW
         config=request.config,
     )
 
@@ -101,13 +125,17 @@ async def create_experiment(
         chunking_method=experiment.chunking_method,
         chunk_size=experiment.chunk_size,
         chunk_overlap=experiment.chunk_overlap,
+        chunk_strategy=experiment.chunk_strategy,
+        instruction_version=experiment.instruction_version,
+        instruction_template=experiment.instruction_template,
+        instruction_hash=experiment.instruction_hash,
         status=experiment.status,
         total_queries=experiment.total_queries or 0,
-        avg_faithfulness=experiment.avg_faithfulness,
-        avg_answer_relevancy=experiment.avg_answer_relevancy,
-        avg_context_recall=experiment.avg_context_recall,
-        avg_context_precision=experiment.avg_context_precision,
-        avg_latency_ms=experiment.avg_latency_ms,
+        avg_faithfulness=safe_float(experiment.avg_faithfulness),
+        avg_answer_relevancy=safe_float(experiment.avg_answer_relevancy),
+        avg_context_recall=safe_float(experiment.avg_context_recall),
+        avg_context_precision=safe_float(experiment.avg_context_precision),
+        avg_latency_ms=safe_float(experiment.avg_latency_ms),
         mlflow_experiment_id=experiment.mlflow_experiment_id,
         mlflow_run_id=experiment.mlflow_run_id,
         created_at=experiment.created_at.isoformat() if experiment.created_at else None,
@@ -150,13 +178,17 @@ async def run_evaluation(
         chunking_method=experiment.chunking_method,
         chunk_size=experiment.chunk_size,
         chunk_overlap=experiment.chunk_overlap,
+        chunk_strategy=experiment.chunk_strategy,
+        instruction_version=experiment.instruction_version,
+        instruction_template=experiment.instruction_template,
+        instruction_hash=experiment.instruction_hash,
         status=experiment.status,
         total_queries=experiment.total_queries or 0,
-        avg_faithfulness=experiment.avg_faithfulness,
-        avg_answer_relevancy=experiment.avg_answer_relevancy,
-        avg_context_recall=experiment.avg_context_recall,
-        avg_context_precision=experiment.avg_context_precision,
-        avg_latency_ms=experiment.avg_latency_ms,
+        avg_faithfulness=safe_float(experiment.avg_faithfulness),
+        avg_answer_relevancy=safe_float(experiment.avg_answer_relevancy),
+        avg_context_recall=safe_float(experiment.avg_context_recall),
+        avg_context_precision=safe_float(experiment.avg_context_precision),
+        avg_latency_ms=safe_float(experiment.avg_latency_ms),
         mlflow_experiment_id=experiment.mlflow_experiment_id,
         mlflow_run_id=experiment.mlflow_run_id,
         created_at=experiment.created_at.isoformat() if experiment.created_at else None,
@@ -190,19 +222,117 @@ async def list_experiments(
             chunking_method=exp.chunking_method,
             chunk_size=exp.chunk_size,
             chunk_overlap=exp.chunk_overlap,
+            chunk_strategy=exp.chunk_strategy,
+            instruction_version=exp.instruction_version,
+            instruction_template=exp.instruction_template,
+            instruction_hash=exp.instruction_hash,
             status=exp.status,
             total_queries=exp.total_queries or 0,
-            avg_faithfulness=exp.avg_faithfulness,
-            avg_answer_relevancy=exp.avg_answer_relevancy,
-            avg_context_recall=exp.avg_context_recall,
-            avg_context_precision=exp.avg_context_precision,
-            avg_latency_ms=exp.avg_latency_ms,
+            avg_faithfulness=safe_float(exp.avg_faithfulness),
+            avg_answer_relevancy=safe_float(exp.avg_answer_relevancy),
+            avg_context_recall=safe_float(exp.avg_context_recall),
+            avg_context_precision=safe_float(exp.avg_context_precision),
+            avg_latency_ms=safe_float(exp.avg_latency_ms),
+            mlflow_experiment_id=exp.mlflow_experiment_id,
             mlflow_run_id=exp.mlflow_run_id,
             created_at=exp.created_at.isoformat() if exp.created_at else None,
             updated_at=exp.updated_at.isoformat() if exp.updated_at else None,
         )
         for exp in experiments
     ]
+
+
+@router.get("/experiments/matrix")
+async def get_evaluation_matrix(
+    db: Session = Depends(get_db),
+):
+    """Get evaluation matrix data for heatmap visualization
+
+    Returns a matrix of experiments grouped by:
+    - Rows: chunk_strategy (rec_256_50, rec_400_80, rec_512_100, rec_1024_200, rec_2048_400)
+    - Columns: test set name
+
+    Each cell contains:
+    - avg_faithfulness, avg_answer_relevancy
+    - experiment_id, status
+    - instruction_version, document_count
+    """
+    from collections import defaultdict
+
+    # Get all completed experiments
+    experiments = db.query(EvaluationExperiment).filter(
+        EvaluationExperiment.status == "completed",
+        EvaluationExperiment.chunk_strategy.isnot(None)
+    ).all()
+
+    # Define strategies and test sets
+    strategies = ["rec_256_50", "rec_400_80", "rec_512_100", "rec_1024_200", "rec_2048_400"]
+
+    # Get unique test set names from experiments
+    test_sets = set()
+    for exp in experiments:
+        # Extract test set name from experiment name or description
+        # Format: "矩陣評估 - 優質模式 (512字) × 職涯興趣與熱情探索"
+        name_parts = exp.name.split("×")
+        if len(name_parts) == 2:
+            test_set = name_parts[1].strip()
+            test_sets.add(test_set)
+
+    test_sets = sorted(list(test_sets)) if test_sets else ["Default Test Set"]
+
+    # Build matrix
+    matrix = defaultdict(lambda: defaultdict(lambda: None))
+
+    for exp in experiments:
+        strategy = exp.chunk_strategy
+
+        # Extract test set from experiment name
+        test_set = "Default Test Set"
+        name_parts = exp.name.split("×")
+        if len(name_parts) == 2:
+            test_set = name_parts[1].strip()
+
+        # Get document count from config_json
+        doc_count = 0
+        if exp.config_json and 'total_documents' in exp.config_json:
+            doc_count = exp.config_json['total_documents']
+
+        cell_data = {
+            "experiment_id": str(exp.id),
+            "name": exp.name,
+            "status": exp.status,
+            "avg_faithfulness": safe_float(exp.avg_faithfulness),
+            "avg_answer_relevancy": safe_float(exp.avg_answer_relevancy),
+            "avg_context_recall": safe_float(exp.avg_context_recall),
+            "avg_context_precision": safe_float(exp.avg_context_precision),
+            "total_queries": exp.total_queries or 0,
+            "instruction_version": exp.instruction_version,
+            "document_count": doc_count,
+            "created_at": exp.created_at.isoformat() if exp.created_at else None,
+            "chunking_method": exp.chunking_method,
+            "chunk_size": exp.chunk_size,
+            "chunk_overlap": exp.chunk_overlap,
+        }
+
+        # Store in matrix (if multiple experiments, keep the most recent)
+        existing = matrix[strategy][test_set]
+        if existing is None or (exp.created_at and existing.get("created_at") and
+                                exp.created_at.isoformat() > existing["created_at"]):
+            matrix[strategy][test_set] = cell_data
+
+    # Convert to list format for frontend
+    matrix_data = {
+        "strategies": strategies,
+        "test_sets": test_sets,
+        "cells": {}
+    }
+
+    for strategy in strategies:
+        matrix_data["cells"][strategy] = {}
+        for test_set in test_sets:
+            matrix_data["cells"][strategy][test_set] = matrix[strategy][test_set]
+
+    return matrix_data
 
 
 @router.get("/experiments/{experiment_id}", response_model=ExperimentResponse)
@@ -229,13 +359,17 @@ async def get_experiment(
         chunking_method=experiment.chunking_method,
         chunk_size=experiment.chunk_size,
         chunk_overlap=experiment.chunk_overlap,
+        chunk_strategy=experiment.chunk_strategy,
+        instruction_version=experiment.instruction_version,
+        instruction_template=experiment.instruction_template,
+        instruction_hash=experiment.instruction_hash,
         status=experiment.status,
         total_queries=experiment.total_queries or 0,
-        avg_faithfulness=experiment.avg_faithfulness,
-        avg_answer_relevancy=experiment.avg_answer_relevancy,
-        avg_context_recall=experiment.avg_context_recall,
-        avg_context_precision=experiment.avg_context_precision,
-        avg_latency_ms=experiment.avg_latency_ms,
+        avg_faithfulness=safe_float(experiment.avg_faithfulness),
+        avg_answer_relevancy=safe_float(experiment.avg_answer_relevancy),
+        avg_context_recall=safe_float(experiment.avg_context_recall),
+        avg_context_precision=safe_float(experiment.avg_context_precision),
+        avg_latency_ms=safe_float(experiment.avg_latency_ms),
         mlflow_experiment_id=experiment.mlflow_experiment_id,
         mlflow_run_id=experiment.mlflow_run_id,
         created_at=experiment.created_at.isoformat() if experiment.created_at else None,
@@ -270,11 +404,11 @@ async def get_experiment_results(
             answer=result.answer,
             contexts=result.contexts,
             ground_truth=result.ground_truth,
-            faithfulness=result.faithfulness,
-            answer_relevancy=result.answer_relevancy,
-            context_recall=result.context_recall,
-            context_precision=result.context_precision,
-            latency_ms=result.latency_ms,
+            faithfulness=safe_float(result.faithfulness),
+            answer_relevancy=safe_float(result.answer_relevancy),
+            context_recall=safe_float(result.context_recall),
+            context_precision=safe_float(result.context_precision),
+            latency_ms=safe_float(result.latency_ms),
         )
         for result in results
     ]
@@ -298,3 +432,357 @@ async def compare_experiments(
     comparison = await eval_service.compare_experiments(db=db, experiment_ids=exp_uuids)
 
     return comparison
+
+
+class PromptVersion(BaseModel):
+    version: str
+    template: str
+    description: Optional[str] = None
+    is_active: bool = True
+
+
+@router.post("/prompts")
+async def create_prompt_version(
+    prompt: PromptVersion,
+    db: Session = Depends(get_db),
+):
+    """Create a new prompt version"""
+    import hashlib
+
+    # Calculate hash
+    prompt_hash = hashlib.sha256(prompt.template.encode('utf-8')).hexdigest()
+
+    # Store in simple JSON format (could be a separate table in production)
+    # For now, we'll return the structured data
+    return {
+        "version": prompt.version,
+        "template": prompt.template,
+        "description": prompt.description,
+        "hash": prompt_hash,
+        "is_active": prompt.is_active,
+        "created_at": datetime.now().isoformat()
+    }
+
+
+@router.get("/prompts")
+async def list_prompt_versions(
+    db: Session = Depends(get_db),
+):
+    """List all prompt versions from experiments"""
+    from collections import defaultdict
+
+    # Get unique instruction versions from experiments
+    experiments = db.query(EvaluationExperiment).filter(
+        EvaluationExperiment.instruction_version.isnot(None)
+    ).all()
+
+    # Group by version
+    versions = defaultdict(lambda: {
+        "version": None,
+        "template": None,
+        "hash": None,
+        "experiments_count": 0,
+        "first_used": None,
+        "last_used": None
+    })
+
+    for exp in experiments:
+        version = exp.instruction_version
+        if version not in versions or versions[version]["version"] is None:
+            versions[version]["version"] = version
+            versions[version]["template"] = exp.instruction_template
+            versions[version]["hash"] = exp.instruction_hash
+            versions[version]["first_used"] = exp.created_at.isoformat() if exp.created_at else None
+
+        versions[version]["experiments_count"] += 1
+        if exp.created_at:
+            last_used = exp.created_at.isoformat()
+            if not versions[version]["last_used"] or last_used > versions[version]["last_used"]:
+                versions[version]["last_used"] = last_used
+
+    return list(versions.values())
+
+
+@router.get("/prompts/{version}/experiments")
+async def get_experiments_by_prompt_version(
+    version: str,
+    db: Session = Depends(get_db),
+):
+    """Get all experiments using a specific prompt version"""
+    experiments = db.query(EvaluationExperiment).filter(
+        EvaluationExperiment.instruction_version == version
+    ).all()
+
+    return [
+        {
+            "id": str(exp.id),
+            "name": exp.name,
+            "chunk_strategy": exp.chunk_strategy,
+            "status": exp.status,
+            "avg_faithfulness": safe_float(exp.avg_faithfulness),
+            "avg_answer_relevancy": safe_float(exp.avg_answer_relevancy),
+            "created_at": exp.created_at.isoformat() if exp.created_at else None
+        }
+        for exp in experiments
+    ]
+
+
+@router.get("/prompts/compare")
+async def compare_prompt_versions(
+    version1: str,
+    version2: str,
+    db: Session = Depends(get_db),
+):
+    """Compare two prompt versions with their templates and performance metrics"""
+
+    # Get experiments for both versions
+    exp1 = db.query(EvaluationExperiment).filter(
+        EvaluationExperiment.instruction_version == version1
+    ).first()
+
+    exp2 = db.query(EvaluationExperiment).filter(
+        EvaluationExperiment.instruction_version == version2
+    ).first()
+
+    if not exp1:
+        raise HTTPException(status_code=404, detail=f"Version {version1} not found")
+    if not exp2:
+        raise HTTPException(status_code=404, detail=f"Version {version2} not found")
+
+    # Get all experiments for each version to calculate average metrics
+    all_exp1 = db.query(EvaluationExperiment).filter(
+        EvaluationExperiment.instruction_version == version1
+    ).all()
+
+    all_exp2 = db.query(EvaluationExperiment).filter(
+        EvaluationExperiment.instruction_version == version2
+    ).all()
+
+    def calc_avg_metrics(experiments):
+        metrics = {
+            'faithfulness': [],
+            'answer_relevancy': [],
+            'context_recall': [],
+            'context_precision': []
+        }
+
+        for exp in experiments:
+            if exp.avg_faithfulness is not None:
+                metrics['faithfulness'].append(float(exp.avg_faithfulness))
+            if exp.avg_answer_relevancy is not None:
+                metrics['answer_relevancy'].append(float(exp.avg_answer_relevancy))
+            if exp.avg_context_recall is not None:
+                metrics['context_recall'].append(float(exp.avg_context_recall))
+            if exp.avg_context_precision is not None:
+                metrics['context_precision'].append(float(exp.avg_context_precision))
+
+        return {
+            'avg_faithfulness': sum(metrics['faithfulness']) / len(metrics['faithfulness']) if metrics['faithfulness'] else None,
+            'avg_answer_relevancy': sum(metrics['answer_relevancy']) / len(metrics['answer_relevancy']) if metrics['answer_relevancy'] else None,
+            'avg_context_recall': sum(metrics['context_recall']) / len(metrics['context_recall']) if metrics['context_recall'] else None,
+            'avg_context_precision': sum(metrics['context_precision']) / len(metrics['context_precision']) if metrics['context_precision'] else None,
+        }
+
+    # Calculate text diff
+    import difflib
+    template1_lines = (exp1.instruction_template or "").splitlines()
+    template2_lines = (exp2.instruction_template or "").splitlines()
+    diff = list(difflib.unified_diff(template1_lines, template2_lines, lineterm=''))
+
+    return {
+        "version1": {
+            "version": version1,
+            "template": exp1.instruction_template,
+            "hash": exp1.instruction_hash,
+            "experiments_count": len(all_exp1),
+            "metrics": calc_avg_metrics(all_exp1)
+        },
+        "version2": {
+            "version": version2,
+            "template": exp2.instruction_template,
+            "hash": exp2.instruction_hash,
+            "experiments_count": len(all_exp2),
+            "metrics": calc_avg_metrics(all_exp2)
+        },
+        "diff": diff,
+        "template_identical": exp1.instruction_hash == exp2.instruction_hash
+    }
+
+
+@router.get("/recommendations")
+async def get_recommendations(db: Session = Depends(get_db)):
+    """Get intelligent recommendations based on experiment results"""
+
+    experiments = db.query(EvaluationExperiment).filter(
+        EvaluationExperiment.status == "completed"
+    ).all()
+
+    if not experiments:
+        return {
+            "recommendations": [],
+            "summary": "尚無實驗數據，建議先執行評估實驗。"
+        }
+
+    recommendations = []
+
+    # Analyze by chunk strategy
+    strategy_performance = {}
+    for exp in experiments:
+        if not exp.chunk_strategy:
+            continue
+
+        if exp.chunk_strategy not in strategy_performance:
+            strategy_performance[exp.chunk_strategy] = {
+                'count': 0,
+                'total_faithfulness': 0,
+                'total_answer_relevancy': 0,
+                'total_context_recall': 0,
+                'total_context_precision': 0
+            }
+
+        perf = strategy_performance[exp.chunk_strategy]
+        perf['count'] += 1
+
+        if exp.avg_faithfulness:
+            perf['total_faithfulness'] += float(exp.avg_faithfulness)
+        if exp.avg_answer_relevancy:
+            perf['total_answer_relevancy'] += float(exp.avg_answer_relevancy)
+        if exp.avg_context_recall:
+            perf['total_context_recall'] += float(exp.avg_context_recall)
+        if exp.avg_context_precision:
+            perf['total_context_precision'] += float(exp.avg_context_precision)
+
+    # Calculate averages and find best strategy
+    best_strategy = None
+    best_avg = 0
+
+    for strategy, perf in strategy_performance.items():
+        count = perf['count']
+        avg_score = (
+            perf['total_faithfulness'] / count +
+            perf['total_answer_relevancy'] / count +
+            perf['total_context_recall'] / count +
+            perf['total_context_precision'] / count
+        ) / 4
+
+        if avg_score > best_avg:
+            best_avg = avg_score
+            best_strategy = strategy
+
+    if best_strategy:
+        recommendations.append({
+            "type": "best_chunk_strategy",
+            "priority": "high",
+            "title": f"推薦使用 {best_strategy} 切分策略",
+            "description": f"基於 {strategy_performance[best_strategy]['count']} 個實驗的數據，此策略平均分數最高 ({best_avg:.3f})",
+            "action": f"在新實驗中使用 chunk_strategy='{best_strategy}'",
+            "impact": "high"
+        })
+
+    # Analyze by instruction version
+    version_performance = {}
+    for exp in experiments:
+        if not exp.instruction_version:
+            continue
+
+        if exp.instruction_version not in version_performance:
+            version_performance[exp.instruction_version] = {
+                'count': 0,
+                'total_score': 0
+            }
+
+        perf = version_performance[exp.instruction_version]
+        perf['count'] += 1
+
+        score_sum = 0
+        score_count = 0
+        if exp.avg_faithfulness:
+            score_sum += float(exp.avg_faithfulness)
+            score_count += 1
+        if exp.avg_answer_relevancy:
+            score_sum += float(exp.avg_answer_relevancy)
+            score_count += 1
+
+        if score_count > 0:
+            perf['total_score'] += score_sum / score_count
+
+    # Find best prompt version
+    best_version = None
+    best_version_avg = 0
+
+    for version, perf in version_performance.items():
+        if perf['count'] == 0:
+            continue
+        avg = perf['total_score'] / perf['count']
+        if avg > best_version_avg:
+            best_version_avg = avg
+            best_version = version
+
+    if best_version:
+        recommendations.append({
+            "type": "best_prompt_version",
+            "priority": "high",
+            "title": f"推薦使用 Prompt {best_version}",
+            "description": f"基於 {version_performance[best_version]['count']} 個實驗，此版本平均效果最佳",
+            "action": f"使用 instruction_version='{best_version}'",
+            "impact": "medium"
+        })
+
+    # Check for low-performing areas
+    low_performers = []
+    for exp in experiments:
+        if exp.avg_faithfulness and float(exp.avg_faithfulness) < 0.5:
+            low_performers.append(exp.chunk_strategy or "unknown")
+
+    if low_performers:
+        unique_low = set(low_performers)
+        recommendations.append({
+            "type": "avoid_strategy",
+            "priority": "medium",
+            "title": "避免使用低效策略",
+            "description": f"以下策略表現較差: {', '.join(unique_low)}",
+            "action": "考慮更換不同的 chunk 參數組合",
+            "impact": "medium"
+        })
+
+    # Check coverage
+    total_cells = 0
+    completed_cells = 0
+    strategies = set()
+    test_sets = set()
+
+    for exp in experiments:
+        if exp.chunk_strategy:
+            strategies.add(exp.chunk_strategy)
+        if hasattr(exp, 'test_set_name') and exp.test_set_name:
+            test_sets.add(exp.test_set_name)
+
+    if strategies and test_sets:
+        total_cells = len(strategies) * len(test_sets)
+        completed_cells = len(experiments)
+        coverage = (completed_cells / total_cells) * 100
+
+        if coverage < 50:
+            recommendations.append({
+                "type": "increase_coverage",
+                "priority": "low",
+                "title": "增加測試覆蓋率",
+                "description": f"目前評估矩陣覆蓋率僅 {coverage:.1f}%",
+                "action": "執行更多策略與測試集的組合實驗",
+                "impact": "low"
+            })
+
+    # Summary
+    summary = f"分析了 {len(experiments)} 個實驗，生成了 {len(recommendations)} 個建議"
+
+    return {
+        "recommendations": recommendations,
+        "summary": summary,
+        "stats": {
+            "total_experiments": len(experiments),
+            "unique_strategies": len(strategy_performance),
+            "unique_prompt_versions": len(version_performance),
+            "best_strategy": best_strategy,
+            "best_prompt_version": best_version
+        }
+    }

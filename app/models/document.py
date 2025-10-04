@@ -62,6 +62,7 @@ class Chunk(Base):
         nullable=False,
         index=True,
     )
+    chunk_strategy = Column(String(100), default="rec_400_80", nullable=False, index=True)  # NEW: chunking strategy tag
     ordinal = Column(Integer, nullable=False)  # Order in document
     text = Column(Text, nullable=False)
     meta_json = Column(JSON, default={})

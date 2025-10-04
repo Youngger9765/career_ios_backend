@@ -1,6 +1,7 @@
 """RAG Evaluation Service with RAGAS and MLflow integration"""
 
 import asyncio
+import math
 import os
 import time
 import uuid
@@ -47,6 +48,10 @@ class EvaluationService:
         chunking_method: Optional[str] = None,
         chunk_size: Optional[int] = None,
         chunk_overlap: Optional[int] = None,
+        chunk_strategy: Optional[str] = None,  # NEW
+        instruction_version: Optional[str] = None,
+        instruction_template: Optional[str] = None,
+        instruction_hash: Optional[str] = None,
         config: Optional[dict[str, Any]] = None,
     ) -> EvaluationExperiment:
         """Create a new evaluation experiment
@@ -59,6 +64,10 @@ class EvaluationService:
             chunking_method: Chunking method being tested
             chunk_size: Chunk size parameter
             chunk_overlap: Chunk overlap parameter
+            chunk_strategy: Chunk strategy to filter by (e.g., rec_400_80)
+            instruction_version: Instruction prompt version (e.g., "v2.0")
+            instruction_template: Full instruction prompt template
+            instruction_hash: SHA256 hash of instruction template
             config: Additional configuration
 
         Returns:
@@ -76,6 +85,10 @@ class EvaluationService:
             chunking_method=chunking_method,
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
+            chunk_strategy=chunk_strategy,  # NEW
+            instruction_version=instruction_version,
+            instruction_template=instruction_template,
+            instruction_hash=instruction_hash,
             config_json=config,
             status="pending",
             mlflow_experiment_id=str(mlflow_experiment_id),
@@ -118,6 +131,38 @@ class EvaluationService:
         db.commit()
 
         try:
+            # Query document IDs that have the specified chunk_strategy
+            from sqlalchemy import text
+            document_ids = []
+            total_documents = 0
+
+            if experiment.chunk_strategy:
+                result = db.execute(
+                    text("""
+                        SELECT DISTINCT doc_id
+                        FROM chunks
+                        WHERE chunk_strategy = :strategy
+                        ORDER BY doc_id
+                    """),
+                    {"strategy": experiment.chunk_strategy}
+                )
+                document_ids = [row.doc_id for row in result]
+                total_documents = len(document_ids)
+            else:
+                # If no strategy specified, get all documents with chunks
+                result = db.execute(text("SELECT DISTINCT doc_id FROM chunks ORDER BY doc_id"))
+                document_ids = [row.doc_id for row in result]
+                total_documents = len(document_ids)
+
+            # Store document snapshot in config_json
+            config = experiment.config_json or {}
+            config.update({
+                "document_ids": document_ids,
+                "total_documents": total_documents,
+                "evaluation_timestamp": datetime.now().isoformat()
+            })
+            experiment.config_json = config
+
             # Start MLflow run
             with mlflow.start_run(
                 experiment_id=experiment.mlflow_experiment_id,
@@ -132,8 +177,16 @@ class EvaluationService:
                     mlflow.log_param("chunk_size", experiment.chunk_size)
                 if experiment.chunk_overlap:
                     mlflow.log_param("chunk_overlap", experiment.chunk_overlap)
+                if experiment.chunk_strategy:
+                    mlflow.log_param("chunk_strategy", experiment.chunk_strategy)
+                if experiment.instruction_version:
+                    mlflow.log_param("instruction_version", experiment.instruction_version)
+                if experiment.instruction_hash:
+                    mlflow.log_param("instruction_hash", experiment.instruction_hash)
 
                 mlflow.log_param("total_queries", len(test_cases))
+                mlflow.log_param("total_documents", total_documents)
+                mlflow.log_param("document_ids", str(document_ids))
 
                 # Prepare dataset for RAGAS
                 questions = []
@@ -159,19 +212,25 @@ class EvaluationService:
 
                 dataset = Dataset.from_dict(dataset_dict)
 
+                # Configure RAGAS to use gpt-4o-mini for better cost-performance balance
+                from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+
+                llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+                embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+
                 # Select metrics based on whether we have ground truth
+                # NOTE: faithfulness and answer_relevancy don't need ground_truth
+                #       context_recall and context_precision DO need ground_truth
                 metrics = [faithfulness, answer_relevancy]
                 if include_ground_truth and ground_truths:
                     metrics.extend([context_recall, context_precision])
-                else:
-                    metrics.append(context_precision)
 
                 # Run RAGAS evaluation in a separate thread to avoid uvloop/nest_asyncio conflict
                 start_time = time.time()
 
                 # Create a wrapper function to run evaluate in a thread
                 def run_ragas_sync():
-                    return evaluate(dataset, metrics=metrics)
+                    return evaluate(dataset, metrics=metrics, llm=llm, embeddings=embeddings)
 
                 # Execute in thread pool to avoid event loop conflicts
                 loop = asyncio.get_event_loop()
@@ -182,30 +241,38 @@ class EvaluationService:
                 # Convert to pandas for easier access
                 df = result.to_pandas()
 
+                # Helper function to safely convert metrics (handle NaN)
+                def safe_metric(value):
+                    """Convert metric to float, return None if NaN"""
+                    if value is None:
+                        return None
+                    f = float(value)
+                    return None if math.isnan(f) else f
+
                 # Calculate aggregated metrics (convert numpy types to Python native types)
                 avg_faithfulness = (
-                    float(df["faithfulness"].mean()) if "faithfulness" in df.columns else None
+                    safe_metric(df["faithfulness"].mean()) if "faithfulness" in df.columns else None
                 )
                 avg_answer_relevancy = (
-                    float(df["answer_relevancy"].mean()) if "answer_relevancy" in df.columns else None
+                    safe_metric(df["answer_relevancy"].mean()) if "answer_relevancy" in df.columns else None
                 )
                 avg_context_recall = (
-                    float(df["context_recall"].mean())
+                    safe_metric(df["context_recall"].mean())
                     if "context_recall" in df.columns
                     else None
                 )
                 avg_context_precision = (
-                    float(df["context_precision"].mean())
+                    safe_metric(df["context_precision"].mean())
                     if "context_precision" in df.columns
                     else None
                 )
 
                 # Update experiment with aggregated results (ensure Python native types)
                 experiment.total_queries = len(test_cases)
-                experiment.avg_faithfulness = float(avg_faithfulness) if avg_faithfulness is not None else None
-                experiment.avg_answer_relevancy = float(avg_answer_relevancy) if avg_answer_relevancy is not None else None
-                experiment.avg_context_recall = float(avg_context_recall) if avg_context_recall is not None else None
-                experiment.avg_context_precision = float(avg_context_precision) if avg_context_precision is not None else None
+                experiment.avg_faithfulness = avg_faithfulness
+                experiment.avg_answer_relevancy = avg_answer_relevancy
+                experiment.avg_context_recall = avg_context_recall
+                experiment.avg_context_precision = avg_context_precision
                 experiment.avg_latency_ms = float((evaluation_time / len(test_cases)) * 1000)
                 experiment.status = "completed"
 
@@ -229,16 +296,16 @@ class EvaluationService:
                         answer=case["answer"],
                         contexts=case["contexts"],
                         ground_truth=case.get("ground_truth"),
-                        faithfulness=float(df.iloc[idx]["faithfulness"])
+                        faithfulness=safe_metric(df.iloc[idx]["faithfulness"])
                         if "faithfulness" in df.columns
                         else None,
-                        answer_relevancy=float(df.iloc[idx]["answer_relevancy"])
+                        answer_relevancy=safe_metric(df.iloc[idx]["answer_relevancy"])
                         if "answer_relevancy" in df.columns
                         else None,
-                        context_recall=float(df.iloc[idx]["context_recall"])
+                        context_recall=safe_metric(df.iloc[idx]["context_recall"])
                         if "context_recall" in df.columns
                         else None,
-                        context_precision=float(df.iloc[idx]["context_precision"])
+                        context_precision=safe_metric(df.iloc[idx]["context_precision"])
                         if "context_precision" in df.columns
                         else None,
                         latency_ms=case.get("latency_ms"),

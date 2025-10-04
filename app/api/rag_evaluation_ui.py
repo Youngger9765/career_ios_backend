@@ -17,10 +17,28 @@ async def evaluation_dashboard(request: Request):
     )
 
 
+@router.get("/matrix", response_class=HTMLResponse)
+async def evaluation_matrix(request: Request):
+    """Evaluation matrix heatmap page"""
+    return templates.TemplateResponse(
+        "rag/matrix.html",
+        {"request": request}
+    )
+
+
 @router.get("/experiments/{experiment_id}", response_class=HTMLResponse)
 async def experiment_detail(request: Request, experiment_id: str):
     """Experiment detail page"""
     return templates.TemplateResponse(
         "rag/experiment_detail.html",
         {"request": request, "experiment_id": experiment_id}
+    )
+
+
+@router.get("/prompts", response_class=HTMLResponse)
+async def prompts_management(request: Request):
+    """Prompt version management page"""
+    return templates.TemplateResponse(
+        "rag/prompts.html",
+        {"request": request}
     )
