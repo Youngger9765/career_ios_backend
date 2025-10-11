@@ -26,6 +26,7 @@ async def generate_report_stream(
     top_k: int,
     similarity_threshold: float,
     num_participants: int,
+    rag_system: str,
     db: AsyncSession,
 ) -> AsyncGenerator[str, None]:
     """
@@ -111,49 +112,73 @@ async def generate_report_stream(
         yield f"data: {json.dumps({'step': 2, 'status': 'completed', 'message': f'識別到 {len(main_concerns)} 個關鍵議題', 'data': {'concerns': main_concerns, 'techniques': techniques}}, ensure_ascii=False)}\n\n"
 
         # Step 3: RAG search for relevant theories
-        yield f"data: {json.dumps({'step': 3, 'status': 'processing', 'message': '正在檢索相關理論...'}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'step': 3, 'status': 'processing', 'message': f'正在檢索相關理論（使用 {rag_system.upper()}）...'}, ensure_ascii=False)}\n\n"
 
         # Search for theories related to main concerns
         search_query = " ".join(main_concerns[:3])  # Top 3 concerns
-        query_embedding = await openai_service.create_embedding(search_query)
-        embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
 
-        query_sql = text(
+        if rag_system == "vertex":
+            # Use Vertex AI RAG
+            from vertexai.preview import rag as vertex_rag
+
+            # Use predefined corpus name (should match your Vertex AI corpus)
+            VERTEX_CORPUS_NAME = "projects/groovy-iris-473015-h3/locations/us-east4/ragCorpora/7991637538768945152"
+
+            retrieval_response = vertex_rag.retrieval_query(
+                rag_resources=[vertex_rag.RagResource(rag_corpus=VERTEX_CORPUS_NAME)],
+                text=search_query,
+                similarity_top_k=top_k,
+            )
+
+            theories = [
+                {
+                    "text": ctx.text,
+                    "document": ctx.source_uri.split("/")[-1] if hasattr(ctx, "source_uri") else "Vertex AI Document",
+                    "score": float(ctx.score),
+                }
+                for ctx in retrieval_response.contexts.contexts
+            ]
+        else:
+            # Use OpenAI + Supabase
+            query_embedding = await openai_service.create_embedding(search_query)
+            embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
+
+            query_sql = text(
+                """
+                SELECT
+                    c.id as chunk_id,
+                    c.text,
+                    d.title as document_title,
+                    1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
+                FROM chunks c
+                JOIN embeddings e ON c.id = e.chunk_id
+                JOIN documents d ON c.doc_id = d.id
+                WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
+                ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
+                LIMIT :top_k
             """
-            SELECT
-                c.id as chunk_id,
-                c.text,
-                d.title as document_title,
-                1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
-            FROM chunks c
-            JOIN embeddings e ON c.id = e.chunk_id
-            JOIN documents d ON c.doc_id = d.id
-            WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
-            ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
-            LIMIT :top_k
-        """
-        ).bindparams(
-            bindparam("query_embedding", type_=String),
-            bindparam("threshold", type_=Float),
-            bindparam("top_k", type_=Integer),
-        )
+            ).bindparams(
+                bindparam("query_embedding", type_=String),
+                bindparam("threshold", type_=Float),
+                bindparam("top_k", type_=Integer),
+            )
 
-        result = db.execute(
-            query_sql,
-            {
-                "query_embedding": embedding_str,
-                "threshold": similarity_threshold,
-                "top_k": top_k,
-            },
-        )
+            result = db.execute(
+                query_sql,
+                {
+                    "query_embedding": embedding_str,
+                    "threshold": similarity_threshold,
+                    "top_k": top_k,
+                },
+            )
 
-        rows = result.fetchall()
-        theories = [
-            {"text": row.text, "document": row.document_title, "score": float(row.similarity_score)}
-            for row in rows
-        ]
+            rows = result.fetchall()
+            theories = [
+                {"text": row.text, "document": row.document_title, "score": float(row.similarity_score)}
+                for row in rows
+            ]
 
-        yield f"data: {json.dumps({'step': 3, 'status': 'completed', 'message': f'檢索到 {len(theories)} 個相關理論', 'data': {'theories': theories}}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'step': 3, 'status': 'completed', 'message': f'檢索到 {len(theories)} 個相關理論（{rag_system.upper()}）', 'data': {'theories': theories}}, ensure_ascii=False)}\n\n"
 
         # Step 4: Generate structured report
         yield f"data: {json.dumps({'step': 4, 'status': 'processing', 'message': '正在生成個案報告...'}, ensure_ascii=False)}\n\n"
@@ -315,19 +340,23 @@ async def generate_report_stream(
 @router.get("/generate")
 async def generate_report(
     transcript: str,
-    top_k: int = 5,
+    top_k: int = 7,  # Default to 7 for better coverage
     similarity_threshold: float = 0.5,
     num_participants: int = 2,
+    rag_system: str = "supabase",  # "supabase" or "vertex"
     db: AsyncSession = Depends(get_db),
 ):
     """
     Generate case report from transcript with real-time progress updates
 
+    Args:
+        rag_system: RAG system to use - "supabase" (OpenAI + Supabase) or "vertex" (Vertex AI)
+
     Returns: SSE stream with progress updates
     """
 
     return StreamingResponse(
-        generate_report_stream(transcript, top_k, similarity_threshold, num_participants, db),
+        generate_report_stream(transcript, top_k, similarity_threshold, num_participants, rag_system, db),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

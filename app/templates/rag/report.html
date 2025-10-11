@@ -32,14 +32,43 @@
             <p class="text-gray-400 text-xs mt-2">💡 支援任何格式的對話記錄，AI 會自動識別說話者與關鍵資訊</p>
         </div>
 
-        <div>
-            <label class="block text-gray-300 text-sm mb-2">參與人數</label>
-            <select id="numParticipants" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
-                <option value="2">2人（諮詢師 + 個案）</option>
-                <option value="3">3人</option>
-                <option value="4">4人</option>
-                <option value="5">5人</option>
-            </select>
+        <div class="grid grid-cols-3 gap-4">
+            <div>
+                <label class="block text-gray-300 text-sm mb-2">參與人數</label>
+                <select id="numParticipants" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                    <option value="2">2人（諮詢師 + 個案）</option>
+                    <option value="3">3人</option>
+                    <option value="4">4人</option>
+                    <option value="5">5人</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-gray-300 text-sm mb-2">RAG 系統</label>
+                <select id="ragSystem" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                    <option value="supabase">🤖 OpenAI + Supabase</option>
+                    <option value="vertex">🔷 Google Vertex AI</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-gray-300 text-sm mb-2">檢索數量 (TOP K)</label>
+                <select id="topK" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                    <option value="3">3 個（精準）</option>
+                    <option value="5">5 個</option>
+                    <option value="7" selected>7 個（建議）</option>
+                    <option value="10">10 個（全面）</option>
+                    <option value="15">15 個（最大）</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Comparison Mode Toggle -->
+        <div class="mb-4">
+            <label class="flex items-center gap-2 text-gray-300 cursor-pointer">
+                <input type="checkbox" id="comparisonMode" class="form-checkbox h-4 w-4 text-purple-600">
+                <span>🔬 比較模式（同時測試兩個 RAG 系統）</span>
+            </label>
         </div>
 
         <div class="flex gap-3">
@@ -64,6 +93,70 @@
     <h3 class="text-xl font-semibold text-white mb-4">生成進度</h3>
     <div id="progressSteps" class="space-y-3">
         <!-- Progress steps will be dynamically added here -->
+    </div>
+</div>
+
+<!-- Comparison Results Section -->
+<div id="comparisonSection" class="hidden space-y-6 mb-6">
+    <div class="bg-gray-800 rounded-lg p-6">
+        <h3 class="text-2xl font-semibold text-white mb-6">🔬 RAG 系統比較結果</h3>
+
+        <!-- Comparison Metrics Summary -->
+        <div id="comparisonMetrics" class="mb-6">
+            <!-- Metrics will be injected here -->
+        </div>
+
+        <!-- Tab Navigation for Comparison View -->
+        <div class="flex gap-2 mb-6 border-b border-gray-700">
+            <button onclick="switchComparisonTab('retrieval')" id="comp-tab-retrieval" class="px-6 py-3 text-white font-semibold border-b-2 border-blue-500 transition">
+                🔍 檢索結果比較
+            </button>
+            <button onclick="switchComparisonTab('reports')" id="comp-tab-reports" class="px-6 py-3 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600 transition">
+                📄 個案報告比較
+            </button>
+        </div>
+
+        <!-- Tab Content: Retrieval Comparison -->
+        <div id="comp-content-retrieval" class="comp-tab-content">
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Supabase Results -->
+                <div class="bg-gray-900 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-blue-400 mb-4">🤖 OpenAI + Supabase</h4>
+                    <div id="supabaseResults" class="space-y-3">
+                        <!-- Results will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Vertex Results -->
+                <div class="bg-gray-900 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-purple-400 mb-4">🔷 Google Vertex AI</h4>
+                    <div id="vertexResults" class="space-y-3">
+                        <!-- Results will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Content: Reports Comparison -->
+        <div id="comp-content-reports" class="comp-tab-content hidden">
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Supabase Report -->
+                <div class="bg-gray-900 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-blue-400 mb-4">🤖 OpenAI + Supabase 生成報告</h4>
+                    <div id="supabaseReport" class="text-white text-sm space-y-4">
+                        <!-- Report will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Vertex Report -->
+                <div class="bg-gray-900 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-purple-400 mb-4">🔷 Google Vertex AI 生成報告</h4>
+                    <div id="vertexReport" class="text-white text-sm space-y-4">
+                        <!-- Report will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -265,6 +358,9 @@ async function loadSampleTranscript() {
 async function generateReport() {
     const transcript = document.getElementById('transcript').value.trim();
     const numParticipants = parseInt(document.getElementById('numParticipants').value);
+    const ragSystem = document.getElementById('ragSystem').value;
+    const topK = parseInt(document.getElementById('topK').value);
+    const comparisonMode = document.getElementById('comparisonMode').checked;
 
     if (!transcript) {
         alert('請輸入晤談逐字稿');
@@ -274,10 +370,19 @@ async function generateReport() {
     // Reset and show progress
     document.getElementById('progressSection').classList.remove('hidden');
     document.getElementById('reportSection').classList.add('hidden');
+    document.getElementById('comparisonSection').classList.add('hidden');
     document.getElementById('progressSteps').innerHTML = '';
 
+    if (comparisonMode) {
+        await runComparisonMode(transcript, numParticipants, topK);
+    } else {
+        await runSingleReport(transcript, numParticipants, ragSystem, topK);
+    }
+}
+
+async function runSingleReport(transcript, numParticipants, ragSystem, topK) {
     try {
-        const url = `/api/report/generate?transcript=${encodeURIComponent(transcript)}&num_participants=${numParticipants}`;
+        const url = `/api/report/generate?transcript=${encodeURIComponent(transcript)}&num_participants=${numParticipants}&rag_system=${ragSystem}&top_k=${topK}`;
         const eventSource = new EventSource(url);
 
         eventSource.onmessage = function(event) {
@@ -316,6 +421,266 @@ async function generateReport() {
     }
 }
 
+async function runComparisonMode(transcript, numParticipants, topK) {
+    const comparisonData = {
+        supabase: null,
+        vertex: null
+    };
+
+    // Run Supabase first
+    document.getElementById('progressSteps').innerHTML = '<div class="text-blue-400">🔵 正在運行 OpenAI + Supabase...</div>';
+    comparisonData.supabase = await runReportAndCapture(transcript, numParticipants, 'supabase', topK);
+
+    // Run Vertex AI
+    document.getElementById('progressSteps').innerHTML += '<div class="text-purple-400 mt-2">🟣 正在運行 Vertex AI...</div>';
+    comparisonData.vertex = await runReportAndCapture(transcript, numParticipants, 'vertex', topK);
+
+    // Display comparison
+    displayComparisonResults(comparisonData);
+    document.getElementById('progressSection').classList.add('hidden');
+    document.getElementById('comparisonSection').classList.remove('hidden');
+}
+
+function runReportAndCapture(transcript, numParticipants, ragSystem, topK) {
+    return new Promise((resolve, reject) => {
+        const url = `/api/report/generate?transcript=${encodeURIComponent(transcript)}&num_participants=${numParticipants}&rag_system=${ragSystem}&top_k=${topK}`;
+        const eventSource = new EventSource(url);
+        const capturedData = {
+            system: ragSystem,
+            theories: [],
+            report: null,
+            processingTime: 0,
+            startTime: Date.now()
+        };
+
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+
+            if (data.status === 'error') {
+                eventSource.close();
+                reject(new Error(data.message));
+                return;
+            }
+
+            // Capture theories from step 3
+            if (data.step === 3 && data.status === 'completed' && data.data?.theories) {
+                capturedData.theories = data.data.theories;
+            }
+
+            // Capture final report from step 5
+            if (data.step === 5 && data.status === 'completed' && data.data?.report) {
+                capturedData.report = data.data.report;
+            }
+
+            // Close and resolve when done
+            if (data.step === 6 && data.status === 'completed') {
+                capturedData.processingTime = (Date.now() - capturedData.startTime) / 1000;
+                eventSource.close();
+                resolve(capturedData);
+            }
+        };
+
+        eventSource.onerror = function(error) {
+            eventSource.close();
+            reject(error);
+        };
+    });
+}
+
+function displayComparisonResults(comparisonData) {
+    const supabase = comparisonData.supabase;
+    const vertex = comparisonData.vertex;
+
+    // Calculate metrics
+    const supabaseAvgScore = supabase.theories.length > 0
+        ? (supabase.theories.reduce((sum, t) => sum + t.score, 0) / supabase.theories.length).toFixed(4)
+        : 0;
+    const vertexAvgScore = vertex.theories.length > 0
+        ? (vertex.theories.reduce((sum, t) => sum + t.score, 0) / vertex.theories.length).toFixed(4)
+        : 0;
+
+    // Find unique and common theories by document name
+    const supabaseDocs = new Set(supabase.theories.map(t => t.document));
+    const vertexDocs = new Set(vertex.theories.map(t => t.document));
+    const commonDocs = [...supabaseDocs].filter(doc => vertexDocs.has(doc));
+    const uniqueSupabase = [...supabaseDocs].filter(doc => !vertexDocs.has(doc));
+    const uniqueVertex = [...vertexDocs].filter(doc => !supabaseDocs.has(doc));
+
+    // Display summary metrics
+    const metricsHTML = `
+        <div class="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-6">
+            <h4 class="text-xl font-semibold text-white mb-4">📊 比較統計</h4>
+            <div class="grid grid-cols-5 gap-4 text-center">
+                <div>
+                    <div class="text-gray-400 text-sm mb-1">共同文獻</div>
+                    <div class="text-green-400 text-3xl font-bold">${commonDocs.length}</div>
+                    <div class="text-gray-500 text-xs">兩者皆找到</div>
+                </div>
+                <div>
+                    <div class="text-gray-400 text-sm mb-1">Supabase 獨有</div>
+                    <div class="text-blue-400 text-3xl font-bold">${uniqueSupabase.length}</div>
+                    <div class="text-gray-500 text-xs">僅 Supabase</div>
+                </div>
+                <div>
+                    <div class="text-gray-400 text-sm mb-1">Vertex 獨有</div>
+                    <div class="text-purple-400 text-3xl font-bold">${uniqueVertex.length}</div>
+                    <div class="text-gray-500 text-xs">僅 Vertex</div>
+                </div>
+                <div>
+                    <div class="text-gray-400 text-sm mb-1">Supabase 速度</div>
+                    <div class="text-blue-400 text-3xl font-bold">${supabase.processingTime.toFixed(1)}s</div>
+                    <div class="text-gray-500 text-xs">處理時間</div>
+                </div>
+                <div>
+                    <div class="text-gray-400 text-sm mb-1">Vertex 速度</div>
+                    <div class="text-purple-400 text-3xl font-bold">${vertex.processingTime.toFixed(1)}s</div>
+                    <div class="text-gray-500 text-xs">處理時間</div>
+                </div>
+            </div>
+
+            <!-- Winner Badge -->
+            <div class="mt-6 pt-4 border-t border-gray-700">
+                <div class="flex justify-around text-sm">
+                    <div class="text-center">
+                        <div class="text-gray-400 mb-1">平均相似度</div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-blue-400 font-mono text-lg">${supabaseAvgScore}</span>
+                            <span class="text-gray-500">vs</span>
+                            <span class="text-purple-400 font-mono text-lg">${vertexAvgScore}</span>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-400 mb-1">檢索到理論數</div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-blue-400 font-mono text-lg">${supabase.theories.length}</span>
+                            <span class="text-gray-500">vs</span>
+                            <span class="text-purple-400 font-mono text-lg">${vertex.theories.length}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById('comparisonMetrics').innerHTML = metricsHTML;
+
+    // Display Supabase results
+    displaySystemResults('supabaseResults', supabase, supabaseDocs, uniqueSupabase, commonDocs);
+
+    // Display Vertex results
+    displaySystemResults('vertexResults', vertex, vertexDocs, uniqueVertex, commonDocs);
+
+    // Display reports
+    displaySystemReport('supabaseReport', supabase.report, '🤖 OpenAI + Supabase');
+    displaySystemReport('vertexReport', vertex.report, '🔷 Google Vertex AI');
+}
+
+function displaySystemReport(elementId, reportData, systemName) {
+    if (!reportData || !reportData.conceptualization) {
+        document.getElementById(elementId).innerHTML = '<div class="text-gray-400">報告生成失敗</div>';
+        return;
+    }
+
+    let html = `
+        <div class="space-y-4">
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h5 class="text-white font-semibold mb-2">👤 案主資訊</h5>
+                <div class="text-gray-300 text-xs space-y-1">
+                    <div><span class="text-gray-500">姓名：</span>${reportData.client_info.name}</div>
+                    <div><span class="text-gray-500">年齡：</span>${reportData.client_info.age}</div>
+                    <div><span class="text-gray-500">職業：</span>${reportData.client_info.occupation}</div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h5 class="text-white font-semibold mb-2">🎯 主訴問題</h5>
+                <div class="text-gray-300 text-xs">
+                    ${reportData.main_concerns.map(c => `<div>• ${c}</div>`).join('')}
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h5 class="text-white font-semibold mb-2">📝 概念化內容</h5>
+                <div class="text-gray-300 text-xs leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
+                    ${reportData.conceptualization}
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h5 class="text-white font-semibold mb-2">📚 參考理論（${reportData.theories.length} 個）</h5>
+                <div class="text-gray-300 text-xs space-y-2">
+                    ${reportData.theories.slice(0, 3).map((t, idx) => `
+                        <div class="border-l-2 border-blue-500 pl-2">
+                            <div class="text-yellow-400 font-mono">[${idx + 1}] ${t.score.toFixed(3)}</div>
+                            <div class="text-gray-400">${t.text.substring(0, 100)}...</div>
+                        </div>
+                    `).join('')}
+                    ${reportData.theories.length > 3 ? `<div class="text-gray-500">... 還有 ${reportData.theories.length - 3} 個理論</div>` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById(elementId).innerHTML = html;
+}
+
+function displaySystemResults(elementId, systemData, allDocs, uniqueDocs, commonDocs) {
+    const theories = systemData.theories;
+    const avgScore = theories.length > 0
+        ? (theories.reduce((sum, t) => sum + t.score, 0) / theories.length).toFixed(4)
+        : 0;
+
+    let html = `
+        <div class="mb-4 p-4 bg-gray-800 rounded-lg">
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                    <span class="text-gray-400">找到理論：</span>
+                    <span class="text-white font-bold">${theories.length} 個</span>
+                </div>
+                <div>
+                    <span class="text-gray-400">平均分數：</span>
+                    <span class="text-yellow-400 font-mono">${avgScore}</span>
+                </div>
+                <div>
+                    <span class="text-gray-400">處理時間：</span>
+                    <span class="text-green-400 font-mono">${systemData.processingTime.toFixed(2)}s</span>
+                </div>
+                <div>
+                    <span class="text-gray-400">獨有文獻：</span>
+                    <span class="text-orange-400 font-bold">${uniqueDocs.length} 個</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-2">
+    `;
+
+    theories.forEach((theory, idx) => {
+        const isUnique = uniqueDocs.includes(theory.document);
+        const isCommon = commonDocs.includes(theory.document);
+        const badge = isUnique ? '<span class="text-xs bg-orange-500 text-white px-2 py-1 rounded">獨有</span>' :
+                      isCommon ? '<span class="text-xs bg-green-500 text-white px-2 py-1 rounded">共同</span>' : '';
+
+        html += `
+            <div class="bg-gray-800 rounded p-3">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-500 text-sm">#${idx + 1}</span>
+                        <span class="text-gray-300 text-sm font-medium">${theory.document}</span>
+                        ${badge}
+                    </div>
+                    <span class="text-yellow-400 font-mono text-sm">${theory.score.toFixed(4)}</span>
+                </div>
+                <div class="text-gray-400 text-xs leading-relaxed max-h-20 overflow-hidden">
+                    ${theory.text.substring(0, 150)}${theory.text.length > 150 ? '...' : ''}
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    document.getElementById(elementId).innerHTML = html;
+}
+
 function updateProgress(data) {
     const stepMessages = {
         1: '分析逐字稿結構',
@@ -346,6 +711,24 @@ function updateProgress(data) {
             <div class="text-sm text-gray-400">${data.message}</div>
         </div>
     `;
+}
+
+function switchComparisonTab(tabName) {
+    // Update tab buttons
+    ['retrieval', 'reports'].forEach(tab => {
+        const button = document.getElementById(`comp-tab-${tab}`);
+        const content = document.getElementById(`comp-content-${tab}`);
+
+        if (tab === tabName) {
+            button.classList.remove('text-gray-400', 'border-transparent');
+            button.classList.add('text-white', 'border-blue-500');
+            content.classList.remove('hidden');
+        } else {
+            button.classList.remove('text-white', 'border-blue-500');
+            button.classList.add('text-gray-400', 'border-transparent');
+            content.classList.add('hidden');
+        }
+    });
 }
 
 function switchTab(tabName) {
@@ -482,8 +865,27 @@ function clearForm() {
     document.getElementById('numParticipants').value = '2';
     document.getElementById('reportSection').classList.add('hidden');
     document.getElementById('progressSection').classList.add('hidden');
+    document.getElementById('comparisonSection').classList.add('hidden');
     reportData = null;
 }
+
+// Toggle RAG system selector based on comparison mode
+document.addEventListener('DOMContentLoaded', function() {
+    const comparisonCheckbox = document.getElementById('comparisonMode');
+    const ragSystemSelect = document.getElementById('ragSystem');
+
+    comparisonCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            ragSystemSelect.disabled = true;
+            ragSystemSelect.style.opacity = '0.5';
+            ragSystemSelect.title = '比較模式會測試兩個系統';
+        } else {
+            ragSystemSelect.disabled = false;
+            ragSystemSelect.style.opacity = '1';
+            ragSystemSelect.title = '';
+        }
+    });
+});
 
 function downloadJSON() {
     if (!reportData) {
