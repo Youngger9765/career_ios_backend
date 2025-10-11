@@ -88,6 +88,8 @@ key.json
 *.key
 *.pem
 service-account*.json
+vertex-ai-sa-key.json
+*-sa-key.json
 gcp-*.json
 
 # MLflow
