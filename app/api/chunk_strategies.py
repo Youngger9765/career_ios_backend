@@ -47,6 +47,12 @@ class ChunkStrategyResponse(BaseModel):
 _strategies_store = {}
 
 
+def get_all_strategies():
+    """Get all chunk strategies as a list (helper for UI rendering)"""
+    _init_default_strategies()
+    return list(_strategies_store.values())
+
+
 def _init_default_strategies():
     """Initialize default chunk strategies"""
     if not _strategies_store:

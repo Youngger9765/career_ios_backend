@@ -264,6 +264,10 @@ function renderMatrix() {
 
         if (!strategyName || !promptVersion) return;
 
+        // Try to match experiment to a chunk strategy
+        // For now, assign to first testset as placeholder until we add testset_id
+        const firstTestset = testsets[0]?.name;
+
         // Find matching chunk_strategy from API
         // Match by comparing chunk_size and chunk_overlap
         const matchingStrategy = chunk_strategies.find(cs => {
@@ -272,18 +276,8 @@ function renderMatrix() {
 
         const strategyKey = matchingStrategy ? matchingStrategy.name : strategyName;
 
-        // Try to infer testset from experiment name
-        // Experiment names typically follow pattern: "strategy_version_testset"
-        let matchedTestset = null;
-        for (const ts of testsets) {
-            if (exp.name.includes(ts.name)) {
-                matchedTestset = ts.name;
-                break;
-            }
-        }
-
-        if (cells[strategyKey] && cells[strategyKey][promptVersion] && matchedTestset) {
-            cells[strategyKey][promptVersion][matchedTestset] = exp;
+        if (cells[strategyKey] && cells[strategyKey][promptVersion] && firstTestset) {
+            cells[strategyKey][promptVersion][firstTestset] = exp;
         }
     });
 
