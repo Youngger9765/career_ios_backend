@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from app.core.config import settings
 from app.api import router as api_router
 # RAG API routers
-from app.api import rag_ingest, rag_search, rag_chat, rag_agents, rag_stats, rag_report, rag_evaluation, rag_evaluation_ui, evaluation_testsets, rag_evaluation_testsets_ui, chunk_strategies, vertex_poc
+from app.api import rag_ingest, rag_search, rag_chat, rag_agents, rag_stats, rag_report, rag_evaluation, rag_evaluation_ui, evaluation_testsets, rag_evaluation_testsets_ui, chunk_strategies
 
 # Templates
 templates = Jinja2Templates(directory="app/templates")
@@ -44,7 +44,6 @@ app.include_router(rag_evaluation_ui.router)
 app.include_router(evaluation_testsets.router)
 app.include_router(rag_evaluation_testsets_ui.router)
 app.include_router(chunk_strategies.router)
-app.include_router(vertex_poc.router)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -113,12 +112,6 @@ async def rag_chat_page(request: Request):
 async def rag_report_page(request: Request):
     """RAG Ops Console - Report Generation page"""
     return templates.TemplateResponse("rag/report.html", {"request": request})
-
-
-@app.get("/rag/vertex-poc", response_class=HTMLResponse)
-async def rag_vertex_poc_page(request: Request):
-    """RAG Ops Console - Vertex AI POC page"""
-    return templates.TemplateResponse("rag/vertex_poc.html", {"request": request})
 
 
 # Counseling Console (諮商前台)

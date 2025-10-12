@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.services.openai_service import OpenAIService
+from app.services.gemini_service import gemini_service
 
 router = APIRouter(prefix="/api/report", tags=["report"])
 
@@ -111,77 +112,55 @@ async def generate_report_stream(
 
         yield f"data: {json.dumps({'step': 2, 'status': 'completed', 'message': f'識別到 {len(main_concerns)} 個關鍵議題', 'data': {'concerns': main_concerns, 'techniques': techniques}}, ensure_ascii=False)}\n\n"
 
-        # Step 3: RAG search for relevant theories
-        yield f"data: {json.dumps({'step': 3, 'status': 'processing', 'message': f'正在檢索相關理論（使用 {rag_system.upper()}）...'}, ensure_ascii=False)}\n\n"
+        # Step 3: RAG search for relevant theories (always use OpenAI embeddings)
+        yield f"data: {json.dumps({'step': 3, 'status': 'processing', 'message': '正在檢索相關理論...'}, ensure_ascii=False)}\n\n"
 
         # Search for theories related to main concerns
         search_query = " ".join(main_concerns[:3])  # Top 3 concerns
 
-        if rag_system == "vertex":
-            # Use Vertex AI RAG
-            from vertexai.preview import rag as vertex_rag
+        # Always use OpenAI embedding for search
+        query_embedding = await openai_service.create_embedding(search_query)
+        embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
 
-            # Use predefined corpus name (should match your Vertex AI corpus)
-            VERTEX_CORPUS_NAME = "projects/groovy-iris-473015-h3/locations/us-east4/ragCorpora/7991637538768945152"
-
-            retrieval_response = vertex_rag.retrieval_query(
-                rag_resources=[vertex_rag.RagResource(rag_corpus=VERTEX_CORPUS_NAME)],
-                text=search_query,
-                similarity_top_k=top_k,
-            )
-
-            theories = [
-                {
-                    "text": ctx.text,
-                    "document": ctx.source_uri.split("/")[-1] if hasattr(ctx, "source_uri") else "Vertex AI Document",
-                    "score": float(ctx.score),
-                }
-                for ctx in retrieval_response.contexts.contexts
-            ]
-        else:
-            # Use OpenAI + Supabase
-            query_embedding = await openai_service.create_embedding(search_query)
-            embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
-
-            query_sql = text(
-                """
-                SELECT
-                    c.id as chunk_id,
-                    c.text,
-                    d.title as document_title,
-                    1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
-                FROM chunks c
-                JOIN embeddings e ON c.id = e.chunk_id
-                JOIN documents d ON c.doc_id = d.id
-                WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
-                ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
-                LIMIT :top_k
+        query_sql = text(
             """
-            ).bindparams(
-                bindparam("query_embedding", type_=String),
-                bindparam("threshold", type_=Float),
-                bindparam("top_k", type_=Integer),
-            )
+            SELECT
+                c.id as chunk_id,
+                c.text,
+                d.title as document_title,
+                1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
+            FROM chunks c
+            JOIN embeddings e ON c.id = e.chunk_id
+            JOIN documents d ON c.doc_id = d.id
+            WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
+            ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
+            LIMIT :top_k
+        """
+        ).bindparams(
+            bindparam("query_embedding", type_=String),
+            bindparam("threshold", type_=Float),
+            bindparam("top_k", type_=Integer),
+        )
 
-            result = db.execute(
-                query_sql,
-                {
-                    "query_embedding": embedding_str,
-                    "threshold": similarity_threshold,
-                    "top_k": top_k,
-                },
-            )
+        result = db.execute(
+            query_sql,
+            {
+                "query_embedding": embedding_str,
+                "threshold": similarity_threshold,
+                "top_k": top_k,
+            },
+        )
 
-            rows = result.fetchall()
-            theories = [
-                {"text": row.text, "document": row.document_title, "score": float(row.similarity_score)}
-                for row in rows
-            ]
+        rows = result.fetchall()
+        theories = [
+            {"text": row.text, "document": row.document_title, "score": float(row.similarity_score)}
+            for row in rows
+        ]
 
-        yield f"data: {json.dumps({'step': 3, 'status': 'completed', 'message': f'檢索到 {len(theories)} 個相關理論（{rag_system.upper()}）', 'data': {'theories': theories}}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'step': 3, 'status': 'completed', 'message': f'檢索到 {len(theories)} 個相關理論', 'data': {'theories': theories}}, ensure_ascii=False)}\n\n"
 
         # Step 4: Generate structured report
-        yield f"data: {json.dumps({'step': 4, 'status': 'processing', 'message': '正在生成個案報告...'}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'step': 4, 'status': 'processing', 'message': f'正在生成個案報告（使用 {rag_system.upper()} 模型）...'}, ensure_ascii=False)}\n\n"
 
         # Construct context from theories
         context_parts = [f"[{i+1}] {theory['text']}" for i, theory in enumerate(theories)]
@@ -240,9 +219,13 @@ async def generate_report_stream(
 5. 內容直接書寫，不要用項目符號
 """
 
-        report_content = await openai_service.chat_completion(
-            messages=[{"role": "user", "content": report_prompt}], temperature=0.6
-        )
+        # Use selected LLM model based on rag_system
+        if rag_system == "gemini":
+            report_content = await gemini_service.chat_completion(report_prompt, temperature=0.6)
+        else:
+            report_content = await openai_service.chat_completion(
+                messages=[{"role": "user", "content": report_prompt}], temperature=0.6
+            )
 
         # Step 5: Extract key dialogue excerpts (5-10 exchanges)
         yield f"data: {json.dumps({'step': 5, 'status': 'processing', 'message': '正在提取關鍵對話片段...'}, ensure_ascii=False)}\n\n"
@@ -286,9 +269,13 @@ async def generate_report_stream(
 - 如果逐字稿中有明確標示說話者（如 Co:、Cl:、諮詢師：、個案：等），請參考這些標示
 """
 
-        excerpt_response = await openai_service.chat_completion(
-            messages=[{"role": "user", "content": excerpt_prompt}], temperature=0.3
-        )
+        # Use selected LLM model based on rag_system
+        if rag_system == "gemini":
+            excerpt_response = await gemini_service.chat_completion(excerpt_prompt, temperature=0.3)
+        else:
+            excerpt_response = await openai_service.chat_completion(
+                messages=[{"role": "user", "content": excerpt_prompt}], temperature=0.3
+            )
 
         try:
             excerpt_data = json.loads(excerpt_response)
@@ -343,14 +330,15 @@ async def generate_report(
     top_k: int = 7,  # Default to 7 for better coverage
     similarity_threshold: float = 0.5,
     num_participants: int = 2,
-    rag_system: str = "supabase",  # "supabase" or "vertex"
+    rag_system: str = "openai",  # "openai" or "gemini"
     db: AsyncSession = Depends(get_db),
 ):
     """
     Generate case report from transcript with real-time progress updates
 
     Args:
-        rag_system: RAG system to use - "supabase" (OpenAI + Supabase) or "vertex" (Vertex AI)
+        rag_system: LLM model to use for report generation - "openai" (GPT) or "gemini" (Gemini)
+                   Note: Retrieval always uses OpenAI embeddings
 
     Returns: SSE stream with progress updates
     """

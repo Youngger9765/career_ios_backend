@@ -76,7 +76,7 @@ class Chunk(Base):
 
 
 class Embedding(Base):
-    """Vector embeddings for chunks"""
+    """Vector embeddings for chunks (OpenAI text-embedding-3-small)"""
 
     __tablename__ = "embeddings"
 

@@ -44,10 +44,10 @@
             </div>
 
             <div>
-                <label class="block text-gray-300 text-sm mb-2">RAG 系統</label>
+                <label class="block text-gray-300 text-sm mb-2">LLM 模型</label>
                 <select id="ragSystem" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
-                    <option value="supabase">🤖 OpenAI + Supabase</option>
-                    <option value="vertex">🔷 Google Vertex AI</option>
+                    <option value="openai">🤖 OpenAI GPT-4</option>
+                    <option value="gemini">🔷 Gemini 1.5 Pro</option>
                 </select>
             </div>
 
@@ -67,7 +67,7 @@
         <div class="mb-4">
             <label class="flex items-center gap-2 text-gray-300 cursor-pointer">
                 <input type="checkbox" id="comparisonMode" class="form-checkbox h-4 w-4 text-purple-600">
-                <span>🔬 比較模式（同時測試兩個 RAG 系統）</span>
+                <span>🔬 比較模式（同時測試兩個 LLM 模型）</span>
             </label>
         </div>
 
@@ -99,7 +99,7 @@
 <!-- Comparison Results Section -->
 <div id="comparisonSection" class="hidden space-y-6 mb-6">
     <div class="bg-gray-800 rounded-lg p-6">
-        <h3 class="text-2xl font-semibold text-white mb-6">🔬 RAG 系統比較結果</h3>
+        <h3 class="text-2xl font-semibold text-white mb-6">🔬 LLM 模型比較結果</h3>
 
         <!-- Comparison Metrics Summary -->
         <div id="comparisonMetrics" class="mb-6">
@@ -121,7 +121,7 @@
             <div class="grid grid-cols-2 gap-6">
                 <!-- Supabase Results -->
                 <div class="bg-gray-900 rounded-lg p-4">
-                    <h4 class="text-lg font-semibold text-blue-400 mb-4">🤖 OpenAI + Supabase</h4>
+                    <h4 class="text-lg font-semibold text-blue-400 mb-4">🤖 OpenAI Embedding</h4>
                     <div id="supabaseResults" class="space-y-3">
                         <!-- Results will be injected here -->
                     </div>
@@ -129,7 +129,7 @@
 
                 <!-- Vertex Results -->
                 <div class="bg-gray-900 rounded-lg p-4">
-                    <h4 class="text-lg font-semibold text-purple-400 mb-4">🔷 Google Vertex AI</h4>
+                    <h4 class="text-lg font-semibold text-purple-400 mb-4">🔷 Gemini Embedding</h4>
                     <div id="vertexResults" class="space-y-3">
                         <!-- Results will be injected here -->
                     </div>
@@ -142,7 +142,7 @@
             <div class="grid grid-cols-2 gap-6">
                 <!-- Supabase Report -->
                 <div class="bg-gray-900 rounded-lg p-4">
-                    <h4 class="text-lg font-semibold text-blue-400 mb-4">🤖 OpenAI + Supabase 生成報告</h4>
+                    <h4 class="text-lg font-semibold text-blue-400 mb-4">🤖 OpenAI Embedding 生成報告</h4>
                     <div id="supabaseReport" class="text-white text-sm space-y-4">
                         <!-- Report will be injected here -->
                     </div>
@@ -150,7 +150,7 @@
 
                 <!-- Vertex Report -->
                 <div class="bg-gray-900 rounded-lg p-4">
-                    <h4 class="text-lg font-semibold text-purple-400 mb-4">🔷 Google Vertex AI 生成報告</h4>
+                    <h4 class="text-lg font-semibold text-purple-400 mb-4">🔷 Gemini Embedding 生成報告</h4>
                     <div id="vertexReport" class="text-white text-sm space-y-4">
                         <!-- Report will be injected here -->
                     </div>
@@ -423,17 +423,17 @@ async function runSingleReport(transcript, numParticipants, ragSystem, topK) {
 
 async function runComparisonMode(transcript, numParticipants, topK) {
     const comparisonData = {
-        supabase: null,
-        vertex: null
+        openai: null,
+        gemini: null
     };
 
-    // Run Supabase first
-    document.getElementById('progressSteps').innerHTML = '<div class="text-blue-400">🔵 正在運行 OpenAI + Supabase...</div>';
-    comparisonData.supabase = await runReportAndCapture(transcript, numParticipants, 'supabase', topK);
+    // Run OpenAI first
+    document.getElementById('progressSteps').innerHTML = '<div class="text-blue-400">🔵 正在運行 OpenAI Embedding...</div>';
+    comparisonData.openai = await runReportAndCapture(transcript, numParticipants, 'openai', topK);
 
-    // Run Vertex AI
-    document.getElementById('progressSteps').innerHTML += '<div class="text-purple-400 mt-2">🟣 正在運行 Vertex AI...</div>';
-    comparisonData.vertex = await runReportAndCapture(transcript, numParticipants, 'vertex', topK);
+    // Run Gemini
+    document.getElementById('progressSteps').innerHTML += '<div class="text-purple-400 mt-2">🟣 正在運行 Gemini Embedding...</div>';
+    comparisonData.gemini = await runReportAndCapture(transcript, numParticipants, 'gemini', topK);
 
     // Display comparison
     displayComparisonResults(comparisonData);
@@ -488,23 +488,23 @@ function runReportAndCapture(transcript, numParticipants, ragSystem, topK) {
 }
 
 function displayComparisonResults(comparisonData) {
-    const supabase = comparisonData.supabase;
-    const vertex = comparisonData.vertex;
+    const openaiData = comparisonData.openai;
+    const geminiData = comparisonData.gemini;
 
     // Calculate metrics
-    const supabaseAvgScore = supabase.theories.length > 0
-        ? (supabase.theories.reduce((sum, t) => sum + t.score, 0) / supabase.theories.length).toFixed(4)
+    const supabaseAvgScore = openaiData.theories.length > 0
+        ? (openaiData.theories.reduce((sum, t) => sum + t.score, 0) / openaiData.theories.length).toFixed(4)
         : 0;
-    const vertexAvgScore = vertex.theories.length > 0
-        ? (vertex.theories.reduce((sum, t) => sum + t.score, 0) / vertex.theories.length).toFixed(4)
+    const geminiAvgScore = geminiData.theories.length > 0
+        ? (geminiData.theories.reduce((sum, t) => sum + t.score, 0) / geminiData.theories.length).toFixed(4)
         : 0;
 
     // Find unique and common theories by document name
-    const supabaseDocs = new Set(supabase.theories.map(t => t.document));
-    const vertexDocs = new Set(vertex.theories.map(t => t.document));
-    const commonDocs = [...supabaseDocs].filter(doc => vertexDocs.has(doc));
-    const uniqueSupabase = [...supabaseDocs].filter(doc => !vertexDocs.has(doc));
-    const uniqueVertex = [...vertexDocs].filter(doc => !supabaseDocs.has(doc));
+    const supabaseDocs = new Set(openaiData.theories.map(t => t.document));
+    const geminiDocs = new Set(geminiData.theories.map(t => t.document));
+    const commonDocs = [...supabaseDocs].filter(doc => geminiDocs.has(doc));
+    const uniqueSupabase = [...supabaseDocs].filter(doc => !geminiDocs.has(doc));
+    const uniqueGemini = [...geminiDocs].filter(doc => !supabaseDocs.has(doc));
 
     // Display summary metrics
     const metricsHTML = `
@@ -517,23 +517,23 @@ function displayComparisonResults(comparisonData) {
                     <div class="text-gray-500 text-xs">兩者皆找到</div>
                 </div>
                 <div>
-                    <div class="text-gray-400 text-sm mb-1">Supabase 獨有</div>
+                    <div class="text-gray-400 text-sm mb-1">OpenAI 獨有</div>
                     <div class="text-blue-400 text-3xl font-bold">${uniqueSupabase.length}</div>
-                    <div class="text-gray-500 text-xs">僅 Supabase</div>
+                    <div class="text-gray-500 text-xs">僅 OpenAI</div>
                 </div>
                 <div>
-                    <div class="text-gray-400 text-sm mb-1">Vertex 獨有</div>
-                    <div class="text-purple-400 text-3xl font-bold">${uniqueVertex.length}</div>
-                    <div class="text-gray-500 text-xs">僅 Vertex</div>
+                    <div class="text-gray-400 text-sm mb-1">Gemini 獨有</div>
+                    <div class="text-purple-400 text-3xl font-bold">${uniqueGemini.length}</div>
+                    <div class="text-gray-500 text-xs">僅 Gemini</div>
                 </div>
                 <div>
-                    <div class="text-gray-400 text-sm mb-1">Supabase 速度</div>
-                    <div class="text-blue-400 text-3xl font-bold">${supabase.processingTime.toFixed(1)}s</div>
+                    <div class="text-gray-400 text-sm mb-1">OpenAI 速度</div>
+                    <div class="text-blue-400 text-3xl font-bold">${openaiData.processingTime.toFixed(1)}s</div>
                     <div class="text-gray-500 text-xs">處理時間</div>
                 </div>
                 <div>
-                    <div class="text-gray-400 text-sm mb-1">Vertex 速度</div>
-                    <div class="text-purple-400 text-3xl font-bold">${vertex.processingTime.toFixed(1)}s</div>
+                    <div class="text-gray-400 text-sm mb-1">Gemini 速度</div>
+                    <div class="text-purple-400 text-3xl font-bold">${geminiData.processingTime.toFixed(1)}s</div>
                     <div class="text-gray-500 text-xs">處理時間</div>
                 </div>
             </div>
@@ -546,15 +546,15 @@ function displayComparisonResults(comparisonData) {
                         <div class="flex items-center gap-4">
                             <span class="text-blue-400 font-mono text-lg">${supabaseAvgScore}</span>
                             <span class="text-gray-500">vs</span>
-                            <span class="text-purple-400 font-mono text-lg">${vertexAvgScore}</span>
+                            <span class="text-purple-400 font-mono text-lg">${geminiAvgScore}</span>
                         </div>
                     </div>
                     <div class="text-center">
                         <div class="text-gray-400 mb-1">檢索到理論數</div>
                         <div class="flex items-center gap-4">
-                            <span class="text-blue-400 font-mono text-lg">${supabase.theories.length}</span>
+                            <span class="text-blue-400 font-mono text-lg">${openaiData.theories.length}</span>
                             <span class="text-gray-500">vs</span>
-                            <span class="text-purple-400 font-mono text-lg">${vertex.theories.length}</span>
+                            <span class="text-purple-400 font-mono text-lg">${geminiData.theories.length}</span>
                         </div>
                     </div>
                 </div>
@@ -563,15 +563,15 @@ function displayComparisonResults(comparisonData) {
     `;
     document.getElementById('comparisonMetrics').innerHTML = metricsHTML;
 
-    // Display Supabase results
-    displaySystemResults('supabaseResults', supabase, supabaseDocs, uniqueSupabase, commonDocs);
+    // Display OpenAI results
+    displaySystemResults('supabaseResults', openaiData, supabaseDocs, uniqueSupabase, commonDocs);
 
-    // Display Vertex results
-    displaySystemResults('vertexResults', vertex, vertexDocs, uniqueVertex, commonDocs);
+    // Display Gemini results
+    displaySystemResults('vertexResults', geminiData, geminiDocs, uniqueGemini, commonDocs);
 
     // Display reports
-    displaySystemReport('supabaseReport', supabase.report, '🤖 OpenAI + Supabase');
-    displaySystemReport('vertexReport', vertex.report, '🔷 Google Vertex AI');
+    displaySystemReport('supabaseReport', openaiData.report, '🤖 OpenAI Embedding');
+    displaySystemReport('vertexReport', geminiData.report, '🔷 Gemini Embedding');
 }
 
 function displaySystemReport(elementId, reportData, systemName) {
