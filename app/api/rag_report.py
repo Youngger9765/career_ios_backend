@@ -18,7 +18,9 @@ router = APIRouter(prefix="/api/report", tags=["report"])
 
 class ReportRequest(BaseModel):
     transcript: str
-    top_k: int = 5
+    num_participants: int = 2
+    rag_system: str = "openai"  # "openai" or "gemini"
+    top_k: int = 7
     similarity_threshold: float = 0.25  # Lowered from 0.5 to 0.25 for better recall
 
 
@@ -326,27 +328,34 @@ async def generate_report_stream(
         yield f"data: {json.dumps({'status': 'error', 'message': f'發生錯誤: {str(e)}'}, ensure_ascii=False)}\n\n"
 
 
-@router.get("/generate")
+@router.post("/generate")
 async def generate_report(
-    transcript: str,
-    top_k: int = 7,  # Default to 7 for better coverage
-    similarity_threshold: float = 0.25,  # Lowered from 0.5 to 0.25 for better recall
-    num_participants: int = 2,
-    rag_system: str = "openai",  # "openai" or "gemini"
+    request: ReportRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """
     Generate case report from transcript with real-time progress updates
 
     Args:
-        rag_system: LLM model to use for report generation - "openai" (GPT) or "gemini" (Gemini)
-                   Note: Retrieval always uses OpenAI embeddings
+        request: Request body containing transcript and optional parameters
+            - transcript (str): Counseling transcript text
+            - rag_system (str): LLM model - "openai" (GPT-4.1 Mini) or "gemini" (Gemini 2.5 Flash)
+            - num_participants (int): Number of participants in session
+            - top_k (int): Number of theory documents to retrieve
+            - similarity_threshold (float): Similarity threshold for RAG retrieval
 
     Returns: SSE stream with progress updates
     """
 
     return StreamingResponse(
-        generate_report_stream(transcript, top_k, similarity_threshold, num_participants, rag_system, db),
+        generate_report_stream(
+            request.transcript,
+            request.top_k,
+            request.similarity_threshold,
+            request.num_participants,
+            request.rag_system,
+            db,
+        ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

@@ -388,38 +388,51 @@ async function generateReport() {
 
 async function runSingleReport(transcript, numParticipants, ragSystem, topK) {
     try {
-        const url = `/api/report/generate?transcript=${encodeURIComponent(transcript)}&num_participants=${numParticipants}&rag_system=${ragSystem}&top_k=${topK}`;
-        const eventSource = new EventSource(url);
+        const response = await fetch('/api/report/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                transcript: transcript,
+                num_participants: numParticipants,
+                rag_system: ragSystem,
+                top_k: topK
+            })
+        });
 
-        eventSource.onmessage = function(event) {
-            const data = JSON.parse(event.data);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
 
-            if (data.status === 'error') {
-                alert('錯誤: ' + data.message);
-                eventSource.close();
-                return;
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const jsonStr = line.substring(6);
+                    try {
+                        const data = JSON.parse(jsonStr);
+
+                        if (data.status === 'error') {
+                            alert('錯誤: ' + data.message);
+                            return;
+                        }
+
+                        updateProgress(data);
+
+                        if (data.step === 5 && data.status === 'completed' && data.data?.report) {
+                            reportData = data.data.report;
+                            displayReportInTable(reportData);
+                            document.getElementById('reportSection').classList.remove('hidden');
+                        }
+                    } catch (e) {
+                        // Ignore parse errors for incomplete chunks
+                    }
+                }
             }
-
-            updateProgress(data);
-
-            if (data.step === 5 && data.status === 'completed' && data.data?.report) {
-                reportData = data.data.report;
-                displayReportInTable(reportData);
-                document.getElementById('reportSection').classList.remove('hidden');
-            }
-
-            if (data.step === 6 && data.status === 'completed') {
-                eventSource.close();
-            }
-        };
-
-        eventSource.onerror = function(error) {
-            console.error('EventSource error:', error);
-            alert('連線錯誤，請重試');
-            eventSource.close();
-            document.getElementById('progressSection').classList.add('hidden');
-        };
-
+        }
     } catch (error) {
         console.error('Report generation error:', error);
         alert('報告生成失敗: ' + error.message);
@@ -466,50 +479,70 @@ async function runComparisonMode(transcript, numParticipants, topK) {
     }
 }
 
-function runReportAndCapture(transcript, numParticipants, ragSystem, topK) {
-    return new Promise((resolve, reject) => {
-        const url = `/api/report/generate?transcript=${encodeURIComponent(transcript)}&num_participants=${numParticipants}&rag_system=${ragSystem}&top_k=${topK}`;
-        const eventSource = new EventSource(url);
-        const capturedData = {
-            system: ragSystem,
-            theories: [],
-            report: null,
-            processingTime: 0,
-            startTime: Date.now()
-        };
+async function runReportAndCapture(transcript, numParticipants, ragSystem, topK) {
+    const capturedData = {
+        system: ragSystem,
+        theories: [],
+        report: null,
+        processingTime: 0,
+        startTime: Date.now()
+    };
 
-        eventSource.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-
-            if (data.status === 'error') {
-                eventSource.close();
-                reject(new Error(data.message));
-                return;
-            }
-
-            // Capture theories from step 3
-            if (data.step === 3 && data.status === 'completed' && data.data?.theories) {
-                capturedData.theories = data.data.theories;
-            }
-
-            // Capture final report from step 5
-            if (data.step === 5 && data.status === 'completed' && data.data?.report) {
-                capturedData.report = data.data.report;
-            }
-
-            // Close and resolve when done
-            if (data.step === 6 && data.status === 'completed') {
-                capturedData.processingTime = (Date.now() - capturedData.startTime) / 1000;
-                eventSource.close();
-                resolve(capturedData);
-            }
-        };
-
-        eventSource.onerror = function(error) {
-            eventSource.close();
-            reject(error);
-        };
+    const response = await fetch('/api/report/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            transcript: transcript,
+            num_participants: numParticipants,
+            rag_system: ragSystem,
+            top_k: topK
+        })
     });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n\n');
+
+        for (const line of lines) {
+            if (line.startsWith('data: ')) {
+                const jsonStr = line.substring(6);
+                try {
+                    const data = JSON.parse(jsonStr);
+
+                    if (data.status === 'error') {
+                        throw new Error(data.message);
+                    }
+
+                    // Capture theories from step 3
+                    if (data.step === 3 && data.status === 'completed' && data.data?.theories) {
+                        capturedData.theories = data.data.theories;
+                    }
+
+                    // Capture final report from step 5
+                    if (data.step === 5 && data.status === 'completed' && data.data?.report) {
+                        capturedData.report = data.data.report;
+                    }
+
+                    // Complete when done
+                    if (data.step === 6 && data.status === 'completed') {
+                        capturedData.processingTime = (Date.now() - capturedData.startTime) / 1000;
+                        return capturedData;
+                    }
+                } catch (e) {
+                    // Ignore parse errors for incomplete chunks
+                    if (data?.status === 'error') throw e;
+                }
+            }
+        }
+    }
+
+    return capturedData;
 }
 
 function displayComparisonResults(comparisonData) {
