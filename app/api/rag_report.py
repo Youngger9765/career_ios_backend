@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/report", tags=["report"])
 class ReportRequest(BaseModel):
     transcript: str
     top_k: int = 5
-    similarity_threshold: float = 0.5
+    similarity_threshold: float = 0.25  # Lowered from 0.5 to 0.25 for better recall
 
 
 async def generate_report_stream(
@@ -115,8 +115,10 @@ async def generate_report_stream(
         # Step 3: RAG search for relevant theories (always use OpenAI embeddings)
         yield f"data: {json.dumps({'step': 3, 'status': 'processing', 'message': '正在檢索相關理論...'}, ensure_ascii=False)}\n\n"
 
-        # Search for theories related to main concerns
-        search_query = " ".join(main_concerns[:3])  # Top 3 concerns
+        # Search for theories related to main concerns + techniques
+        # Combine concerns and techniques for broader search
+        search_terms = main_concerns[:3] + techniques[:2]  # Top 3 concerns + top 2 techniques
+        search_query = " ".join(search_terms) if search_terms else "職涯諮詢 生涯發展"
 
         # Always use OpenAI embedding for search
         query_embedding = await openai_service.create_embedding(search_query)
@@ -328,7 +330,7 @@ async def generate_report_stream(
 async def generate_report(
     transcript: str,
     top_k: int = 7,  # Default to 7 for better coverage
-    similarity_threshold: float = 0.5,
+    similarity_threshold: float = 0.25,  # Lowered from 0.5 to 0.25 for better recall
     num_participants: int = 2,
     rag_system: str = "openai",  # "openai" or "gemini"
     db: AsyncSession = Depends(get_db),

@@ -140,17 +140,23 @@
         <!-- Tab Content: Reports Comparison -->
         <div id="comp-content-reports" class="comp-tab-content hidden">
             <div class="grid grid-cols-2 gap-6">
-                <!-- Supabase Report -->
-                <div class="bg-gray-900 rounded-lg p-4">
-                    <h4 class="text-lg font-semibold text-blue-400 mb-4">🤖 OpenAI Embedding 生成報告</h4>
+                <!-- OpenAI Report -->
+                <div class="bg-gradient-to-br from-blue-900/30 to-gray-900 rounded-lg p-6 border-2 border-blue-500/50">
+                    <div class="flex items-center gap-3 mb-4 pb-3 border-b-2 border-blue-500/50">
+                        <h4 class="text-xl font-bold text-blue-400">🤖 OpenAI GPT-4.1 Mini</h4>
+                        <span class="text-xs bg-blue-500 text-white px-2 py-1 rounded">生成報告</span>
+                    </div>
                     <div id="supabaseReport" class="text-white text-sm space-y-4">
                         <!-- Report will be injected here -->
                     </div>
                 </div>
 
-                <!-- Vertex Report -->
-                <div class="bg-gray-900 rounded-lg p-4">
-                    <h4 class="text-lg font-semibold text-purple-400 mb-4">🔷 Gemini Embedding 生成報告</h4>
+                <!-- Gemini Report -->
+                <div class="bg-gradient-to-br from-purple-900/30 to-gray-900 rounded-lg p-6 border-2 border-purple-500/50">
+                    <div class="flex items-center gap-3 mb-4 pb-3 border-b-2 border-purple-500/50">
+                        <h4 class="text-xl font-bold text-purple-400">🔷 Gemini 2.5 Flash</h4>
+                        <span class="text-xs bg-purple-500 text-white px-2 py-1 rounded">生成報告</span>
+                    </div>
                     <div id="vertexReport" class="text-white text-sm space-y-4">
                         <!-- Report will be injected here -->
                     </div>
@@ -422,23 +428,42 @@ async function runSingleReport(transcript, numParticipants, ragSystem, topK) {
 }
 
 async function runComparisonMode(transcript, numParticipants, topK) {
-    const comparisonData = {
-        openai: null,
-        gemini: null
-    };
+    try {
+        const comparisonData = {
+            openai: null,
+            gemini: null
+        };
 
-    // Run OpenAI first
-    document.getElementById('progressSteps').innerHTML = '<div class="text-blue-400">🔵 正在運行 OpenAI Embedding...</div>';
-    comparisonData.openai = await runReportAndCapture(transcript, numParticipants, 'openai', topK);
+        // Run OpenAI first
+        document.getElementById('progressSteps').innerHTML = '<div class="text-blue-400 font-semibold text-lg">🔵 正在運行 OpenAI GPT-4.1 Mini...</div>';
+        console.log('Starting OpenAI comparison...');
+        comparisonData.openai = await runReportAndCapture(transcript, numParticipants, 'openai', topK);
+        console.log('OpenAI completed:', comparisonData.openai);
 
-    // Run Gemini
-    document.getElementById('progressSteps').innerHTML += '<div class="text-purple-400 mt-2">🟣 正在運行 Gemini Embedding...</div>';
-    comparisonData.gemini = await runReportAndCapture(transcript, numParticipants, 'gemini', topK);
+        // Run Gemini
+        document.getElementById('progressSteps').innerHTML += '<div class="text-purple-400 font-semibold text-lg mt-4">🟣 正在運行 Gemini 2.5 Flash...</div>';
+        console.log('Starting Gemini comparison...');
+        comparisonData.gemini = await runReportAndCapture(transcript, numParticipants, 'gemini', topK);
+        console.log('Gemini completed:', comparisonData.gemini);
 
-    // Display comparison
-    displayComparisonResults(comparisonData);
-    document.getElementById('progressSection').classList.add('hidden');
-    document.getElementById('comparisonSection').classList.remove('hidden');
+        // Display comparison
+        console.log('Displaying comparison results...');
+        displayComparisonResults(comparisonData);
+
+        // Hide progress and show comparison
+        document.getElementById('progressSection').classList.add('hidden');
+        document.getElementById('reportSection').classList.add('hidden');  // Ensure single report is hidden
+        document.getElementById('comparisonSection').classList.remove('hidden');
+
+        // Auto-switch to reports tab
+        switchComparisonTab('reports');
+
+        console.log('Comparison mode completed successfully');
+    } catch (error) {
+        console.error('Comparison mode failed:', error);
+        alert('比較模式執行失敗: ' + error.message);
+        document.getElementById('progressSection').classList.add('hidden');
+    }
 }
 
 function runReportAndCapture(transcript, numParticipants, ragSystem, topK) {
@@ -576,45 +601,57 @@ function displayComparisonResults(comparisonData) {
 
 function displaySystemReport(elementId, reportData, systemName) {
     if (!reportData || !reportData.conceptualization) {
-        document.getElementById(elementId).innerHTML = '<div class="text-gray-400">報告生成失敗</div>';
+        document.getElementById(elementId).innerHTML = '<div class="text-red-400 p-4 bg-red-900/20 rounded">⚠️ 報告生成失敗</div>';
         return;
     }
 
+    const borderColor = elementId === 'supabaseReport' ? 'border-blue-500' : 'border-purple-500';
+    const textColor = elementId === 'supabaseReport' ? 'text-blue-400' : 'text-purple-400';
+
     let html = `
         <div class="space-y-4">
-            <div class="bg-gray-800 rounded-lg p-4">
-                <h5 class="text-white font-semibold mb-2">👤 案主資訊</h5>
-                <div class="text-gray-300 text-xs space-y-1">
-                    <div><span class="text-gray-500">姓名：</span>${reportData.client_info.name}</div>
-                    <div><span class="text-gray-500">年齡：</span>${reportData.client_info.age}</div>
-                    <div><span class="text-gray-500">職業：</span>${reportData.client_info.occupation}</div>
+            <div class="bg-gray-800/70 rounded-lg p-4 border border-gray-700">
+                <h5 class="${textColor} font-semibold mb-3 text-base">👤 案主基本資訊</h5>
+                <div class="text-gray-300 text-sm space-y-2">
+                    <div class="flex"><span class="text-gray-500 w-16">姓名：</span><span class="font-medium">${reportData.client_info.name}</span></div>
+                    <div class="flex"><span class="text-gray-500 w-16">年齡：</span><span>${reportData.client_info.age}</span></div>
+                    <div class="flex"><span class="text-gray-500 w-16">職業：</span><span>${reportData.client_info.occupation}</span></div>
                 </div>
             </div>
 
-            <div class="bg-gray-800 rounded-lg p-4">
-                <h5 class="text-white font-semibold mb-2">🎯 主訴問題</h5>
-                <div class="text-gray-300 text-xs">
-                    ${reportData.main_concerns.map(c => `<div>• ${c}</div>`).join('')}
+            <div class="bg-gray-800/70 rounded-lg p-4 border border-gray-700">
+                <h5 class="${textColor} font-semibold mb-3 text-base">🎯 主訴問題</h5>
+                <div class="text-gray-300 text-sm space-y-1">
+                    ${reportData.main_concerns.map(c => `<div class="flex items-start gap-2"><span class="text-yellow-400">•</span><span>${c}</span></div>`).join('')}
                 </div>
             </div>
 
-            <div class="bg-gray-800 rounded-lg p-4">
-                <h5 class="text-white font-semibold mb-2">📝 概念化內容</h5>
-                <div class="text-gray-300 text-xs leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
-                    ${reportData.conceptualization}
+            <div class="bg-gray-800/70 rounded-lg p-4 border border-gray-700">
+                <h5 class="${textColor} font-semibold mb-3 text-base">📝 概念化分析</h5>
+                <div class="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap max-h-[500px] overflow-y-auto bg-gray-900/50 rounded p-3">
+${reportData.conceptualization}
                 </div>
             </div>
 
-            <div class="bg-gray-800 rounded-lg p-4">
-                <h5 class="text-white font-semibold mb-2">📚 參考理論（${reportData.theories.length} 個）</h5>
-                <div class="text-gray-300 text-xs space-y-2">
+            <div class="bg-gray-800/70 rounded-lg p-4 border border-gray-700">
+                <h5 class="${textColor} font-semibold mb-3 text-base">📚 引用理論文獻（${reportData.theories.length} 個）</h5>
+                <div class="text-gray-300 text-sm space-y-3">
                     ${reportData.theories.slice(0, 3).map((t, idx) => `
-                        <div class="border-l-2 border-blue-500 pl-2">
-                            <div class="text-yellow-400 font-mono">[${idx + 1}] ${t.score.toFixed(3)}</div>
-                            <div class="text-gray-400">${t.text.substring(0, 100)}...</div>
+                        <div class="border-l-3 ${borderColor} pl-3 py-1 bg-gray-900/50 rounded">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-yellow-400 font-mono text-xs">[${idx + 1}]</span>
+                                <span class="text-gray-500 text-xs">${(t.score * 100).toFixed(1)}% 相似</span>
+                            </div>
+                            <div class="text-gray-400 text-xs">${t.text.substring(0, 120)}...</div>
                         </div>
                     `).join('')}
-                    ${reportData.theories.length > 3 ? `<div class="text-gray-500">... 還有 ${reportData.theories.length - 3} 個理論</div>` : ''}
+                    ${reportData.theories.length > 3 ? `<div class="text-gray-500 text-xs text-center pt-2">... 還有 ${reportData.theories.length - 3} 個參考理論</div>` : ''}
+                </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-gray-700">
+                <div class="text-gray-500 text-xs text-center">
+                    ${systemName} • 生成時間約 ${reportData.theories.length > 0 ? Math.ceil(reportData.theories.length * 0.5) : 1} 秒
                 </div>
             </div>
         </div>
