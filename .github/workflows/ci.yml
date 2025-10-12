@@ -113,7 +113,7 @@ jobs:
           --concurrency=1000 \
           --cpu-throttling \
           --port=8080 \
-          --no-allow-unauthenticated \
+          --allow-unauthenticated \
           --set-env-vars="DATABASE_URL=${DATABASE_URL},DATABASE_URL_DIRECT=${DATABASE_URL_DIRECT},SECRET_KEY=${SECRET_KEY},OPENAI_API_KEY=${OPENAI_API_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY},MOCK_MODE=false,DEBUG=${{ steps.env.outputs.DEBUG }},GCS_PROJECT=groovy-iris-473015-h3,ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }}"
 
     - name: Get service URL
