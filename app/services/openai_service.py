@@ -8,13 +8,13 @@ try:
 
     OPENAI_API_KEY = settings.OPENAI_API_KEY
     EMBEDDING_MODEL = getattr(settings, "OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-    CHAT_MODEL = getattr(settings, "OPENAI_CHAT_MODEL", "gpt-4o-mini")
+    CHAT_MODEL = getattr(settings, "OPENAI_CHAT_MODEL", "gpt-4.1-mini")
 except ImportError:
     import os
 
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-    CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+    CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-4.1-mini")
 
 
 class OpenAIService:

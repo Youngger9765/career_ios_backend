@@ -28,7 +28,7 @@ class GeminiService:
         """Lazy initialization of models"""
         if not self._initialized:
             vertexai.init(project=self.project_id, location=self.location)
-            self._chat_model = GenerativeModel("gemini-1.5-pro")
+            self._chat_model = GenerativeModel("gemini-2.5-flash")
             self._initialized = True
 
     @property

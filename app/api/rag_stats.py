@@ -17,7 +17,11 @@ class DocumentStats(BaseModel):
     title: str
     pages: int
     bytes: int
+    chunk_strategy: str  # Strategy name like "rec_400_80"
+    chunk_size: int  # Extracted from strategy
+    overlap: int  # Extracted from strategy
     chunks_count: int
+    embeddings_count: int
     text_length: int  # Original extracted text length
     total_text_chars: int  # Sum of all chunk text lengths
     created_at: str
@@ -48,7 +52,7 @@ def get_database_stats(db: Session = Depends(get_db)):
     embeddings_count = db.execute(text("SELECT COUNT(*) FROM embeddings")).scalar()
     total_bytes = db.execute(text("SELECT COALESCE(SUM(bytes), 0) FROM documents")).scalar()
 
-    # Get document details with chunk counts and total text length
+    # Get document details grouped by chunk strategy
     query = text("""
         SELECT
             d.id,
@@ -57,16 +61,31 @@ def get_database_stats(db: Session = Depends(get_db)):
             d.bytes,
             d.text_length,
             d.created_at,
+            COALESCE(c.chunk_strategy, 'no_chunks') as chunk_strategy,
             COUNT(c.id) as chunks_count,
+            COUNT(e.id) as embeddings_count,
             COALESCE(SUM(LENGTH(c.text)), 0) as total_text_chars
         FROM documents d
         LEFT JOIN chunks c ON d.id = c.doc_id
-        GROUP BY d.id, d.title, d.pages, d.bytes, d.text_length, d.created_at
-        ORDER BY d.created_at DESC
+        LEFT JOIN embeddings e ON c.id = e.chunk_id
+        GROUP BY d.id, d.title, d.pages, d.bytes, d.text_length, d.created_at, c.chunk_strategy
+        ORDER BY d.created_at DESC, c.chunk_strategy
     """)
 
     result = db.execute(query)
     rows = result.fetchall()
+
+    def parse_strategy(strategy_name: str) -> tuple[int, int]:
+        """Parse chunk_strategy like 'rec_400_80' to (chunk_size, overlap)"""
+        if strategy_name == 'no_chunks':
+            return (0, 0)
+        try:
+            parts = strategy_name.split('_')
+            if len(parts) >= 3:
+                return (int(parts[1]), int(parts[2]))
+        except (ValueError, IndexError):
+            pass
+        return (0, 0)
 
     documents = [
         DocumentStats(
@@ -74,7 +93,11 @@ def get_database_stats(db: Session = Depends(get_db)):
             title=row.title,
             pages=row.pages or 0,
             bytes=row.bytes or 0,
+            chunk_strategy=row.chunk_strategy,
+            chunk_size=parse_strategy(row.chunk_strategy)[0],
+            overlap=parse_strategy(row.chunk_strategy)[1],
             chunks_count=row.chunks_count or 0,
+            embeddings_count=row.embeddings_count or 0,
             text_length=row.text_length or 0,
             total_text_chars=row.total_text_chars or 0,
             created_at=str(row.created_at),
