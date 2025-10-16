@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/rag/chat", tags=["rag-chat"])
 class ChatRequest(BaseModel):
     question: str
     top_k: int = 7
-    similarity_threshold: float = 0.55
+    similarity_threshold: float = 0.45
     system_prompt: Optional[str] = None
     temperature: float = 0.6
     chunk_strategy: Optional[str] = None  # NEW: filter by chunk strategy
@@ -59,42 +59,56 @@ async def chat_with_rag(request: ChatRequest, db: AsyncSession = Depends(get_db)
         # Initialize OpenAI service
         openai_service = OpenAIService()
 
-        # Step 1: Determine if question needs RAG search
+        # Step 1: Determine if question needs RAG search with improved prompt
         intent_check = await openai_service.chat_completion(
             messages=[
                 {
                     "role": "system",
-                    "content": """You are a classifier. Determine if the question needs document search.
+                    "content": """You are a classifier for a career counseling AI assistant.
 
-Available documents cover:
-- 職涯諮詢概論與興趣熱情
-- 優勢職能分析
-- 生涯成熟與價值觀
-- 求職策略、履歷與面試技巧
-- 心理諮詢技巧
-- 綜合職涯實戰錦囊
+Your job: Determine if the question needs to search our professional documents.
 
-Reply ONLY with JSON (no other text):
-{
-  "needs_search": true/false,
-  "reason": "brief explanation"
-}
+📚 Available documents cover:
+- 職涯諮詢概論與興趣熱情 (Career counseling fundamentals & passion exploration)
+- 優勢職能分析 (Strengths & competency analysis)
+- 生涯成熟與價值觀 (Career maturity & values)
+- 求職策略、履歷與面試技巧 (Job search strategies, resume & interview skills)
+- 心理諮詢技巧 (Psychological counseling techniques)
+- 綜合職涯實戰錦囊 (Comprehensive career practice toolkit)
 
-needs_search = true if:
-- Asking about career theory, concepts, or frameworks
-- Needs specific professional knowledge
-- Asking about career counseling techniques
-- Related to available document topics
+Reply ONLY with JSON:
+{"needs_search": true/false, "reason": "brief explanation"}
 
-needs_search = false if:
-- Simple greetings (hi, hello, 你好)
-- General chat (how are you)
-- Questions clearly outside career counseling scope
-- Personal opinions not requiring documents""",
+✅ needs_search = TRUE for:
+- Career-related questions (職涯、工作、求職、面試、履歷)
+- Personal development questions (成長、發展、目標、規劃、興趣、熱情)
+- Life purpose questions (人生意義、價值觀、想要的生活)
+- Career confusion or exploration (迷茫、困惑、選擇、探索)
+- Skill or competency questions (能力、優勢、專長、技能)
+- Work-life balance (工作生活平衡、壓力)
+- Career transitions (轉職、換工作、職涯轉換)
+- Any question that MIGHT relate to career counseling
+
+❌ needs_search = FALSE ONLY for:
+- Pure greetings with no question (只是「你好」「hi」「hello」)
+- System commands (重置、清除、設定)
+- Completely unrelated topics (天氣、數學計算、娛樂八卦、今天吃什麼)
+
+🔑 Key principle: When in doubt, choose TRUE.
+Career counseling is broad - almost any life question can relate to career.
+
+Examples:
+- "我想要活得更好" → TRUE (relates to life purpose & career direction)
+- "因為想要活得更好" → TRUE (implies career motivation)
+- "如何找到熱情" → TRUE (passion exploration)
+- "我很迷茫" → TRUE (career confusion)
+- "你好" → FALSE (just greeting)
+- "今天天氣如何" → FALSE (weather)
+- "1+1等於多少" → FALSE (math calculation)""",
                 },
                 {"role": "user", "content": request.question},
             ],
-            temperature=0.3,
+            temperature=0.2,  # Lower temperature for more consistent classification
         )
 
         # Parse intent
@@ -108,9 +122,10 @@ needs_search = false if:
             if json_match:
                 intent_data = json.loads(json_match.group(0))
             else:
-                intent_data = {"needs_search": True, "reason": "default to search"}
+                # Default to search if parsing fails
+                intent_data = {"needs_search": True, "reason": "default to search on parse error"}
 
-        needs_search = intent_data.get("needs_search", True)
+        needs_search = intent_data.get("needs_search", True)  # Default TRUE
 
         # If doesn't need search, respond directly
         if not needs_search:
