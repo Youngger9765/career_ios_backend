@@ -416,16 +416,38 @@ async function runSingleReport(transcript, numParticipants, ragSystem, topK) {
                         const data = JSON.parse(jsonStr);
 
                         if (data.status === 'error') {
-                            alert('錯誤: ' + data.message);
+                            document.getElementById('progressSteps').innerHTML += `
+                                <div class="bg-red-50 border border-red-200 rounded p-4 mt-4">
+                                    <p class="text-red-800 font-semibold">✗ API 錯誤</p>
+                                    <p class="text-red-600 text-sm mt-2">${data.message}</p>
+                                </div>
+                            `;
                             return;
                         }
 
                         updateProgress(data);
 
+                        // Debug logging
+                        if (data.step === 5) {
+                            console.log('Step 5 received:', data);
+                            console.log('Has report?', !!data.data?.report);
+                        }
+
                         if (data.step === 5 && data.status === 'completed' && data.data?.report) {
+                            console.log('Displaying report:', data.data.report);
                             reportData = data.data.report;
                             displayReportInTable(reportData);
                             document.getElementById('reportSection').classList.remove('hidden');
+                        }
+
+                        // If step 6 completed but no report shown, there's a problem
+                        if (data.step === 6 && data.status === 'completed' && !reportData) {
+                            document.getElementById('progressSteps').innerHTML += `
+                                <div class="bg-yellow-50 border border-yellow-200 rounded p-4 mt-4">
+                                    <p class="text-yellow-800 font-semibold">⚠ 報告未顯示</p>
+                                    <p class="text-yellow-600 text-sm mt-2">流程完成但報告內容未接收到。請重試或聯繫技術支援。</p>
+                                </div>
+                            `;
                         }
                     } catch (e) {
                         // Ignore parse errors for incomplete chunks
