@@ -77,6 +77,9 @@ async def ingest_file(
         text = pdf_service.extract_text(file_content)
         metadata = pdf_service.extract_metadata(file_content)
 
+        # Remove NUL characters that PostgreSQL cannot store
+        text = text.replace('\x00', '')
+
         # 3. Create datasource and document records
         datasource = Datasource(type="pdf", source_uri=storage_url)
         db.add(datasource)
@@ -106,19 +109,22 @@ async def ingest_file(
         openai_service = OpenAIService()
 
         for idx, chunk_text in enumerate(chunks):
+            # Remove NUL characters from chunk text
+            clean_chunk_text = chunk_text.replace('\x00', '')
+
             # Create chunk record with strategy tag
             chunk = Chunk(
                 doc_id=document.id,
                 chunk_strategy=chunk_strategy,
                 ordinal=idx,
-                text=chunk_text,
+                text=clean_chunk_text,
                 meta_json={}
             )
             db.add(chunk)
             db.flush()
 
             # Generate embedding
-            embedding_vector = await openai_service.create_embedding(chunk_text)
+            embedding_vector = await openai_service.create_embedding(clean_chunk_text)
 
             # Create embedding record
             embedding = Embedding(chunk_id=chunk.id, embedding=embedding_vector)
@@ -244,13 +250,16 @@ async def reprocess_document(
         openai_service = OpenAIService()
 
         for idx, chunk_text in enumerate(chunks):
+            # Remove NUL characters from chunk text
+            clean_chunk_text = chunk_text.replace('\x00', '')
+
             # Create chunk record
-            chunk = Chunk(doc_id=document.id, ordinal=idx, text=chunk_text, meta_json={})
+            chunk = Chunk(doc_id=document.id, ordinal=idx, text=clean_chunk_text, meta_json={})
             db.add(chunk)
             db.flush()
 
             # Generate embedding
-            embedding_vector = await openai_service.create_embedding(chunk_text)
+            embedding_vector = await openai_service.create_embedding(clean_chunk_text)
 
             # Create embedding record
             embedding = Embedding(chunk_id=chunk.id, embedding=embedding_vector)
@@ -344,19 +353,22 @@ async def generate_strategy_for_document(
         openai_service = OpenAIService()
 
         for idx, chunk_text in enumerate(chunks):
+            # Remove NUL characters from chunk text
+            clean_chunk_text = chunk_text.replace('\x00', '')
+
             # Create chunk record
             chunk = Chunk(
                 doc_id=document.id,
                 chunk_strategy=strategy_name,
                 ordinal=idx,
-                text=chunk_text,
+                text=clean_chunk_text,
                 meta_json={},
             )
             db.add(chunk)
             db.flush()
 
             # Generate embedding
-            embedding_vector = await openai_service.create_embedding(chunk_text)
+            embedding_vector = await openai_service.create_embedding(clean_chunk_text)
 
             # Create embedding record
             embedding = Embedding(chunk_id=chunk.id, embedding=embedding_vector)
