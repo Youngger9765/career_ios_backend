@@ -435,8 +435,16 @@ async function runSingleReport(transcript, numParticipants, ragSystem, topK) {
         }
     } catch (error) {
         console.error('Report generation error:', error);
-        alert('報告生成失敗: ' + error.message);
-        document.getElementById('progressSection').classList.add('hidden');
+        document.getElementById('progressSteps').innerHTML += `
+            <div class="bg-red-50 border border-red-200 rounded p-4 mt-4">
+                <p class="text-red-800 font-semibold">✗ 報告生成失敗</p>
+                <p class="text-red-600 text-sm mt-2">${error.message}</p>
+                <p class="text-red-500 text-xs mt-2">請檢查：<br>
+                1. 網路連線是否正常<br>
+                2. 逐字稿內容是否有效<br>
+                3. API 服務是否正常運作</p>
+            </div>
+        `;
     }
 }
 
