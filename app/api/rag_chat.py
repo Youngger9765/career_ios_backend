@@ -59,25 +59,36 @@ async def chat_with_rag(request: ChatRequest, db: AsyncSession = Depends(get_db)
         # Initialize OpenAI service
         openai_service = OpenAIService()
 
+        # Step 0.5: Get available documents from database
+        from sqlalchemy import select
+        from app.models.document import Document
+
+        result = db.execute(select(Document.title).distinct())
+        doc_titles = [row[0] for row in result.fetchall()]
+
+        # Format document list for prompt
+        doc_list = "\n".join([f"- {title}" for title in sorted(set(doc_titles))])
+
         # Step 1: Determine if question needs RAG search with improved prompt
-        intent_check = await openai_service.chat_completion(
-            messages=[
-                {
-                    "role": "system",
-                    "content": """You are a classifier for a career counseling AI assistant.
+        intent_system_prompt = f"""You are a classifier for a career counseling AI assistant.
 
 Your job: Determine if the question needs to search our professional documents.
 
-📚 Available documents cover:
+📚 **Available documents in our database:**
+{doc_list}
+
+**Document coverage includes:**
 - 職涯諮詢概論與興趣熱情 (Career counseling fundamentals & passion exploration)
 - 優勢職能分析 (Strengths & competency analysis)
 - 生涯成熟與價值觀 (Career maturity & values)
 - 求職策略、履歷與面試技巧 (Job search strategies, resume & interview skills)
 - 心理諮詢技巧 (Psychological counseling techniques)
 - 綜合職涯實戰錦囊 (Comprehensive career practice toolkit)
+- 主人思維 (Owner mindset and proactive thinking)
+- 職遊精選文章 (Curated career development articles)
 
 Reply ONLY with JSON:
-{"needs_search": true/false, "reason": "brief explanation"}
+{{"needs_search": true/false, "reason": "brief explanation"}}
 
 ✅ needs_search = TRUE for:
 - Career-related questions (職涯、工作、求職、面試、履歷)
@@ -87,7 +98,9 @@ Reply ONLY with JSON:
 - Skill or competency questions (能力、優勢、專長、技能)
 - Work-life balance (工作生活平衡、壓力)
 - Career transitions (轉職、換工作、職涯轉換)
-- Any question that MIGHT relate to career counseling
+- Mindset questions (思維、心態、主人思維)
+- Any question that MIGHT relate to career counseling or personal development
+- **Any question that mentions topics in our document titles**
 
 ❌ needs_search = FALSE ONLY for:
 - Pure greetings with no question (只是「你好」「hi」「hello」)
@@ -102,10 +115,14 @@ Examples:
 - "因為想要活得更好" → TRUE (implies career motivation)
 - "如何找到熱情" → TRUE (passion exploration)
 - "我很迷茫" → TRUE (career confusion)
+- "主人思維是什麼" → TRUE (we have 主人思維全.pdf)
 - "你好" → FALSE (just greeting)
 - "今天天氣如何" → FALSE (weather)
-- "1+1等於多少" → FALSE (math calculation)""",
-                },
+- "1+1等於多少" → FALSE (math calculation)"""
+
+        intent_check = await openai_service.chat_completion(
+            messages=[
+                {"role": "system", "content": intent_system_prompt},
                 {"role": "user", "content": request.question},
             ],
             temperature=0.2,  # Lower temperature for more consistent classification
