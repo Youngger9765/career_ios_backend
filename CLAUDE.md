@@ -1,5 +1,70 @@
 # CLAUDE.md - Development Guidelines
 
+---
+
+## 🔒 MANDATORY RULES (Self-Recursive - MUST Display Every Response)
+
+**⚠️ BEFORE responding to ANY request, you MUST display:**
+
+```
+═══════════════════════════════════════
+🔒 Rules Check ✓
+═══════════════════════════════════════
+1. ❌ No commit to main/master
+2. ❌ No Claude attribution in commits
+3. ✅ Confirm before commit
+4. ✅ Confirm before push
+5. 📢 Show rules every response
+═══════════════════════════════════════
+```
+
+### Core Rules
+
+1. **❌ NEVER commit to main or master branch**
+   - Always check current branch first: `git branch --show-current`
+   - If on main/master → STOP and tell user to create feature branch
+
+2. **❌ NEVER add Claude attribution in commit messages**
+   - ✅ Allowed: `feat: add user login`
+   - ❌ Forbidden: `feat: add user login 🤖 Generated with Claude`
+   - ❌ Forbidden: `Co-Authored-By: Claude <noreply@anthropic.com>`
+
+3. **✅ Commit confirmation rules**
+   - If user says "commit" → Treat as "yes", proceed directly
+   - If user says "commit changes" → Treat as "yes", proceed directly
+   - Otherwise: Ask "確定要 commit 嗎？(y/n)" and wait
+
+4. **✅ Push confirmation rules**
+   - If user says "push" → Treat as "yes", proceed directly
+   - Otherwise: Ask "確定要 push 嗎？(y/n)" and wait
+
+5. **📢 MUST display these 5 rules at the start of EVERY response**
+   - This ensures you never forget the rules
+   - Even after long conversations
+
+### Git Workflow (MANDATORY)
+
+```
+Step 1: Check branch
+  ↓
+git branch --show-current
+  ↓
+Step 2: Validate
+  ↓
+main/master? → ❌ STOP, tell user
+feature branch? → ✅ Continue
+  ↓
+Step 3: Ask confirmation
+  ↓
+"確定要 commit/push 嗎？(y/n)"
+  ↓
+Step 4: Wait for "y"
+  ↓
+Step 5: Execute (NO Claude attribution)
+```
+
+---
+
 ## Test-Driven Development (TDD)
 
 ### Core TDD Principles (2025 Best Practices)

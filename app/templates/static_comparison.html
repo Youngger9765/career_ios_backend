@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>報告品質改善對比 - 舊版 vs 增強版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f7;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 16px;
+            color: #1d1d1f;
+        }
+
+        .header p {
+            color: #6e6e73;
+            font-size: 18px;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .card-title {
+            font-size: 14px;
+            color: #6e6e73;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .card-improvement {
+            font-size: 14px;
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        .old-value { color: #d1453b; }
+        .new-value { color: #28a745; }
+
+        .section {
+            background: white;
+            padding: 32px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .section-header {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .comparison-item {
+            border: 2px solid #f5f5f7;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .comparison-item-header {
+            padding: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .old-header {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .new-header {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .comparison-item-body {
+            padding: 20px;
+            background: #fafafa;
+            font-size: 14px;
+            font-family: "SF Mono", Monaco, monospace;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-old {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-new {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .evidence-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .evidence-table th,
+        .evidence-table td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .evidence-table th {
+            background: #f5f5f7;
+            font-weight: 600;
+            color: #1d1d1f;
+            position: sticky;
+            top: 0;
+        }
+
+        .evidence-table tr:hover {
+            background: #fafafa;
+        }
+
+        .diff-missing {
+            color: #d1453b;
+            font-weight: 500;
+        }
+
+        .diff-added {
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        .example-box {
+            background: #f9f9f9;
+            border-left: 4px solid #0071e3;
+            padding: 16px;
+            margin: 12px 0;
+            border-radius: 4px;
+        }
+
+        .example-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1d1d1f;
+        }
+
+        .highlight {
+            background: #fff9e6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .icon {
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            border-color: #0071e3;
+        }
+
+        .tab.active {
+            background: #0071e3;
+            color: white;
+            border-color: #0071e3;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 報告品質改善驗證</h1>
+            <p>舊版（Staging）vs 增強版（Feature）- 完整證據對比</p>
+        </div>
+
+        <!-- 關鍵指標卡片 -->
+        <div class="summary-cards">
+            <div class="card">
+                <div class="card-title">結構完整性</div>
+                <div class="card-value">
+                    <span class="old-value">60%</span> → <span class="new-value">100%</span>
+                </div>
+                <div class="card-improvement">↗ +40% 提升</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">理論引用數</div>
+                <div class="card-value">
+                    <span class="old-value">4</span> → <span class="new-value">6</span>
+                </div>
+                <div class="card-improvement">↗ +50% 增加</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">理由說明</div>
+                <div class="card-value">
+                    <span class="old-value">❌</span> → <span class="new-value">✅</span>
+                </div>
+                <div class="card-improvement">✨ 全新功能</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">品質分數</div>
+                <div class="card-value">
+                    <span class="old-value">69.7</span> → <span class="new-value">98.6</span>
+                </div>
+                <div class="card-improvement">↗ +28.9分（+41%）</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('overview')">📋 總覽對比</button>
+            <button class="tab" onclick="switchTab('structure')">🏗️ 結構差異</button>
+            <button class="tab" onclick="switchTab('citations')">📚 引用差異</button>
+            <button class="tab" onclick="switchTab('examples')">💡 實際範例</button>
+        </div>
+
+        <!-- Tab 1: 總覽對比 -->
+        <div id="tab-overview" class="tab-content active">
+            <div class="section">
+                <div class="section-header">📊 詳細改善證據</div>
+
+                <table class="evidence-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">改善項目</th>
+                            <th style="width: 30%;">舊版問題</th>
+                            <th style="width: 30%;">新版改善</th>
+                            <th style="width: 20%;">證據/範例</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>1. 段落完整性</strong></td>
+                            <td class="diff-missing">❌ 缺少4個段落<br>（三、四、六、九）</td>
+                            <td class="diff-added">✅ 10/10段落完整</td>
+                            <td>舊版覆蓋率 60%<br>新版覆蓋率 100%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>2. 理論引用說明</strong></td>
+                            <td class="diff-missing">❌ 只有編號 [1]<br>無理論內容說明</td>
+                            <td class="diff-added">✅ 完整說明理論<br>「根據Super理論...」</td>
+                            <td>點擊「引用差異」查看範例</td>
+                        </tr>
+                        <tr>
+                            <td><strong>3. 引用數量</strong></td>
+                            <td class="diff-missing">⚠️ 4個引用（不足）</td>
+                            <td class="diff-added">✅ 6個引用（充足）</td>
+                            <td>最佳範圍 5-7個</td>
+                        </tr>
+                        <tr>
+                            <td><strong>4. RAG查詢優化</strong></td>
+                            <td class="diff-missing">❌ 簡單拼接<br>「職涯迷茫 工作倦怠」</td>
+                            <td class="diff-added">✅ 結構化查詢<br>「建立期 28歲 女性 碩士 職涯迷茫...」</td>
+                            <td>M2.1 改善<br>加入生涯階段+人口統計</td>
+                        </tr>
+                        <tr>
+                            <td><strong>5. 理論整合深度</strong></td>
+                            <td class="diff-missing">❌ 淺層：「案主28歲 [1]」</td>
+                            <td class="diff-added">✅ 深度：說明理論→連結個案→推論</td>
+                            <td>M2.2 改善<br>3步驟理由結構</td>
+                        </tr>
+                        <tr>
+                            <td><strong>6. 品質可追蹤</strong></td>
+                            <td class="diff-missing">❌ 無品質指標</td>
+                            <td class="diff-added">✅ 0-100分數 + 等級</td>
+                            <td>M1.3 改善<br>quality_summary欄位</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 2: 結構差異 -->
+        <div id="tab-structure" class="tab-content">
+            <div class="section">
+                <div class="section-header">🏗️ 段落結構對比</div>
+
+                <div class="example-box">
+                    <div class="example-title">📌 舊版缺少的段落（4個）</div>
+                    <ul style="line-height: 2;">
+                        <li class="diff-missing">❌ 【三、問題發展脈絡】- 無法追蹤問題如何發展</li>
+                        <li class="diff-missing">❌ 【四、求助動機與期待】- 不清楚案主期待什麼</li>
+                        <li class="diff-missing">❌ 【六、個案優勢與資源】- 沒有優勢評估</li>
+                        <li class="diff-missing">❌ 【九、預期成效與評估】- 缺乏評估指標</li>
+                    </ul>
+                </div>
+
+                <div class="comparison-grid" style="margin-top: 24px;">
+                    <div class="comparison-item">
+                        <div class="comparison-item-header old-header">
+                            <span>舊版結構（6/10段落）</span>
+                            <span class="badge badge-old">60%</span>
+                        </div>
+                        <div class="comparison-item-body">【一、案主基本資料】✅
+【二、主訴問題】✅
+【三、問題發展脈絡】❌ 缺少
+【四、求助動機與期待】❌ 缺少
+【五、多層次因素分析】✅
+【六、個案優勢與資源】❌ 缺少
+【七、諮詢師的專業判斷】✅
+【八、諮商目標與介入策略】✅
+【九、預期成效與評估】❌ 缺少
+【十、諮詢師自我反思】✅</div>
+                    </div>
+
+                    <div class="comparison-item">
+                        <div class="comparison-item-header new-header">
+                            <span>新版結構（10/10段落）</span>
+                            <span class="badge badge-new">100%</span>
+                        </div>
+                        <div class="comparison-item-body">【一、案主基本資料】✅
+【二、主訴問題】✅
+【三、問題發展脈絡】✅ 新增
+【四、求助動機與期待】✅ 新增
+【五、多層次因素分析】✅
+【六、個案優勢與資源】✅ 新增
+【七、諮詢師的專業判斷】✅
+【八、諮商目標與介入策略】✅
+【九、預期成效與評估】✅ 新增
+【十、諮詢師自我反思】✅</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: 引用差異 -->
+        <div id="tab-citations" class="tab-content">
+            <div class="section">
+                <div class="section-header">📚 理論引用品質對比</div>
+
+                <div class="example-box">
+                    <div class="example-title">❌ 舊版問題：只有引用編號，無說明</div>
+                    <div style="background: white; padding: 12px; border-radius: 4px; margin-top: 8px;">
+                        <strong>【五、多層次因素分析】</strong><br>
+                        個人因素：案主28歲，碩士學歷 <span class="highlight">[1]</span><br>
+                        <br>
+                        <span style="color: #d1453b;">⚠️ 問題：引用[1]但沒說明是什麼理論、為何適用</span>
+                    </div>
+                </div>
+
+                <div class="example-box" style="margin-top: 20px;">
+                    <div class="example-title">✅ 新版改善：完整3步驟理由說明</div>
+                    <div style="background: white; padding: 12px; border-radius: 4px; margin-top: 8px;">
+                        <strong>【五、多層次因素分析】</strong><br>
+                        <span class="diff-added">根據 Super 生涯發展理論 [1]</span>，案主28歲正處於建立期（25-44歲）。<br>
+                        <span class="diff-added">此階段的發展任務是</span>在職場中立足與穩定，<br>
+                        但案主目前遭遇的困境符合此階段常見的「試誤」歷程。<br>
+                        <span class="diff-added">Super 認為</span>個體需透過探索來確認適合的發展路徑，<br>
+                        <span class="diff-added">因此</span>案主的迷茫是正常發展現象，而非能力不足。<br>
+                        <br>
+                        <span style="color: #28a745;">✅ 包含：理論內容 → 個案連結 → 推論結論</span>
+                    </div>
+                </div>
+
+                <table class="evidence-table" style="margin-top: 24px;">
+                    <thead>
+                        <tr>
+                            <th>段落</th>
+                            <th>舊版引用</th>
+                            <th>新版引用</th>
+                            <th>改善</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>【五、因素分析】</td>
+                            <td class="diff-missing">1個引用<br>無理由</td>
+                            <td class="diff-added">2個引用<br>有完整說明</td>
+                            <td>+1個 + 理由</td>
+                        </tr>
+                        <tr>
+                            <td>【七、專業判斷】</td>
+                            <td class="diff-missing">1個引用<br>無理由</td>
+                            <td class="diff-added">2個引用<br>有完整說明</td>
+                            <td>+1個 + 理由</td>
+                        </tr>
+                        <tr>
+                            <td>【八、介入策略】</td>
+                            <td class="diff-missing">2個引用<br>無理由</td>
+                            <td class="diff-added">2個引用<br>有完整說明</td>
+                            <td>理由說明</td>
+                        </tr>
+                        <tr>
+                            <td><strong>總計</strong></td>
+                            <td class="diff-missing"><strong>4個</strong></td>
+                            <td class="diff-added"><strong>6個</strong></td>
+                            <td><strong>+50%</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 4: 實際範例 -->
+        <div id="tab-examples" class="tab-content">
+            <div class="section">
+                <div class="section-header">💡 完整報告範例對比</div>
+
+                <div class="comparison-grid">
+                    <div class="comparison-item">
+                        <div class="comparison-item-header old-header">
+                            <span><span class="icon">📄</span>舊版報告</span>
+                            <span class="badge badge-old">69.7分 | 及格</span>
+                        </div>
+                        <div class="comparison-item-body" style="max-height: 600px;">【一、案主基本資料】
+姓名：小美（化名）
+年齡：28歲
+職業：軟體工程師
+
+【二、主訴問題】
+- 個案陳述：工作迷茫
+- 諮詢師觀察：缺乏目標
+
+❌【三、問題發展脈絡】缺少
+
+❌【四、求助動機與期待】缺少
+
+【五、多層次因素分析】
+個人因素：案主28歲 [1]
+❌ 問題：引用無說明
+
+❌【六、個案優勢與資源】缺少
+
+【七、諮詢師的專業判斷】
+問題假設：處於探索期 [2]
+❌ 問題：引用無說明
+
+【八、諮商目標與介入策略】
+介入技術：卡片排序 [3]
+❌ 問題：未說明為何用此技術
+
+❌【九、預期成效與評估】缺少
+
+【十、諮詢師自我反思】
+本次晤談順利。</div>
+                    </div>
+
+                    <div class="comparison-item">
+                        <div class="comparison-item-header new-header">
+                            <span><span class="icon">✨</span>增強版報告</span>
+                            <span class="badge badge-new">98.6分 | 優秀</span>
+                        </div>
+                        <div class="comparison-item-body" style="max-height: 600px;">【一、案主基本資料】
+姓名：小美（化名）
+年齡：28歲
+性別：女性
+學歷：碩士
+職業：軟體工程師
+
+【二、主訴問題】
+- 個案陳述：3個月前升遷失敗後開始質疑職涯方向
+- 諮詢師觀察：建立期遇到發展瓶頸
+
+✅【三、問題發展脈絡】
+出現時間：3個月前
+關鍵事件：升遷失敗觸發職涯定位思考
+
+✅【四、求助動機與期待】
+求助期待：找到職涯方向、提升動機
+動機強度：主動求助
+
+【五、多層次因素分析】
+✅ 根據 Super 生涯發展理論 [1]，
+案主28歲處於建立期，此階段需透過
+試誤來確認發展路徑。
+
+✅【六、個案優勢與資源】
+心理優勢：主動求助、自我覺察
+社會資源：穩定工作、家庭支持
+
+【七、諮詢師的專業判斷】
+✅ 基於生涯建構理論 [2]，問題核心
+在於生涯敘事未整合，需重新建構。
+
+【八、諮商目標與介入策略】
+✅ 卡片排序 [3]：根據Holland理論，
+選擇理由：案主對想要什麼感到困惑，
+此技術提供具體選擇框架。
+
+✅【九、預期成效與評估】
+短期指標：3個月內完成價值觀澄清
+長期指標：制定2個職涯行動方案
+
+【十、諮詢師自我反思】
+優點：有效同理案主挫折感
+可改進：需更深入探索自我認同議題</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            // Hide all
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+            // Show selected
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

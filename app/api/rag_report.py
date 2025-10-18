@@ -565,7 +565,64 @@ async def generate_report(
         context_parts = [f"[{i+1}] {theory['text']}" for i, theory in enumerate(theories)]
         context = "\n\n".join(context_parts)
 
-        report_prompt = f"""你是職涯諮詢督導，協助新手諮詢師撰寫個案概念化報告。
+        # Choose prompt based on use_legacy flag
+        if request.use_legacy:
+            # Legacy version: Simple 5-section prompt (staging logic)
+            report_prompt = f"""你是一位專業的職涯諮詢督導。請根據以下資訊生成個案報告：
+
+**案主基本資料：**
+- 姓名（化名）：{parsed_data.get('client_name', '未提供')}
+- 性別：{parsed_data.get('gender', '未提及')}
+- 年齡：{parsed_data.get('age', '未提及')}
+- 部門/職業（學校科系）：{parsed_data.get('occupation', '未提及')}
+- 學歷：{parsed_data.get('education', '未提及')}
+- 現居地：{parsed_data.get('location', '未提及')}
+- 經濟狀況：{parsed_data.get('economic_status', '未提及')}
+- 家庭關係：{parsed_data.get('family_relations', '未提及')}
+- 其他重要資訊：{', '.join(parsed_data.get('other_info', []))}
+
+**晤談內容概述：**
+{parsed_data.get('session_content', '')}
+
+**主訴問題：**
+{', '.join(main_concerns)}
+
+**晤談目標：**
+{', '.join(parsed_data.get('counseling_goals', []))}
+
+**使用的諮詢技巧：**
+{', '.join(techniques)}
+
+**相關理論參考：**
+{context}
+
+請生成結構化的個案報告，包含以下部分：
+
+【主訴問題】
+個案說的，此次想要討論的議題
+
+【成因分析】
+諮詢師您認為，個案為何會有這些主訴問題，請結合引用的理論 [1], [2] 等進行分析
+
+【晤談目標（移動主訴）】
+諮詢師對個案諮詢目標的假設，須與個案確認
+
+【介入策略】
+諮詢師判斷會需要帶個案做的事，結合理論說明
+
+【目前成效評估】
+上述目標和策略達成的狀況如何，目前打算如何修正
+
+重要提醒：
+1. 請使用專業、客觀、具同理心的語氣
+2. 適當引用理論文獻 [1], [2] 等
+3. 不要使用 markdown 格式（如 ##, ###, **, - 等符號）
+4. 使用【標題】的格式來區分段落
+5. 內容直接書寫，不要用項目符號
+"""
+        else:
+            # Enhanced version: Structured 10-section prompt with validation
+            report_prompt = f"""你是職涯諮詢督導，協助新手諮詢師撰寫個案概念化報告。
 
 你的優勢：快速從大量文獻中找到最適合此個案的理論和策略。
 
@@ -648,10 +705,9 @@ async def generate_report(
 5. 每段至少 2-3 句，不可空白
 """
 
-        # M2.2: Add rationale examples to prompt
-        from app.utils.prompt_enhancer import add_rationale_examples
-
-        report_prompt = add_rationale_examples(report_prompt)
+            # M2.2: Add rationale examples to prompt (only for enhanced version)
+            from app.utils.prompt_enhancer import add_rationale_examples
+            report_prompt = add_rationale_examples(report_prompt)
 
         if request.rag_system == "gemini":
             report_content = await gemini_service.chat_completion(report_prompt, temperature=0.6)
@@ -741,31 +797,37 @@ async def generate_report(
             "dialogue_excerpts": dialogues,
         }
 
-        # Generate quality summary
+        # Generate quality summary (for both versions, to enable comparison)
         from app.utils.report_quality import generate_quality_summary
         quality_summary = generate_quality_summary(report, report_content, theories)
 
         # Format based on output_format
         if request.output_format == "html":
             formatted_report = format_report_as_html(report)
-            return {
+            result = {
                 "report": formatted_report,
-                "format": "html",
-                "quality_summary": quality_summary
+                "format": "html"
             }
+            if quality_summary:
+                result["quality_summary"] = quality_summary
+            return result
         elif request.output_format == "markdown":
             formatted_report = format_report_as_markdown(report)
-            return {
+            result = {
                 "report": formatted_report,
-                "format": "markdown",
-                "quality_summary": quality_summary
+                "format": "markdown"
             }
+            if quality_summary:
+                result["quality_summary"] = quality_summary
+            return result
         else:  # json (default)
-            return {
+            result = {
                 "report": report,
-                "format": "json",
-                "quality_summary": quality_summary
+                "format": "json"
             }
+            if quality_summary:
+                result["quality_summary"] = quality_summary
+            return result
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")

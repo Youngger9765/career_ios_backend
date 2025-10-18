@@ -32,7 +32,7 @@
             <p class="text-gray-400 text-xs mt-2">💡 支援任何格式的對話記錄，AI 會自動識別說話者與關鍵資訊</p>
         </div>
 
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-4 gap-4">
             <div>
                 <label class="block text-gray-300 text-sm mb-2">參與人數</label>
                 <select id="numParticipants" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
@@ -61,13 +61,21 @@
                     <option value="15">15 個（最大）</option>
                 </select>
             </div>
+
+            <div>
+                <label class="block text-gray-300 text-sm mb-2">報告版本</label>
+                <select id="reportVersion" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                    <option value="enhanced">✨ 增強版（10段式+品質驗證）</option>
+                    <option value="legacy">📄 舊版（5段式簡易版）</option>
+                </select>
+            </div>
         </div>
 
-        <!-- Comparison Mode Toggle -->
+        <!-- Version Comparison Mode Toggle -->
         <div class="mb-4">
             <label class="flex items-center gap-2 text-gray-300 cursor-pointer">
-                <input type="checkbox" id="comparisonMode" class="form-checkbox h-4 w-4 text-purple-600">
-                <span>🔬 比較模式（同時測試兩個 LLM 模型）</span>
+                <input type="checkbox" id="versionComparisonMode" class="form-checkbox h-4 w-4 text-blue-600">
+                <span>📊 版本比較模式（同時生成舊版+新版報告並對比）</span>
             </label>
         </div>
 
@@ -93,6 +101,60 @@
     <h3 class="text-xl font-semibold text-white mb-4">生成進度</h3>
     <div id="progressSteps" class="space-y-3">
         <!-- Progress steps will be dynamically added here -->
+    </div>
+</div>
+
+<!-- Version Comparison Results Section -->
+<div id="versionComparisonSection" class="hidden space-y-6 mb-6">
+    <div class="bg-gray-800 rounded-lg p-6">
+        <h3 class="text-2xl font-semibold text-white mb-6">📊 舊版 vs 新版報告對比</h3>
+
+        <!-- Tab Navigation for Version Comparison -->
+        <div class="flex gap-2 mb-6 border-b border-gray-700">
+            <button onclick="switchVersionTab('legacy')" id="ver-tab-legacy" class="px-6 py-3 text-white font-semibold border-b-2 border-blue-500 transition">
+                📄 舊版報告
+            </button>
+            <button onclick="switchVersionTab('enhanced')" id="ver-tab-enhanced" class="px-6 py-3 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600 transition">
+                ✨ 新版報告
+            </button>
+            <button onclick="switchVersionTab('comparison')" id="ver-tab-comparison" class="px-6 py-3 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600 transition">
+                🔍 比較表
+            </button>
+        </div>
+
+        <!-- Tab Content: Legacy Report -->
+        <div id="ver-content-legacy" class="ver-tab-content">
+            <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg p-6 border-2 border-gray-600">
+                <div class="flex items-center gap-3 mb-4 pb-3 border-b-2 border-gray-600">
+                    <h4 class="text-xl font-bold text-gray-300">📄 舊版報告（5段式）</h4>
+                </div>
+                <div id="legacyReportContent" class="text-white text-sm space-y-4">
+                    <!-- Legacy report will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Content: Enhanced Report -->
+        <div id="ver-content-enhanced" class="ver-tab-content hidden">
+            <div class="bg-gradient-to-br from-blue-900/30 to-gray-900 rounded-lg p-6 border-2 border-blue-500/50">
+                <div class="flex items-center gap-3 mb-4 pb-3 border-b-2 border-blue-500/50">
+                    <h4 class="text-xl font-bold text-blue-400">✨ 新版報告（10段式+品質驗證）</h4>
+                </div>
+                <div id="enhancedReportContent" class="text-white text-sm space-y-4">
+                    <!-- Enhanced report will be injected here -->
+                </div>
+                <div id="qualityScoreDisplay" class="mt-6 pt-4 border-t border-blue-500/30">
+                    <!-- Quality score will be shown here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Content: Comparison Table -->
+        <div id="ver-content-comparison" class="ver-tab-content hidden">
+            <div id="comparisonTableContent">
+                <!-- Comparison table will be generated here -->
+            </div>
+        </div>
     </div>
 </div>
 
@@ -366,7 +428,7 @@ async function generateReport() {
     const numParticipants = parseInt(document.getElementById('numParticipants').value);
     const ragSystem = document.getElementById('ragSystem').value;
     const topK = parseInt(document.getElementById('topK').value);
-    const comparisonMode = document.getElementById('comparisonMode').checked;
+    const versionComparisonMode = document.getElementById('versionComparisonMode').checked;
 
     if (!transcript) {
         alert('請輸入晤談逐字稿');
@@ -377,10 +439,11 @@ async function generateReport() {
     document.getElementById('progressSection').classList.remove('hidden');
     document.getElementById('reportSection').classList.add('hidden');
     document.getElementById('comparisonSection').classList.add('hidden');
+    document.getElementById('versionComparisonSection').classList.add('hidden');
     document.getElementById('progressSteps').innerHTML = '';
 
-    if (comparisonMode) {
-        await runComparisonMode(transcript, numParticipants, topK);
+    if (versionComparisonMode) {
+        await runVersionComparison(transcript, numParticipants, ragSystem, topK);
     } else {
         await runSingleReport(transcript, numParticipants, ragSystem, topK);
     }
@@ -390,6 +453,9 @@ async function runSingleReport(transcript, numParticipants, ragSystem, topK) {
     try {
         document.getElementById('progressSteps').innerHTML = '<div class="text-blue-400">⏳ 正在生成報告，請稍候...</div>';
 
+        const reportVersion = document.getElementById('reportVersion').value;
+        const useLegacy = (reportVersion === 'legacy');
+
         const response = await fetch('/api/report/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -397,7 +463,8 @@ async function runSingleReport(transcript, numParticipants, ragSystem, topK) {
                 transcript: transcript,
                 num_participants: numParticipants,
                 rag_system: ragSystem,
-                top_k: topK
+                top_k: topK,
+                use_legacy: useLegacy
             })
         });
 
@@ -1134,5 +1201,434 @@ ${sections.effectiveness || '-'}
         alert('❌ 複製失敗');
     });
 }
+
+// Version Comparison Functions
+async function runVersionComparison(transcript, numParticipants, ragSystem, topK) {
+    try {
+        const comparisonData = {
+            legacy: null,
+            enhanced: null
+        };
+
+        // Generate Legacy Version
+        document.getElementById('progressSteps').innerHTML = '<div class="text-gray-400 font-semibold text-lg">📄 正在生成舊版報告（5段式）...</div>';
+        comparisonData.legacy = await generateReportVersion(transcript, numParticipants, ragSystem, topK, true);
+
+        // Generate Enhanced Version
+        document.getElementById('progressSteps').innerHTML += '<div class="text-blue-400 font-semibold text-lg mt-4">✨ 正在生成新版報告（10段式+品質驗證）...</div>';
+        comparisonData.enhanced = await generateReportVersion(transcript, numParticipants, ragSystem, topK, false);
+
+        // Display comparison
+        displayVersionComparison(comparisonData);
+
+        // Hide progress and show comparison
+        document.getElementById('progressSection').classList.add('hidden');
+        document.getElementById('reportSection').classList.add('hidden');
+        document.getElementById('versionComparisonSection').classList.remove('hidden');
+
+    } catch (error) {
+        console.error('Version comparison failed:', error);
+        alert('版本比較執行失敗: ' + error.message);
+        document.getElementById('progressSection').classList.add('hidden');
+    }
+}
+
+async function generateReportVersion(transcript, numParticipants, ragSystem, topK, useLegacy) {
+    const response = await fetch('/api/report/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            transcript: transcript,
+            num_participants: numParticipants,
+            rag_system: ragSystem,
+            top_k: topK,
+            use_legacy: useLegacy
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || '報告生成失敗');
+    }
+
+    return await response.json();
+}
+
+function displayVersionComparison(data) {
+    const legacyReport = data.legacy.report;
+    const enhancedReport = data.enhanced.report;
+    const legacyQuality = data.legacy.quality_summary;
+    const enhancedQuality = data.enhanced.quality_summary;
+
+    // Display Legacy Report
+    const legacyHTML = formatReportContent(legacyReport);
+    document.getElementById('legacyReportContent').innerHTML = legacyHTML;
+
+    // Display Legacy Quality Score
+    if (legacyQuality) {
+        const legacyQualityHTML = `
+            <div class="bg-gray-800/50 rounded-lg p-4 mt-4">
+                <h5 class="text-gray-400 font-semibold mb-3">📊 品質評分（舊版）</h5>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <div class="text-gray-400">結構完整性</div>
+                        <div class="text-white font-mono text-lg">${legacyQuality.structure_quality.coverage}%</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400">引用覆蓋率</div>
+                        <div class="text-white font-mono text-lg">${(legacyQuality.citation_quality.critical_sections_cited / 3 * 100).toFixed(0)}%</div>
+                    </div>
+                    <div class="col-span-2">
+                        <div class="text-gray-400 mb-1">總分</div>
+                        <div class="text-2xl font-bold ${getScoreColor(legacyQuality.overall_score)}">${legacyQuality.overall_score} / 100</div>
+                        <div class="text-gray-400 text-xs mt-1">${legacyQuality.grade}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('legacyReportContent').innerHTML += legacyQualityHTML;
+    }
+
+    // Display Enhanced Report
+    const enhancedHTML = formatReportContent(enhancedReport);
+    document.getElementById('enhancedReportContent').innerHTML = enhancedHTML;
+
+    // Display Enhanced Quality Score
+    if (enhancedQuality) {
+        const qualityHTML = `
+            <div class="bg-blue-900/20 rounded-lg p-4">
+                <h5 class="text-blue-400 font-semibold mb-3">📊 品質評分（新版）</h5>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <div class="text-gray-400">結構完整性</div>
+                        <div class="text-white font-mono text-lg">${enhancedQuality.structure_quality.coverage}%</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400">引用覆蓋率</div>
+                        <div class="text-white font-mono text-lg">${(enhancedQuality.citation_quality.critical_sections_cited / 3 * 100).toFixed(0)}%</div>
+                    </div>
+                    <div class="col-span-2">
+                        <div class="text-gray-400 mb-1">總分</div>
+                        <div class="text-2xl font-bold ${getScoreColor(enhancedQuality.overall_score)}">${enhancedQuality.overall_score} / 100</div>
+                        <div class="text-gray-400 text-xs mt-1">${enhancedQuality.grade}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('qualityScoreDisplay').innerHTML = qualityHTML;
+    }
+
+    // Generate Comparison Table
+    generateComparisonTable(legacyReport, enhancedReport, legacyQuality, enhancedQuality);
+}
+
+function formatReportContent(report) {
+    const conceptText = report.conceptualization || '';
+    return `<div class="bg-gray-900/50 rounded p-4 whitespace-pre-wrap max-h-[600px] overflow-y-auto">${conceptText}</div>`;
+}
+
+function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, enhancedQuality) {
+    // Extract sample citations for comparison
+    const legacyText = legacyReport.conceptualization || '';
+    const enhancedText = enhancedReport.conceptualization || '';
+
+    // Find citation examples
+    const legacyCitation = legacyText.match(/[^。]+\[\d+\][^。]*/)?.[0] || '（無引用範例）';
+    const enhancedCitation = enhancedText.match(/根據[^。]+\[\d+\][^。]+/)?.[0] || enhancedText.match(/[^。]+\[\d+\][^。]*/)?.[0] || '（無引用範例）';
+
+    const tableHTML = `
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="bg-gradient-to-br from-red-900/30 to-gray-800 rounded-lg p-4 border-2 border-red-500/50">
+                <div class="text-red-400 text-xs mb-1">舊版問題</div>
+                <div class="text-white text-2xl font-bold mb-2">3 個</div>
+                <div class="text-gray-400 text-xs">結構不完整、無理由說明、無品質驗證</div>
+            </div>
+            <div class="bg-gradient-to-br from-blue-900/30 to-gray-800 rounded-lg p-4 border-2 border-blue-500/50">
+                <div class="text-blue-400 text-xs mb-1">新版改善</div>
+                <div class="text-white text-2xl font-bold mb-2">6 項</div>
+                <div class="text-gray-400 text-xs">完整結構、理論說明、品質評分、增強檢索、範例引導</div>
+            </div>
+            <div class="bg-gradient-to-br from-green-900/30 to-gray-800 rounded-lg p-4 border-2 border-green-500/50">
+                <div class="text-green-400 text-xs mb-1">品質提升</div>
+                <div class="text-white text-2xl font-bold mb-2">${(legacyQuality && enhancedQuality) ? '+' + (enhancedQuality.overall_score - legacyQuality.overall_score).toFixed(0) : 'N/A'} 分</div>
+                <div class="text-gray-400 text-xs">${legacyQuality ? legacyQuality.grade : ''} → ${enhancedQuality ? enhancedQuality.grade : ''}</div>
+            </div>
+        </div>
+
+        <!-- Visual Comparison -->
+        <div class="mb-6">
+            <h4 class="text-white font-semibold mb-4 text-lg">📊 視覺化對比</h4>
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Legacy Version Visualization -->
+                <div class="bg-gray-900/50 rounded-lg p-4">
+                    <div class="text-center text-gray-300 font-semibold mb-3">📄 舊版架構</div>
+                    <div class="space-y-2">
+                        <div class="bg-gray-700 rounded px-3 py-2 text-gray-400 text-sm">1. 主訴問題</div>
+                        <div class="bg-gray-700 rounded px-3 py-2 text-gray-400 text-sm">2. 成因分析</div>
+                        <div class="bg-gray-700 rounded px-3 py-2 text-gray-400 text-sm">3. 晤談目標</div>
+                        <div class="bg-gray-700 rounded px-3 py-2 text-gray-400 text-sm">4. 介入策略</div>
+                        <div class="bg-gray-700 rounded px-3 py-2 text-gray-400 text-sm">5. 成效評估</div>
+                        <div class="text-center text-red-400 text-xs mt-3">❌ 缺少 5 個段落</div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Version Visualization -->
+                <div class="bg-gray-900/50 rounded-lg p-4">
+                    <div class="text-center text-blue-400 font-semibold mb-3">✨ 新版架構</div>
+                    <div class="space-y-2">
+                        <div class="bg-blue-800/30 rounded px-3 py-2 text-white text-sm border border-blue-500/30">1. 案主基本資料</div>
+                        <div class="bg-blue-800/30 rounded px-3 py-2 text-white text-sm border border-blue-500/30">2. 主訴問題</div>
+                        <div class="bg-blue-800/30 rounded px-3 py-2 text-white text-sm border border-blue-500/30">3. 問題發展脈絡</div>
+                        <div class="bg-blue-800/30 rounded px-3 py-2 text-white text-sm border border-blue-500/30">4. 求助動機</div>
+                        <div class="bg-blue-800/50 rounded px-3 py-2 text-white text-sm border-2 border-blue-400">5. 多層次分析 ⭐</div>
+                        <div class="bg-blue-800/30 rounded px-3 py-2 text-white text-sm border border-blue-500/30">6. 優勢資源</div>
+                        <div class="bg-blue-800/50 rounded px-3 py-2 text-white text-sm border-2 border-blue-400">7. 專業判斷 ⭐</div>
+                        <div class="bg-blue-800/50 rounded px-3 py-2 text-white text-sm border-2 border-blue-400">8. 目標策略 ⭐</div>
+                        <div class="bg-blue-800/30 rounded px-3 py-2 text-white text-sm border border-blue-500/30">9. 成效評估</div>
+                        <div class="bg-blue-800/30 rounded px-3 py-2 text-white text-sm border border-blue-500/30">10. 自我反思</div>
+                        <div class="text-center text-green-400 text-xs mt-3">✅ 100% 完整結構</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Citation Quality Comparison -->
+        <div class="mb-6">
+            <h4 class="text-white font-semibold mb-4 text-lg">📚 理論引用品質對比</h4>
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Legacy Citation Example -->
+                <div class="bg-red-900/20 rounded-lg p-4 border-2 border-red-500/50">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-red-400 text-lg">❌</span>
+                        <span class="text-gray-300 font-semibold">舊版引用方式</span>
+                    </div>
+                    <div class="bg-gray-900/50 rounded p-3 mb-3">
+                        <div class="text-gray-400 text-sm font-mono leading-relaxed">
+                            ${legacyCitation.substring(0, 150)}...
+                        </div>
+                    </div>
+                    <div class="space-y-1 text-xs">
+                        <div class="text-red-300">⚠️ 只有編號 [1]，無理論說明</div>
+                        <div class="text-red-300">⚠️ 看不出為何適用此理論</div>
+                        <div class="text-red-300">⚠️ 無法學習理論應用邏輯</div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Citation Example -->
+                <div class="bg-blue-900/20 rounded-lg p-4 border-2 border-blue-500/50">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-blue-400 text-lg">✅</span>
+                        <span class="text-white font-semibold">新版引用方式</span>
+                    </div>
+                    <div class="bg-gray-900/50 rounded p-3 mb-3">
+                        <div class="text-white text-sm font-mono leading-relaxed">
+                            ${enhancedCitation.substring(0, 150)}...
+                        </div>
+                    </div>
+                    <div class="space-y-1 text-xs">
+                        <div class="text-blue-300">✓ 說明理論內容</div>
+                        <div class="text-blue-300">✓ 連結個案情況</div>
+                        <div class="text-blue-300">✓ 推論結論</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Comparison Table -->
+        <div class="overflow-x-auto">
+            <h4 class="text-white font-semibold mb-4 text-lg">🔍 詳細功能比較</h4>
+            <table class="w-full border-collapse border border-gray-600">
+                <thead>
+                    <tr class="bg-gray-700">
+                        <th class="border border-gray-600 px-4 py-3 text-white w-1/4">改善項目</th>
+                        <th class="border border-gray-600 px-4 py-3 text-gray-300">📄 舊版問題</th>
+                        <th class="border border-gray-600 px-4 py-3 text-blue-400">✨ 新版改善</th>
+                        <th class="border border-gray-600 px-4 py-3 text-green-400">效果</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    <tr>
+                        <td class="border border-gray-600 px-4 py-2 font-semibold text-gray-300">報告結構</td>
+                        <td class="border border-gray-600 px-4 py-2 text-gray-400">
+                            <div>5段式（簡易版）</div>
+                            <div class="text-red-400 text-xs mt-1">缺少發展脈絡、求助動機等</div>
+                        </td>
+                        <td class="border border-gray-600 px-4 py-2 text-white">
+                            <div>10段式（完整個案概念化）</div>
+                            <div class="text-blue-400 text-xs mt-1">符合督導要求的報告格式</div>
+                        </td>
+                        <td class="border border-gray-600 px-4 py-2 text-green-400">
+                            覆蓋率 +40%
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-600 px-4 py-2 font-semibold text-gray-300">結構驗證</td>
+                        <td class="border border-gray-600 px-4 py-2 text-gray-400">
+                            <div>❌ 無驗證機制</div>
+                            <div class="text-red-400 text-xs mt-1">可能漏段落</div>
+                        </td>
+                        <td class="border border-gray-600 px-4 py-2 text-white">
+                            <div>✅ 自動檢查 10 個段落</div>
+                            <div class="text-blue-400 text-xs mt-1">完整性評分 ${enhancedQuality ? enhancedQuality.structure_quality.coverage : 'N/A'}%</div>
+                        </td>
+                        <td class="border border-gray-600 px-4 py-2 text-green-400">
+                            零遺漏
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-600 px-4 py-2 font-semibold text-gray-300">理論引用說明</td>
+                        <td class="border border-gray-600 px-4 py-2 text-gray-400">
+                            <div>只標註 [1][2]</div>
+                            <div class="text-red-400 text-xs mt-1">無法學習應用邏輯</div>
+                        </td>
+                        <td class="border border-gray-600 px-4 py-2 text-white">
+                            <div>強制「根據理論X...」格式</div>
+                            <div class="text-blue-400 text-xs mt-1">提供正反範例引導</div>
+                        </td>
+                        <td class="border border-gray-600 px-4 py-2 text-green-400">
+                            可學習性 ↑
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-600 px-4 py-2 font-semibold text-gray-300">RAG 檢索</td>
+                        <td class="border border-gray-600 px-4 py-2 text-gray-400">
+                            <div>簡單關鍵詞拼接</div>
+                            <div class="text-gray-500 text-xs mt-1 font-mono">「職涯迷茫 工作倦怠」</div>
+                        </td>
+                        <td class="border border-gray-600 px-4 py-2 text-white">
+                            <div>結構化查詢（年齡+階段+主訴）</div>
+                            <div class="text-blue-400 text-xs mt-1 font-mono">「建立期 28歲 女性 碩士 職涯迷茫」</div>
+                        </td>
+                        <td class="border border-gray-600 px-4 py-2 text-green-400">
+                            相關性 ↑
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-600 px-4 py-2 font-semibold text-gray-300">品質評分</td>
+                        <td class="border border-gray-600 px-4 py-2 text-gray-400">
+                            <div>❌ 無評分機制</div>
+                            <div class="text-red-400 text-xs mt-1">無法量化品質</div>
+                        </td>
+                        <td class="border border-gray-600 px-4 py-2 text-white">
+                            <div>✅ 自動評分 0-100</div>
+                            <div class="text-blue-400 text-xs mt-1">結構(40%)+引用覆蓋(40%)+引用品質(20%)</div>
+                        </td>
+                        <td class="border border-gray-600 px-4 py-2 text-green-400">
+                            可衡量
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-600 px-4 py-2 font-semibold text-gray-300">關鍵段落檢查</td>
+                        <td class="border border-gray-600 px-4 py-2 text-gray-400">
+                            <div>無特別要求</div>
+                        </td>
+                        <td class="border border-gray-600 px-4 py-2 text-white">
+                            <div>強制檢查第 5、7、8 段</div>
+                            <div class="text-blue-400 text-xs mt-1">核心段落必須有理論支撐</div>
+                        </td>
+                        <td class="border border-gray-600 px-4 py-2 text-green-400">
+                            專業度 ↑
+                        </td>
+                    </tr>
+                    <tr class="bg-gray-800">
+                        <td class="border border-gray-600 px-4 py-3 font-bold text-white">總評</td>
+                        <td class="border border-gray-600 px-4 py-3 text-red-400 font-semibold">
+                            可用但不完整
+                        </td>
+                        <td class="border border-gray-600 px-4 py-3 text-blue-400 font-semibold">
+                            專業且可驗證
+                        </td>
+                        <td class="border border-gray-600 px-4 py-3 text-green-400 font-bold">
+                            ${legacyQuality ? legacyQuality.overall_score : 'N/A'} → ${enhancedQuality ? enhancedQuality.overall_score : 'N/A'}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Key Improvements Summary -->
+        <div class="mt-6 bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-lg p-6 border-2 border-blue-500/50">
+            <h4 class="text-white font-semibold mb-4 text-lg">💡 核心改善重點</h4>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <div class="text-blue-400 font-semibold mb-2">結構化改善</div>
+                    <ul class="text-gray-300 text-sm space-y-1">
+                        <li>✓ 10段式完整架構</li>
+                        <li>✓ 自動結構驗證</li>
+                        <li>✓ 關鍵段落強制要求</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="text-purple-400 font-semibold mb-2">引用品質改善</div>
+                    <ul class="text-gray-300 text-sm space-y-1">
+                        <li>✓ 理論說明強制要求</li>
+                        <li>✓ 正反範例引導</li>
+                        <li>✓ 引用覆蓋率檢查</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="text-green-400 font-semibold mb-2">檢索能力提升</div>
+                    <ul class="text-gray-300 text-sm space-y-1">
+                        <li>✓ 結構化查詢語句</li>
+                        <li>✓ 生涯階段自動識別</li>
+                        <li>✓ 更精準的理論匹配</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="text-yellow-400 font-semibold mb-2">品質可視化</div>
+                    <ul class="text-gray-300 text-sm space-y-1">
+                        <li>✓ 0-100 自動評分</li>
+                        <li>✓ 結構/引用分項評分</li>
+                        <li>✓ 優秀/良好/及格等級</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById('comparisonTableContent').innerHTML = tableHTML;
+}
+
+function switchVersionTab(tabName) {
+    ['legacy', 'enhanced', 'comparison'].forEach(tab => {
+        const button = document.getElementById(`ver-tab-${tab}`);
+        const content = document.getElementById(`ver-content-${tab}`);
+
+        if (tab === tabName) {
+            button.classList.remove('text-gray-400', 'border-transparent');
+            button.classList.add('text-white', 'border-blue-500');
+            content.classList.remove('hidden');
+        } else {
+            button.classList.remove('text-white', 'border-blue-500');
+            button.classList.add('text-gray-400', 'border-transparent');
+            content.classList.add('hidden');
+        }
+    });
+}
+
+function getScoreColor(score) {
+    if (score >= 90) return 'text-green-400';
+    if (score >= 75) return 'text-blue-400';
+    if (score >= 60) return 'text-yellow-400';
+    return 'text-red-400';
+}
+
+// Disable reportVersion selector when version comparison mode is checked
+document.addEventListener('DOMContentLoaded', function() {
+    const versionCompCheckbox = document.getElementById('versionComparisonMode');
+    const reportVersionSelect = document.getElementById('reportVersion');
+
+    versionCompCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            reportVersionSelect.disabled = true;
+            reportVersionSelect.style.opacity = '0.5';
+            reportVersionSelect.title = '版本比較模式會同時生成兩個版本';
+        } else {
+            reportVersionSelect.disabled = false;
+            reportVersionSelect.style.opacity = '1';
+            reportVersionSelect.title = '';
+        }
+    });
+});
 </script>
 {% endblock %}
