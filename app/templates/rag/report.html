@@ -1266,6 +1266,12 @@ function displayVersionComparison(data) {
 
     // Display Legacy Quality Score
     if (legacyQuality) {
+        // Calculate total critical sections dynamically from section_details
+        const legacyTotalSections = Object.keys(legacyQuality.citation_quality.section_details).length;
+        const legacyCitationCoverage = legacyTotalSections > 0
+            ? (legacyQuality.citation_quality.critical_sections_cited / legacyTotalSections * 100).toFixed(0)
+            : 0;
+
         const legacyQualityHTML = `
             <div class="bg-gray-800/50 rounded-lg p-4 mt-4">
                 <h5 class="text-gray-400 font-semibold mb-3">📊 品質評分（舊版）</h5>
@@ -1276,7 +1282,7 @@ function displayVersionComparison(data) {
                     </div>
                     <div>
                         <div class="text-gray-400">引用覆蓋率</div>
-                        <div class="text-white font-mono text-lg">${(legacyQuality.citation_quality.critical_sections_cited / 3 * 100).toFixed(0)}%</div>
+                        <div class="text-white font-mono text-lg">${legacyCitationCoverage}%</div>
                     </div>
                     <div class="col-span-2">
                         <div class="text-gray-400 mb-1">總分</div>
@@ -1295,6 +1301,12 @@ function displayVersionComparison(data) {
 
     // Display Enhanced Quality Score
     if (enhancedQuality) {
+        // Calculate total critical sections dynamically from section_details
+        const enhancedTotalSections = Object.keys(enhancedQuality.citation_quality.section_details).length;
+        const enhancedCitationCoverage = enhancedTotalSections > 0
+            ? (enhancedQuality.citation_quality.critical_sections_cited / enhancedTotalSections * 100).toFixed(0)
+            : 0;
+
         const qualityHTML = `
             <div class="bg-blue-900/20 rounded-lg p-4">
                 <h5 class="text-blue-400 font-semibold mb-3">📊 品質評分（新版）</h5>
@@ -1305,7 +1317,7 @@ function displayVersionComparison(data) {
                     </div>
                     <div>
                         <div class="text-gray-400">引用覆蓋率</div>
-                        <div class="text-white font-mono text-lg">${(enhancedQuality.citation_quality.critical_sections_cited / 3 * 100).toFixed(0)}%</div>
+                        <div class="text-white font-mono text-lg">${enhancedCitationCoverage}%</div>
                     </div>
                     <div class="col-span-2">
                         <div class="text-gray-400 mb-1">總分</div>
@@ -1363,7 +1375,6 @@ function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, en
 
     const legacyHasRationale = hasRationale(legacyText);
     const enhancedHasRationale = hasRationale(enhancedText);
-    const enhancedCitation = enhancedText.match(/根據[^。]+\[\d+\][^。]+/)?.[0] || enhancedText.match(/[^。]+\[\d+\][^。]*/)?.[0] || '（無引用範例）';
 
     const tableHTML = `
         <!-- Summary Cards -->
@@ -1434,7 +1445,7 @@ function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, en
                     </div>
                     <div class="bg-gray-900/50 rounded p-3 mb-3">
                         <div class="text-gray-400 text-sm font-mono leading-relaxed">
-                            ${legacyCitation.substring(0, 150)}...
+                            ${extractCitation(legacyText, 5).substring(0, 150)}...
                         </div>
                     </div>
                     <div class="space-y-1 text-xs">
@@ -1452,7 +1463,7 @@ function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, en
                     </div>
                     <div class="bg-gray-900/50 rounded p-3 mb-3">
                         <div class="text-white text-sm font-mono leading-relaxed">
-                            ${enhancedCitation.substring(0, 150)}...
+                            ${extractCitation(enhancedText, 5).substring(0, 150)}...
                         </div>
                     </div>
                     <div class="space-y-1 text-xs">

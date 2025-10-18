@@ -723,7 +723,9 @@ async def generate_report(
             report_content = await gemini_service.chat_completion(report_prompt, temperature=0.6)
         else:
             report_content = await openai_service.chat_completion(
-                messages=[{"role": "user", "content": report_prompt}], temperature=0.6
+                messages=[{"role": "user", "content": report_prompt}],
+                temperature=0.6,
+                max_tokens=4000  # Increase for full 10-section report (was default 1000)
             )
 
         # Step 4: Extract key dialogue excerpts
