@@ -95,8 +95,8 @@ gcp-*.json
 # MLflow
 mlruns/
 
-# Test scripts
-test_*.py
+# Test/Fix helper scripts (not actual test suites)
+# Note: Unit tests in tests/ directory should be committed per TDD requirements
 fix_*.py
 
 # Documentation
