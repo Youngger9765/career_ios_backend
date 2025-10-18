@@ -220,10 +220,10 @@ async def generate_report_stream(
         # Step 3: RAG search for relevant theories (always use OpenAI embeddings)
         yield f"data: {json.dumps({'step': 3, 'status': 'processing', 'message': '正在檢索相關理論...'}, ensure_ascii=False)}\n\n"
 
-        # Search for theories related to main concerns + techniques
-        # Combine concerns and techniques for broader search
-        search_terms = main_concerns[:3] + techniques[:2]  # Top 3 concerns + top 2 techniques
-        search_query = " ".join(search_terms) if search_terms else "職涯諮詢 生涯發展"
+        # M2.1: Enhanced query construction with demographics + career stage
+        from app.utils.rag_query_builder import build_enhanced_query
+
+        search_query = build_enhanced_query(parsed_data)
 
         # Always use OpenAI embedding for search
         query_embedding = await openai_service.create_embedding(search_query)
