@@ -124,6 +124,7 @@ class ReportRequest(BaseModel):
     top_k: int = 7
     similarity_threshold: float = 0.25  # Lowered from 0.5 to 0.25 for better recall
     output_format: str = "json"  # "json", "html", or "markdown"
+    use_legacy: bool = False  # True = 舊版邏輯（無驗證），False = 新版（有驗證）
 
 
 async def generate_report_stream(

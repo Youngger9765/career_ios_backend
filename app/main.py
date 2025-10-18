@@ -37,6 +37,10 @@ app.include_router(rag_ingest.router)
 app.include_router(rag_search.router)
 app.include_router(rag_chat.router)
 app.include_router(rag_agents.router)
+
+# Report comparison page
+from app.api import comparison
+app.include_router(comparison.router, tags=["comparison"])
 app.include_router(rag_stats.router)
 app.include_router(rag_report.router)
 app.include_router(rag_evaluation.router)
