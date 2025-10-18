@@ -647,6 +647,11 @@ async def generate_report(
 5. 每段至少 2-3 句，不可空白
 """
 
+        # M2.2: Add rationale examples to prompt
+        from app.utils.prompt_enhancer import add_rationale_examples
+
+        report_prompt = add_rationale_examples(report_prompt)
+
         if request.rag_system == "gemini":
             report_content = await gemini_service.chat_completion(report_prompt, temperature=0.6)
         else:
