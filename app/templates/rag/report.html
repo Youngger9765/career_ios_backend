@@ -1328,12 +1328,41 @@ function formatReportContent(report) {
 }
 
 function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, enhancedQuality) {
-    // Extract sample citations for comparison
+    // Extract actual report content for evidence-based comparison
     const legacyText = legacyReport.conceptualization || '';
     const enhancedText = enhancedReport.conceptualization || '';
 
-    // Find citation examples
-    const legacyCitation = legacyText.match(/[^。]+\[\d+\][^。]*/)?.[0] || '（無引用範例）';
+    // Extract real sections from reports for rubrics validation
+    const extractSection = (text, sectionTitle) => {
+        const regex = new RegExp(`【${sectionTitle}】([^【]+)`, 's');
+        const match = text.match(regex);
+        return match ? match[1].trim().substring(0, 200) + '...' : '（未找到此段落）';
+    };
+
+    // Get actual missing sections from quality summary
+    const legacyMissing = legacyQuality?.structure_quality?.missing_sections || [];
+    const enhancedMissing = enhancedQuality?.structure_quality?.missing_sections || [];
+
+    // Extract real citation examples from critical sections
+    const extractCitation = (text, sectionNum) => {
+        const sectionNames = {
+            5: '五、多層次因素分析',
+            7: '七、諮詢師的專業判斷',
+            8: '八、諮商目標與介入策略'
+        };
+        const section = extractSection(text, sectionNames[sectionNum]);
+        const citationMatch = section.match(/[^。]*\[\d+\][^。]{0,100}/);
+        return citationMatch ? citationMatch[0] : section.substring(0, 150) + '...';
+    };
+
+    // Check if citations have rationale (actual text analysis)
+    const hasRationale = (text) => {
+        const rationaleKeywords = ['根據', '基於', '從', '理論指出', '顯示', '觀點', '依據'];
+        return rationaleKeywords.some(kw => text.includes(kw));
+    };
+
+    const legacyHasRationale = hasRationale(legacyText);
+    const enhancedHasRationale = hasRationale(enhancedText);
     const enhancedCitation = enhancedText.match(/根據[^。]+\[\d+\][^。]+/)?.[0] || enhancedText.match(/[^。]+\[\d+\][^。]*/)?.[0] || '（無引用範例）';
 
     const tableHTML = `
@@ -1450,66 +1479,79 @@ function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, en
                 </thead>
                 <tbody class="text-sm">
                     <tr>
-                        <td class="border border-gray-600 px-4 py-2 font-semibold text-gray-300">報告結構</td>
+                        <td class="border border-gray-600 px-4 py-2 font-semibold text-gray-300">
+                            <div>報告結構</div>
+                            <div class="text-gray-500 text-xs mt-1">Rubrics: 結構完整性</div>
+                        </td>
                         <td class="border border-gray-600 px-4 py-2 text-gray-400">
-                            <div>5段式（簡易版）</div>
-                            <div class="text-red-400 text-xs mt-1">缺少發展脈絡、求助動機等</div>
+                            <div class="font-semibold">${legacyQuality ? legacyQuality.structure_quality.coverage : 'N/A'}% 覆蓋率</div>
+                            <div class="text-red-400 text-xs mt-1">
+                                ${legacyMissing.length > 0 ? '缺少 ' + legacyMissing.length + ' 個段落' : '完整'}
+                            </div>
                         </td>
                         <td class="border border-gray-600 px-4 py-2 text-white">
-                            <div>10段式（完整個案概念化）</div>
-                            <div class="text-blue-400 text-xs mt-1">符合督導要求的報告格式</div>
+                            <div class="font-semibold">${enhancedQuality ? enhancedQuality.structure_quality.coverage : 'N/A'}% 覆蓋率</div>
+                            <div class="text-${enhancedMissing.length === 0 ? 'green' : 'red'}-400 text-xs mt-1">
+                                ${enhancedMissing.length === 0 ? '✅ 完整' : '缺少 ' + enhancedMissing.length + ' 個段落'}
+                            </div>
                         </td>
                         <td class="border border-gray-600 px-4 py-2 text-green-400">
-                            覆蓋率 +40%
+                            ${legacyQuality && enhancedQuality ? '+' + (enhancedQuality.structure_quality.coverage - legacyQuality.structure_quality.coverage).toFixed(0) + '%' : 'N/A'}
                         </td>
                         <td class="border border-gray-600 px-4 py-2">
                             <button onclick="toggleDetailRow('detail-structure')" class="text-yellow-400 hover:text-yellow-300 underline text-xs">
-                                點擊查看 ▼
+                                點擊查看證據 ▼
                             </button>
                         </td>
                     </tr>
                     <tr id="detail-structure" class="hidden">
                         <td colspan="5" class="border border-gray-600 px-6 py-4 bg-gray-900/50">
                             <div class="space-y-3 text-sm">
-                                <div class="text-yellow-400 font-semibold">📌 為什麼需要10段式？</div>
-                                <div class="text-gray-300">
-                                    <strong>根據評審 rubrics：</strong>個案概念化報告必須包含「問題發展脈絡」、「多層次因素分析」、「專業判斷」等關鍵段落，才能幫助新手諮詢師系統性理解個案。
+                                <div class="text-yellow-400 font-semibold">📋 Rubrics 判斷依據：結構完整性（40分）</div>
+                                <div class="text-gray-300 text-xs">
+                                    系統檢查報告是否包含10個必要段落，每缺少1個段落扣4分
                                 </div>
 
-                                <div class="text-yellow-400 font-semibold mt-4">🔍 真實案例對比：</div>
+                                <div class="text-yellow-400 font-semibold mt-4">🔍 真實判斷結果（來自本次報告）：</div>
                                 <div class="grid grid-cols-2 gap-4 mt-2">
                                     <div class="bg-red-900/20 border border-red-500/30 rounded p-3">
-                                        <div class="text-red-400 font-semibold mb-2">❌ 舊版輸出（缺漏）</div>
-                                        <div class="text-gray-400 text-xs font-mono">
-                                            【主訴問題】：職涯迷茫<br>
-                                            【成因分析】：工作倦怠<br>
-                                            【晤談目標】：釐清方向<br>
-                                            【介入策略】：職涯探索<br>
-                                            【成效評估】：追蹤改變<br>
-                                            <span class="text-red-400 mt-2 block">➜ 缺少：發展脈絡、求助動機、優勢資源、專業判斷、自我反思</span>
+                                        <div class="text-red-400 font-semibold mb-2">❌ 舊版檢查結果</div>
+                                        <div class="text-gray-300 text-xs">
+                                            <strong>結構完整性：</strong>${legacyQuality ? legacyQuality.structure_quality.coverage : 'N/A'}%<br>
+                                            <strong>缺失段落：</strong>${legacyMissing.length} 個<br><br>
+                                            ${legacyMissing.length > 0 ? `
+                                                <div class="text-red-300 font-mono text-xs mt-2">
+                                                    ${legacyMissing.map(s => `❌ ${s}`).join('<br>')}
+                                                </div>
+                                            ` : '<div class="text-green-300">✅ 無缺失</div>'}
                                         </div>
                                     </div>
                                     <div class="bg-blue-900/20 border border-blue-500/30 rounded p-3">
-                                        <div class="text-blue-400 font-semibold mb-2">✅ 新版輸出（完整）</div>
-                                        <div class="text-gray-300 text-xs font-mono">
-                                            【一、案主基本資料】：28歲女性碩士<br>
-                                            【二、主訴問題】：職涯迷茫<br>
-                                            【三、問題發展脈絡】：從大學開始的探索歷程<br>
-                                            【四、求助動機與期待】：希望找到適配職涯<br>
-                                            【五、多層次因素分析】⭐：個人/環境/時間維度<br>
-                                            【六、個案優勢與資源】：碩士學歷、家人支持<br>
-                                            【七、諮詢師的專業判斷】⭐：處於建立期探索階段<br>
-                                            【八、諮商目標與介入策略】⭐：職涯探索+價值觀釐清<br>
-                                            【九、預期成效與評估】：3個月後評估<br>
-                                            【十、諮詢師自我反思】：需加強探索技術<br>
-                                            <span class="text-green-400 mt-2 block">➜ 100% 覆蓋所有必要段落</span>
+                                        <div class="text-blue-400 font-semibold mb-2">✅ 新版檢查結果</div>
+                                        <div class="text-gray-300 text-xs">
+                                            <strong>結構完整性：</strong>${enhancedQuality ? enhancedQuality.structure_quality.coverage : 'N/A'}%<br>
+                                            <strong>缺失段落：</strong>${enhancedMissing.length} 個<br><br>
+                                            ${enhancedMissing.length > 0 ? `
+                                                <div class="text-red-300 font-mono text-xs mt-2">
+                                                    ${enhancedMissing.map(s => `❌ ${s}`).join('<br>')}
+                                                </div>
+                                            ` : '<div class="text-green-300 font-semibold">✅ 全部10個段落都存在</div>'}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="text-yellow-400 font-semibold mt-4">💡 督導評語：</div>
+                                <div class="text-yellow-400 font-semibold mt-4">⚙️ 系統判斷邏輯（validate_report_structure）：</div>
+                                <div class="bg-gray-800/50 p-3 rounded text-xs font-mono text-gray-300">
+                                    1. 在報告文字中搜尋10個必要段落標題<br>
+                                    2. 每找到1個 → 計入「已存在」清單<br>
+                                    3. 每缺少1個 → 計入「缺失段落」清單<br>
+                                    4. 計算覆蓋率 = (10 - 缺失數) / 10 × 100%<br>
+                                    5. 覆蓋率 × 0.4 = 結構完整性分數（最高40分）
+                                </div>
+
+                                <div class="text-yellow-400 font-semibold mt-4">💡 專家評語：</div>
                                 <div class="text-gray-300 italic text-xs bg-gray-800/50 p-3 rounded">
-                                    "舊版報告雖然有基本資訊，但缺少<strong class="text-red-400">『問題如何發展而來』</strong>這個關鍵脈絡，導致諮詢師無法理解個案的完整生命歷程。新版的10段式架構確保了<strong class="text-green-400">系統性思考</strong>，不會遺漏重要資訊。"
+                                    "舊版${legacyMissing.length > 0 ? `缺少 ${legacyMissing.length} 個段落，特別是<strong class="text-red-400">「${legacyMissing[0] || ''}」</strong>` : '結構完整'}，導致無法系統性理解個案。新版${enhancedMissing.length === 0 ? '確保了' : '改善了'}完整架構，符合督導要求。"
                                 </div>
                             </div>
                         </td>
@@ -1547,72 +1589,79 @@ function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, en
                         </td>
                     </tr>
                     <tr>
-                        <td class="border border-gray-600 px-4 py-2 font-semibold text-gray-300">理論引用說明</td>
+                        <td class="border border-gray-600 px-4 py-2 font-semibold text-gray-300">
+                            <div>理論引用說明</div>
+                            <div class="text-gray-500 text-xs mt-1">Rubrics: 引用品質</div>
+                        </td>
                         <td class="border border-gray-600 px-4 py-2 text-gray-400">
-                            <div>只標註 [1][2]</div>
-                            <div class="text-red-400 text-xs mt-1">無法學習應用邏輯</div>
+                            <div class="font-semibold">${legacyHasRationale ? '有說明' : '無說明'}</div>
+                            <div class="text-${legacyHasRationale ? 'green' : 'red'}-400 text-xs mt-1">
+                                ${legacyHasRationale ? '✅ 有「根據/基於」關鍵詞' : '❌ 只有 [1][2] 編號'}
+                            </div>
                         </td>
                         <td class="border border-gray-600 px-4 py-2 text-white">
-                            <div>強制「根據理論X...」格式</div>
-                            <div class="text-blue-400 text-xs mt-1">提供正反範例引導</div>
+                            <div class="font-semibold">${enhancedHasRationale ? '有說明' : '無說明'}</div>
+                            <div class="text-${enhancedHasRationale ? 'green' : 'red'}-400 text-xs mt-1">
+                                ${enhancedHasRationale ? '✅ 有理論說明文字' : '❌ 無理論說明'}
+                            </div>
                         </td>
                         <td class="border border-gray-600 px-4 py-2 text-green-400">
-                            可學習性 ↑
+                            ${enhancedHasRationale && !legacyHasRationale ? '+10 分' : (enhancedHasRationale ? '持平' : '-10 分')}
                         </td>
                         <td class="border border-gray-600 px-4 py-2">
                             <button onclick="toggleDetailRow('detail-citation')" class="text-yellow-400 hover:text-yellow-300 underline text-xs">
-                                點擊查看 ▼
+                                點擊查看證據 ▼
                             </button>
                         </td>
                     </tr>
                     <tr id="detail-citation" class="hidden">
                         <td colspan="5" class="border border-gray-600 px-6 py-4 bg-gray-900/50">
                             <div class="space-y-3 text-sm">
-                                <div class="text-yellow-400 font-semibold">📌 為什麼需要強制理論說明？</div>
-                                <div class="text-gray-300">
-                                    <strong>根據評審 rubrics：</strong>新手諮詢師常犯的錯誤是「只標註理論編號[1][2]，但不說明為什麼用這個理論」，導致無法展現專業思考過程。督導需要看到<strong class="text-yellow-400">「理論如何應用到個案」</strong>的推理邏輯。
+                                <div class="text-yellow-400 font-semibold">📋 Rubrics 判斷依據：引用品質（20分）</div>
+                                <div class="text-gray-300 text-xs">
+                                    系統檢查報告是否包含「根據/基於/從」等說明理由的關鍵詞（10分）+ 引用數量適中（10分）
                                 </div>
 
-                                <div class="text-yellow-400 font-semibold mt-4">🔍 真實案例對比：</div>
+                                <div class="text-yellow-400 font-semibold mt-4">🔍 真實判斷結果（來自本次報告）：</div>
                                 <div class="space-y-3 mt-2">
                                     <div class="bg-red-900/20 border border-red-500/30 rounded p-3">
-                                        <div class="text-red-400 font-semibold mb-2">❌ 舊版輸出（只有編號，無說明）</div>
-                                        <div class="text-gray-400 text-xs">
-                                            <strong>【五、成因分析】</strong><br>
-                                            案主目前處於職涯探索階段，面臨工作適配問題。根據理論分析，可能涉及個人興趣、能力與工作環境的不匹配[1][2]。<br>
-                                            <span class="text-red-400 mt-2 block">➜ 問題：[1][2] 是什麼理論？為什麼適用？完全看不出來！</span>
+                                        <div class="text-red-400 font-semibold mb-2">❌ 舊版檢查結果</div>
+                                        <div class="text-gray-300 text-xs">
+                                            <strong>有說明理由：</strong>${legacyHasRationale ? '是' : '否'} ${legacyHasRationale ? '(+10分)' : '(+0分)'}<br>
+                                            <strong>引用數量：</strong>${legacyQuality?.citation_quality?.total_citations || 0} 個<br><br>
+                                            <div class="text-gray-400 font-mono text-xs mt-2 bg-gray-900/50 p-2 rounded max-h-32 overflow-y-auto">
+                                                ${extractCitation(legacyText, 5).substring(0, 200)}...
+                                            </div>
+                                            ${!legacyHasRationale ? '<div class="text-red-300 mt-2">➜ 問題：只有 [1][2] 編號，沒有說明為什麼用這個理論</div>' : ''}
                                         </div>
                                     </div>
 
                                     <div class="bg-blue-900/20 border border-blue-500/30 rounded p-3">
-                                        <div class="text-blue-400 font-semibold mb-2">✅ 新版輸出（有說明理由）</div>
+                                        <div class="text-blue-400 font-semibold mb-2">✅ 新版檢查結果</div>
                                         <div class="text-gray-300 text-xs">
-                                            <strong>【五、多層次因素分析】⭐</strong><br>
-                                            案主目前28歲，處於 <strong class="text-yellow-400">Super 生涯發展理論的「建立期」（25-44歲）</strong>[1]。根據該理論，此階段的主要任務是<strong class="text-green-400">「在工作世界中找到適合的位置並穩定下來」</strong>。案主目前的職涯迷茫，正反映了建立期常見的「試探-穩定」循環。<br><br>
-                                            從 <strong class="text-yellow-400">Holland 職業興趣理論</strong>[2] 來看，案主提到「不知道自己適合什麼」，顯示可能尚未釐清自己的興趣類型（RIASEC）。根據該理論，<strong class="text-green-400">個人興趣類型與工作環境類型的適配度</strong>，是影響工作滿意度的關鍵因素。<br>
-                                            <span class="text-green-400 mt-2 block">➜ 改善：清楚說明「用哪個理論」、「理論核心概念」、「如何應用到個案」</span>
+                                            <strong>有說明理由：</strong>${enhancedHasRationale ? '是' : '否'} ${enhancedHasRationale ? '(+10分)' : '(+0分)'}<br>
+                                            <strong>引用數量：</strong>${enhancedQuality?.citation_quality?.total_citations || 0} 個<br><br>
+                                            <div class="text-gray-300 font-mono text-xs mt-2 bg-gray-900/50 p-2 rounded max-h-32 overflow-y-auto">
+                                                ${extractCitation(enhancedText, 5).substring(0, 200)}...
+                                            </div>
+                                            ${enhancedHasRationale ? '<div class="text-green-300 mt-2">➜ 改善：明確說明理論名稱和應用理由</div>' : ''}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="text-yellow-400 font-semibold mt-4">💡 督導評語：</div>
+                                <div class="text-yellow-400 font-semibold mt-4">⚙️ 系統判斷邏輯（validate_citations）：</div>
+                                <div class="bg-gray-800/50 p-3 rounded text-xs font-mono text-gray-300">
+                                    1. 搜尋關鍵詞：「根據」「基於」「從」「理論指出」「顯示」「觀點」「依據」<br>
+                                    2. 找到任一關鍵詞 → has_rationale = True (+10分)<br>
+                                    3. 未找到 → has_rationale = False (+0分)<br>
+                                    4. 計算引用數量：搜尋 [數字] 格式<br>
+                                    5. 引用數量 / 7 × 10 = 引用數量分數（最高10分）<br>
+                                    6. has_rationale 分數 + 引用數量分數 = 引用品質分數（最高20分）
+                                </div>
+
+                                <div class="text-yellow-400 font-semibold mt-4">💡 專家評語：</div>
                                 <div class="text-gray-300 italic text-xs bg-gray-800/50 p-3 rounded">
-                                    "舊版的 [1][2] 標註方式，讓我完全不知道你在想什麼。新版強制要求「根據XX理論」的格式，確保你<strong class="text-green-400">真的理解理論</strong>，而不是亂標號碼。這是專業報告的基本要求。"
-                                </div>
-
-                                <div class="text-yellow-400 font-semibold mt-4">📊 學習效果證據：</div>
-                                <div class="bg-gray-800/50 p-3 rounded text-xs">
-                                    <div class="text-gray-300 mb-2">新版 prompt 提供的正反範例：</div>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div class="text-red-400">
-                                            ❌ 錯誤：「根據理論[1]...」<br>
-                                            <span class="text-gray-500">（沒說理論名稱）</span>
-                                        </div>
-                                        <div class="text-green-400">
-                                            ✅ 正確：「根據 Super 生涯發展理論[1]...」<br>
-                                            <span class="text-gray-400">（明確理論名稱）</span>
-                                        </div>
-                                    </div>
+                                    "${legacyHasRationale ? '舊版有理論說明關鍵詞，尚可。' : '舊版只有 [1][2] 編號，無法看出理論應用邏輯。'}新版${enhancedHasRationale ? '明確說明理論依據，展現專業思考過程' : '仍需改進理論說明'}。"
                                 </div>
                             </div>
                         </td>
