@@ -799,7 +799,7 @@ async def generate_report(
 
         # Generate quality summary (for both versions, to enable comparison)
         from app.utils.report_quality import generate_quality_summary
-        quality_summary = generate_quality_summary(report, report_content, theories)
+        quality_summary = generate_quality_summary(report, report_content, theories, use_legacy=request.use_legacy)
 
         # Format based on output_format
         if request.output_format == "html":

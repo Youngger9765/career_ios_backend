@@ -4,11 +4,15 @@ import re
 from typing import Dict, List
 
 
-def validate_report_structure(report_text: str) -> Dict:
+def validate_report_structure(report_text: str, use_legacy: bool = False) -> Dict:
     """
     檢查報告結構完整性
 
     確保報告包含所有必須的段落
+
+    Args:
+        report_text: 報告文字
+        use_legacy: True = 檢查舊版5段式, False = 檢查新版10段式
 
     Returns:
         dict: {
@@ -17,25 +21,38 @@ def validate_report_structure(report_text: str) -> Dict:
             "coverage": float (0-100)
         }
     """
-    required_sections = [
-        "【一、案主基本資料】",
-        "【二、主訴問題】",
-        "【三、問題發展脈絡】",
-        "【四、求助動機與期待】",
-        "【五、多層次因素分析】",
-        "【六、個案優勢與資源】",  # 修正：與新 prompt 對應
-        "【七、諮詢師的專業判斷】",
-        "【八、諮商目標與介入策略】",
-        "【九、預期成效與評估】",
-        "【十、諮詢師自我反思】"
-    ]
+    if use_legacy:
+        # Legacy version: 5 sections
+        required_sections = [
+            "【主訴問題】",
+            "【成因分析】",
+            "【晤談目標（移動主訴）】",
+            "【介入策略】",
+            "【目前成效評估】"
+        ]
+        total_sections = 5
+    else:
+        # Enhanced version: 10 sections
+        required_sections = [
+            "【一、案主基本資料】",
+            "【二、主訴問題】",
+            "【三、問題發展脈絡】",
+            "【四、求助動機與期待】",
+            "【五、多層次因素分析】",
+            "【六、個案優勢與資源】",
+            "【七、諮詢師的專業判斷】",
+            "【八、諮商目標與介入策略】",
+            "【九、預期成效與評估】",
+            "【十、諮詢師自我反思】"
+        ]
+        total_sections = 10
 
     missing = []
     for section in required_sections:
         if section not in report_text:
             missing.append(section)
 
-    coverage = (10 - len(missing)) / 10 * 100
+    coverage = (total_sections - len(missing)) / total_sections * 100
 
     return {
         "complete": len(missing) == 0,
@@ -44,11 +61,15 @@ def validate_report_structure(report_text: str) -> Dict:
     }
 
 
-def validate_citations(report_text: str) -> Dict:
+def validate_citations(report_text: str, use_legacy: bool = False) -> Dict:
     """
     檢查理論引用品質
 
     檢查三個核心段落是否有引用，以及引用說明的品質
+
+    Args:
+        report_text: 報告文字
+        use_legacy: True = 檢查舊版段落, False = 檢查新版段落
 
     Returns:
         dict: {
@@ -58,11 +79,19 @@ def validate_citations(report_text: str) -> Dict:
             "all_critical_sections_cited": bool
         }
     """
-    critical_sections = {
-        "【五、多層次因素分析】": "因素分析需要理論支持",
-        "【七、諮詢師的專業判斷】": "專業判斷需要理論依據",
-        "【八、諮商目標與介入策略】": "介入策略需要技術引用"
-    }
+    if use_legacy:
+        # Legacy version: 成因分析 and 介入策略
+        critical_sections = {
+            "【成因分析】": "成因分析需要理論支持",
+            "【介入策略】": "介入策略需要技術引用"
+        }
+    else:
+        # Enhanced version: 3 critical sections
+        critical_sections = {
+            "【五、多層次因素分析】": "因素分析需要理論支持",
+            "【七、諮詢師的專業判斷】": "專業判斷需要理論依據",
+            "【八、諮商目標與介入策略】": "介入策略需要技術引用"
+        }
 
     results = {}
     for section, reason in critical_sections.items():
@@ -148,12 +177,14 @@ def calculate_quality_score(structure_validation: Dict, citation_validation: Dic
     if citation_validation["all_critical_sections_cited"]:
         score += 40
     else:
-        # 部分覆蓋
+        # 部分覆蓋（動態計算總段落數）
+        total_critical_sections = len(citation_validation["section_details"])
         cited_count = sum(
             1 for r in citation_validation["section_details"].values()
             if r["has_citations"]
         )
-        score += (cited_count / 3) * 40
+        if total_critical_sections > 0:
+            score += (cited_count / total_critical_sections) * 40
 
     # 3. 引用品質 (20%)
     # 3a. 是否有說明理由 (10%)

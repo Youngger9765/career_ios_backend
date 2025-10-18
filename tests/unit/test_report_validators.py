@@ -82,6 +82,50 @@ class TestValidateReportStructure:
         assert result["coverage"] == 0.0
         assert len(result["missing_sections"]) == 10
 
+    def test_legacy_complete_report(self):
+        """測試舊版完整報告（5段式）"""
+        report_text = """
+        【主訴問題】
+        案主在此次諮詢中主要表達了對未來職涯方向的困惑。
+
+        【成因分析】
+        根據諮詢過程中的觀察，案主的主訴問題可能源於對自身能力的認知不足。
+
+        【晤談目標（移動主訴）】
+        在理解案主的需求後，諮詢師假設此次晤談的目標為協助案主探索職涯與生涯的關聯。
+
+        【介入策略】
+        為了達成上述目標，諮詢師計劃運用引導式提問的方式深入探索案主的內在特質。
+
+        【目前成效評估】
+        截至目前，案主對於自我認識的深度有所提高。
+        """
+
+        result = validate_report_structure(report_text, use_legacy=True)
+
+        assert result["complete"] is True
+        assert result["coverage"] == 100.0
+        assert len(result["missing_sections"]) == 0
+
+    def test_legacy_incomplete_report(self):
+        """測試舊版不完整報告（缺少段落）"""
+        report_text = """
+        【主訴問題】
+        案主在此次諮詢中主要表達了對未來職涯方向的困惑。
+
+        【成因分析】
+        根據諮詢過程中的觀察，案主的主訴問題可能源於對自身能力的認知不足。
+        """
+
+        result = validate_report_structure(report_text, use_legacy=True)
+
+        assert result["complete"] is False
+        assert result["coverage"] == 40.0  # 2/5 = 40%
+        assert len(result["missing_sections"]) == 3
+        assert "【晤談目標（移動主訴）】" in result["missing_sections"]
+        assert "【介入策略】" in result["missing_sections"]
+        assert "【目前成效評估】" in result["missing_sections"]
+
 
 class TestValidateCitations:
     """測試理論引用驗證功能"""
@@ -173,6 +217,43 @@ class TestValidateCitations:
         """
         result = validate_citations(report_without_rationale)
         assert result["has_rationale"] is False
+
+    def test_legacy_citations(self):
+        """測試舊版報告引用檢查（2個核心段落）"""
+        report_text = """
+        【主訴問題】
+        案主在此次諮詢中主要表達了對未來職涯方向的困惑。
+
+        【成因分析】
+        根據職涯規劃三角形的理論 [1]，職涯的發展需要平衡。
+        薩提爾冰山理論 [2] 所指出的，表面上的迷茫可能掩蓋更深層問題。
+
+        【晤談目標（移動主訴）】
+        在理解案主的需求後，諮詢師假設此次晤談的目標。
+
+        【介入策略】
+        諮詢師計劃運用引導式提問 [3] 的方式深入探索案主的內在特質。
+
+        【目前成效評估】
+        截至目前，案主對於自我認識的深度有所提高。
+        """
+
+        result = validate_citations(report_text, use_legacy=True)
+
+        # Legacy version only has 2 critical sections
+        assert len(result["section_details"]) == 2
+        assert "【成因分析】" in result["section_details"]
+        assert "【介入策略】" in result["section_details"]
+
+        # Both sections have citations
+        assert result["section_details"]["【成因分析】"]["has_citations"] is True
+        assert result["section_details"]["【成因分析】"]["citation_count"] == 2
+        assert result["section_details"]["【介入策略】"]["has_citations"] is True
+        assert result["section_details"]["【介入策略】"]["citation_count"] == 1
+
+        assert result["all_critical_sections_cited"] is True
+        assert result["total_citations"] == 3
+        assert result["has_rationale"] is True
 
 
 class TestExtractSection:

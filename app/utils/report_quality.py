@@ -13,7 +13,8 @@ from app.utils.report_validators import (
 def generate_quality_summary(
     report: Dict[str, Any],
     report_text: str,
-    theories: List[Dict]
+    theories: List[Dict],
+    use_legacy: bool = False
 ) -> Dict[str, Any]:
     """
     生成報告品質摘要
@@ -24,15 +25,16 @@ def generate_quality_summary(
         report: 完整報告 dict
         report_text: 報告的 conceptualization 文字
         theories: 引用的理論列表
+        use_legacy: True = 舊版5段式驗證, False = 新版10段式驗證
 
     Returns:
         dict: 品質摘要，包含結構、引用、內容指標和總分
     """
-    # 結構驗證
-    structure_validation = validate_report_structure(report_text)
+    # 結構驗證（根據版本使用不同標題清單）
+    structure_validation = validate_report_structure(report_text, use_legacy=use_legacy)
 
-    # 引用驗證
-    citation_validation = validate_citations(report_text)
+    # 引用驗證（根據版本使用不同段落標題）
+    citation_validation = validate_citations(report_text, use_legacy=use_legacy)
 
     # 內容指標
     content_metrics = {
