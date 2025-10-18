@@ -117,6 +117,9 @@
             <button onclick="switchVersionTab('enhanced')" id="ver-tab-enhanced" class="px-6 py-3 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600 transition">
                 ✨ 新版報告
             </button>
+            <button onclick="switchVersionTab('aligned')" id="ver-tab-aligned" class="px-6 py-3 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600 transition">
+                ↔️ 段落對齊
+            </button>
             <button onclick="switchVersionTab('comparison')" id="ver-tab-comparison" class="px-6 py-3 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600 transition">
                 🔍 比較表
             </button>
@@ -146,6 +149,13 @@
                 <div id="qualityScoreDisplay" class="mt-6 pt-4 border-t border-blue-500/30">
                     <!-- Quality score will be shown here -->
                 </div>
+            </div>
+        </div>
+
+        <!-- Tab Content: Aligned Comparison -->
+        <div id="ver-content-aligned" class="ver-tab-content hidden">
+            <div id="alignedComparisonContent" class="space-y-4">
+                <!-- Side-by-side aligned comparison will be injected here -->
             </div>
         </div>
 
@@ -1001,17 +1011,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const comparisonCheckbox = document.getElementById('comparisonMode');
     const ragSystemSelect = document.getElementById('ragSystem');
 
-    comparisonCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-            ragSystemSelect.disabled = true;
-            ragSystemSelect.style.opacity = '0.5';
-            ragSystemSelect.title = '比較模式會測試兩個系統';
-        } else {
-            ragSystemSelect.disabled = false;
-            ragSystemSelect.style.opacity = '1';
-            ragSystemSelect.title = '';
-        }
-    });
+    if (comparisonCheckbox && ragSystemSelect) {
+        comparisonCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                ragSystemSelect.disabled = true;
+                ragSystemSelect.style.opacity = '0.5';
+                ragSystemSelect.title = '比較模式會測試兩個系統';
+            } else {
+                ragSystemSelect.disabled = false;
+                ragSystemSelect.style.opacity = '1';
+                ragSystemSelect.title = '';
+            }
+        });
+    }
 });
 
 function downloadJSON() {
@@ -1266,30 +1278,83 @@ function displayVersionComparison(data) {
 
     // Display Legacy Quality Score
     if (legacyQuality) {
-        // Calculate total critical sections dynamically from section_details
-        const legacyTotalSections = Object.keys(legacyQuality.citation_quality.section_details).length;
-        const legacyCitationCoverage = legacyTotalSections > 0
-            ? (legacyQuality.citation_quality.critical_sections_cited / legacyTotalSections * 100).toFixed(0)
-            : 0;
+        // DEBUG: Show actual report text to verify citations
+        console.log('📄 舊版報告完整文本:', legacyReport.conceptualization);
+        console.log('🔍 檢查引用標記 [1], [2] 等:', legacyReport.conceptualization.match(/\[\d+\]/g));
 
-        const legacyQualityHTML = `
+        console.log('📊 舊版品質資料:', legacyQuality);
+
+        // Check if using LLM grading or legacy grading
+        const isLLMGrading = legacyQuality.grading_method === 'llm';
+
+        let legacyQualityHTML = `
             <div class="bg-gray-800/50 rounded-lg p-4 mt-4">
-                <h5 class="text-gray-400 font-semibold mb-3">📊 品質評分（舊版）</h5>
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <div class="text-gray-400">結構完整性</div>
-                        <div class="text-white font-mono text-lg">${legacyQuality.structure_quality.coverage}%</div>
-                    </div>
-                    <div>
-                        <div class="text-gray-400">引用覆蓋率</div>
-                        <div class="text-white font-mono text-lg">${legacyCitationCoverage}%</div>
-                    </div>
-                    <div class="col-span-2">
-                        <div class="text-gray-400 mb-1">總分</div>
-                        <div class="text-2xl font-bold ${getScoreColor(legacyQuality.overall_score)}">${legacyQuality.overall_score} / 100</div>
-                        <div class="text-gray-400 text-xs mt-1">${legacyQuality.grade}</div>
-                    </div>
+                <h5 class="text-gray-400 font-semibold mb-3">📊 品質評分（舊版）${isLLMGrading ? ' - LLM 評分' : ''}</h5>`;
+
+        if (isLLMGrading) {
+            // LLM Grading Display with 8 dimensions (個案概念化能力評量表)
+            const dimensions = [
+                { key: 'problem_clarity', label: '問題陳述', color: 'gray' },
+                { key: 'problem_evolution', label: '問題演變', color: 'gray' },
+                { key: 'help_seeking', label: '求助原因', color: 'gray' },
+                { key: 'related_factors', label: '相關因素', color: 'gray' },
+                { key: 'function_assessment', label: '功能評估', color: 'gray' },
+                { key: 'problem_judgment', label: '問題判斷', color: 'gray' },
+                { key: 'counseling_plan', label: '諮商計劃', color: 'gray' },
+                { key: 'implementation_eval', label: '實施評估', color: 'gray' }
+            ];
+
+            legacyQualityHTML += `
+                <div class="text-xs text-gray-400 mb-2">依據「個案概念化能力評量表」8向度評分</div>
+                <div class="grid grid-cols-4 gap-2 text-sm mb-4">`;
+
+            dimensions.forEach(dim => {
+                const dimData = legacyQuality[dim.key];
+                if (dimData) {
+                    legacyQualityHTML += `
+                        <div class="bg-${dim.color}-700/50 rounded p-2">
+                            <div class="text-gray-400 text-xs">${dim.label} (${dimData.max_score})</div>
+                            <div class="text-white font-mono text-lg font-bold">${dimData.score}</div>
+                            ${dimData.feedback ? `<div class="text-gray-400 text-xs mt-1 line-clamp-2" title="${dimData.feedback}">${dimData.feedback}</div>` : ''}
+                        </div>`;
+                }
+            });
+
+            legacyQualityHTML += `
                 </div>
+                <div class="border-t border-gray-700 pt-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="text-gray-400">總分</div>
+                        <div class="text-2xl font-bold ${getScoreColor(legacyQuality.overall_score)}">${legacyQuality.overall_score} / 100 (${legacyQuality.grade})</div>
+                    </div>
+                    ${legacyQuality.overall_feedback ? `<div class="text-gray-300 text-sm bg-gray-700/30 rounded p-2 mb-2">${legacyQuality.overall_feedback}</div>` : ''}
+                    ${legacyQuality.strengths && legacyQuality.strengths.length > 0 ? `
+                        <div class="mt-2">
+                            <div class="text-green-400 text-xs font-semibold mb-1">✅ 優點：</div>
+                            <ul class="text-gray-300 text-xs list-disc list-inside space-y-1">
+                                ${legacyQuality.strengths.map(s => `<li>${s}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    ${legacyQuality.improvements && legacyQuality.improvements.length > 0 ? `
+                        <div class="mt-2">
+                            <div class="text-yellow-400 text-xs font-semibold mb-1">💡 建議改進：</div>
+                            <ul class="text-gray-300 text-xs list-disc list-inside space-y-1">
+                                ${legacyQuality.improvements.map(i => `<li>${i}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>`;
+        } else {
+            // Fallback if LLM grading not available
+            legacyQualityHTML += `
+                <div class="text-center text-gray-400 py-4">
+                    <div class="text-2xl font-bold ${getScoreColor(legacyQuality.overall_score)}">${legacyQuality.overall_score} / 100</div>
+                    <div class="text-xs mt-1">${legacyQuality.grade}</div>
+                </div>`;
+        }
+
+        legacyQualityHTML += `
             </div>
         `;
         document.getElementById('legacyReportContent').innerHTML += legacyQualityHTML;
@@ -1301,30 +1366,83 @@ function displayVersionComparison(data) {
 
     // Display Enhanced Quality Score
     if (enhancedQuality) {
-        // Calculate total critical sections dynamically from section_details
-        const enhancedTotalSections = Object.keys(enhancedQuality.citation_quality.section_details).length;
-        const enhancedCitationCoverage = enhancedTotalSections > 0
-            ? (enhancedQuality.citation_quality.critical_sections_cited / enhancedTotalSections * 100).toFixed(0)
-            : 0;
+        // DEBUG: Show actual report text to verify citations
+        console.log('📄 新版報告完整文本:', enhancedReport.conceptualization);
+        console.log('🔍 檢查引用標記 [1], [2] 等:', enhancedReport.conceptualization.match(/\[\d+\]/g));
 
-        const qualityHTML = `
+        console.log('📊 新版品質資料:', enhancedQuality);
+
+        // Check if using LLM grading
+        const isEnhancedLLMGrading = enhancedQuality.grading_method === 'llm';
+
+        let qualityHTML = `
             <div class="bg-blue-900/20 rounded-lg p-4">
-                <h5 class="text-blue-400 font-semibold mb-3">📊 品質評分（新版）</h5>
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <div class="text-gray-400">結構完整性</div>
-                        <div class="text-white font-mono text-lg">${enhancedQuality.structure_quality.coverage}%</div>
-                    </div>
-                    <div>
-                        <div class="text-gray-400">引用覆蓋率</div>
-                        <div class="text-white font-mono text-lg">${enhancedCitationCoverage}%</div>
-                    </div>
-                    <div class="col-span-2">
-                        <div class="text-gray-400 mb-1">總分</div>
-                        <div class="text-2xl font-bold ${getScoreColor(enhancedQuality.overall_score)}">${enhancedQuality.overall_score} / 100</div>
-                        <div class="text-gray-400 text-xs mt-1">${enhancedQuality.grade}</div>
-                    </div>
+                <h5 class="text-blue-400 font-semibold mb-3">📊 品質評分（新版）${isEnhancedLLMGrading ? ' - LLM 評分' : ''}</h5>`;
+
+        if (isEnhancedLLMGrading) {
+            // LLM Grading Display with 8 dimensions (個案概念化能力評量表)
+            const dimensions = [
+                { key: 'problem_clarity', label: '問題陳述', color: 'blue' },
+                { key: 'problem_evolution', label: '問題演變', color: 'blue' },
+                { key: 'help_seeking', label: '求助原因', color: 'blue' },
+                { key: 'related_factors', label: '相關因素', color: 'blue' },
+                { key: 'function_assessment', label: '功能評估', color: 'blue' },
+                { key: 'problem_judgment', label: '問題判斷', color: 'blue' },
+                { key: 'counseling_plan', label: '諮商計劃', color: 'blue' },
+                { key: 'implementation_eval', label: '實施評估', color: 'blue' }
+            ];
+
+            qualityHTML += `
+                <div class="text-xs text-gray-400 mb-2">依據「個案概念化能力評量表」8向度評分</div>
+                <div class="grid grid-cols-4 gap-2 text-sm mb-4">`;
+
+            dimensions.forEach(dim => {
+                const dimData = enhancedQuality[dim.key];
+                if (dimData) {
+                    qualityHTML += `
+                        <div class="bg-${dim.color}-900/30 rounded p-2">
+                            <div class="text-gray-400 text-xs">${dim.label} (${dimData.max_score})</div>
+                            <div class="text-white font-mono text-lg font-bold">${dimData.score}</div>
+                            ${dimData.feedback ? `<div class="text-gray-400 text-xs mt-1 line-clamp-2" title="${dimData.feedback}">${dimData.feedback}</div>` : ''}
+                        </div>`;
+                }
+            });
+
+            qualityHTML += `
                 </div>
+                <div class="border-t border-blue-800 pt-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="text-gray-400">總分</div>
+                        <div class="text-2xl font-bold ${getScoreColor(enhancedQuality.overall_score)}">${enhancedQuality.overall_score} / 100 (${enhancedQuality.grade})</div>
+                    </div>
+                    ${enhancedQuality.overall_feedback ? `<div class="text-gray-300 text-sm bg-blue-900/20 rounded p-2 mb-2">${enhancedQuality.overall_feedback}</div>` : ''}
+                    ${enhancedQuality.strengths && enhancedQuality.strengths.length > 0 ? `
+                        <div class="mt-2">
+                            <div class="text-green-400 text-xs font-semibold mb-1">✅ 優點：</div>
+                            <ul class="text-gray-300 text-xs list-disc list-inside space-y-1">
+                                ${enhancedQuality.strengths.map(s => `<li>${s}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    ${enhancedQuality.improvements && enhancedQuality.improvements.length > 0 ? `
+                        <div class="mt-2">
+                            <div class="text-yellow-400 text-xs font-semibold mb-1">💡 建議改進：</div>
+                            <ul class="text-gray-300 text-xs list-disc list-inside space-y-1">
+                                ${enhancedQuality.improvements.map(i => `<li>${i}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>`;
+        } else {
+            // Fallback if LLM grading not available
+            qualityHTML += `
+                <div class="text-center text-gray-400 py-4">
+                    <div class="text-2xl font-bold ${getScoreColor(enhancedQuality.overall_score)}">${enhancedQuality.overall_score} / 100</div>
+                    <div class="text-xs mt-1">${enhancedQuality.grade}</div>
+                </div>`;
+        }
+
+        qualityHTML += `
             </div>
         `;
         document.getElementById('qualityScoreDisplay').innerHTML = qualityHTML;
@@ -1332,11 +1450,107 @@ function displayVersionComparison(data) {
 
     // Generate Comparison Table
     generateComparisonTable(legacyReport, enhancedReport, legacyQuality, enhancedQuality);
+
+    // Generate Aligned Comparison
+    generateAlignedComparison(legacyReport, enhancedReport);
+}
+
+function extractSectionContent(text, sectionTitle) {
+    const escapedTitle = sectionTitle.replace(/[()【】]/g, '\\$&');
+    const regex = new RegExp(`${escapedTitle}[）】]?\\s*([\\s\\S]*?)(?=【|$)`);
+    const match = text.match(regex);
+    const content = match ? match[1].trim() : '';
+    console.log(`Extracting "${sectionTitle}": found ${content.length} chars`);
+    return content || '-';
 }
 
 function formatReportContent(report) {
+    const info = report.client_info;
     const conceptText = report.conceptualization || '';
-    return `<div class="bg-gray-900/50 rounded p-4 whitespace-pre-wrap max-h-[600px] overflow-y-auto">${conceptText}</div>`;
+    const isEnhanced = conceptText.includes('【一、案主基本資料】') || conceptText.includes('【二、主訴問題】');
+
+    let html = '<div class="space-y-6 max-h-[600px] overflow-y-auto">';
+
+    // Client Info Table
+    html += `
+        <div>
+            <h4 class="text-lg font-semibold text-white mb-3">一、案主基本資料</h4>
+            <table class="w-full border-collapse border border-gray-600 text-sm">
+                <tr>
+                    <td class="border border-gray-600 px-3 py-2 bg-gray-700 text-gray-300 font-semibold w-1/4">姓名(化名)</td>
+                    <td class="border border-gray-600 px-3 py-2 text-white">${info.name || '-'}</td>
+                    <td class="border border-gray-600 px-3 py-2 bg-gray-700 text-gray-300 font-semibold w-1/4">性別</td>
+                    <td class="border border-gray-600 px-3 py-2 text-white">${info.gender || '-'}</td>
+                </tr>
+                <tr>
+                    <td class="border border-gray-600 px-3 py-2 bg-gray-700 text-gray-300 font-semibold">年紀</td>
+                    <td class="border border-gray-600 px-3 py-2 text-white">${info.age || '-'}</td>
+                    <td class="border border-gray-600 px-3 py-2 bg-gray-700 text-gray-300 font-semibold">職業</td>
+                    <td class="border border-gray-600 px-3 py-2 text-white">${info.occupation || '-'}</td>
+                </tr>
+            </table>
+        </div>
+    `;
+
+    // Conceptualization Section
+    html += '<div>';
+    if (isEnhanced) {
+        // Enhanced 10-section version
+        const sections = [
+            { title: '二、主訴問題', key: '【二、主訴問題】' },
+            { title: '三、問題發展脈絡', key: '【三、問題發展脈絡】' },
+            { title: '四、求助動機與期待', key: '【四、求助動機與期待】' },
+            { title: '五、多層次因素分析', key: '【五、多層次因素分析】' },
+            { title: '六、個案優勢與資源', key: '【六、個案優勢與資源】' },
+            { title: '七、諮詢師的專業判斷', key: '【七、諮詢師的專業判斷】' },
+            { title: '八、諮商目標與介入策略', key: '【八、諮商目標與介入策略】' },
+            { title: '九、預期成效與評估', key: '【九、預期成效與評估】' },
+            { title: '十、諮詢師自我反思', key: '【十、諮詢師自我反思】' }
+        ];
+
+        html += '<h4 class="text-lg font-semibold text-white mb-3">概念化分析（增強版 10 段式）</h4>';
+        html += '<table class="w-full border-collapse border border-gray-600 text-sm">';
+
+        sections.forEach(section => {
+            const content = extractSectionContent(conceptText, section.key);
+            html += `
+                <tr>
+                    <td class="border border-gray-600 px-3 py-2 bg-gray-700 text-gray-300 font-semibold w-1/4">${section.title}</td>
+                    <td class="border border-gray-600 px-3 py-2 text-white whitespace-pre-wrap">${content}</td>
+                </tr>
+            `;
+        });
+
+        html += '</table>';
+    } else {
+        // Legacy 5-section version
+        const sections = [
+            { title: '主訴問題', key: '【主訴問題】' },
+            { title: '成因分析', key: '【成因分析】' },
+            { title: '晤談目標（移動主訴）', key: '【晤談目標' },
+            { title: '介入策略', key: '【介入策略】' },
+            { title: '目前成效評估', key: '【目前成效評估】' }
+        ];
+
+        html += '<h4 class="text-lg font-semibold text-white mb-3">概念化分析（舊版 5 段式）</h4>';
+        html += '<table class="w-full border-collapse border border-gray-600 text-sm">';
+
+        sections.forEach(section => {
+            const content = extractSectionContent(conceptText, section.key);
+            html += `
+                <tr>
+                    <td class="border border-gray-600 px-3 py-2 bg-gray-700 text-gray-300 font-semibold w-1/4">${section.title}</td>
+                    <td class="border border-gray-600 px-3 py-2 text-white whitespace-pre-wrap">${content}</td>
+                </tr>
+            `;
+        });
+
+        html += '</table>';
+    }
+    html += '</div>';
+
+    html += '</div>';
+    return html;
 }
 
 function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, enhancedQuality) {
@@ -1491,23 +1705,23 @@ function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, en
                 <tbody class="text-sm">
                     <tr>
                         <td class="border border-gray-600 px-4 py-2 font-semibold text-gray-300">
-                            <div>報告結構</div>
-                            <div class="text-gray-500 text-xs mt-1">Rubrics: 結構完整性</div>
+                            <div>整體品質評分</div>
+                            <div class="text-gray-500 text-xs mt-1">個案概念化能力評量表（8向度）</div>
                         </td>
                         <td class="border border-gray-600 px-4 py-2 text-gray-400">
-                            <div class="font-semibold">${legacyQuality ? legacyQuality.structure_quality.coverage : 'N/A'}% 覆蓋率</div>
+                            <div class="font-semibold">${legacyQuality ? legacyQuality.overall_score : 'N/A'} / 100</div>
                             <div class="text-red-400 text-xs mt-1">
-                                ${legacyMissing.length > 0 ? '缺少 ' + legacyMissing.length + ' 個段落' : '完整'}
+                                ${legacyQuality ? legacyQuality.grade : 'N/A'}
                             </div>
                         </td>
                         <td class="border border-gray-600 px-4 py-2 text-white">
-                            <div class="font-semibold">${enhancedQuality ? enhancedQuality.structure_quality.coverage : 'N/A'}% 覆蓋率</div>
-                            <div class="text-${enhancedMissing.length === 0 ? 'green' : 'red'}-400 text-xs mt-1">
-                                ${enhancedMissing.length === 0 ? '✅ 完整' : '缺少 ' + enhancedMissing.length + ' 個段落'}
+                            <div class="font-semibold">${enhancedQuality ? enhancedQuality.overall_score : 'N/A'} / 100</div>
+                            <div class="text-${enhancedQuality && enhancedQuality.overall_score >= 90 ? 'green' : 'yellow'}-400 text-xs mt-1">
+                                ${enhancedQuality ? enhancedQuality.grade : 'N/A'}
                             </div>
                         </td>
                         <td class="border border-gray-600 px-4 py-2 text-green-400">
-                            ${legacyQuality && enhancedQuality ? '+' + (enhancedQuality.structure_quality.coverage - legacyQuality.structure_quality.coverage).toFixed(0) + '%' : 'N/A'}
+                            ${legacyQuality && enhancedQuality ? `+${(enhancedQuality.overall_score - legacyQuality.overall_score).toFixed(1)} 分` : 'N/A'}
                         </td>
                         <td class="border border-gray-600 px-4 py-2">
                             <button onclick="toggleDetailRow('detail-structure')" class="text-yellow-400 hover:text-yellow-300 underline text-xs">
@@ -1518,51 +1732,50 @@ function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, en
                     <tr id="detail-structure" class="hidden">
                         <td colspan="5" class="border border-gray-600 px-6 py-4 bg-gray-900/50">
                             <div class="space-y-3 text-sm">
-                                <div class="text-yellow-400 font-semibold">📋 Rubrics 判斷依據：結構完整性（40分）</div>
+                                <div class="text-yellow-400 font-semibold">📋 評分依據：個案概念化能力評量表（8向度）</div>
                                 <div class="text-gray-300 text-xs">
-                                    系統檢查報告是否包含10個必要段落，每缺少1個段落扣4分
+                                    使用 GPT-4o 依照專業督導標準評分，模擬真實督導對報告的評價
                                 </div>
 
-                                <div class="text-yellow-400 font-semibold mt-4">🔍 真實判斷結果（來自本次報告）：</div>
+                                <div class="text-yellow-400 font-semibold mt-4">🔍 八大向度得分比較：</div>
                                 <div class="grid grid-cols-2 gap-4 mt-2">
                                     <div class="bg-red-900/20 border border-red-500/30 rounded p-3">
-                                        <div class="text-red-400 font-semibold mb-2">❌ 舊版檢查結果</div>
-                                        <div class="text-gray-300 text-xs">
-                                            <strong>結構完整性：</strong>${legacyQuality ? legacyQuality.structure_quality.coverage : 'N/A'}%<br>
-                                            <strong>缺失段落：</strong>${legacyMissing.length} 個<br><br>
-                                            ${legacyMissing.length > 0 ? `
-                                                <div class="text-red-300 font-mono text-xs mt-2">
-                                                    ${legacyMissing.map(s => `❌ ${s}`).join('<br>')}
-                                                </div>
-                                            ` : '<div class="text-green-300">✅ 無缺失</div>'}
+                                        <div class="text-red-400 font-semibold mb-2">📊 舊版 (5段式)</div>
+                                        <div class="text-gray-300 text-xs space-y-1">
+                                            ${legacyQuality ? `
+                                                <div>問題陳述：${legacyQuality.problem_clarity?.score || 0}/15</div>
+                                                <div>問題演變：${legacyQuality.problem_evolution?.score || 0}/15</div>
+                                                <div>求助原因：${legacyQuality.help_seeking?.score || 0}/10</div>
+                                                <div>相關因素：${legacyQuality.related_factors?.score || 0}/25</div>
+                                                <div>功能評估：${legacyQuality.function_assessment?.score || 0}/10</div>
+                                                <div>問題判斷：${legacyQuality.problem_judgment?.score || 0}/10</div>
+                                                <div>諮商計劃：${legacyQuality.counseling_plan?.score || 0}/10</div>
+                                                <div>實施評估：${legacyQuality.implementation_eval?.score || 0}/5</div>
+                                                <div class="mt-2 pt-2 border-t border-red-500/30 font-semibold">總分：${legacyQuality.overall_score}/100</div>
+                                            ` : 'N/A'}
                                         </div>
                                     </div>
                                     <div class="bg-blue-900/20 border border-blue-500/30 rounded p-3">
-                                        <div class="text-blue-400 font-semibold mb-2">✅ 新版檢查結果</div>
-                                        <div class="text-gray-300 text-xs">
-                                            <strong>結構完整性：</strong>${enhancedQuality ? enhancedQuality.structure_quality.coverage : 'N/A'}%<br>
-                                            <strong>缺失段落：</strong>${enhancedMissing.length} 個<br><br>
-                                            ${enhancedMissing.length > 0 ? `
-                                                <div class="text-red-300 font-mono text-xs mt-2">
-                                                    ${enhancedMissing.map(s => `❌ ${s}`).join('<br>')}
-                                                </div>
-                                            ` : '<div class="text-green-300 font-semibold">✅ 全部10個段落都存在</div>'}
+                                        <div class="text-blue-400 font-semibold mb-2">📊 新版 (10段式)</div>
+                                        <div class="text-gray-300 text-xs space-y-1">
+                                            ${enhancedQuality ? `
+                                                <div>問題陳述：${enhancedQuality.problem_clarity?.score || 0}/15</div>
+                                                <div>問題演變：${enhancedQuality.problem_evolution?.score || 0}/15</div>
+                                                <div>求助原因：${enhancedQuality.help_seeking?.score || 0}/10</div>
+                                                <div>相關因素：${enhancedQuality.related_factors?.score || 0}/25</div>
+                                                <div>功能評估：${enhancedQuality.function_assessment?.score || 0}/10</div>
+                                                <div>問題判斷：${enhancedQuality.problem_judgment?.score || 0}/10</div>
+                                                <div>諮商計劃：${enhancedQuality.counseling_plan?.score || 0}/10</div>
+                                                <div>實施評估：${enhancedQuality.implementation_eval?.score || 0}/5</div>
+                                                <div class="mt-2 pt-2 border-t border-blue-500/30 font-semibold text-green-300">總分：${enhancedQuality.overall_score}/100</div>
+                                            ` : 'N/A'}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="text-yellow-400 font-semibold mt-4">⚙️ 系統判斷邏輯（validate_report_structure）：</div>
-                                <div class="bg-gray-800/50 p-3 rounded text-xs font-mono text-gray-300">
-                                    1. 在報告文字中搜尋10個必要段落標題<br>
-                                    2. 每找到1個 → 計入「已存在」清單<br>
-                                    3. 每缺少1個 → 計入「缺失段落」清單<br>
-                                    4. 計算覆蓋率 = (10 - 缺失數) / 10 × 100%<br>
-                                    5. 覆蓋率 × 0.4 = 結構完整性分數（最高40分）
-                                </div>
-
-                                <div class="text-yellow-400 font-semibold mt-4">💡 專家評語：</div>
+                                <div class="text-yellow-400 font-semibold mt-4">💡 LLM 督導評語：</div>
                                 <div class="text-gray-300 italic text-xs bg-gray-800/50 p-3 rounded">
-                                    "舊版${legacyMissing.length > 0 ? `缺少 ${legacyMissing.length} 個段落，特別是<strong class="text-red-400">「${legacyMissing[0] || ''}」</strong>` : '結構完整'}，導致無法系統性理解個案。新版${enhancedMissing.length === 0 ? '確保了' : '改善了'}完整架構，符合督導要求。"
+                                    ${enhancedQuality?.overall_feedback || '評語生成中...'}
                                 </div>
                             </div>
                         </td>
@@ -1575,7 +1788,7 @@ function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, en
                         </td>
                         <td class="border border-gray-600 px-4 py-2 text-white">
                             <div>✅ 自動檢查 10 個段落</div>
-                            <div class="text-blue-400 text-xs mt-1">完整性評分 ${enhancedQuality ? enhancedQuality.structure_quality.coverage : 'N/A'}%</div>
+                            <div class="text-blue-400 text-xs mt-1">總分 ${enhancedQuality ? enhancedQuality.overall_score : 'N/A'}/100</div>
                         </td>
                         <td class="border border-gray-600 px-4 py-2 text-green-400">
                             零遺漏
@@ -1594,7 +1807,7 @@ function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, en
                                     舊版沒有驗證機制，AI可能「覺得」自己寫了10段，但實際上漏掉2-3段。新版會自動檢查所有必要段落是否存在，並給出結構完整性評分（0-100%）。
                                 </div>
                                 <div class="bg-gray-800/50 p-3 rounded text-xs">
-                                    <div class="text-green-400">✅ 新版驗證邏輯：檢查10個段落標題 → 計算覆蓋率 → ${enhancedQuality ? enhancedQuality.structure_quality.coverage : 'N/A'}%</div>
+                                    <div class="text-green-400">✅ 新版驗證邏輯：使用「個案概念化能力評量表」8向度評分 → 總分 ${enhancedQuality ? enhancedQuality.overall_score : 'N/A'}/100</div>
                                 </div>
                             </div>
                         </td>
@@ -1861,8 +2074,84 @@ function generateComparisonTable(legacyReport, enhancedReport, legacyQuality, en
     document.getElementById('comparisonTableContent').innerHTML = tableHTML;
 }
 
+function generateAlignedComparison(legacyReport, enhancedReport) {
+    const legacyText = legacyReport.conceptualization || '';
+    const enhancedText = enhancedReport.conceptualization || '';
+
+    // All enhanced sections (complete 10 sections)
+    const enhancedSections = [
+        { title: '一、案主基本資料', key: '【一、案主基本資料】', legacyKey: null },
+        { title: '二、主訴問題', key: '【二、主訴問題】', legacyKey: '【主訴問題】' },
+        { title: '三、問題發展脈絡', key: '【三、問題發展脈絡】', legacyKey: null },
+        { title: '四、求助動機與期待', key: '【四、求助動機與期待】', legacyKey: null },
+        { title: '五、多層次因素分析', key: '【五、多層次因素分析】', legacyKey: '【成因分析】' },
+        { title: '六、個案優勢與資源', key: '【六、個案優勢與資源】', legacyKey: null },
+        { title: '七、諮詢師的專業判斷', key: '【七、諮詢師的專業判斷】', legacyKey: '【晤談目標（移動主訴）】' },
+        { title: '八、諮商目標與介入策略', key: '【八、諮商目標與介入策略】', legacyKey: '【介入策略】' },
+        { title: '九、預期成效與評估', key: '【九、預期成效與評估】', legacyKey: '【目前成效評估】' },
+        { title: '十、諮詢師自我反思', key: '【十、諮詢師自我反思】', legacyKey: null }
+    ];
+
+    let alignedHTML = `
+        <div class="bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold text-white mb-4">↔️ 段落對齊比較</h3>
+            <p class="text-gray-400 text-sm mb-6">左側為舊版 5 段式報告，右側為新版完整 10 段式報告</p>
+
+            <div class="space-y-4">
+    `;
+
+    enhancedSections.forEach((section, index) => {
+        const enhancedContent = extractSectionContent(enhancedText, section.key);
+
+        let legacyContent = '';
+        let legacyTitle = '';
+
+        if (section.legacyKey) {
+            legacyContent = extractSectionContent(legacyText, section.legacyKey);
+            // Extract legacy title without brackets
+            legacyTitle = section.legacyKey.replace(/【|】/g, '');
+        }
+
+        alignedHTML += `
+            <div class="grid grid-cols-2 gap-4 border border-gray-700 rounded-lg overflow-hidden">
+                <!-- Legacy Section -->
+                <div class="bg-gray-900 p-4 ${!section.legacyKey ? 'opacity-50' : ''}">
+                    ${section.legacyKey
+                        ? `<h4 class="text-sm font-semibold text-blue-400 mb-3">📄 舊版：${legacyTitle}</h4>
+                           <div class="text-white text-sm whitespace-pre-wrap leading-relaxed">${legacyContent}</div>`
+                        : `<h4 class="text-sm font-semibold text-gray-500 mb-3">📄 舊版：無此段落</h4>
+                           <div class="text-gray-500 text-sm italic">此段落僅在新版報告中提供</div>`
+                    }
+                </div>
+
+                <!-- Enhanced Section -->
+                <div class="bg-gray-900 p-4">
+                    <h4 class="text-sm font-semibold text-green-400 mb-3">✨ 新版：${section.title}</h4>
+                    <div class="text-white text-sm whitespace-pre-wrap leading-relaxed">${enhancedContent}</div>
+                </div>
+            </div>
+        `;
+    });
+
+    alignedHTML += `
+            </div>
+
+            <div class="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <h4 class="text-blue-400 font-semibold mb-2">💡 說明</h4>
+                <ul class="text-gray-300 text-sm space-y-1">
+                    <li>• 左側為舊版 5 段式報告，右側為新版完整 10 段式報告</li>
+                    <li>• 新版新增的段落（一、三、四、六、十）在左側顯示為「無此段落」</li>
+                    <li>• 可清楚看出新版報告在結構上的擴充與優化</li>
+                </ul>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('alignedComparisonContent').innerHTML = alignedHTML;
+}
+
 function switchVersionTab(tabName) {
-    ['legacy', 'enhanced', 'comparison'].forEach(tab => {
+    ['legacy', 'enhanced', 'aligned', 'comparison'].forEach(tab => {
         const button = document.getElementById(`ver-tab-${tab}`);
         const content = document.getElementById(`ver-content-${tab}`);
 
@@ -1897,17 +2186,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const versionCompCheckbox = document.getElementById('versionComparisonMode');
     const reportVersionSelect = document.getElementById('reportVersion');
 
-    versionCompCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-            reportVersionSelect.disabled = true;
-            reportVersionSelect.style.opacity = '0.5';
-            reportVersionSelect.title = '版本比較模式會同時生成兩個版本';
-        } else {
-            reportVersionSelect.disabled = false;
-            reportVersionSelect.style.opacity = '1';
-            reportVersionSelect.title = '';
-        }
-    });
+    if (versionCompCheckbox && reportVersionSelect) {
+        versionCompCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                reportVersionSelect.disabled = true;
+                reportVersionSelect.style.opacity = '0.5';
+                reportVersionSelect.title = '版本比較模式會同時生成兩個版本';
+            } else {
+                reportVersionSelect.disabled = false;
+                reportVersionSelect.style.opacity = '1';
+                reportVersionSelect.title = '';
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

@@ -3,7 +3,7 @@
 import json
 from collections.abc import AsyncGenerator
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import Float, Integer, String, bindparam, text
@@ -270,11 +270,44 @@ async def generate_report_stream(
         # Step 4: Generate structured report
         yield f"data: {json.dumps({'step': 4, 'status': 'processing', 'message': f'正在生成個案報告（使用 {rag_system.upper()} 模型）...'}, ensure_ascii=False)}\n\n"
 
-        # Construct context from theories
-        context_parts = [f"[{i+1}] {theory['text']}" for i, theory in enumerate(theories)]
+        # Construct context from theories with explicit instructions
+        context_parts = []
+        for i, theory in enumerate(theories):
+            # Extract theory name from document title or theory text
+            doc_title = theory.get('document', '未知文獻')
+            theory_text = theory['text']
+            score = theory['score']
+
+            context_parts.append(
+                f"[{i+1}] **來源文獻：{doc_title}**\n"
+                f"   相似度分數：{score:.2f}\n"
+                f"   內容：{theory_text}"
+            )
+
         context = "\n\n".join(context_parts)
 
-        report_prompt = f"""你是一位專業的職涯諮詢督導。請根據以下資訊生成個案報告：
+        # Add explicit instruction about RAG usage
+        rag_instruction = f"""
+⚠️⚠️⚠️ 重要：理論引用規則 ⚠️⚠️⚠️
+
+你【必須】使用以下 RAG 檢索到的 {len(theories)} 個理論文獻，【不可】使用你自己記憶中的理論！
+
+引用時：
+1. 必須從 [1] 到 [{len(theories)}] 中選擇
+2. 必須提取文獻來源或內容中的理論名稱（例如：Super 生涯發展理論、Holland 類型論、認知行為理論）
+3. 引用格式：「根據 [理論名稱] [數字]，...」
+4. 如果文獻中沒有明確理論名稱，則引用「來源文獻名稱 [數字]」
+
+範例：
+✅ 正確：「根據 Super 生涯發展理論 [1]，案主處於探索期...」（如果 [1] 的內容或來源提到 Super）
+✅ 正確：「依據職涯諮詢精選文章 [3]，...」（如果不知道具體理論名稱，用文獻名）
+❌ 錯誤：引用 RAG 未提供的理論（例如 Freud、Maslow 等，如果它們不在下列文獻中）
+❌ 錯誤：「根據理論 [1]」（沒有說明理論名稱）
+"""
+
+        report_prompt = f"""{rag_instruction}
+
+你是一位專業的職涯諮詢督導。請根據以下資訊生成個案報告：
 
 **案主基本資料：**
 - 姓名（化名）：{parsed_data.get('client_name', '未提供')}
@@ -561,14 +594,46 @@ async def generate_report(
             for row in rows
         ]
 
-        # Step 3: Generate structured report
-        context_parts = [f"[{i+1}] {theory['text']}" for i, theory in enumerate(theories)]
+        # Step 3: Generate structured report with enhanced context format
+        context_parts = []
+        for i, theory in enumerate(theories):
+            doc_title = theory.get('document', '未知文獻')
+            theory_text = theory['text']
+            score = theory['score']
+
+            context_parts.append(
+                f"[{i+1}] **來源文獻：{doc_title}**\n"
+                f"   相似度分數：{score:.2f}\n"
+                f"   內容：{theory_text}"
+            )
+
         context = "\n\n".join(context_parts)
+
+        # Add explicit RAG instruction
+        rag_instruction = f"""
+⚠️⚠️⚠️ 重要：理論引用規則 ⚠️⚠️⚠️
+
+你【必須】使用以下 RAG 檢索到的 {len(theories)} 個理論文獻，【不可】使用你自己記憶中的理論！
+
+引用時：
+1. 必須從 [1] 到 [{len(theories)}] 中選擇
+2. 必須提取文獻來源或內容中的理論名稱（例如：Super 生涯發展理論、Holland 類型論、認知行為理論）
+3. 引用格式：「根據 [理論名稱] [數字]，...」
+4. 如果文獻中沒有明確理論名稱，則引用「來源文獻名稱 [數字]」
+
+範例：
+✅ 正確：「根據 Super 生涯發展理論 [1]，案主處於探索期...」（如果 [1] 的內容或來源提到 Super）
+✅ 正確：「依據職涯諮詢精選文章 [3]，...」（如果不知道具體理論名稱，用文獻名）
+❌ 錯誤：引用 RAG 未提供的理論（例如 Freud、Maslow 等，如果它們不在下列文獻中）
+❌ 錯誤：「根據理論 [1]」（沒有說明理論名稱）
+"""
 
         # Choose prompt based on use_legacy flag
         if request.use_legacy:
             # Legacy version: Enhanced 5-section prompt with content requirements
-            report_prompt = f"""你是一位專業的職涯諮詢督導。請根據以下資訊生成個案報告：
+            report_prompt = f"""{rag_instruction}
+
+你是一位專業的職涯諮詢督導。請根據以下資訊生成個案報告：
 
 **案主基本資料：**
 - 姓名（化名）：{parsed_data.get('client_name', '未提供')}
@@ -624,7 +689,9 @@ async def generate_report(
 """
         else:
             # Enhanced version: Structured 10-section prompt with validation
-            report_prompt = f"""你是職涯諮詢督導，協助新手諮詢師撰寫個案概念化報告。
+            report_prompt = f"""{rag_instruction}
+
+你是職涯諮詢督導，協助新手諮詢師撰寫個案概念化報告。
 
 你的優勢：快速從大量文獻中找到最適合此個案的理論和策略。
 
@@ -648,17 +715,20 @@ async def generate_report(
 【相關理論文獻】（請在適當段落引用 [1], [2]）
 {context}
 
-請生成以下結構的個案報告（所有段落必須包含）：
+⚠️ 重要：請嚴格按照以下結構生成個案報告，段落【二】到【十】都必須完整包含！
 
 【一、案主基本資料】
+根據逐字稿提取的資訊整理如下（若逐字稿未提及則省略該項）：
 - 姓名（化名）：{parsed_data.get('client_name', '未提供')}
-- 性別：{parsed_data.get('gender', '未提及')}
-- 年齡：{parsed_data.get('age', '未提及')}
-- 部門/職業：{parsed_data.get('occupation', '未提及')}
-- 學歷：{parsed_data.get('education', '未提及')}
-- 現居地：{parsed_data.get('location', '未提及')}
-- 經濟狀況：{parsed_data.get('economic_status', '未提及')}
-- 家庭關係：{parsed_data.get('family_relations', '未提及')}
+{f"- 性別：{parsed_data.get('gender')}" if parsed_data.get('gender') != '未提及' else ""}
+{f"- 年齡：{parsed_data.get('age')}" if parsed_data.get('age') != '未提及' else ""}
+{f"- 部門/職業：{parsed_data.get('occupation')}" if parsed_data.get('occupation') != '未提及' else ""}
+{f"- 學歷：{parsed_data.get('education')}" if parsed_data.get('education') != '未提及' else ""}
+{f"- 現居地：{parsed_data.get('location')}" if parsed_data.get('location') != '未提及' else ""}
+{f"- 經濟狀況：{parsed_data.get('economic_status')}" if parsed_data.get('economic_status') != '未提及' else ""}
+{f"- 家庭關係：{parsed_data.get('family_relations')}" if parsed_data.get('family_relations') != '未提及' else ""}
+
+註：本段僅呈現逐字稿中提及的資訊。若資訊不完整，不影響後續專業分析的品質。
 
 【二、主訴問題】
 - 個案陳述：（個案原話中的困擾）
@@ -680,7 +750,11 @@ async def generate_report(
 - 環境因素：（職場/學校、經濟）
 - 發展因素：（生涯成熟度、早期經驗）
 
-引用要求：必須說明「根據理論 [X]，案主...」或「從 [X] 觀點...」
+⚠️ 引用格式要求：必須包含「理論名稱 + [數字]」，例如：
+✅ 正確：「根據 Super 生涯發展理論 [1]，案主處於探索期...」
+✅ 正確：「從社會認知職業理論 (SCCT) [2] 的觀點來看...」
+❌ 錯誤：「根據理論 [1]」（缺少理論名稱）
+❌ 錯誤：「根據文獻」（沒有數字引用）
 
 【六、個案優勢與資源】
 - 心理優勢：（情緒調適、動機）
@@ -691,7 +765,10 @@ async def generate_report(
 - 理論依據：（用什麼理論支持判斷）引用 [3][4]
 - 理論取向：（採用的觀點）
 
-引用要求：說明「基於理論 [X]，我認為問題源於...」
+⚠️ 引用格式要求：必須包含「理論名稱 + [數字]」，例如：
+✅ 正確：「基於認知行為理論 [3]，我認為問題源於...」
+✅ 正確：「從 Holland 類型論 [4] 的角度來看...」
+❌ 錯誤：「根據理論 [3]」（缺少理論名稱）
 
 【八、諮商目標與介入策略】⭐ 核心段落（必須引用 [5][6]）
 - 諮商目標：（SMART 格式，具體可衡量）
@@ -699,7 +776,10 @@ async def generate_report(
 - 技術理由：（為何這技術適合此個案）
 - 介入步驟：（執行順序）
 
-引用要求：說明「選擇此技術因為...，理論 [X] 指出...」
+⚠️ 引用格式要求：必須包含「理論名稱 + [數字]」，例如：
+✅ 正確：「選擇敘事治療技術 [5]，因為此方法能幫助案主重新建構生涯故事...」
+✅ 正確：「根據焦點解決短期治療 (SFBT) [6]，設定具體可達成的目標...」
+❌ 錯誤：「理論 [5] 指出...」（缺少理論名稱）
 
 【九、預期成效與評估】
 - 短期指標：（3 個月內如何判斷進步）
@@ -711,10 +791,12 @@ async def generate_report(
 
 格式要求：
 1. 必須包含上述所有段落，用【】標題
-2. 第五、七、八段落必須引用理論 [1][2] 格式
-3. 每個引用要說明為何適用
-4. 不用 markdown（##, **, -）
-5. 每段至少 2-3 句，不可空白
+2. 第五、七、八段落必須引用理論，格式為「理論名稱 [數字]」
+3. 每個引用必須完整說明理論名稱，例如「Super 生涯發展理論 [1]」而非「理論 [1]」
+4. 引用時要說明為何此理論適用於個案
+5. 不用 markdown（##, **, -）
+6. 每段至少 3-5 句，內容充實且具體
+7. 必須考慮多層次因素：生理、心理、社會、文化
 """
 
             # M2.2: Add rationale examples to prompt (only for enhanced version)
@@ -811,9 +893,15 @@ async def generate_report(
             "dialogue_excerpts": dialogues,
         }
 
-        # Generate quality summary (for both versions, to enable comparison)
-        from app.utils.report_quality import generate_quality_summary
-        quality_summary = generate_quality_summary(report, report_content, theories, use_legacy=request.use_legacy)
+        # Generate quality summary using LLM (for more accurate grading)
+        from app.utils.report_quality import generate_quality_summary_with_llm
+        quality_summary = await generate_quality_summary_with_llm(
+            report=report,
+            report_text=report_content,
+            theories=theories,
+            use_legacy=request.use_legacy,
+            openai_client=openai_service.client
+        )
 
         # Format based on output_format
         if request.output_format == "html":
