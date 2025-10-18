@@ -648,6 +648,16 @@ async def generate_report(
 
 請生成以下結構的個案報告（所有段落必須包含）：
 
+【一、案主基本資料】
+- 姓名（化名）：{parsed_data.get('client_name', '未提供')}
+- 性別：{parsed_data.get('gender', '未提及')}
+- 年齡：{parsed_data.get('age', '未提及')}
+- 部門/職業：{parsed_data.get('occupation', '未提及')}
+- 學歷：{parsed_data.get('education', '未提及')}
+- 現居地：{parsed_data.get('location', '未提及')}
+- 經濟狀況：{parsed_data.get('economic_status', '未提及')}
+- 家庭關係：{parsed_data.get('family_relations', '未提及')}
+
 【二、主訴問題】
 - 個案陳述：（個案原話中的困擾）
 - 諮詢師觀察：（你在晤談中觀察到的議題）
