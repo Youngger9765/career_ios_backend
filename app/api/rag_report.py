@@ -567,7 +567,7 @@ async def generate_report(
 
         # Choose prompt based on use_legacy flag
         if request.use_legacy:
-            # Legacy version: Simple 5-section prompt (staging logic)
+            # Legacy version: Enhanced 5-section prompt with content requirements
             report_prompt = f"""你是一位專業的職涯諮詢督導。請根據以下資訊生成個案報告：
 
 **案主基本資料：**
@@ -614,11 +614,13 @@ async def generate_report(
 上述目標和策略達成的狀況如何，目前打算如何修正
 
 重要提醒：
-1. 請使用專業、客觀、具同理心的語氣
-2. 適當引用理論文獻 [1], [2] 等
-3. 不要使用 markdown 格式（如 ##, ###, **, - 等符號）
-4. 使用【標題】的格式來區分段落
-5. 內容直接書寫，不要用項目符號
+1. ⚠️ 每個段落必須有實質內容，每段至少寫5-8句完整的段落文字，絕對不可只寫「-」、「無」、「待評估」或留空
+2. 每個段落都要深入分析，提供具體的觀察、推論和建議
+3. 請使用專業、客觀、具同理心的語氣
+4. 適當引用理論文獻 [1], [2] 等
+5. 不要使用 markdown 格式（如 ##, ###, **, - 等符號）
+6. 使用【標題】的格式來區分段落
+7. 內容直接書寫成段落，不要用項目符號或短句
 """
         else:
             # Enhanced version: Structured 10-section prompt with validation
