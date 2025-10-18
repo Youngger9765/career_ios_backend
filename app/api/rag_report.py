@@ -564,57 +564,87 @@ async def generate_report(
         context_parts = [f"[{i+1}] {theory['text']}" for i, theory in enumerate(theories)]
         context = "\n\n".join(context_parts)
 
-        report_prompt = f"""你是一位專業的職涯諮詢督導。請根據以下資訊生成個案報告：
+        report_prompt = f"""你是職涯諮詢督導，協助新手諮詢師撰寫個案概念化報告。
 
-**案主基本資料：**
+你的優勢：快速從大量文獻中找到最適合此個案的理論和策略。
+
+【案主資料】
 - 姓名（化名）：{parsed_data.get('client_name', '未提供')}
 - 性別：{parsed_data.get('gender', '未提及')}
 - 年齡：{parsed_data.get('age', '未提及')}
-- 部門/職業（學校科系）：{parsed_data.get('occupation', '未提及')}
+- 部門/職業：{parsed_data.get('occupation', '未提及')}
 - 學歷：{parsed_data.get('education', '未提及')}
 - 現居地：{parsed_data.get('location', '未提及')}
 - 經濟狀況：{parsed_data.get('economic_status', '未提及')}
 - 家庭關係：{parsed_data.get('family_relations', '未提及')}
-- 其他重要資訊：{', '.join(parsed_data.get('other_info', []))}
 
-**晤談內容概述：**
+【晤談摘要】
 {parsed_data.get('session_content', '')}
 
-**主訴問題：**
-{', '.join(main_concerns)}
+【主訴】{', '.join(main_concerns)}
+【目標】{', '.join(parsed_data.get('counseling_goals', []))}
+【技巧】{', '.join(techniques)}
 
-**晤談目標：**
-{', '.join(parsed_data.get('counseling_goals', []))}
-
-**使用的諮詢技巧：**
-{', '.join(techniques)}
-
-**相關理論參考：**
+【相關理論文獻】（請在適當段落引用 [1], [2]）
 {context}
 
-請生成結構化的個案報告，包含以下部分：
+請生成以下結構的個案報告（所有段落必須包含）：
 
-【主訴問題】
-個案說的，此次想要討論的議題
+【二、主訴問題】
+- 個案陳述：（個案原話中的困擾）
+- 諮詢師觀察：（你在晤談中觀察到的議題）
 
-【成因分析】
-諮詢師您認為，個案為何會有這些主訴問題，請結合引用的理論 [1], [2] 等進行分析
+【三、問題發展脈絡】
+- 出現時間：（何時開始）
+- 持續頻率：（多久發生一次）
+- 影響程度：（對生活/工作的影響）
 
-【晤談目標（移動主訴）】
-諮詢師對個案諮詢目標的假設，須與個案確認
+【四、求助動機與期待】
+- 引發因素：（為何此時求助）
+- 期待目標：（希望改善什麼）
 
-【介入策略】
-諮詢師判斷會需要帶個案做的事，結合理論說明
+【五、多層次因素分析】⭐ 核心段落（必須引用理論 [1][2]）
+分析以下層次，並引用理論：
+- 個人因素：（年齡/生涯階段、性格、能力）
+- 人際因素：（家庭、社會支持）
+- 環境因素：（職場/學校、經濟）
+- 發展因素：（生涯成熟度、早期經驗）
 
-【目前成效評估】
-上述目標和策略達成的狀況如何，目前打算如何修正
+引用要求：必須說明「根據理論 [X]，案主...」或「從 [X] 觀點...」
 
-重要提醒：
-1. 請使用專業、客觀、具同理心的語氣
-2. 適當引用理論文獻 [1], [2] 等
-3. 不要使用 markdown 格式（如 ##, ###, **, - 等符號）
-4. 使用【標題】的格式來區分段落
-5. 內容直接書寫，不要用項目符號
+【六、個案優勢與資源】
+- 心理優勢：（情緒調適、動機）
+- 社會資源：（支持系統）
+
+【七、諮詢師的專業判斷】⭐ 核心段落（必須引用理論 [3][4]）
+- 問題假設：（為何有這些困擾）
+- 理論依據：（用什麼理論支持判斷）引用 [3][4]
+- 理論取向：（採用的觀點）
+
+引用要求：說明「基於理論 [X]，我認為問題源於...」
+
+【八、諮商目標與介入策略】⭐ 核心段落（必須引用 [5][6]）
+- 諮商目標：（SMART 格式，具體可衡量）
+- 介入技術：（使用的方法）引用 [5][6]
+- 技術理由：（為何這技術適合此個案）
+- 介入步驟：（執行順序）
+
+引用要求：說明「選擇此技術因為...，理論 [X] 指出...」
+
+【九、預期成效與評估】
+- 短期指標：（3 個月內如何判斷進步）
+- 長期指標：（6-12 個月目標）
+- 可能調整：（什麼情況需改變策略）
+
+【十、諮詢師自我反思】
+{parsed_data.get('counselor_self_evaluation', '請反思本次晤談優點和可改進處')}
+
+格式要求：
+1. 必須包含上述所有段落，用【】標題
+2. 第五、七、八段落必須引用理論 [1][2] 格式
+3. 每個引用要說明為何適用
+4. 不用 markdown（##, **, -）
+5. 每段至少 2-3 句，不可空白
 """
 
         if request.rag_system == "gemini":
@@ -705,15 +735,31 @@ async def generate_report(
             "dialogue_excerpts": dialogues,
         }
 
+        # Generate quality summary
+        from app.utils.report_quality import generate_quality_summary
+        quality_summary = generate_quality_summary(report, report_content, theories)
+
         # Format based on output_format
         if request.output_format == "html":
             formatted_report = format_report_as_html(report)
-            return {"report": formatted_report, "format": "html"}
+            return {
+                "report": formatted_report,
+                "format": "html",
+                "quality_summary": quality_summary
+            }
         elif request.output_format == "markdown":
             formatted_report = format_report_as_markdown(report)
-            return {"report": formatted_report, "format": "markdown"}
+            return {
+                "report": formatted_report,
+                "format": "markdown",
+                "quality_summary": quality_summary
+            }
         else:  # json (default)
-            return {"report": report, "format": "json"}
+            return {
+                "report": report,
+                "format": "json",
+                "quality_summary": quality_summary
+            }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
