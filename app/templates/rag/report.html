@@ -258,6 +258,7 @@
 
         <!-- Tab Content: HTML -->
         <div id="content-html" class="tab-content">
+            <div id="singleReportContent"></div>
 
         <!-- Header Info Table -->
         <div class="mb-6">
@@ -487,9 +488,10 @@ async function runSingleReport(transcript, numParticipants, ragSystem, topK) {
 
         document.getElementById('progressSteps').innerHTML = '<div class="text-green-400">✅ 報告生成完成！</div>';
 
-        // Display report
+        // Display report using the same format as comparison mode
         reportData = result.report;
-        displayReportInTable(reportData);
+        const reportHTML = formatReportContent(reportData);
+        document.getElementById('singleReportContent').innerHTML = reportHTML;
         document.getElementById('reportSection').classList.remove('hidden');
 
     } catch (error) {
@@ -981,18 +983,57 @@ function parseConceptualization(text) {
         effectiveness: ''
     };
 
-    // Try to parse sections marked with 【】
-    const mainIssueMatch = text.match(/【主訴問題】\s*([\s\S]*?)(?=【|$)/);
-    const causeMatch = text.match(/【成因分析】\s*([\s\S]*?)(?=【|$)/);
-    const goalMatch = text.match(/【晤談目標】\s*([\s\S]*?)(?=【|$)/);
-    const interventionMatch = text.match(/【介入策略】\s*([\s\S]*?)(?=【|$)/);
-    const effectivenessMatch = text.match(/【目前成效評估】\s*([\s\S]*?)(?=【|$)/);
+    // Check if this is the enhanced 10-section version
+    const isEnhancedVersion = text.includes('【二、主訴問題】') || text.includes('【五、多層次因素分析】');
 
-    if (mainIssueMatch) sections.main_issue = mainIssueMatch[1].trim();
-    if (causeMatch) sections.cause_analysis = causeMatch[1].trim();
-    if (goalMatch) sections.counseling_goal = goalMatch[1].trim();
-    if (interventionMatch) sections.intervention = interventionMatch[1].trim();
-    if (effectivenessMatch) sections.effectiveness = effectivenessMatch[1].trim();
+    if (isEnhancedVersion) {
+        // Parse enhanced 10-section format
+        const section2Match = text.match(/【二、主訴問題】\s*([\s\S]*?)(?=【[三四五六七八九十]、|$)/);
+        const section3Match = text.match(/【三、問題發展脈絡】\s*([\s\S]*?)(?=【[四五六七八九十]、|$)/);
+        const section4Match = text.match(/【四、求助動機與期待】\s*([\s\S]*?)(?=【[五六七八九十]、|$)/);
+        const section5Match = text.match(/【五、多層次因素分析】\s*([\s\S]*?)(?=【[六七八九十]、|$)/);
+        const section6Match = text.match(/【六、個案優勢與資源】\s*([\s\S]*?)(?=【[七八九十]、|$)/);
+        const section7Match = text.match(/【七、諮詢師的專業判斷】\s*([\s\S]*?)(?=【[八九十]、|$)/);
+        const section8Match = text.match(/【八、諮商目標與介入策略】\s*([\s\S]*?)(?=【[九十]、|$)/);
+        const section9Match = text.match(/【九、預期成效與評估】\s*([\s\S]*?)(?=【十、|$)/);
+
+        // Map to legacy structure for display compatibility
+        if (section2Match) sections.main_issue = section2Match[1].trim();
+        if (section5Match) sections.cause_analysis = section5Match[1].trim();  // 多層次因素分析
+        if (section8Match) {
+            // Extract counseling goal and intervention from section 8
+            const goalPart = section8Match[1].match(/諮商目標[：:]([\s\S]*?)(?=介入技術|$)/);
+            const interventionPart = section8Match[1].match(/介入技術[：:]([\s\S]*?)$/);
+            if (goalPart) sections.counseling_goal = goalPart[1].trim();
+            if (interventionPart) sections.intervention = interventionPart[1].trim();
+        }
+        if (section9Match) sections.effectiveness = section9Match[1].trim();
+
+        // Store full enhanced sections for future use
+        sections.enhanced = {
+            section2: section2Match ? section2Match[1].trim() : '',
+            section3: section3Match ? section3Match[1].trim() : '',
+            section4: section4Match ? section4Match[1].trim() : '',
+            section5: section5Match ? section5Match[1].trim() : '',
+            section6: section6Match ? section6Match[1].trim() : '',
+            section7: section7Match ? section7Match[1].trim() : '',
+            section8: section8Match ? section8Match[1].trim() : '',
+            section9: section9Match ? section9Match[1].trim() : ''
+        };
+    } else {
+        // Parse legacy 5-section format
+        const mainIssueMatch = text.match(/【主訴問題】\s*([\s\S]*?)(?=【|$)/);
+        const causeMatch = text.match(/【成因分析】\s*([\s\S]*?)(?=【|$)/);
+        const goalMatch = text.match(/【晤談目標】\s*([\s\S]*?)(?=【|$)/);
+        const interventionMatch = text.match(/【介入策略】\s*([\s\S]*?)(?=【|$)/);
+        const effectivenessMatch = text.match(/【目前成效評估】\s*([\s\S]*?)(?=【|$)/);
+
+        if (mainIssueMatch) sections.main_issue = mainIssueMatch[1].trim();
+        if (causeMatch) sections.cause_analysis = causeMatch[1].trim();
+        if (goalMatch) sections.counseling_goal = goalMatch[1].trim();
+        if (interventionMatch) sections.intervention = interventionMatch[1].trim();
+        if (effectivenessMatch) sections.effectiveness = effectivenessMatch[1].trim();
+    }
 
     return sections;
 }

@@ -12,7 +12,6 @@ class Settings(BaseSettings):
     APP_NAME: str = "Career Counseling API"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
-    MOCK_MODE: bool = False
     
     # API
     API_V1_PREFIX: str = "/api/v1"
@@ -81,9 +80,6 @@ class Settings(BaseSettings):
     # File Upload
     MAX_UPLOAD_SIZE: int = 100 * 1024 * 1024  # 100MB
     ALLOWED_AUDIO_TYPES: List[str] = [".mp3", ".wav", ".m4a", ".aac"]
-    
-    # Mock Data
-    MOCK_DELAY: float = 0.5  # Simulated processing delay in seconds
     
     class Config:
         env_file = ".env"

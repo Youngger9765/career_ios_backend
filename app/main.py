@@ -59,7 +59,6 @@ async def root():
     return {
         "message": "Career Counseling Backend API",
         "version": settings.APP_VERSION,
-        "mock_mode": settings.MOCK_MODE,
         "docs": "/docs",
         "rag_console": "/rag",
         "api": {

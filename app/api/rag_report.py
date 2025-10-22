@@ -4,14 +4,36 @@ import json
 from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import Float, Integer, String, bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.services.openai_service import OpenAIService
 from app.services.gemini_service import gemini_service
+from app.services.openai_service import OpenAIService
+
+
+# Report schemas for structured output
+class EnhancedReportSchema(BaseModel):
+    """10段式增強報告結構"""
+    section_2_main_issue: str = Field(description="二、主訴問題 - 個案陳述與諮詢師觀察")
+    section_3_development: str = Field(description="三、問題發展脈絡 - 出現時間、持續頻率、影響程度")
+    section_4_help_seeking: str = Field(description="四、求助動機與期待 - 引發因素、期待目標")
+    section_5_multilevel_analysis: str = Field(description="五、多層次因素分析 - 個人、人際、環境、發展因素（必須引用理論[1][2]）")
+    section_6_strengths: str = Field(description="六、個案優勢與資源 - 心理優勢、社會資源")
+    section_7_professional_judgment: str = Field(description="七、諮詢師的專業判斷 - 問題假設、理論依據（必須引用理論[3][4]）")
+    section_8_goals_strategies: str = Field(description="八、諮商目標與介入策略 - SMART目標、介入技術（必須引用理論[5][6]）")
+    section_9_expected_outcomes: str = Field(description="九、預期成效與評估 - 短期指標、長期指標、可能調整")
+    section_10_self_reflection: str = Field(description="十、諮詢師自我反思 - 本次晤談優點和可改進處")
+
+
+class LegacyReportSchema(BaseModel):
+    """5段式舊版報告結構"""
+    main_issue: str = Field(description="主訴問題 - 個案說的，此次想要討論的議題")
+    cause_analysis: str = Field(description="成因分析 - 諮詢師認為個案為何會有這些主訴問題，結合引用的理論[1][2]分析")
+    counseling_goal: str = Field(description="晤談目標（移動主訴）- 諮詢師對個案諮詢目標的假設")
+    intervention: str = Field(description="介入策略 - 諮詢師判斷會需要帶個案做的事，結合理論說明")
+    effectiveness: str = Field(description="目前成效評估 - 上述目標和策略達成的狀況")
 
 router = APIRouter(prefix="/api/report", tags=["report"])
 
@@ -19,7 +41,7 @@ router = APIRouter(prefix="/api/report", tags=["report"])
 def format_report_as_html(report: dict) -> str:
     """Convert report to HTML format"""
     html = "<html><body>"
-    html += f"<h1>個案報告</h1>"
+    html += "<h1>個案報告</h1>"
 
     # Client info
     html += "<h2>案主基本資料</h2><table border='1'>"
@@ -124,7 +146,7 @@ class ReportRequest(BaseModel):
     top_k: int = 7
     similarity_threshold: float = 0.25  # Lowered from 0.5 to 0.25 for better recall
     output_format: str = "json"  # "json", "html", or "markdown"
-    use_legacy: bool = False  # True = 舊版邏輯（無驗證），False = 新版（有驗證）
+    mode: str = "enhanced"  # "legacy", "enhanced", or "comparison"
 
 
 async def generate_report_stream(
@@ -264,6 +286,11 @@ async def generate_report_stream(
             {"text": row.text, "document": row.document_title, "score": float(row.similarity_score)}
             for row in rows
         ]
+
+        # ⚠️ Enforce RAG usage: Fail if no theories found
+        if not theories:
+            yield f"data: {json.dumps({'status': 'error', 'message': '❌ RAG 檢索失敗：未找到相關理論文獻，無法生成報告。請檢查資料庫或降低 similarity_threshold。'}, ensure_ascii=False)}\n\n"
+            return
 
         yield f"data: {json.dumps({'step': 3, 'status': 'completed', 'message': f'檢索到 {len(theories)} 個相關理論', 'data': {'theories': theories}}, ensure_ascii=False)}\n\n"
 
@@ -594,6 +621,13 @@ async def generate_report(
             for row in rows
         ]
 
+        # ⚠️ Enforce RAG usage: Fail if no theories found
+        if not theories:
+            raise HTTPException(
+                status_code=400,
+                detail="❌ RAG 檢索失敗：未找到相關理論文獻，無法生成報告。請檢查資料庫或降低 similarity_threshold。"
+            )
+
         # Step 3: Generate structured report with enhanced context format
         context_parts = []
         for i, theory in enumerate(theories):
@@ -628,8 +662,11 @@ async def generate_report(
 ❌ 錯誤：「根據理論 [1]」（沒有說明理論名稱）
 """
 
+        # Determine use_legacy flag based on mode
+        use_legacy = (request.mode == "legacy")
+
         # Choose prompt based on use_legacy flag
-        if request.use_legacy:
+        if use_legacy:
             # Legacy version: Enhanced 5-section prompt with content requirements
             report_prompt = f"""{rag_instruction}
 
@@ -809,7 +846,7 @@ async def generate_report(
             report_content = await openai_service.chat_completion(
                 messages=[{"role": "user", "content": report_prompt}],
                 temperature=0.6,
-                max_tokens=4000  # Increase for full 10-section report (was default 1000)
+                max_tokens=8000  # Maximum tokens for comprehensive report generation
             )
 
         # Step 4: Extract key dialogue excerpts
@@ -893,13 +930,46 @@ async def generate_report(
             "dialogue_excerpts": dialogues,
         }
 
+        # Handle comparison mode: generate both versions
+        if request.mode == "comparison":
+            # Generate legacy version
+            legacy_request = ReportRequest(
+                transcript=request.transcript,
+                num_participants=request.num_participants,
+                rag_system=request.rag_system,
+                top_k=request.top_k,
+                similarity_threshold=request.similarity_threshold,
+                output_format="json",
+                mode="legacy"
+            )
+            legacy_result = await generate_report(legacy_request, db)
+
+            # Generate enhanced version
+            enhanced_request = ReportRequest(
+                transcript=request.transcript,
+                num_participants=request.num_participants,
+                rag_system=request.rag_system,
+                top_k=request.top_k,
+                similarity_threshold=request.similarity_threshold,
+                output_format="json",
+                mode="enhanced"
+            )
+            enhanced_result = await generate_report(enhanced_request, db)
+
+            return {
+                "mode": "comparison",
+                "legacy": legacy_result,
+                "enhanced": enhanced_result,
+                "format": "json"
+            }
+
         # Generate quality summary using LLM (for more accurate grading)
         from app.utils.report_quality import generate_quality_summary_with_llm
         quality_summary = await generate_quality_summary_with_llm(
             report=report,
             report_text=report_content,
             theories=theories,
-            use_legacy=request.use_legacy,
+            use_legacy=use_legacy,
             openai_client=openai_service.client
         )
 
@@ -907,6 +977,7 @@ async def generate_report(
         if request.output_format == "html":
             formatted_report = format_report_as_html(report)
             result = {
+                "mode": request.mode,
                 "report": formatted_report,
                 "format": "html"
             }
@@ -916,6 +987,7 @@ async def generate_report(
         elif request.output_format == "markdown":
             formatted_report = format_report_as_markdown(report)
             result = {
+                "mode": request.mode,
                 "report": formatted_report,
                 "format": "markdown"
             }
@@ -924,6 +996,7 @@ async def generate_report(
             return result
         else:  # json (default)
             result = {
+                "mode": request.mode,
                 "report": report,
                 "format": "json"
             }

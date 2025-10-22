@@ -68,6 +68,7 @@ class OpenAIService:
         messages: list[dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 1000,
+        response_format: dict = None,
     ) -> str:
         """
         Get chat completion from OpenAI
@@ -76,16 +77,22 @@ class OpenAIService:
             messages: List of message dicts with 'role' and 'content'
             temperature: Sampling temperature (0-2)
             max_tokens: Maximum tokens in response
+            response_format: Optional response format (e.g., {"type": "json_schema", "json_schema": {...}})
 
         Returns:
             Response text from assistant
         """
-        response = await self.client.chat.completions.create(
-            model=self.chat_model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+        kwargs = {
+            "model": self.chat_model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+
+        if response_format:
+            kwargs["response_format"] = response_format
+
+        response = await self.client.chat.completions.create(**kwargs)
 
         return response.choices[0].message.content or ""
 
