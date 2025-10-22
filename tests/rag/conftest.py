@@ -3,7 +3,7 @@
 from io import BytesIO
 
 import pytest
-from pypdf import PdfWriter
+from PyPDF2 import PdfWriter
 
 
 @pytest.fixture
