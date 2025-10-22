@@ -94,6 +94,10 @@ class SanitizerService:
             "removed_types": list(result["found_items"].keys()),
         }
 
+        # Add individual type counts for backward compatibility
+        for key, matches in result["found_items"].items():
+            metadata[f"{key}_count"] = len(matches)
+
         return result["sanitized_text"], metadata
 
 

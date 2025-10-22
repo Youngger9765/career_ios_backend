@@ -21,7 +21,7 @@ class TestSTTService:
         """Test successful audio transcription"""
         mock_audio_path = "/tmp/test_audio.m4a"
 
-        with patch.object(stt_service.client.audio.transcriptions, 'create') as mock_create:
+        with patch.object(stt_service.client.audio.transcriptions, 'create', new_callable=AsyncMock) as mock_create:
             mock_create.return_value = "這是測試逐字稿內容"
 
             with patch("builtins.open", create=True) as mock_open:
@@ -38,18 +38,20 @@ class TestSTTService:
         """Test transcription with timestamps"""
         mock_audio_path = "/tmp/test_audio.m4a"
 
-        with patch.object(stt_service.client.audio.transcriptions, 'create') as mock_create:
-            mock_response = {
-                "text": "這是測試內容",
-                "segments": [
-                    {"start": 0.0, "end": 2.5, "text": "這是"},
-                    {"start": 2.5, "end": 5.0, "text": "測試內容"}
-                ]
-            }
+        with patch.object(stt_service.client.audio.transcriptions, 'create', new_callable=AsyncMock) as mock_create:
+            # Create a mock response object with attributes
+            mock_segment_1 = MagicMock(start=0.0, end=2.5, text="這是")
+            mock_segment_2 = MagicMock(start=2.5, end=5.0, text="測試內容")
+            mock_response = MagicMock(
+                text="這是測試內容",
+                segments=[mock_segment_1, mock_segment_2],
+                language="zh",
+                duration=5.0
+            )
             mock_create.return_value = mock_response
 
             with patch("builtins.open", create=True):
-                result = await stt_service.transcribe_audio_with_timestamps(mock_audio_path)
+                result = await stt_service.transcribe_with_timestamps(mock_audio_path)
 
                 assert "text" in result
                 assert "segments" in result
@@ -68,9 +70,9 @@ class TestSTTService:
         for format_ext in supported_formats:
             mock_path = f"/tmp/test_audio{format_ext}"
 
-            with patch.object(stt_service.client.audio.transcriptions, 'create') as mock_create:
+            with patch.object(stt_service.client.audio.transcriptions, 'create', new_callable=AsyncMock) as mock_create:
                 mock_create.return_value = "測試內容"
-                with patch("builtins.open", create=True):
+                with patch("builtins.open", create=True), patch("os.path.exists", return_value=True):
                     result = await stt_service.transcribe_audio(mock_path)
                     assert isinstance(result, str)
 
@@ -88,7 +90,7 @@ class TestSanitizerService:
         result, metadata = sanitizer_service.sanitize_session_transcript(text)
 
         assert "A123456789" not in result
-        assert "[身分證]" in result
+        assert "[已遮蔽身分證字號]" in result
         assert metadata["id_card_count"] == 1
 
     def test_sanitize_phone(self, sanitizer_service):
@@ -97,7 +99,7 @@ class TestSanitizerService:
         result, metadata = sanitizer_service.sanitize_session_transcript(text)
 
         assert "0912345678" not in result
-        assert "[電話]" in result
+        assert "[已遮蔽手機號碼]" in result
         assert metadata["phone_count"] == 1
 
     def test_sanitize_email(self, sanitizer_service):
@@ -106,7 +108,7 @@ class TestSanitizerService:
         result, metadata = sanitizer_service.sanitize_session_transcript(text)
 
         assert "test@example.com" not in result
-        assert "[電子郵件]" in result
+        assert "[已遮蔽電子郵件]" in result
         assert metadata["email_count"] == 1
 
     def test_sanitize_credit_card(self, sanitizer_service):
@@ -115,7 +117,7 @@ class TestSanitizerService:
         result, metadata = sanitizer_service.sanitize_session_transcript(text)
 
         assert "1234 5678 9012 3456" not in result
-        assert "[信用卡]" in result
+        assert "[已遮蔽信用卡號]" in result
         assert metadata["credit_card_count"] == 1
 
     def test_sanitize_address(self, sanitizer_service):
@@ -124,7 +126,7 @@ class TestSanitizerService:
         result, metadata = sanitizer_service.sanitize_session_transcript(text)
 
         assert "123號" not in result
-        assert "[地址]" in result
+        assert "[已遮蔽門牌]" in result
         assert metadata["address_number_count"] == 1
 
     def test_sanitize_landline(self, sanitizer_service):
@@ -133,7 +135,7 @@ class TestSanitizerService:
         result, metadata = sanitizer_service.sanitize_session_transcript(text)
 
         assert "02-12345678" not in result
-        assert "[電話]" in result
+        assert "[已遮蔽市話]" in result
         assert metadata["landline_count"] == 1
 
     def test_sanitize_multiple_types(self, sanitizer_service):
@@ -152,8 +154,7 @@ class TestSanitizerService:
         assert "test@example.com" not in result
         assert "100號" not in result
 
-        total_sanitized = sum(metadata.values())
-        assert total_sanitized == 4
+        assert metadata["removed_count"] == 4
 
     def test_no_sensitive_data(self, sanitizer_service):
         """Test text without sensitive data"""
@@ -161,7 +162,7 @@ class TestSanitizerService:
         result, metadata = sanitizer_service.sanitize_session_transcript(text)
 
         assert result == text
-        assert sum(metadata.values()) == 0
+        assert metadata["removed_count"] == 0
 
     def test_preserve_transcript_structure(self, sanitizer_service):
         """Test that sanitization preserves transcript structure"""
@@ -175,7 +176,7 @@ class TestSanitizerService:
         assert "諮商師：" in result
         assert "來訪者：" in result
         assert "0912345678" not in result
-        assert "[電話]" in result
+        assert "[已遮蔽手機號碼]" in result
 
 
 class TestReportGenerationService:
@@ -247,7 +248,7 @@ class TestReportGenerationService:
         第三者：我是家長
         """
 
-        with patch.object(report_service.client.chat.completions, 'create') as mock_create:
+        with patch.object(report_service.openai_client.chat.completions, 'create', new_callable=AsyncMock) as mock_create:
             mock_response = MagicMock()
             mock_response.choices = [MagicMock()]
             mock_response.choices[0].message.content = '{"num_participants": 3, "session_duration": "50分鐘"}'
@@ -263,16 +264,16 @@ class TestReportGenerationService:
         """Test retrieving theories using specific agent"""
         search_query = "職涯發展困擾"
 
-        with patch('aiohttp.ClientSession.post') as mock_post:
+        with patch('httpx.AsyncClient.post') as mock_post:
             mock_response = AsyncMock()
-            mock_response.status = 200
-            mock_response.json = AsyncMock(return_value={
+            mock_response.status_code = 200
+            mock_response.json = MagicMock(return_value={
                 "answer": "根據理論...",
                 "citations": [
                     {"theory": "Super 生涯發展理論", "relevance": 0.92}
                 ]
             })
-            mock_post.return_value.__aenter__.return_value = mock_response
+            mock_post.return_value = mock_response
 
             result = await report_service._retrieve_theories(search_query, agent_id=1)
 
@@ -284,9 +285,9 @@ class TestReportGenerationService:
         """Test generating structured report content"""
         transcript = "測試逐字稿"
         parsed_info = {"main_concerns": ["職涯困擾"]}
-        citations = [{"theory": "Holland理論"}]
+        citations = [{"theory": "Holland理論", "text": "Holland理論說明了六種職業類型..."}]
 
-        with patch.object(report_service.client.chat.completions, 'create') as mock_create:
+        with patch.object(report_service.openai_client.chat.completions, 'create', new_callable=AsyncMock) as mock_create:
             mock_response = MagicMock()
             mock_response.choices = [MagicMock()]
             mock_response.choices[0].message.content = '''
@@ -299,7 +300,7 @@ class TestReportGenerationService:
             mock_create.return_value = mock_response
 
             result = await report_service._generate_structured_report(
-                transcript, parsed_info, citations
+                transcript, parsed_info, citations, num_participants=2
             )
 
             assert "main_issue" in result
@@ -315,21 +316,23 @@ class TestReportGenerationService:
         諮商師：我們可以一起探索
         """
 
-        with patch.object(report_service.client.chat.completions, 'create') as mock_create:
+        with patch.object(report_service.openai_client.chat.completions, 'create', new_callable=AsyncMock) as mock_create:
             mock_response = MagicMock()
             mock_response.choices = [MagicMock()]
             mock_response.choices[0].message.content = '''
-            [
-                {
-                    "speaker": "來訪者",
-                    "text": "我真的不知道自己適合什麼工作",
-                    "significance": "核心困擾"
-                }
-            ]
+            {
+                "dialogues": [
+                    {
+                        "speaker": "來訪者",
+                        "text": "我真的不知道自己適合什麼工作",
+                        "significance": "核心困擾"
+                    }
+                ]
+            }
             '''
             mock_create.return_value = mock_response
 
-            result = await report_service._extract_key_dialogues(transcript)
+            result = await report_service._extract_key_dialogues(transcript, num_participants=2)
 
             assert isinstance(result, list)
             assert len(result) > 0
@@ -373,9 +376,9 @@ class TestServiceIntegration:
 
         # Step 1: STT
         stt_service = STTService()
-        with patch.object(stt_service.client.audio.transcriptions, 'create') as mock_stt:
+        with patch.object(stt_service.client.audio.transcriptions, 'create', new_callable=AsyncMock) as mock_stt:
             mock_stt.return_value = "來訪者：我的電話是 0912345678，我遇到職涯問題"
-            with patch("builtins.open", create=True):
+            with patch("builtins.open", create=True), patch("os.path.exists", return_value=True):
                 transcript = await stt_service.transcribe_audio(audio_path)
 
         # Step 2: Sanitize

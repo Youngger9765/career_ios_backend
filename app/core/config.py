@@ -18,7 +18,8 @@ class Settings(BaseSettings):
     # Server
     HOST: str = "0.0.0.0"
     PORT: int = 8000
-    
+    APP_URL: str = "http://localhost:8000"  # Base URL for internal API calls
+
     # Database
     DATABASE_URL: str = "postgresql://CHANGE_ME:CHANGE_ME@localhost:5432/career_db"
     DATABASE_POOL_SIZE: int = 20
