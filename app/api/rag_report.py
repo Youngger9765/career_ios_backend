@@ -1,11 +1,7 @@
 """API endpoints for case report generation"""
 
-import json
-from collections.abc import AsyncGenerator
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy import Float, Integer, String, bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
