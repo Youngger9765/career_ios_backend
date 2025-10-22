@@ -46,15 +46,3 @@ def auth_headers():
     }
 
 
-@pytest.fixture(autouse=True)
-def reset_mock_data():
-    """Reset mock data before each test"""
-    # This ensures each test starts with clean mock data
-    try:
-        from app.services.mock_service import MockDataService
-        MockDataService._instance = None
-        yield
-        MockDataService._instance = None
-    except ImportError:
-        # If mock service doesn't exist, just continue
-        yield

@@ -4,9 +4,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from app.core.config import settings
-from app.api import router as api_router
 # RAG API routers
-from app.api import rag_ingest, rag_search, rag_chat, rag_agents, rag_stats, rag_report, rag_evaluation, rag_evaluation_ui, evaluation_testsets, rag_evaluation_testsets_ui, chunk_strategies
+from app.api import rag_ingest, rag_search, rag_chat, rag_agents, rag_stats, rag_report, rag_evaluation, rag_evaluation_ui, evaluation_testsets, rag_evaluation_testsets_ui, chunk_strategies, comparison
 
 # Templates
 templates = Jinja2Templates(directory="app/templates")
@@ -29,18 +28,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API routes
-app.include_router(api_router, prefix=settings.API_V1_PREFIX)
-
 # Include RAG API routes
 app.include_router(rag_ingest.router)
 app.include_router(rag_search.router)
 app.include_router(rag_chat.router)
 app.include_router(rag_agents.router)
-
-# Report comparison page
-from app.api import comparison
-app.include_router(comparison.router, tags=["comparison"])
 app.include_router(rag_stats.router)
 app.include_router(rag_report.router)
 app.include_router(rag_evaluation.router)
@@ -48,6 +40,7 @@ app.include_router(rag_evaluation_ui.router)
 app.include_router(evaluation_testsets.router)
 app.include_router(rag_evaluation_testsets_ui.router)
 app.include_router(chunk_strategies.router)
+app.include_router(comparison.router, tags=["comparison"])
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -115,31 +108,6 @@ async def rag_chat_page(request: Request):
 async def rag_report_page(request: Request):
     """RAG Ops Console - Report Generation page"""
     return templates.TemplateResponse("rag/report.html", {"request": request})
-
-
-# Counseling Console (諮商前台)
-@app.get("/console/login", response_class=HTMLResponse)
-async def console_login(request: Request):
-    """Console - Login page"""
-    return templates.TemplateResponse("console/login.html", {"request": request})
-
-
-@app.get("/console", response_class=HTMLResponse)
-async def console_index(request: Request):
-    """Console - Main page"""
-    return templates.TemplateResponse("console/index.html", {"request": request})
-
-
-@app.get("/console/cases", response_class=HTMLResponse)
-async def console_cases(request: Request):
-    """Console - Cases page"""
-    return templates.TemplateResponse("console/cases.html", {"request": request})
-
-
-@app.get("/console/reports", response_class=HTMLResponse)
-async def console_reports(request: Request):
-    """Console - Reports page"""
-    return templates.TemplateResponse("console/reports.html", {"request": request})
 
 
 @app.get("/health")
