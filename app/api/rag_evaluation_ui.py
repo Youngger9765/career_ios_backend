@@ -8,7 +8,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.api.chunk_strategies import get_all_strategies
-from app.database import get_db
+from app.core.database import get_db
 from app.models.evaluation import EvaluationExperiment, EvaluationTestSet
 
 logger = logging.getLogger(__name__)

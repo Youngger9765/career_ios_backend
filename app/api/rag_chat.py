@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import Float, Integer, String, bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.core.database import get_db
 from app.services.openai_service import OpenAIService
 
 router = APIRouter(prefix="/api/rag/chat", tags=["rag-chat"])

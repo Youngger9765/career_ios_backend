@@ -2,7 +2,7 @@
 
 from io import BytesIO
 
-from pypdf import PdfReader
+from PyPDF2 import PdfReader
 
 
 class PDFService:

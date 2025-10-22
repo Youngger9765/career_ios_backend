@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.core.database import get_db
 from app.services.dialogue_extractor import DialogueExtractor
 from app.services.gemini_service import gemini_service
 from app.services.openai_service import OpenAIService
