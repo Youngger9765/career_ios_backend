@@ -6,7 +6,7 @@ Extracted from app/api/rag_report.py to follow SRP (Single Responsibility Princi
 
 import json
 import re
-from typing import Dict, List
+from typing import Dict
 
 from app.services.openai_service import OpenAIService
 

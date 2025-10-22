@@ -1,7 +1,5 @@
 """RAG Document Models - for PDF ingestion, chunking, and embeddings"""
 
-from datetime import datetime
-from typing import Optional
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text, func

@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import Float, Integer, String, bindparam, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db

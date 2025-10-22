@@ -1,6 +1,5 @@
 from pydantic import EmailStr, Field
 from typing import Optional
-from typing import Union
 from app.schemas.base import BaseSchema, BaseResponse
 from app.models.user import UserRole
 

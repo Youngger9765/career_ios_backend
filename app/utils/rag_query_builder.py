@@ -1,6 +1,6 @@
 """Enhanced RAG query builder for better theory retrieval"""
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 
 def extract_key_demographics(parsed_data: Dict[str, Any]) -> str:

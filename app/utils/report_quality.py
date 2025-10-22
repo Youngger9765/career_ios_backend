@@ -1,7 +1,7 @@
 """Report quality summary generation"""
 
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from openai import AsyncOpenAI
 
 from app.utils.report_validators import (

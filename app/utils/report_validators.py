@@ -1,7 +1,7 @@
 """Report quality validators for case conceptualization reports"""
 
 import re
-from typing import Dict, List
+from typing import Dict
 
 
 def validate_report_structure(report_text: str, use_legacy: bool = False) -> Dict:

@@ -1,7 +1,7 @@
 """Text Sanitization Service - 脫敏處理"""
 
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 
 class SanitizerService:
