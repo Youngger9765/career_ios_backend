@@ -254,58 +254,37 @@ async def get_evaluation_matrix(
     - Chunk Strategies (from chunk_strategies API)
     - Experiments results
     """
-
     from app.api.chunk_strategies import list_chunk_strategies
     from app.models.evaluation import EvaluationTestSet
+    from app.services.evaluation_matrix import (
+        format_experiments,
+        format_prompts,
+        format_testsets,
+    )
 
     # Get all testsets
     testsets_db = db.query(EvaluationTestSet).filter(
         EvaluationTestSet.is_active.is_(True)
     ).all()
-    testsets = [{"id": str(ts.id), "name": ts.name} for ts in testsets_db]
+    testsets = format_testsets(testsets_db)
 
     # Get all chunk strategies from API
-    chunk_strategies_data = await list_chunk_strategies()
-    # chunk_strategies_data is already a list of dicts
-    chunk_strategies = chunk_strategies_data
+    chunk_strategies = await list_chunk_strategies()
 
     # Get all prompt versions
     prompts_list = await list_prompt_versions(db)
-    prompts = [{"version": p["version"]} for p in prompts_list]
+    prompts = format_prompts(prompts_list)
 
     # Get all experiments
-    experiments = db.query(EvaluationExperiment).all()
-
-    # Build matrix: strategy -> prompt -> testset -> experiment
-    # matrix = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: None)))
-
-    # For now, create a simpler matrix structure
-    # Future: add testset_id to EvaluationExperiment model
-    experiments_list = []
-    for exp in experiments:
-        experiments_list.append({
-            "experiment_id": str(exp.id),
-            "name": exp.name,
-            "status": exp.status,
-            "chunk_strategy": exp.chunk_strategy,
-            "instruction_version": exp.instruction_version,
-            "avg_faithfulness": safe_float(exp.avg_faithfulness),
-            "avg_answer_relevancy": safe_float(exp.avg_answer_relevancy),
-            "avg_context_recall": safe_float(exp.avg_context_recall),
-            "avg_context_precision": safe_float(exp.avg_context_precision),
-            "total_queries": exp.total_queries or 0,
-            "created_at": exp.created_at.isoformat() if exp.created_at else None,
-            "chunking_method": exp.chunking_method,
-            "chunk_size": exp.chunk_size,
-            "chunk_overlap": exp.chunk_overlap,
-        })
+    experiments_db = db.query(EvaluationExperiment).all()
+    experiments = format_experiments(experiments_db)
 
     # Convert to structured format for frontend
     return {
         "testsets": testsets,
         "prompts": prompts,
         "chunk_strategies": chunk_strategies,
-        "experiments": experiments_list  # Return the list, not the matrix dict
+        "experiments": experiments
     }
 
 
@@ -547,6 +526,10 @@ async def compare_prompt_versions(
     db: Session = Depends(get_db),
 ):
     """Compare two prompt versions with their templates and performance metrics"""
+    from app.services.evaluation_analysis import (
+        calculate_average_metrics,
+        calculate_template_diff,
+    )
 
     # Get experiments for both versions
     exp1 = db.query(EvaluationExperiment).filter(
@@ -571,36 +554,10 @@ async def compare_prompt_versions(
         EvaluationExperiment.instruction_version == version2
     ).all()
 
-    def calc_avg_metrics(experiments):
-        metrics = {
-            'faithfulness': [],
-            'answer_relevancy': [],
-            'context_recall': [],
-            'context_precision': []
-        }
-
-        for exp in experiments:
-            if exp.avg_faithfulness is not None:
-                metrics['faithfulness'].append(float(exp.avg_faithfulness))
-            if exp.avg_answer_relevancy is not None:
-                metrics['answer_relevancy'].append(float(exp.avg_answer_relevancy))
-            if exp.avg_context_recall is not None:
-                metrics['context_recall'].append(float(exp.avg_context_recall))
-            if exp.avg_context_precision is not None:
-                metrics['context_precision'].append(float(exp.avg_context_precision))
-
-        return {
-            'avg_faithfulness': sum(metrics['faithfulness']) / len(metrics['faithfulness']) if metrics['faithfulness'] else None,
-            'avg_answer_relevancy': sum(metrics['answer_relevancy']) / len(metrics['answer_relevancy']) if metrics['answer_relevancy'] else None,
-            'avg_context_recall': sum(metrics['context_recall']) / len(metrics['context_recall']) if metrics['context_recall'] else None,
-            'avg_context_precision': sum(metrics['context_precision']) / len(metrics['context_precision']) if metrics['context_precision'] else None,
-        }
-
-    # Calculate text diff
-    import difflib
-    template1_lines = (exp1.instruction_template or "").splitlines()
-    template2_lines = (exp2.instruction_template or "").splitlines()
-    diff = list(difflib.unified_diff(template1_lines, template2_lines, lineterm=''))
+    # Calculate metrics and diff
+    metrics1 = calculate_average_metrics(all_exp1)
+    metrics2 = calculate_average_metrics(all_exp2)
+    diff = calculate_template_diff(exp1.instruction_template, exp2.instruction_template)
 
     return {
         "version1": {
@@ -608,14 +565,14 @@ async def compare_prompt_versions(
             "template": exp1.instruction_template,
             "hash": exp1.instruction_hash,
             "experiments_count": len(all_exp1),
-            "metrics": calc_avg_metrics(all_exp1)
+            "metrics": metrics1
         },
         "version2": {
             "version": version2,
             "template": exp2.instruction_template,
             "hash": exp2.instruction_hash,
             "experiments_count": len(all_exp2),
-            "metrics": calc_avg_metrics(all_exp2)
+            "metrics": metrics2
         },
         "diff": diff,
         "template_identical": exp1.instruction_hash == exp2.instruction_hash
@@ -625,6 +582,14 @@ async def compare_prompt_versions(
 @router.get("/recommendations")
 async def get_recommendations(db: Session = Depends(get_db)):
     """Get intelligent recommendations based on experiment results"""
+    from app.services.evaluation_analysis import (
+        analyze_chunk_strategy_performance,
+        analyze_instruction_version_performance,
+        calculate_coverage_metrics,
+        find_best_chunk_strategy,
+        find_best_instruction_version,
+        find_low_performing_strategies,
+    )
 
     experiments = db.query(EvaluationExperiment).filter(
         EvaluationExperiment.status == "completed"
@@ -638,49 +603,9 @@ async def get_recommendations(db: Session = Depends(get_db)):
 
     recommendations = []
 
-    # Analyze by chunk strategy
-    strategy_performance = {}
-    for exp in experiments:
-        if not exp.chunk_strategy:
-            continue
-
-        if exp.chunk_strategy not in strategy_performance:
-            strategy_performance[exp.chunk_strategy] = {
-                'count': 0,
-                'total_faithfulness': 0,
-                'total_answer_relevancy': 0,
-                'total_context_recall': 0,
-                'total_context_precision': 0
-            }
-
-        perf = strategy_performance[exp.chunk_strategy]
-        perf['count'] += 1
-
-        if exp.avg_faithfulness:
-            perf['total_faithfulness'] += float(exp.avg_faithfulness)
-        if exp.avg_answer_relevancy:
-            perf['total_answer_relevancy'] += float(exp.avg_answer_relevancy)
-        if exp.avg_context_recall:
-            perf['total_context_recall'] += float(exp.avg_context_recall)
-        if exp.avg_context_precision:
-            perf['total_context_precision'] += float(exp.avg_context_precision)
-
-    # Calculate averages and find best strategy
-    best_strategy = None
-    best_avg = 0
-
-    for strategy, perf in strategy_performance.items():
-        count = perf['count']
-        avg_score = (
-            perf['total_faithfulness'] / count +
-            perf['total_answer_relevancy'] / count +
-            perf['total_context_recall'] / count +
-            perf['total_context_precision'] / count
-        ) / 4
-
-        if avg_score > best_avg:
-            best_avg = avg_score
-            best_strategy = strategy
+    # Analyze chunk strategies
+    strategy_performance = analyze_chunk_strategy_performance(experiments)
+    best_strategy, best_avg = find_best_chunk_strategy(strategy_performance)
 
     if best_strategy:
         recommendations.append({
@@ -692,44 +617,9 @@ async def get_recommendations(db: Session = Depends(get_db)):
             "impact": "high"
         })
 
-    # Analyze by instruction version
-    version_performance = {}
-    for exp in experiments:
-        if not exp.instruction_version:
-            continue
-
-        if exp.instruction_version not in version_performance:
-            version_performance[exp.instruction_version] = {
-                'count': 0,
-                'total_score': 0
-            }
-
-        perf = version_performance[exp.instruction_version]
-        perf['count'] += 1
-
-        score_sum = 0
-        score_count = 0
-        if exp.avg_faithfulness:
-            score_sum += float(exp.avg_faithfulness)
-            score_count += 1
-        if exp.avg_answer_relevancy:
-            score_sum += float(exp.avg_answer_relevancy)
-            score_count += 1
-
-        if score_count > 0:
-            perf['total_score'] += score_sum / score_count
-
-    # Find best prompt version
-    best_version = None
-    best_version_avg = 0
-
-    for version, perf in version_performance.items():
-        if perf['count'] == 0:
-            continue
-        avg = perf['total_score'] / perf['count']
-        if avg > best_version_avg:
-            best_version_avg = avg
-            best_version = version
+    # Analyze instruction versions
+    version_performance = analyze_instruction_version_performance(experiments)
+    best_version, best_version_avg = find_best_instruction_version(version_performance)
 
     if best_version:
         recommendations.append({
@@ -742,48 +632,30 @@ async def get_recommendations(db: Session = Depends(get_db)):
         })
 
     # Check for low-performing areas
-    low_performers = []
-    for exp in experiments:
-        if exp.avg_faithfulness and float(exp.avg_faithfulness) < 0.5:
-            low_performers.append(exp.chunk_strategy or "unknown")
+    low_performers = find_low_performing_strategies(experiments, threshold=0.5)
 
     if low_performers:
-        unique_low = set(low_performers)
         recommendations.append({
             "type": "avoid_strategy",
             "priority": "medium",
             "title": "避免使用低效策略",
-            "description": f"以下策略表現較差: {', '.join(unique_low)}",
+            "description": f"以下策略表現較差: {', '.join(low_performers)}",
             "action": "考慮更換不同的 chunk 參數組合",
             "impact": "medium"
         })
 
     # Check coverage
-    total_cells = 0
-    completed_cells = 0
-    strategies = set()
-    test_sets = set()
+    coverage_metrics = calculate_coverage_metrics(experiments)
 
-    for exp in experiments:
-        if exp.chunk_strategy:
-            strategies.add(exp.chunk_strategy)
-        if hasattr(exp, 'test_set_name') and exp.test_set_name:
-            test_sets.add(exp.test_set_name)
-
-    if strategies and test_sets:
-        total_cells = len(strategies) * len(test_sets)
-        completed_cells = len(experiments)
-        coverage = (completed_cells / total_cells) * 100
-
-        if coverage < 50:
-            recommendations.append({
-                "type": "increase_coverage",
-                "priority": "low",
-                "title": "增加測試覆蓋率",
-                "description": f"目前評估矩陣覆蓋率僅 {coverage:.1f}%",
-                "action": "執行更多策略與測試集的組合實驗",
-                "impact": "low"
-            })
+    if coverage_metrics['coverage_percent'] < 50 and coverage_metrics['total_cells'] > 0:
+        recommendations.append({
+            "type": "increase_coverage",
+            "priority": "low",
+            "title": "增加測試覆蓋率",
+            "description": f"目前評估矩陣覆蓋率僅 {coverage_metrics['coverage_percent']:.1f}%",
+            "action": "執行更多策略與測試集的組合實驗",
+            "impact": "low"
+        })
 
     # Summary
     summary = f"分析了 {len(experiments)} 個實驗，生成了 {len(recommendations)} 個建議"
