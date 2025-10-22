@@ -2,7 +2,7 @@
 
 from io import BytesIO
 
-import PyPDF2
+from pypdf import PdfReader
 
 
 class PDFService:
@@ -26,7 +26,7 @@ class PDFService:
 
         try:
             pdf_file = BytesIO(pdf_bytes)
-            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            pdf_reader = PdfReader(pdf_file)
 
             text_parts = []
             for page in pdf_reader.pages:
@@ -54,7 +54,7 @@ class PDFService:
 
         try:
             pdf_file = BytesIO(pdf_bytes)
-            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            pdf_reader = PdfReader(pdf_file)
 
             pages = []
             for page in pdf_reader.pages:
@@ -81,7 +81,7 @@ class PDFService:
 
         try:
             pdf_file = BytesIO(pdf_bytes)
-            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            pdf_reader = PdfReader(pdf_file)
             return len(pdf_reader.pages)
 
         except Exception as e:
@@ -102,7 +102,7 @@ class PDFService:
 
         try:
             pdf_file = BytesIO(pdf_bytes)
-            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            pdf_reader = PdfReader(pdf_file)
 
             metadata = {
                 "pages": len(pdf_reader.pages),

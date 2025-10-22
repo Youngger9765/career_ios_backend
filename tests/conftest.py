@@ -44,5 +44,3 @@ def auth_headers():
     return {
         "Authorization": "Bearer mock_token_12345"
     }
-
-
