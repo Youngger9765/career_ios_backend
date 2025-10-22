@@ -1,9 +1,9 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 try:
-    from pydantic_settings import BaseSettings
+    from pydantic_settings import BaseSettings, SettingsConfigDict
 except ImportError:
     from pydantic import BaseSettings
-from pydantic import validator
+from pydantic import field_validator
 
 
 class Settings(BaseSettings):
@@ -63,9 +63,10 @@ class Settings(BaseSettings):
     
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
-    
-    @validator("CORS_ORIGINS", pre=True)
-    def assemble_cors_origins(cls, v):
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> List[str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
         elif isinstance(v, list):
@@ -79,11 +80,14 @@ class Settings(BaseSettings):
     # File Upload
     MAX_UPLOAD_SIZE: int = 100 * 1024 * 1024  # 100MB
     ALLOWED_AUDIO_TYPES: List[str] = [".mp3", ".wav", ".m4a", ".aac"]
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        extra = "ignore"  # Allow extra fields from .env
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore",  # Allow extra fields from .env
+        # Parse comma-separated strings for List fields
+        env_parse_none_str="null",
+    )
 
 
 settings = Settings()
