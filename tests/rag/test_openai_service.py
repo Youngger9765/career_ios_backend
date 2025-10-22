@@ -11,13 +11,14 @@ class TestOpenAIService:
     """Test suite for OpenAIService"""
 
     @pytest.mark.asyncio
-    async def test_create_embedding_returns_correct_dimensions(self, mock_embedding_response):
+    async def test_create_embedding_returns_correct_dimensions(self):
         """Test that create_embedding returns 1536-dimensional vector"""
         service = OpenAIService()
 
         with patch.object(
             service.client.embeddings,
             "create",
+            new_callable=AsyncMock,
             return_value=MagicMock(data=[MagicMock(embedding=[0.1] * 1536)]),
         ):
             embedding = await service.create_embedding("test text")
@@ -42,6 +43,7 @@ class TestOpenAIService:
         with patch.object(
             service.client.embeddings,
             "create",
+            new_callable=AsyncMock,
             return_value=MagicMock(
                 data=[
                     MagicMock(embedding=[0.1] * 1536),
@@ -68,7 +70,8 @@ class TestOpenAIService:
         with patch.object(
             service.client.chat.completions,
             "create",
-            return_value=AsyncMock(return_value=mock_response)(),
+            new_callable=AsyncMock,
+            return_value=mock_response,
         ):
             response = await service.chat_completion(messages)
 
@@ -89,7 +92,8 @@ class TestOpenAIService:
         with patch.object(
             service.client.chat.completions,
             "create",
-            new=AsyncMock(return_value=mock_response),
+            new_callable=AsyncMock,
+            return_value=mock_response,
         ) as mock_create:
             response = await service.chat_completion_with_context(question, context)
 
@@ -107,6 +111,7 @@ class TestOpenAIService:
         with patch.object(
             service.client.embeddings,
             "create",
+            new_callable=AsyncMock,
             side_effect=Exception("API Error"),
         ):
             with pytest.raises(Exception, match="API Error"):

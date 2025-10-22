@@ -2,10 +2,11 @@
 Pytest configuration and fixtures
 """
 import os
-from typing import Generator
+from typing import AsyncGenerator, Generator
 
 import pytest
 from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 
 # Set test environment
 os.environ["MOCK_MODE"] = "true"
@@ -14,9 +15,21 @@ os.environ["DEBUG"] = "true"
 
 @pytest.fixture
 def client() -> Generator:
-    """Create a test client for the FastAPI app"""
+    """Create a synchronous test client for the FastAPI app"""
     from app.main import app
+
     with TestClient(app) as test_client:
+        yield test_client
+
+
+@pytest.fixture
+async def async_client() -> AsyncGenerator:
+    """Create an async test client for the FastAPI app"""
+    from app.main import app
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as test_client:
         yield test_client
 
 
