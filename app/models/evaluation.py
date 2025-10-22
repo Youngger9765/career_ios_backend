@@ -21,16 +21,22 @@ class EvaluationExperiment(Base, BaseModel):
     )  # chunking, retrieval, generation, end_to_end
 
     # Configuration
-    chunking_method = Column(String(50), nullable=True)  # fixed, recursive, semantic, etc.
+    chunking_method = Column(
+        String(50), nullable=True
+    )  # fixed, recursive, semantic, etc.
     chunk_size = Column(Integer, nullable=True)
     chunk_overlap = Column(Integer, nullable=True)
-    chunk_strategy = Column(String(100), nullable=True)  # NEW: strategy filter for evaluation
+    chunk_strategy = Column(
+        String(100), nullable=True
+    )  # NEW: strategy filter for evaluation
     config_json = Column(JSON, nullable=True)  # Additional config parameters
 
     # Instruction Prompt Versioning
     instruction_version = Column(String(50), nullable=True)  # e.g., "v2.0", "v2.1"
     instruction_template = Column(Text, nullable=True)  # Full prompt template
-    instruction_hash = Column(String(64), nullable=True)  # SHA256 hash for quick comparison
+    instruction_hash = Column(
+        String(64), nullable=True
+    )  # SHA256 hash for quick comparison
 
     # Status
     status = Column(
@@ -62,7 +68,9 @@ class EvaluationResult(Base, BaseModel):
 
     __tablename__ = "evaluation_results"
 
-    experiment_id = Column(UUID(as_uuid=True), ForeignKey("evaluation_experiments.id"), nullable=False)
+    experiment_id = Column(
+        UUID(as_uuid=True), ForeignKey("evaluation_experiments.id"), nullable=False
+    )
 
     # Query details
     question = Column(Text, nullable=False)
@@ -109,7 +117,9 @@ class EvaluationTestSet(Base, BaseModel):
 
     # Metadata
     total_cases = Column(Integer, nullable=False, default=0)
-    category = Column(String(100), nullable=True)  # e.g., "career_counseling", "interview_prep"
+    category = Column(
+        String(100), nullable=True
+    )  # e.g., "career_counseling", "interview_prep"
 
 
 class DocumentQualityMetric(Base, BaseModel):

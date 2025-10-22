@@ -117,9 +117,11 @@ class EvaluationService:
             Updated experiment with results
         """
         # Get experiment
-        experiment = db.query(EvaluationExperiment).filter(
-            EvaluationExperiment.id == experiment_id
-        ).first()
+        experiment = (
+            db.query(EvaluationExperiment)
+            .filter(EvaluationExperiment.id == experiment_id)
+            .first()
+        )
 
         if not experiment:
             raise ValueError(f"Experiment {experiment_id} not found")
@@ -131,34 +133,41 @@ class EvaluationService:
         try:
             # Query document IDs that have the specified chunk_strategy
             from sqlalchemy import text
+
             document_ids = []
             total_documents = 0
 
             if experiment.chunk_strategy:
                 result = db.execute(
-                    text("""
+                    text(
+                        """
                         SELECT DISTINCT doc_id
                         FROM chunks
                         WHERE chunk_strategy = :strategy
                         ORDER BY doc_id
-                    """),
-                    {"strategy": experiment.chunk_strategy}
+                    """
+                    ),
+                    {"strategy": experiment.chunk_strategy},
                 )
                 document_ids = [row.doc_id for row in result]
                 total_documents = len(document_ids)
             else:
                 # If no strategy specified, get all documents with chunks
-                result = db.execute(text("SELECT DISTINCT doc_id FROM chunks ORDER BY doc_id"))
+                result = db.execute(
+                    text("SELECT DISTINCT doc_id FROM chunks ORDER BY doc_id")
+                )
                 document_ids = [row.doc_id for row in result]
                 total_documents = len(document_ids)
 
             # Store document snapshot in config_json
             config = experiment.config_json or {}
-            config.update({
-                "document_ids": document_ids,
-                "total_documents": total_documents,
-                "evaluation_timestamp": datetime.now().isoformat()
-            })
+            config.update(
+                {
+                    "document_ids": document_ids,
+                    "total_documents": total_documents,
+                    "evaluation_timestamp": datetime.now().isoformat(),
+                }
+            )
             experiment.config_json = config
 
             # STEP 1: Generate answers using RAG for each test case
@@ -181,7 +190,8 @@ class EvaluationService:
 
                 # Build SQL query - JOIN embeddings table for vector search
                 if experiment.chunk_strategy:
-                    query = text("""
+                    query = text(
+                        """
                         SELECT
                             c.id as chunk_id,
                             c.doc_id,
@@ -194,16 +204,21 @@ class EvaluationService:
                         WHERE c.chunk_strategy = :chunk_strategy
                         ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
                         LIMIT 7
-                    """).bindparams(
+                    """
+                    ).bindparams(
                         bindparam("query_embedding", type_=String),
-                        bindparam("chunk_strategy", type_=String)
+                        bindparam("chunk_strategy", type_=String),
                     )
-                    result = db.execute(query, {
-                        "query_embedding": embedding_str,
-                        "chunk_strategy": experiment.chunk_strategy
-                    })
+                    result = db.execute(
+                        query,
+                        {
+                            "query_embedding": embedding_str,
+                            "chunk_strategy": experiment.chunk_strategy,
+                        },
+                    )
                 else:
-                    query = text("""
+                    query = text(
+                        """
                         SELECT
                             c.id as chunk_id,
                             c.doc_id,
@@ -215,7 +230,8 @@ class EvaluationService:
                         JOIN documents d ON c.doc_id = d.id
                         ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
                         LIMIT 7
-                    """).bindparams(bindparam("query_embedding", type_=String))
+                    """
+                    ).bindparams(bindparam("query_embedding", type_=String))
                     result = db.execute(query, {"query_embedding": embedding_str})
 
                 chunks = result.fetchall()
@@ -225,22 +241,30 @@ class EvaluationService:
                 case["contexts"] = contexts
 
                 # Generate answer using OpenAI with retrieved contexts
-                system_prompt = experiment.instruction_template or """你是一位專業的職涯諮詢師，根據提供的文件內容回答問題。
+                system_prompt = (
+                    experiment.instruction_template
+                    or """你是一位專業的職涯諮詢師，根據提供的文件內容回答問題。
 
 請遵循以下原則：
 1. 僅使用提供的文件內容回答
 2. 如果文件中沒有相關資訊，請誠實說明
 3. 保持專業、友善的語氣
 4. 提供具體、可操作的建議"""
+                )
 
-                context_text = "\n\n".join([f"[文件 {i+1}]\n{chunk}" for i, chunk in enumerate(contexts)])
+                context_text = "\n\n".join(
+                    [f"[文件 {i+1}]\n{chunk}" for i, chunk in enumerate(contexts)]
+                )
 
                 answer = await openai_service.chat_completion(
                     messages=[
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": f"參考文件：\n{context_text}\n\n問題：{question}"}
+                        {
+                            "role": "user",
+                            "content": f"參考文件：\n{context_text}\n\n問題：{question}",
+                        },
                     ],
-                    temperature=0.7
+                    temperature=0.7,
                 )
 
                 case["answer"] = answer
@@ -262,7 +286,9 @@ class EvaluationService:
                 if experiment.chunk_strategy:
                     mlflow.log_param("chunk_strategy", experiment.chunk_strategy)
                 if experiment.instruction_version:
-                    mlflow.log_param("instruction_version", experiment.instruction_version)
+                    mlflow.log_param(
+                        "instruction_version", experiment.instruction_version
+                    )
                 if experiment.instruction_hash:
                     mlflow.log_param("instruction_hash", experiment.instruction_hash)
 
@@ -312,7 +338,9 @@ class EvaluationService:
 
                 # Create a wrapper function to run evaluate in a thread
                 def run_ragas_sync():
-                    return evaluate(dataset, metrics=metrics, llm=llm, embeddings=embeddings)
+                    return evaluate(
+                        dataset, metrics=metrics, llm=llm, embeddings=embeddings
+                    )
 
                 # Execute in thread pool to avoid event loop conflicts
                 loop = asyncio.get_event_loop()
@@ -333,10 +361,14 @@ class EvaluationService:
 
                 # Calculate aggregated metrics (convert numpy types to Python native types)
                 avg_faithfulness = (
-                    safe_metric(df["faithfulness"].mean()) if "faithfulness" in df.columns else None
+                    safe_metric(df["faithfulness"].mean())
+                    if "faithfulness" in df.columns
+                    else None
                 )
                 avg_answer_relevancy = (
-                    safe_metric(df["answer_relevancy"].mean()) if "answer_relevancy" in df.columns else None
+                    safe_metric(df["answer_relevancy"].mean())
+                    if "answer_relevancy" in df.columns
+                    else None
                 )
                 avg_context_recall = (
                     safe_metric(df["context_recall"].mean())
@@ -355,7 +387,9 @@ class EvaluationService:
                 experiment.avg_answer_relevancy = avg_answer_relevancy
                 experiment.avg_context_recall = avg_context_recall
                 experiment.avg_context_precision = avg_context_precision
-                experiment.avg_latency_ms = float((evaluation_time / len(test_cases)) * 1000)
+                experiment.avg_latency_ms = float(
+                    (evaluation_time / len(test_cases)) * 1000
+                )
                 experiment.status = "completed"
 
                 # Log metrics to MLflow
@@ -421,9 +455,11 @@ class EvaluationService:
         Returns:
             Experiment or None
         """
-        return db.query(EvaluationExperiment).filter(
-            EvaluationExperiment.id == experiment_id
-        ).first()
+        return (
+            db.query(EvaluationExperiment)
+            .filter(EvaluationExperiment.id == experiment_id)
+            .first()
+        )
 
     async def list_experiments(
         self,
@@ -448,11 +484,18 @@ class EvaluationService:
         query = db.query(EvaluationExperiment)
 
         if experiment_type:
-            query = query.filter(EvaluationExperiment.experiment_type == experiment_type)
+            query = query.filter(
+                EvaluationExperiment.experiment_type == experiment_type
+            )
         if status:
             query = query.filter(EvaluationExperiment.status == status)
 
-        return query.order_by(EvaluationExperiment.created_at.desc()).offset(offset).limit(limit).all()
+        return (
+            query.order_by(EvaluationExperiment.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
 
     async def get_experiment_results(
         self,
@@ -539,7 +582,10 @@ class EvaluationService:
                 best_answer_relevancy_score = exp.avg_answer_relevancy
                 comparison["best_answer_relevancy"] = exp.name
 
-            if exp.avg_context_recall and exp.avg_context_recall > best_context_recall_score:
+            if (
+                exp.avg_context_recall
+                and exp.avg_context_recall > best_context_recall_score
+            ):
                 best_context_recall_score = exp.avg_context_recall
                 comparison["best_context_recall"] = exp.name
 

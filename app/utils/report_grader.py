@@ -10,9 +10,7 @@ from openai import AsyncOpenAI
 
 
 async def grade_report_with_llm(
-    report_text: str,
-    use_legacy: bool,
-    client: AsyncOpenAI
+    report_text: str, use_legacy: bool, client: AsyncOpenAI
 ) -> Dict[str, Any]:
     """
     使用 LLM 評分個案概念化報告品質
@@ -141,25 +139,28 @@ async def grade_report_with_llm(
             messages=[
                 {
                     "role": "system",
-                    "content": "你是職涯諮商領域的資深督導，擅長評估個案概念化報告的品質。你的評分客觀、嚴謹，能提供具體且有建設性的回饋。"
+                    "content": "你是職涯諮商領域的資深督導，擅長評估個案概念化報告的品質。你的評分客觀、嚴謹，能提供具體且有建設性的回饋。",
                 },
-                {
-                    "role": "user",
-                    "content": grading_prompt
-                }
+                {"role": "user", "content": grading_prompt},
             ],
             response_format={"type": "json_object"},
-            temperature=0.3  # 較低的溫度確保評分一致性
+            temperature=0.3,  # 較低的溫度確保評分一致性
         )
 
         result = json.loads(response.choices[0].message.content)
 
         # 確保所有必要欄位都存在
         required_fields = [
-            "problem_clarity_score", "problem_evolution_score", "help_seeking_score",
-            "related_factors_score", "function_assessment_score", "problem_judgment_score",
-            "counseling_plan_score", "implementation_eval_score",
-            "total_score", "grade"
+            "problem_clarity_score",
+            "problem_evolution_score",
+            "help_seeking_score",
+            "related_factors_score",
+            "function_assessment_score",
+            "problem_judgment_score",
+            "counseling_plan_score",
+            "implementation_eval_score",
+            "total_score",
+            "grade",
         ]
 
         for field in required_fields:
@@ -168,21 +169,37 @@ async def grade_report_with_llm(
 
         # 驗證分數範圍（依照個案概念化能力評量表）
         if not (0 <= result["problem_clarity_score"] <= 15):
-            raise ValueError(f"Invalid problem_clarity_score: {result['problem_clarity_score']}")
+            raise ValueError(
+                f"Invalid problem_clarity_score: {result['problem_clarity_score']}"
+            )
         if not (0 <= result["problem_evolution_score"] <= 15):
-            raise ValueError(f"Invalid problem_evolution_score: {result['problem_evolution_score']}")
+            raise ValueError(
+                f"Invalid problem_evolution_score: {result['problem_evolution_score']}"
+            )
         if not (0 <= result["help_seeking_score"] <= 10):
-            raise ValueError(f"Invalid help_seeking_score: {result['help_seeking_score']}")
+            raise ValueError(
+                f"Invalid help_seeking_score: {result['help_seeking_score']}"
+            )
         if not (0 <= result["related_factors_score"] <= 25):
-            raise ValueError(f"Invalid related_factors_score: {result['related_factors_score']}")
+            raise ValueError(
+                f"Invalid related_factors_score: {result['related_factors_score']}"
+            )
         if not (0 <= result["function_assessment_score"] <= 10):
-            raise ValueError(f"Invalid function_assessment_score: {result['function_assessment_score']}")
+            raise ValueError(
+                f"Invalid function_assessment_score: {result['function_assessment_score']}"
+            )
         if not (0 <= result["problem_judgment_score"] <= 10):
-            raise ValueError(f"Invalid problem_judgment_score: {result['problem_judgment_score']}")
+            raise ValueError(
+                f"Invalid problem_judgment_score: {result['problem_judgment_score']}"
+            )
         if not (0 <= result["counseling_plan_score"] <= 10):
-            raise ValueError(f"Invalid counseling_plan_score: {result['counseling_plan_score']}")
+            raise ValueError(
+                f"Invalid counseling_plan_score: {result['counseling_plan_score']}"
+            )
         if not (0 <= result["implementation_eval_score"] <= 5):
-            raise ValueError(f"Invalid implementation_eval_score: {result['implementation_eval_score']}")
+            raise ValueError(
+                f"Invalid implementation_eval_score: {result['implementation_eval_score']}"
+            )
         if not (0 <= result["total_score"] <= 100):
             raise ValueError(f"Invalid total_score: {result['total_score']}")
 

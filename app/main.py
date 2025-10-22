@@ -127,14 +127,12 @@ async def rag_report_page(request: Request):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
+    return {"status": "healthy", "timestamp": "2024-01-01T00:00:00Z"}
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host=settings.HOST,

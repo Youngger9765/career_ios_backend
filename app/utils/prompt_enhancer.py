@@ -55,12 +55,11 @@ def validate_prompt_has_rationale_requirements(prompt: str) -> Dict[str, bool]:
     has_bad_example = "❌" in prompt and ("錯誤" in prompt or "缺乏" in prompt)
 
     has_examples = (
-        ("範例" in prompt or "示範" in prompt or "✅" in prompt or "❌" in prompt)
-        and (has_good_example or has_bad_example)
-    )
+        "範例" in prompt or "示範" in prompt or "✅" in prompt or "❌" in prompt
+    ) and (has_good_example or has_bad_example)
 
     return {
         "has_examples": has_examples,
         "has_good_example": has_good_example,
-        "has_bad_example": has_bad_example
+        "has_bad_example": has_bad_example,
     }

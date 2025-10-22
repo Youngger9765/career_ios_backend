@@ -63,7 +63,9 @@ async def list_agents(db: AsyncSession = Depends(get_db)):
         ]
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to list agents: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list agents: {str(e)}"
+        ) from e
 
 
 @router.post("/", response_model=AgentResponse)
@@ -93,7 +95,9 @@ async def create_agent(agent_data: AgentCreate, db: AsyncSession = Depends(get_d
 
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to create agent: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create agent: {str(e)}"
+        ) from e
 
 
 @router.get("/{agent_id}", response_model=AgentResponse)
@@ -119,7 +123,9 @@ async def get_agent(agent_id: int, db: AsyncSession = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get agent: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get agent: {str(e)}"
+        ) from e
 
 
 @router.get("/{agent_id}/versions", response_model=List[AgentVersionResponse])
@@ -127,7 +133,9 @@ async def list_agent_versions(agent_id: int, db: AsyncSession = Depends(get_db))
     """List all versions for an agent"""
 
     try:
-        result = await db.execute(select(AgentVersion).where(AgentVersion.agent_id == agent_id))
+        result = await db.execute(
+            select(AgentVersion).where(AgentVersion.agent_id == agent_id)
+        )
         versions = result.scalars().all()
 
         return [
@@ -142,4 +150,6 @@ async def list_agent_versions(agent_id: int, db: AsyncSession = Depends(get_db))
         ]
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to list versions: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list versions: {str(e)}"
+        ) from e

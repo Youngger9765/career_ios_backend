@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/rag/evaluation/testsets", tags=["evaluation-test
 # Schemas
 class TestCase(BaseModel):
     """單個測試案例"""
+
     question: str
     ground_truth: Optional[str] = None
     contexts: Optional[List[str]] = None
@@ -57,10 +58,7 @@ class TestSetDetailResponse(TestSetResponse):
 
 # API Endpoints
 @router.post("/", response_model=TestSetResponse)
-async def create_testset(
-    testset_data: TestSetCreate,
-    db: Session = Depends(get_db)
-):
+async def create_testset(testset_data: TestSetCreate, db: Session = Depends(get_db)):
     """建立測試集"""
     test_cases_json = [case.model_dump() for case in testset_data.test_cases]
 
@@ -70,7 +68,7 @@ async def create_testset(
         category=testset_data.category,
         test_cases=test_cases_json,
         total_cases=len(test_cases_json),
-        is_active=True
+        is_active=True,
     )
 
     db.add(testset)
@@ -85,7 +83,7 @@ async def list_testsets(
     is_active: Optional[bool] = None,
     skip: int = 0,
     limit: int = 50,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """列出測試集"""
     query = db.query(EvaluationTestSet)
@@ -95,15 +93,22 @@ async def list_testsets(
     if is_active is not None:
         query = query.filter(EvaluationTestSet.is_active == is_active)
 
-    return query.order_by(EvaluationTestSet.created_at.desc()).offset(skip).limit(limit).all()
+    return (
+        query.order_by(EvaluationTestSet.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 
 @router.get("/{testset_id}", response_model=TestSetDetailResponse)
 async def get_testset(testset_id: str, db: Session = Depends(get_db)):
     """取得測試集詳情（包含所有測試案例）"""
-    testset = db.query(EvaluationTestSet).filter(
-        EvaluationTestSet.id == uuid.UUID(testset_id)
-    ).first()
+    testset = (
+        db.query(EvaluationTestSet)
+        .filter(EvaluationTestSet.id == uuid.UUID(testset_id))
+        .first()
+    )
 
     if not testset:
         raise HTTPException(status_code=404, detail="Test set not found")
@@ -113,14 +118,14 @@ async def get_testset(testset_id: str, db: Session = Depends(get_db)):
 
 @router.put("/{testset_id}", response_model=TestSetResponse)
 async def update_testset(
-    testset_id: str,
-    testset_update: TestSetUpdate,
-    db: Session = Depends(get_db)
+    testset_id: str, testset_update: TestSetUpdate, db: Session = Depends(get_db)
 ):
     """更新測試集"""
-    testset = db.query(EvaluationTestSet).filter(
-        EvaluationTestSet.id == uuid.UUID(testset_id)
-    ).first()
+    testset = (
+        db.query(EvaluationTestSet)
+        .filter(EvaluationTestSet.id == uuid.UUID(testset_id))
+        .first()
+    )
 
     if not testset:
         raise HTTPException(status_code=404, detail="Test set not found")
@@ -145,9 +150,11 @@ async def update_testset(
 @router.delete("/{testset_id}")
 async def delete_testset(testset_id: str, db: Session = Depends(get_db)):
     """刪除測試集"""
-    testset = db.query(EvaluationTestSet).filter(
-        EvaluationTestSet.id == uuid.UUID(testset_id)
-    ).first()
+    testset = (
+        db.query(EvaluationTestSet)
+        .filter(EvaluationTestSet.id == uuid.UUID(testset_id))
+        .first()
+    )
 
     if not testset:
         raise HTTPException(status_code=404, detail="Test set not found")
@@ -160,9 +167,11 @@ async def delete_testset(testset_id: str, db: Session = Depends(get_db)):
 @router.post("/{testset_id}/toggle")
 async def toggle_testset(testset_id: str, db: Session = Depends(get_db)):
     """啟用/停用測試集"""
-    testset = db.query(EvaluationTestSet).filter(
-        EvaluationTestSet.id == uuid.UUID(testset_id)
-    ).first()
+    testset = (
+        db.query(EvaluationTestSet)
+        .filter(EvaluationTestSet.id == uuid.UUID(testset_id))
+        .first()
+    )
 
     if not testset:
         raise HTTPException(status_code=404, detail="Test set not found")
@@ -177,9 +186,11 @@ async def toggle_testset(testset_id: str, db: Session = Depends(get_db)):
 @router.post("/{testset_id}/duplicate", response_model=TestSetResponse)
 async def duplicate_testset(testset_id: str, db: Session = Depends(get_db)):
     """複製測試集"""
-    original = db.query(EvaluationTestSet).filter(
-        EvaluationTestSet.id == uuid.UUID(testset_id)
-    ).first()
+    original = (
+        db.query(EvaluationTestSet)
+        .filter(EvaluationTestSet.id == uuid.UUID(testset_id))
+        .first()
+    )
 
     if not original:
         raise HTTPException(status_code=404, detail="Test set not found")
@@ -190,7 +201,7 @@ async def duplicate_testset(testset_id: str, db: Session = Depends(get_db)):
         category=original.category,
         test_cases=original.test_cases,
         total_cases=original.total_cases,
-        is_active=False
+        is_active=False,
     )
 
     db.add(new_testset)

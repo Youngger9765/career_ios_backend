@@ -15,7 +15,9 @@ class Agent(Base):
     status = Column(String(50), default="draft", index=True)
     active_version_id = Column(Integer, ForeignKey("agent_versions.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     # Relationships
     versions = relationship(

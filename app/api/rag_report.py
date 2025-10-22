@@ -15,24 +15,49 @@ from app.services.transcript_parser import TranscriptParser
 # Report schemas for structured output
 class EnhancedReportSchema(BaseModel):
     """10段式增強報告結構"""
+
     section_2_main_issue: str = Field(description="二、主訴問題 - 個案陳述與諮詢師觀察")
-    section_3_development: str = Field(description="三、問題發展脈絡 - 出現時間、持續頻率、影響程度")
-    section_4_help_seeking: str = Field(description="四、求助動機與期待 - 引發因素、期待目標")
-    section_5_multilevel_analysis: str = Field(description="五、多層次因素分析 - 個人、人際、環境、發展因素（必須引用理論[1][2]）")
-    section_6_strengths: str = Field(description="六、個案優勢與資源 - 心理優勢、社會資源")
-    section_7_professional_judgment: str = Field(description="七、諮詢師的專業判斷 - 問題假設、理論依據（必須引用理論[3][4]）")
-    section_8_goals_strategies: str = Field(description="八、諮商目標與介入策略 - SMART目標、介入技術（必須引用理論[5][6]）")
-    section_9_expected_outcomes: str = Field(description="九、預期成效與評估 - 短期指標、長期指標、可能調整")
-    section_10_self_reflection: str = Field(description="十、諮詢師自我反思 - 本次晤談優點和可改進處")
+    section_3_development: str = Field(
+        description="三、問題發展脈絡 - 出現時間、持續頻率、影響程度"
+    )
+    section_4_help_seeking: str = Field(
+        description="四、求助動機與期待 - 引發因素、期待目標"
+    )
+    section_5_multilevel_analysis: str = Field(
+        description="五、多層次因素分析 - 個人、人際、環境、發展因素（必須引用理論[1][2]）"
+    )
+    section_6_strengths: str = Field(
+        description="六、個案優勢與資源 - 心理優勢、社會資源"
+    )
+    section_7_professional_judgment: str = Field(
+        description="七、諮詢師的專業判斷 - 問題假設、理論依據（必須引用理論[3][4]）"
+    )
+    section_8_goals_strategies: str = Field(
+        description="八、諮商目標與介入策略 - SMART目標、介入技術（必須引用理論[5][6]）"
+    )
+    section_9_expected_outcomes: str = Field(
+        description="九、預期成效與評估 - 短期指標、長期指標、可能調整"
+    )
+    section_10_self_reflection: str = Field(
+        description="十、諮詢師自我反思 - 本次晤談優點和可改進處"
+    )
 
 
 class LegacyReportSchema(BaseModel):
     """5段式舊版報告結構"""
+
     main_issue: str = Field(description="主訴問題 - 個案說的，此次想要討論的議題")
-    cause_analysis: str = Field(description="成因分析 - 諮詢師認為個案為何會有這些主訴問題，結合引用的理論[1][2]分析")
-    counseling_goal: str = Field(description="晤談目標（移動主訴）- 諮詢師對個案諮詢目標的假設")
-    intervention: str = Field(description="介入策略 - 諮詢師判斷會需要帶個案做的事，結合理論說明")
+    cause_analysis: str = Field(
+        description="成因分析 - 諮詢師認為個案為何會有這些主訴問題，結合引用的理論[1][2]分析"
+    )
+    counseling_goal: str = Field(
+        description="晤談目標（移動主訴）- 諮詢師對個案諮詢目標的假設"
+    )
+    intervention: str = Field(
+        description="介入策略 - 諮詢師判斷會需要帶個案做的事，結合理論說明"
+    )
     effectiveness: str = Field(description="目前成效評估 - 上述目標和策略達成的狀況")
+
 
 router = APIRouter(prefix="/api/report", tags=["report"])
 
@@ -44,7 +69,7 @@ def format_report_as_html(report: dict) -> str:
 
     # Client info
     html += "<h2>案主基本資料</h2><table border='1'>"
-    for key, value in report['client_info'].items():
+    for key, value in report["client_info"].items():
         if isinstance(value, list):
             value = ", ".join(value)
         html += f"<tr><th>{key}</th><td>{value}</td></tr>"
@@ -52,19 +77,19 @@ def format_report_as_html(report: dict) -> str:
 
     # Main concerns
     html += "<h2>主訴問題</h2><ul>"
-    for concern in report['main_concerns']:
+    for concern in report["main_concerns"]:
         html += f"<li>{concern}</li>"
     html += "</ul>"
 
     # Goals
     html += "<h2>晤談目標</h2><ul>"
-    for goal in report['counseling_goals']:
+    for goal in report["counseling_goals"]:
         html += f"<li>{goal}</li>"
     html += "</ul>"
 
     # Techniques
     html += "<h2>諮詢技巧</h2><ul>"
-    for technique in report['techniques']:
+    for technique in report["techniques"]:
         html += f"<li>{technique}</li>"
     html += "</ul>"
 
@@ -74,13 +99,13 @@ def format_report_as_html(report: dict) -> str:
 
     # Theories
     html += "<h2>相關理論文獻</h2><ul>"
-    for theory in report['theories']:
+    for theory in report["theories"]:
         html += f"<li><b>{theory['document']}</b> (相似度: {theory['score']:.2f})<br>{theory['text'][:200]}...</li>"
     html += "</ul>"
 
     # Dialogues
     html += "<h2>關鍵對話摘錄</h2><ol>"
-    for dialogue in report['dialogue_excerpts']:
+    for dialogue in report["dialogue_excerpts"]:
         html += f"<li><b>{dialogue['speaker']}</b>: {dialogue['text']}</li>"
     html += "</ol>"
 
@@ -94,7 +119,7 @@ def format_report_as_markdown(report: dict) -> str:
 
     # Client info
     md += "## 案主基本資料\n\n"
-    for key, value in report['client_info'].items():
+    for key, value in report["client_info"].items():
         if isinstance(value, list):
             value = ", ".join(value)
         md += f"- **{key}**: {value}\n"
@@ -102,19 +127,19 @@ def format_report_as_markdown(report: dict) -> str:
 
     # Main concerns
     md += "## 主訴問題\n\n"
-    for concern in report['main_concerns']:
+    for concern in report["main_concerns"]:
         md += f"- {concern}\n"
     md += "\n"
 
     # Goals
     md += "## 晤談目標\n\n"
-    for goal in report['counseling_goals']:
+    for goal in report["counseling_goals"]:
         md += f"- {goal}\n"
     md += "\n"
 
     # Techniques
     md += "## 諮詢技巧\n\n"
-    for technique in report['techniques']:
+    for technique in report["techniques"]:
         md += f"- {technique}\n"
     md += "\n"
 
@@ -124,14 +149,14 @@ def format_report_as_markdown(report: dict) -> str:
 
     # Theories
     md += "## 相關理論文獻\n\n"
-    for i, theory in enumerate(report['theories'], 1):
+    for i, theory in enumerate(report["theories"], 1):
         md += f"### [{i}] {theory['document']}\n\n"
         md += f"**相似度**: {theory['score']:.2f}\n\n"
         md += f"{theory['text'][:200]}...\n\n"
 
     # Dialogues
     md += "## 關鍵對話摘錄\n\n"
-    for dialogue in report['dialogue_excerpts']:
+    for dialogue in report["dialogue_excerpts"]:
         md += f"{dialogue['order']}. **{dialogue['speaker']}**: {dialogue['text']}\n"
     md += "\n"
 
@@ -203,15 +228,15 @@ async def generate_report(
             query=search_query,
             top_k=request.top_k,
             threshold=request.similarity_threshold,
-            db=db
+            db=db,
         )
 
         # Step 3: Generate structured report with enhanced context format
         context_parts = []
         for i, theory in enumerate(theories):
-            doc_title = theory.get('document', '未知文獻')
-            theory_text = theory['text']
-            score = theory['score']
+            doc_title = theory.get("document", "未知文獻")
+            theory_text = theory["text"]
+            score = theory["score"]
 
             context_parts.append(
                 f"[{i+1}] **來源文獻：{doc_title}**\n"
@@ -241,7 +266,7 @@ async def generate_report(
 """
 
         # Determine use_legacy flag based on mode
-        use_legacy = (request.mode == "legacy")
+        use_legacy = request.mode == "legacy"
 
         # Choose prompt based on use_legacy flag
         if use_legacy:
@@ -416,20 +441,27 @@ async def generate_report(
 
             # M2.2: Add rationale examples to prompt (only for enhanced version)
             from app.utils.prompt_enhancer import add_rationale_examples
+
             report_prompt = add_rationale_examples(report_prompt)
 
         if request.rag_system == "gemini":
-            report_content = await gemini_service.chat_completion(report_prompt, temperature=0.6)
+            report_content = await gemini_service.chat_completion(
+                report_prompt, temperature=0.6
+            )
         else:
             report_content = await openai_service.chat_completion(
                 messages=[{"role": "user", "content": report_prompt}],
                 temperature=0.6,
-                max_tokens=8000  # Maximum tokens for comprehensive report generation
+                max_tokens=8000,  # Maximum tokens for comprehensive report generation
             )
 
         # Step 4: Extract key dialogue excerpts using DialogueExtractor service
-        extractor = DialogueExtractor(openai_service if request.rag_system != "gemini" else gemini_service)
-        dialogues = await extractor.extract(request.transcript, request.num_participants)
+        extractor = DialogueExtractor(
+            openai_service if request.rag_system != "gemini" else gemini_service
+        )
+        dialogues = await extractor.extract(
+            request.transcript, request.num_participants
+        )
 
         # Build final report
         report = {
@@ -466,7 +498,7 @@ async def generate_report(
                 top_k=request.top_k,
                 similarity_threshold=request.similarity_threshold,
                 output_format="json",
-                mode="legacy"
+                mode="legacy",
             )
             legacy_result = await generate_report(legacy_request, db)
 
@@ -478,7 +510,7 @@ async def generate_report(
                 top_k=request.top_k,
                 similarity_threshold=request.similarity_threshold,
                 output_format="json",
-                mode="enhanced"
+                mode="enhanced",
             )
             enhanced_result = await generate_report(enhanced_request, db)
 
@@ -486,17 +518,18 @@ async def generate_report(
                 "mode": "comparison",
                 "legacy": legacy_result,
                 "enhanced": enhanced_result,
-                "format": "json"
+                "format": "json",
             }
 
         # Generate quality summary using LLM (for more accurate grading)
         from app.utils.report_quality import generate_quality_summary_with_llm
+
         quality_summary = await generate_quality_summary_with_llm(
             report=report,
             report_text=report_content,
             theories=theories,
             use_legacy=use_legacy,
-            openai_client=openai_service.client
+            openai_client=openai_service.client,
         )
 
         # Format based on output_format
@@ -505,7 +538,7 @@ async def generate_report(
             result = {
                 "mode": request.mode,
                 "report": formatted_report,
-                "format": "html"
+                "format": "html",
             }
             if quality_summary:
                 result["quality_summary"] = quality_summary
@@ -515,20 +548,18 @@ async def generate_report(
             result = {
                 "mode": request.mode,
                 "report": formatted_report,
-                "format": "markdown"
+                "format": "markdown",
             }
             if quality_summary:
                 result["quality_summary"] = quality_summary
             return result
         else:  # json (default)
-            result = {
-                "mode": request.mode,
-                "report": report,
-                "format": "json"
-            }
+            result = {"mode": request.mode, "report": report, "format": "json"}
             if quality_summary:
                 result["quality_summary"] = quality_summary
             return result
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate report: {str(e)}"
+        )

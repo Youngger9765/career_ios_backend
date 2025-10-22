@@ -4,7 +4,9 @@ import difflib
 from typing import Any, Optional
 
 
-def analyze_chunk_strategy_performance(experiments: list[Any]) -> dict[str, dict[str, float]]:
+def analyze_chunk_strategy_performance(
+    experiments: list[Any],
+) -> dict[str, dict[str, float]]:
     """Analyze performance metrics grouped by chunk strategy
 
     Args:
@@ -21,29 +23,31 @@ def analyze_chunk_strategy_performance(experiments: list[Any]) -> dict[str, dict
 
         if exp.chunk_strategy not in strategy_performance:
             strategy_performance[exp.chunk_strategy] = {
-                'count': 0,
-                'total_faithfulness': 0,
-                'total_answer_relevancy': 0,
-                'total_context_recall': 0,
-                'total_context_precision': 0
+                "count": 0,
+                "total_faithfulness": 0,
+                "total_answer_relevancy": 0,
+                "total_context_recall": 0,
+                "total_context_precision": 0,
             }
 
         perf = strategy_performance[exp.chunk_strategy]
-        perf['count'] += 1
+        perf["count"] += 1
 
         if exp.avg_faithfulness:
-            perf['total_faithfulness'] += float(exp.avg_faithfulness)
+            perf["total_faithfulness"] += float(exp.avg_faithfulness)
         if exp.avg_answer_relevancy:
-            perf['total_answer_relevancy'] += float(exp.avg_answer_relevancy)
+            perf["total_answer_relevancy"] += float(exp.avg_answer_relevancy)
         if exp.avg_context_recall:
-            perf['total_context_recall'] += float(exp.avg_context_recall)
+            perf["total_context_recall"] += float(exp.avg_context_recall)
         if exp.avg_context_precision:
-            perf['total_context_precision'] += float(exp.avg_context_precision)
+            perf["total_context_precision"] += float(exp.avg_context_precision)
 
     return strategy_performance
 
 
-def find_best_chunk_strategy(strategy_performance: dict[str, dict[str, float]]) -> tuple[Optional[str], float]:
+def find_best_chunk_strategy(
+    strategy_performance: dict[str, dict[str, float]],
+) -> tuple[Optional[str], float]:
     """Find the chunk strategy with the highest average score
 
     Args:
@@ -56,15 +60,15 @@ def find_best_chunk_strategy(strategy_performance: dict[str, dict[str, float]]) 
     best_avg = 0
 
     for strategy, perf in strategy_performance.items():
-        count = perf['count']
+        count = perf["count"]
         if count == 0:
             continue
 
         avg_score = (
-            perf['total_faithfulness'] / count +
-            perf['total_answer_relevancy'] / count +
-            perf['total_context_recall'] / count +
-            perf['total_context_precision'] / count
+            perf["total_faithfulness"] / count
+            + perf["total_answer_relevancy"] / count
+            + perf["total_context_recall"] / count
+            + perf["total_context_precision"] / count
         ) / 4
 
         if avg_score > best_avg:
@@ -74,7 +78,9 @@ def find_best_chunk_strategy(strategy_performance: dict[str, dict[str, float]]) 
     return best_strategy, best_avg
 
 
-def analyze_instruction_version_performance(experiments: list[Any]) -> dict[str, dict[str, float]]:
+def analyze_instruction_version_performance(
+    experiments: list[Any],
+) -> dict[str, dict[str, float]]:
     """Analyze performance metrics grouped by instruction version
 
     Args:
@@ -91,12 +97,12 @@ def analyze_instruction_version_performance(experiments: list[Any]) -> dict[str,
 
         if exp.instruction_version not in version_performance:
             version_performance[exp.instruction_version] = {
-                'count': 0,
-                'total_score': 0
+                "count": 0,
+                "total_score": 0,
             }
 
         perf = version_performance[exp.instruction_version]
-        perf['count'] += 1
+        perf["count"] += 1
 
         score_sum = 0
         score_count = 0
@@ -108,12 +114,14 @@ def analyze_instruction_version_performance(experiments: list[Any]) -> dict[str,
             score_count += 1
 
         if score_count > 0:
-            perf['total_score'] += score_sum / score_count
+            perf["total_score"] += score_sum / score_count
 
     return version_performance
 
 
-def find_best_instruction_version(version_performance: dict[str, dict[str, float]]) -> tuple[Optional[str], float]:
+def find_best_instruction_version(
+    version_performance: dict[str, dict[str, float]],
+) -> tuple[Optional[str], float]:
     """Find the instruction version with the highest average score
 
     Args:
@@ -126,9 +134,9 @@ def find_best_instruction_version(version_performance: dict[str, dict[str, float
     best_version_avg = 0
 
     for version, perf in version_performance.items():
-        if perf['count'] == 0:
+        if perf["count"] == 0:
             continue
-        avg = perf['total_score'] / perf['count']
+        avg = perf["total_score"] / perf["count"]
         if avg > best_version_avg:
             best_version_avg = avg
             best_version = version
@@ -136,7 +144,9 @@ def find_best_instruction_version(version_performance: dict[str, dict[str, float
     return best_version, best_version_avg
 
 
-def find_low_performing_strategies(experiments: list[Any], threshold: float = 0.5) -> list[str]:
+def find_low_performing_strategies(
+    experiments: list[Any], threshold: float = 0.5
+) -> list[str]:
     """Identify strategies with faithfulness scores below threshold
 
     Args:
@@ -170,7 +180,7 @@ def calculate_coverage_metrics(experiments: list[Any]) -> dict[str, int | float]
 
     for exp in experiments:
         has_strategy = bool(exp.chunk_strategy)
-        has_testset = hasattr(exp, 'test_set_name') and bool(exp.test_set_name)
+        has_testset = hasattr(exp, "test_set_name") and bool(exp.test_set_name)
 
         if has_strategy:
             strategies.add(exp.chunk_strategy)
@@ -185,9 +195,9 @@ def calculate_coverage_metrics(experiments: list[Any]) -> dict[str, int | float]
     coverage_percent = (completed_cells / total_cells * 100) if total_cells > 0 else 0
 
     return {
-        'total_cells': total_cells,
-        'completed_cells': completed_cells,
-        'coverage_percent': coverage_percent
+        "total_cells": total_cells,
+        "completed_cells": completed_cells,
+        "coverage_percent": coverage_percent,
     }
 
 
@@ -201,31 +211,44 @@ def calculate_average_metrics(experiments: list[Any]) -> dict[str, Optional[floa
         Dict with average values for each metric (None if no data)
     """
     metrics = {
-        'faithfulness': [],
-        'answer_relevancy': [],
-        'context_recall': [],
-        'context_precision': []
+        "faithfulness": [],
+        "answer_relevancy": [],
+        "context_recall": [],
+        "context_precision": [],
     }
 
     for exp in experiments:
         if exp.avg_faithfulness is not None:
-            metrics['faithfulness'].append(float(exp.avg_faithfulness))
+            metrics["faithfulness"].append(float(exp.avg_faithfulness))
         if exp.avg_answer_relevancy is not None:
-            metrics['answer_relevancy'].append(float(exp.avg_answer_relevancy))
+            metrics["answer_relevancy"].append(float(exp.avg_answer_relevancy))
         if exp.avg_context_recall is not None:
-            metrics['context_recall'].append(float(exp.avg_context_recall))
+            metrics["context_recall"].append(float(exp.avg_context_recall))
         if exp.avg_context_precision is not None:
-            metrics['context_precision'].append(float(exp.avg_context_precision))
+            metrics["context_precision"].append(float(exp.avg_context_precision))
 
     return {
-        'avg_faithfulness': sum(metrics['faithfulness']) / len(metrics['faithfulness']) if metrics['faithfulness'] else None,
-        'avg_answer_relevancy': sum(metrics['answer_relevancy']) / len(metrics['answer_relevancy']) if metrics['answer_relevancy'] else None,
-        'avg_context_recall': sum(metrics['context_recall']) / len(metrics['context_recall']) if metrics['context_recall'] else None,
-        'avg_context_precision': sum(metrics['context_precision']) / len(metrics['context_precision']) if metrics['context_precision'] else None,
+        "avg_faithfulness": sum(metrics["faithfulness"]) / len(metrics["faithfulness"])
+        if metrics["faithfulness"]
+        else None,
+        "avg_answer_relevancy": sum(metrics["answer_relevancy"])
+        / len(metrics["answer_relevancy"])
+        if metrics["answer_relevancy"]
+        else None,
+        "avg_context_recall": sum(metrics["context_recall"])
+        / len(metrics["context_recall"])
+        if metrics["context_recall"]
+        else None,
+        "avg_context_precision": sum(metrics["context_precision"])
+        / len(metrics["context_precision"])
+        if metrics["context_precision"]
+        else None,
     }
 
 
-def calculate_template_diff(template1: Optional[str], template2: Optional[str]) -> list[str]:
+def calculate_template_diff(
+    template1: Optional[str], template2: Optional[str]
+) -> list[str]:
     """Calculate unified diff between two templates
 
     Args:
@@ -248,6 +271,6 @@ def calculate_template_diff(template1: Optional[str], template2: Optional[str]) 
     template1_lines = template1.splitlines()
     template2_lines = template2.splitlines()
 
-    diff = list(difflib.unified_diff(template1_lines, template2_lines, lineterm=''))
+    diff = list(difflib.unified_diff(template1_lines, template2_lines, lineterm=""))
 
     return diff

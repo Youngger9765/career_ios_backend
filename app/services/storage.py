@@ -52,7 +52,9 @@ class StorageService:
             Public URL or signed URL
         """
         if not self.enabled:
-            raise Exception("Supabase client not initialized. Check STORAGE_TYPE and credentials.")
+            raise Exception(
+                "Supabase client not initialized. Check STORAGE_TYPE and credentials."
+            )
 
         try:
             # Direct HTTP upload to Supabase Storage API
@@ -64,7 +66,9 @@ class StorageService:
             }
 
             async with httpx.AsyncClient() as client:
-                response = await client.post(url, content=file_content, headers=headers, timeout=60.0)
+                response = await client.post(
+                    url, content=file_content, headers=headers, timeout=60.0
+                )
                 response.raise_for_status()
 
             # Return public URL
@@ -77,7 +81,9 @@ class StorageService:
     async def download_file(self, file_path: str) -> bytes:
         """Download file from Supabase Storage"""
         if not self.enabled:
-            raise Exception("Supabase client not initialized. Check STORAGE_TYPE and credentials.")
+            raise Exception(
+                "Supabase client not initialized. Check STORAGE_TYPE and credentials."
+            )
 
         try:
             # Direct HTTP download from Supabase Storage API
@@ -97,7 +103,9 @@ class StorageService:
     async def delete_file(self, file_path: str) -> bool:
         """Delete file from Supabase Storage"""
         if not self.enabled:
-            raise Exception("Supabase client not initialized. Check STORAGE_TYPE and credentials.")
+            raise Exception(
+                "Supabase client not initialized. Check STORAGE_TYPE and credentials."
+            )
 
         try:
             # Direct HTTP delete from Supabase Storage API
@@ -126,11 +134,15 @@ class StorageService:
             Signed URL
         """
         if not self.enabled:
-            raise Exception("Supabase client not initialized. Check STORAGE_TYPE and credentials.")
+            raise Exception(
+                "Supabase client not initialized. Check STORAGE_TYPE and credentials."
+            )
 
         try:
             # Direct HTTP request to create signed URL
-            url = f"{self.supabase_url}/storage/v1/object/sign/{self.bucket}/{file_path}"
+            url = (
+                f"{self.supabase_url}/storage/v1/object/sign/{self.bucket}/{file_path}"
+            )
             headers = {
                 "Authorization": f"Bearer {self.supabase_key}",
                 "apikey": self.supabase_key,
@@ -139,7 +151,9 @@ class StorageService:
             data = {"expiresIn": expires_in}
 
             async with httpx.AsyncClient() as client:
-                response = await client.post(url, headers=headers, json=data, timeout=60.0)
+                response = await client.post(
+                    url, headers=headers, json=data, timeout=60.0
+                )
                 response.raise_for_status()
                 result = response.json()
                 return result.get("signedURL", "")

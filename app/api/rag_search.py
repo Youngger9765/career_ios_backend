@@ -125,7 +125,9 @@ async def search_similar(request: SearchRequest, db: Session = Depends(get_db)):
             for row in rows
         ]
 
-        return SearchResponse(query=request.query, results=results, total_results=len(results))
+        return SearchResponse(
+            query=request.query, results=results, total_results=len(results)
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}") from e

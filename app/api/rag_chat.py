@@ -141,7 +141,10 @@ Examples:
                 intent_data = json.loads(json_match.group(0))
             else:
                 # Default to search if parsing fails
-                intent_data = {"needs_search": True, "reason": "default to search on parse error"}
+                intent_data = {
+                    "needs_search": True,
+                    "reason": "default to search on parse error",
+                }
 
         needs_search = intent_data.get("needs_search", True)  # Default TRUE
 
@@ -170,7 +173,10 @@ Examples:
             )
 
             return ChatResponse(
-                question=request.question, answer=answer, citations=[], total_citations=0
+                question=request.question,
+                answer=answer,
+                citations=[],
+                total_citations=0,
             )
 
         # Step 2: Perform RAG search
@@ -271,7 +277,10 @@ Examples:
                 )
 
             return ChatResponse(
-                question=request.question, answer=guide_answer, citations=[], total_citations=0
+                question=request.question,
+                answer=guide_answer,
+                citations=[],
+                total_citations=0,
             )
 
         # Step 3: Construct context and generate answer

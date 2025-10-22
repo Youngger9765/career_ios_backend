@@ -96,8 +96,10 @@ class ChunkingService:
 
             # Filter out sentence endings that are too close to the start
             # (within overlap distance) to avoid reusing the same sentence ending
-            min_distance = self.overlap if hasattr(self, 'overlap') else 0
-            valid_endings = [pos for pos in absolute_endings if pos > start + min_distance]
+            min_distance = self.overlap if hasattr(self, "overlap") else 0
+            valid_endings = [
+                pos for pos in absolute_endings if pos > start + min_distance
+            ]
 
             if valid_endings:
                 # Use the last valid sentence ending

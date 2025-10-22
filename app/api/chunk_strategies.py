@@ -7,7 +7,9 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/rag/evaluation/chunk-strategies", tags=["chunk-strategies"])
+router = APIRouter(
+    prefix="/api/rag/evaluation/chunk-strategies", tags=["chunk-strategies"]
+)
 
 
 # Schemas
@@ -62,7 +64,7 @@ def _init_default_strategies():
                 "chunk_overlap": 40,
                 "description": "遞迴切割，適合精細檢索",
                 "is_default": False,
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now().isoformat(),
             },
             {
                 "id": str(uuid.uuid4()),
@@ -72,7 +74,7 @@ def _init_default_strategies():
                 "chunk_overlap": 80,
                 "description": "遞迴切割，平衡大小，適合大多數場景",
                 "is_default": True,
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now().isoformat(),
             },
             {
                 "id": str(uuid.uuid4()),
@@ -82,7 +84,7 @@ def _init_default_strategies():
                 "chunk_overlap": 160,
                 "description": "遞迴切割，保留更多上下文",
                 "is_default": False,
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now().isoformat(),
             },
             {
                 "id": str(uuid.uuid4()),
@@ -92,7 +94,7 @@ def _init_default_strategies():
                 "chunk_overlap": 0,
                 "description": "父子文檔結構，適合階層式檢索",
                 "is_default": False,
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now().isoformat(),
             },
             {
                 "id": str(uuid.uuid4()),
@@ -102,7 +104,7 @@ def _init_default_strategies():
                 "chunk_overlap": 50,
                 "description": "一般切割，處理速度快",
                 "is_default": False,
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now().isoformat(),
             },
             {
                 "id": str(uuid.uuid4()),
@@ -112,8 +114,8 @@ def _init_default_strategies():
                 "chunk_overlap": 100,
                 "description": "基於語義切割，保持語意完整性",
                 "is_default": False,
-                "created_at": datetime.now().isoformat()
-            }
+                "created_at": datetime.now().isoformat(),
+            },
         ]
         for strategy in defaults:
             _strategies_store[strategy["id"]] = strategy
@@ -160,7 +162,7 @@ async def create_chunk_strategy(strategy_data: ChunkStrategyCreate):
         "chunk_overlap": strategy_data.chunk_overlap,
         "description": strategy_data.description,
         "is_default": strategy_data.is_default,
-        "created_at": datetime.now().isoformat()
+        "created_at": datetime.now().isoformat(),
     }
 
     _strategies_store[strategy["id"]] = strategy
@@ -168,10 +170,7 @@ async def create_chunk_strategy(strategy_data: ChunkStrategyCreate):
 
 
 @router.put("/{strategy_id}", response_model=ChunkStrategyResponse)
-async def update_chunk_strategy(
-    strategy_id: str,
-    strategy_data: ChunkStrategyUpdate
-):
+async def update_chunk_strategy(strategy_id: str, strategy_data: ChunkStrategyUpdate):
     """更新 chunk 策略"""
     _init_default_strategies()
 
@@ -216,7 +215,4 @@ async def delete_chunk_strategy(strategy_id: str):
 
     del _strategies_store[strategy_id]
 
-    return {
-        "success": True,
-        "message": "策略已刪除"
-    }
+    return {"success": True, "message": "策略已刪除"}

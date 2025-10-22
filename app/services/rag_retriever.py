@@ -20,11 +20,7 @@ class RAGRetriever:
         self.openai_service = openai_service
 
     async def search(
-        self,
-        query: str,
-        top_k: int,
-        threshold: float,
-        db: AsyncSession
+        self, query: str, top_k: int, threshold: float, db: AsyncSession
     ) -> List[Dict]:
         """
         Search for relevant theories using vector similarity (RAG)
@@ -90,7 +86,7 @@ class RAGRetriever:
             {
                 "text": row.text,
                 "document": row.document_title,
-                "score": float(row.similarity_score)
+                "score": float(row.similarity_score),
             }
             for row in rows
         ]
@@ -99,7 +95,7 @@ class RAGRetriever:
         if not theories:
             raise HTTPException(
                 status_code=400,
-                detail="❌ RAG 檢索失敗：未找到相關理論文獻，無法生成報告。請檢查資料庫或降低 similarity_threshold。"
+                detail="❌ RAG 檢索失敗：未找到相關理論文獻，無法生成報告。請檢查資料庫或降低 similarity_threshold。",
             )
 
         return theories

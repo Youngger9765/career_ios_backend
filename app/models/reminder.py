@@ -28,7 +28,9 @@ class Reminder(Base, BaseModel):
 
     case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id"), nullable=False)
     reminder_type = Column(SQLEnum(ReminderType), nullable=False)
-    status = Column(SQLEnum(ReminderStatus), default=ReminderStatus.ACTIVE, nullable=False)
+    status = Column(
+        SQLEnum(ReminderStatus), default=ReminderStatus.ACTIVE, nullable=False
+    )
 
     title = Column(String, nullable=False)
     description = Column(Text)

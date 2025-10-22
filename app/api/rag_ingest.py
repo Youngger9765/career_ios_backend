@@ -78,7 +78,7 @@ async def ingest_file(
         metadata = pdf_service.extract_metadata(file_content)
 
         # Remove NUL characters that PostgreSQL cannot store
-        text = text.replace('\x00', '')
+        text = text.replace("\x00", "")
 
         # 3. Create datasource and document records
         datasource = Datasource(type="pdf", source_uri=storage_url)
@@ -99,7 +99,9 @@ async def ingest_file(
 
         # 4. Chunk the text
         chunking_service = ChunkingService(chunk_size=chunk_size, overlap=overlap)
-        chunks = chunking_service.split_text(text, split_by_sentence=True, preserve_words=True)
+        chunks = chunking_service.split_text(
+            text, split_by_sentence=True, preserve_words=True
+        )
 
         # Generate strategy name if not provided
         if not chunk_strategy:
@@ -110,7 +112,7 @@ async def ingest_file(
 
         for idx, chunk_text in enumerate(chunks):
             # Remove NUL characters from chunk text
-            clean_chunk_text = chunk_text.replace('\x00', '')
+            clean_chunk_text = chunk_text.replace("\x00", "")
 
             # Create chunk record with strategy tag
             chunk = Chunk(
@@ -118,7 +120,7 @@ async def ingest_file(
                 chunk_strategy=chunk_strategy,
                 ordinal=idx,
                 text=clean_chunk_text,
-                meta_json={}
+                meta_json={},
             )
             db.add(chunk)
             db.flush()
@@ -144,7 +146,9 @@ async def ingest_file(
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to process file: {str(e)}"
+        ) from e
 
 
 # Also add a simpler endpoint for the frontend at /api/rag/ingest
@@ -194,7 +198,9 @@ async def reprocess_document(
             raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
 
         # Get datasource for storage URL
-        result = db.execute(select(Datasource).where(Datasource.id == document.datasource_id))
+        result = db.execute(
+            select(Datasource).where(Datasource.id == document.datasource_id)
+        )
         datasource = result.scalar_one_or_none()
 
         if not datasource or not datasource.source_uri:
@@ -213,12 +219,12 @@ async def reprocess_document(
         if "public" in path_parts:
             idx = path_parts.index("public")
             # Skip bucket name (next after 'public') and get the rest
-            file_path = "/".join(path_parts[idx + 2:])
+            file_path = "/".join(path_parts[idx + 2 :])
         elif "documents" in path_parts:
             # Find the last occurrence of 'documents' (the bucket name)
             # and take everything after it
             idx = path_parts.index("documents")
-            file_path = "/".join(path_parts[idx + 1:])
+            file_path = "/".join(path_parts[idx + 1 :])
         else:
             file_path = path_parts[-1]
 
@@ -243,18 +249,24 @@ async def reprocess_document(
         db.flush()
 
         # 5. Re-chunk with new parameters
-        chunking_service = ChunkingService(chunk_size=request.chunk_size, overlap=request.overlap)
-        chunks = chunking_service.split_text(text, split_by_sentence=True, preserve_words=True)
+        chunking_service = ChunkingService(
+            chunk_size=request.chunk_size, overlap=request.overlap
+        )
+        chunks = chunking_service.split_text(
+            text, split_by_sentence=True, preserve_words=True
+        )
 
         # 6. Generate new embeddings and store
         openai_service = OpenAIService()
 
         for idx, chunk_text in enumerate(chunks):
             # Remove NUL characters from chunk text
-            clean_chunk_text = chunk_text.replace('\x00', '')
+            clean_chunk_text = chunk_text.replace("\x00", "")
 
             # Create chunk record
-            chunk = Chunk(doc_id=document.id, ordinal=idx, text=clean_chunk_text, meta_json={})
+            chunk = Chunk(
+                doc_id=document.id, ordinal=idx, text=clean_chunk_text, meta_json={}
+            )
             db.add(chunk)
             db.flush()
 
@@ -322,7 +334,9 @@ async def generate_strategy_for_document(
             raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
 
         if not document.content:
-            raise HTTPException(status_code=400, detail="Document has no content to chunk")
+            raise HTTPException(
+                status_code=400, detail="Document has no content to chunk"
+            )
 
         # 2. Generate strategy name if not provided
         strategy_name = request.chunk_strategy
@@ -344,7 +358,9 @@ async def generate_strategy_for_document(
             )
 
         # 4. Chunk the text
-        chunking_service = ChunkingService(chunk_size=request.chunk_size, overlap=request.overlap)
+        chunking_service = ChunkingService(
+            chunk_size=request.chunk_size, overlap=request.overlap
+        )
         chunks = chunking_service.split_text(
             document.content, split_by_sentence=True, preserve_words=True
         )
@@ -354,7 +370,7 @@ async def generate_strategy_for_document(
 
         for idx, chunk_text in enumerate(chunks):
             # Remove NUL characters from chunk text
-            clean_chunk_text = chunk_text.replace('\x00', '')
+            clean_chunk_text = chunk_text.replace("\x00", "")
 
             # Create chunk record
             chunk = Chunk(

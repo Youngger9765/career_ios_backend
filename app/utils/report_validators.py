@@ -28,7 +28,7 @@ def validate_report_structure(report_text: str, use_legacy: bool = False) -> Dic
             "【成因分析】",
             "【晤談目標（移動主訴）】",
             "【介入策略】",
-            "【目前成效評估】"
+            "【目前成效評估】",
         ]
         total_sections = 5
     else:
@@ -43,7 +43,7 @@ def validate_report_structure(report_text: str, use_legacy: bool = False) -> Dic
             "【七、諮詢師的專業判斷】",
             "【八、諮商目標與介入策略】",
             "【九、預期成效與評估】",
-            "【十、諮詢師自我反思】"
+            "【十、諮詢師自我反思】",
         ]
         total_sections = 10
 
@@ -57,7 +57,7 @@ def validate_report_structure(report_text: str, use_legacy: bool = False) -> Dic
     return {
         "complete": len(missing) == 0,
         "missing_sections": missing,
-        "coverage": round(coverage, 1)
+        "coverage": round(coverage, 1),
     }
 
 
@@ -83,35 +83,43 @@ def validate_citations(report_text: str, use_legacy: bool = False) -> Dict:
         # Legacy version: 成因分析 and 介入策略
         critical_sections = {
             "【成因分析】": "成因分析需要理論支持",
-            "【介入策略】": "介入策略需要技術引用"
+            "【介入策略】": "介入策略需要技術引用",
         }
     else:
         # Enhanced version: 3 critical sections
         critical_sections = {
             "【五、多層次因素分析】": "因素分析需要理論支持",
             "【七、諮詢師的專業判斷】": "專業判斷需要理論依據",
-            "【八、諮商目標與介入策略】": "介入策略需要技術引用"
+            "【八、諮商目標與介入策略】": "介入策略需要技術引用",
         }
 
     results = {}
     for section, reason in critical_sections.items():
         section_text = extract_section(report_text, section)
-        citations = re.findall(r'\[(\d+)\]', section_text)
+        citations = re.findall(r"\[(\d+)\]", section_text)
 
         results[section] = {
             "has_citations": len(citations) > 0,
             "citation_count": len(citations),
             "reason": reason,
-            "status": "✅" if len(citations) > 0 else "❌"
+            "status": "✅" if len(citations) > 0 else "❌",
         }
 
     # 統計總引用數
-    total_citations = len(re.findall(r'\[(\d+)\]', report_text))
+    total_citations = len(re.findall(r"\[(\d+)\]", report_text))
 
     # 檢查是否有說明理由（關鍵詞）
     rationale_keywords = [
-        "根據", "基於", "從", "理論指出", "顯示",
-        "觀點", "依據", "因為", "由於", "考量"
+        "根據",
+        "基於",
+        "從",
+        "理論指出",
+        "顯示",
+        "觀點",
+        "依據",
+        "因為",
+        "由於",
+        "考量",
     ]
     has_rationale = any(keyword in report_text for keyword in rationale_keywords)
 
@@ -119,7 +127,9 @@ def validate_citations(report_text: str, use_legacy: bool = False) -> Dict:
         "section_details": results,
         "total_citations": total_citations,
         "has_rationale": has_rationale,
-        "all_critical_sections_cited": all(r["has_citations"] for r in results.values())
+        "all_critical_sections_cited": all(
+            r["has_citations"] for r in results.values()
+        ),
     }
 
 
@@ -142,7 +152,7 @@ def extract_section(report_text: str, section_title: str) -> str:
     start = start_match.end()
 
     # 找到下一個【】段落（或結尾）
-    next_section = re.search(r'【.+?】', report_text[start:])
+    next_section = re.search(r"【.+?】", report_text[start:])
 
     if next_section:
         end = start + next_section.start()
@@ -152,7 +162,9 @@ def extract_section(report_text: str, section_title: str) -> str:
     return report_text[start:end].strip()
 
 
-def calculate_quality_score(structure_validation: Dict, citation_validation: Dict) -> float:
+def calculate_quality_score(
+    structure_validation: Dict, citation_validation: Dict
+) -> float:
     """
     計算報告整體品質分數（0-100）
 
@@ -180,7 +192,8 @@ def calculate_quality_score(structure_validation: Dict, citation_validation: Dic
         # 部分覆蓋（動態計算總段落數）
         total_critical_sections = len(citation_validation["section_details"])
         cited_count = sum(
-            1 for r in citation_validation["section_details"].values()
+            1
+            for r in citation_validation["section_details"].values()
             if r["has_citations"]
         )
         if total_critical_sections > 0:

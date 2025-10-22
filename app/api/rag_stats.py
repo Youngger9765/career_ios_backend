@@ -50,10 +50,13 @@ def get_database_stats(db: Session = Depends(get_db)):
     documents_count = db.execute(text("SELECT COUNT(*) FROM documents")).scalar()
     chunks_count = db.execute(text("SELECT COUNT(*) FROM chunks")).scalar()
     embeddings_count = db.execute(text("SELECT COUNT(*) FROM embeddings")).scalar()
-    total_bytes = db.execute(text("SELECT COALESCE(SUM(bytes), 0) FROM documents")).scalar()
+    total_bytes = db.execute(
+        text("SELECT COALESCE(SUM(bytes), 0) FROM documents")
+    ).scalar()
 
     # Get document details grouped by chunk strategy
-    query = text("""
+    query = text(
+        """
         SELECT
             d.id,
             d.title,
@@ -70,17 +73,18 @@ def get_database_stats(db: Session = Depends(get_db)):
         LEFT JOIN embeddings e ON c.id = e.chunk_id
         GROUP BY d.id, d.title, d.pages, d.bytes, d.text_length, d.created_at, c.chunk_strategy
         ORDER BY d.created_at DESC, c.chunk_strategy
-    """)
+    """
+    )
 
     result = db.execute(query)
     rows = result.fetchall()
 
     def parse_strategy(strategy_name: str) -> tuple[int, int]:
         """Parse chunk_strategy like 'rec_400_80' to (chunk_size, overlap)"""
-        if strategy_name == 'no_chunks':
+        if strategy_name == "no_chunks":
             return (0, 0)
         try:
-            parts = strategy_name.split('_')
+            parts = strategy_name.split("_")
             if len(parts) >= 3:
                 return (int(parts[1]), int(parts[2]))
         except (ValueError, IndexError):
@@ -135,7 +139,8 @@ def get_document_chunks(doc_id: int, db: Session = Depends(get_db)):
         List of chunks with details
     """
 
-    query = text("""
+    query = text(
+        """
         SELECT
             c.id,
             c.ordinal,
@@ -146,7 +151,8 @@ def get_document_chunks(doc_id: int, db: Session = Depends(get_db)):
         JOIN documents d ON c.doc_id = d.id
         WHERE c.doc_id = :doc_id
         ORDER BY c.ordinal
-    """)
+    """
+    )
 
     result = db.execute(query, {"doc_id": doc_id})
     rows = result.fetchall()
@@ -188,20 +194,24 @@ def delete_document(doc_id: int, db: Session = Depends(get_db)):
 
     # Get embeddings count before deletion
     embeddings_result = db.execute(
-        text("""
+        text(
+            """
             SELECT COUNT(*) FROM embeddings
             WHERE chunk_id IN (SELECT id FROM chunks WHERE doc_id = :doc_id)
-        """),
+        """
+        ),
         {"doc_id": doc_id},
     )
     embeddings_count = embeddings_result.scalar() or 0
 
     # Delete embeddings first (FK constraint)
     db.execute(
-        text("""
+        text(
+            """
             DELETE FROM embeddings
             WHERE chunk_id IN (SELECT id FROM chunks WHERE doc_id = :doc_id)
-        """),
+        """
+        ),
         {"doc_id": doc_id},
     )
 
@@ -216,5 +226,9 @@ def delete_document(doc_id: int, db: Session = Depends(get_db)):
     return {
         "success": True,
         "message": f"成功刪除文檔 ID {doc_id}",
-        "deleted": {"document": 1, "chunks": chunks_count, "embeddings": embeddings_count},
+        "deleted": {
+            "document": 1,
+            "chunks": chunks_count,
+            "embeddings": embeddings_count,
+        },
     }

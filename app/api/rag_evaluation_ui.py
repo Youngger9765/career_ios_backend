@@ -32,14 +32,22 @@ async def evaluation_matrix(request: Request, db: Session = Depends(get_db)):
     try:
         # 1. 獲取所有testsets
         logger.debug("Step 1: Fetching testsets...")
-        testsets_objs = db.query(EvaluationTestSet).filter(EvaluationTestSet.is_active.is_(True)).all()
+        testsets_objs = (
+            db.query(EvaluationTestSet)
+            .filter(EvaluationTestSet.is_active.is_(True))
+            .all()
+        )
         testsets = [{"id": str(ts.id), "name": ts.name} for ts in testsets_objs]
         logger.info(f"Found {len(testsets)} testsets")
 
         # 2. 獲取所有prompts (unique instruction_version from experiments)
         logger.debug("Step 2: Fetching prompts...")
-        unique_versions = db.query(EvaluationExperiment.instruction_version).distinct().all()
-        prompts = [{"version": v[0]} for v in unique_versions if v[0]]  # Filter out None values
+        unique_versions = (
+            db.query(EvaluationExperiment.instruction_version).distinct().all()
+        )
+        prompts = [
+            {"version": v[0]} for v in unique_versions if v[0]
+        ]  # Filter out None values
         logger.info(f"Found {len(prompts)} unique prompt versions")
 
         # 3. 獲取所有chunk strategies
@@ -49,9 +57,11 @@ async def evaluation_matrix(request: Request, db: Session = Depends(get_db)):
 
         # 4. 獲取所有completed experiments
         logger.debug("Step 4: Fetching experiments...")
-        experiments = db.query(EvaluationExperiment).filter(
-            EvaluationExperiment.status == "completed"
-        ).all()
+        experiments = (
+            db.query(EvaluationExperiment)
+            .filter(EvaluationExperiment.status == "completed")
+            .all()
+        )
         logger.info(f"Found {len(experiments)} completed experiments")
 
         # 5. 組織matrix數據結構：matrix[chunk_strategy][prompt_version][testset_name] = experiment
@@ -72,8 +82,10 @@ async def evaluation_matrix(request: Request, db: Session = Depends(get_db)):
             # 通過chunk_size和chunk_overlap匹配chunk_strategy
             matching_strategy = None
             for cs in chunk_strategies:
-                if (exp.chunk_size == cs["chunk_size"] and
-                    exp.chunk_overlap == cs["chunk_overlap"]):
+                if (
+                    exp.chunk_size == cs["chunk_size"]
+                    and exp.chunk_overlap == cs["chunk_overlap"]
+                ):
                     matching_strategy = cs["name"]
                     break
 
@@ -101,12 +113,7 @@ async def evaluation_matrix(request: Request, db: Session = Depends(get_db)):
         logger.info(f"Matched {matched_count} experiments to matrix cells")
 
         logger.debug("Step 7: Rendering template...")
-        return templates.TemplateResponse(
-            "rag/matrix.html",
-            {
-                "request": request
-            }
-        )
+        return templates.TemplateResponse("rag/matrix.html", {"request": request})
     except Exception as e:
         logger.error(f"Error in matrix route: {e}", exc_info=True)
         raise
@@ -117,23 +124,17 @@ async def experiment_detail(request: Request, experiment_id: str):
     """Experiment detail page"""
     return templates.TemplateResponse(
         "rag/experiment_detail.html",
-        {"request": request, "experiment_id": experiment_id}
+        {"request": request, "experiment_id": experiment_id},
     )
 
 
 @router.get("/prompts", response_class=HTMLResponse)
 async def prompts_management(request: Request):
     """Prompt version management page"""
-    return templates.TemplateResponse(
-        "rag/prompts.html",
-        {"request": request}
-    )
+    return templates.TemplateResponse("rag/prompts.html", {"request": request})
 
 
 @router.get("/chunks", response_class=HTMLResponse)
 async def chunks_management(request: Request):
     """Chunk strategy management page"""
-    return templates.TemplateResponse(
-        "rag/chunks.html",
-        {"request": request}
-    )
+    return templates.TemplateResponse("rag/chunks.html", {"request": request})

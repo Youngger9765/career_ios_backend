@@ -7,7 +7,9 @@ try:
     from app.core.config import settings
 
     OPENAI_API_KEY = settings.OPENAI_API_KEY
-    EMBEDDING_MODEL = getattr(settings, "OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+    EMBEDDING_MODEL = getattr(
+        settings, "OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"
+    )
     CHAT_MODEL = getattr(settings, "OPENAI_CHAT_MODEL", "gpt-4.1-mini")
 except ImportError:
     import os
@@ -42,7 +44,9 @@ class OpenAIService:
         if not text or not text.strip():
             raise ValueError("Text cannot be empty")
 
-        response = await self.client.embeddings.create(model=self.embedding_model, input=text)
+        response = await self.client.embeddings.create(
+            model=self.embedding_model, input=text
+        )
 
         return response.data[0].embedding
 
@@ -59,7 +63,9 @@ class OpenAIService:
         if not texts:
             return []
 
-        response = await self.client.embeddings.create(model=self.embedding_model, input=texts)
+        response = await self.client.embeddings.create(
+            model=self.embedding_model, input=texts
+        )
 
         return [item.embedding for item in response.data]
 

@@ -40,21 +40,23 @@ def format_experiments(experiments_db: list[Any]) -> list[dict[str, Any]]:
 
     experiments_list = []
     for exp in experiments_db:
-        experiments_list.append({
-            "experiment_id": str(exp.id),
-            "name": exp.name,
-            "status": exp.status,
-            "chunk_strategy": exp.chunk_strategy,
-            "instruction_version": exp.instruction_version,
-            "avg_faithfulness": safe_float(exp.avg_faithfulness),
-            "avg_answer_relevancy": safe_float(exp.avg_answer_relevancy),
-            "avg_context_recall": safe_float(exp.avg_context_recall),
-            "avg_context_precision": safe_float(exp.avg_context_precision),
-            "total_queries": exp.total_queries or 0,
-            "created_at": exp.created_at.isoformat() if exp.created_at else None,
-            "chunking_method": exp.chunking_method,
-            "chunk_size": exp.chunk_size,
-            "chunk_overlap": exp.chunk_overlap,
-        })
+        experiments_list.append(
+            {
+                "experiment_id": str(exp.id),
+                "name": exp.name,
+                "status": exp.status,
+                "chunk_strategy": exp.chunk_strategy,
+                "instruction_version": exp.instruction_version,
+                "avg_faithfulness": safe_float(exp.avg_faithfulness),
+                "avg_answer_relevancy": safe_float(exp.avg_answer_relevancy),
+                "avg_context_recall": safe_float(exp.avg_context_recall),
+                "avg_context_precision": safe_float(exp.avg_context_precision),
+                "total_queries": exp.total_queries or 0,
+                "created_at": exp.created_at.isoformat() if exp.created_at else None,
+                "chunking_method": exp.chunking_method,
+                "chunk_size": exp.chunk_size,
+                "chunk_overlap": exp.chunk_overlap,
+            }
+        )
 
     return experiments_list

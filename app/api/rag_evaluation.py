@@ -51,7 +51,9 @@ class TestCase(BaseModel):
 
 class RunEvaluationRequest(BaseModel):
     test_cases: list[TestCase]
-    include_ground_truth: bool = True  # Changed default to True to enable all RAGAS metrics
+    include_ground_truth: bool = (
+        True  # Changed default to True to enable all RAGAS metrics
+    )
 
 
 class ExperimentResponse(BaseModel):
@@ -263,9 +265,9 @@ async def get_evaluation_matrix(
     )
 
     # Get all testsets
-    testsets_db = db.query(EvaluationTestSet).filter(
-        EvaluationTestSet.is_active.is_(True)
-    ).all()
+    testsets_db = (
+        db.query(EvaluationTestSet).filter(EvaluationTestSet.is_active.is_(True)).all()
+    )
     testsets = format_testsets(testsets_db)
 
     # Get all chunk strategies from API
@@ -284,7 +286,7 @@ async def get_evaluation_matrix(
         "testsets": testsets,
         "prompts": prompts,
         "chunk_strategies": chunk_strategies,
-        "experiments": experiments
+        "experiments": experiments,
     }
 
 
@@ -403,7 +405,7 @@ async def create_prompt_version(
     import hashlib
 
     # Calculate hash
-    prompt_hash = hashlib.sha256(prompt.template.encode('utf-8')).hexdigest()
+    prompt_hash = hashlib.sha256(prompt.template.encode("utf-8")).hexdigest()
 
     # Store in simple JSON format (could be a separate table in production)
     # For now, we'll return the structured data
@@ -413,7 +415,7 @@ async def create_prompt_version(
         "description": prompt.description,
         "hash": prompt_hash,
         "is_active": prompt.is_active,
-        "created_at": datetime.now().isoformat()
+        "created_at": datetime.now().isoformat(),
     }
 
 
@@ -425,19 +427,23 @@ async def list_prompt_versions(
     from collections import defaultdict
 
     # Get unique instruction versions from experiments
-    experiments = db.query(EvaluationExperiment).filter(
-        EvaluationExperiment.instruction_version.isnot(None)
-    ).all()
+    experiments = (
+        db.query(EvaluationExperiment)
+        .filter(EvaluationExperiment.instruction_version.isnot(None))
+        .all()
+    )
 
     # Group by version
-    versions = defaultdict(lambda: {
-        "version": None,
-        "template": None,
-        "hash": None,
-        "experiments_count": 0,
-        "first_used": None,
-        "last_used": None
-    })
+    versions = defaultdict(
+        lambda: {
+            "version": None,
+            "template": None,
+            "hash": None,
+            "experiments_count": 0,
+            "first_used": None,
+            "last_used": None,
+        }
+    )
 
     for exp in experiments:
         version = exp.instruction_version
@@ -445,12 +451,17 @@ async def list_prompt_versions(
             versions[version]["version"] = version
             versions[version]["template"] = exp.instruction_template
             versions[version]["hash"] = exp.instruction_hash
-            versions[version]["first_used"] = exp.created_at.isoformat() if exp.created_at else None
+            versions[version]["first_used"] = (
+                exp.created_at.isoformat() if exp.created_at else None
+            )
 
         versions[version]["experiments_count"] += 1
         if exp.created_at:
             last_used = exp.created_at.isoformat()
-            if not versions[version]["last_used"] or last_used > versions[version]["last_used"]:
+            if (
+                not versions[version]["last_used"]
+                or last_used > versions[version]["last_used"]
+            ):
                 versions[version]["last_used"] = last_used
 
     return list(versions.values())
@@ -462,9 +473,11 @@ async def get_experiments_by_prompt_version(
     db: Session = Depends(get_db),
 ):
     """Get all experiments using a specific prompt version"""
-    experiments = db.query(EvaluationExperiment).filter(
-        EvaluationExperiment.instruction_version == version
-    ).all()
+    experiments = (
+        db.query(EvaluationExperiment)
+        .filter(EvaluationExperiment.instruction_version == version)
+        .all()
+    )
 
     return [
         {
@@ -474,7 +487,7 @@ async def get_experiments_by_prompt_version(
             "status": exp.status,
             "avg_faithfulness": safe_float(exp.avg_faithfulness),
             "avg_answer_relevancy": safe_float(exp.avg_answer_relevancy),
-            "created_at": exp.created_at.isoformat() if exp.created_at else None
+            "created_at": exp.created_at.isoformat() if exp.created_at else None,
         }
         for exp in experiments
     ]
@@ -488,9 +501,11 @@ async def delete_prompt_version(
 ):
     """Delete a prompt version and optionally its experiments"""
     # Get all experiments using this version
-    experiments = db.query(EvaluationExperiment).filter(
-        EvaluationExperiment.instruction_version == version
-    ).all()
+    experiments = (
+        db.query(EvaluationExperiment)
+        .filter(EvaluationExperiment.instruction_version == version)
+        .all()
+    )
 
     experiments_count = len(experiments)
 
@@ -498,7 +513,7 @@ async def delete_prompt_version(
         if not force:
             raise HTTPException(
                 status_code=400,
-                detail=f"無法刪除：此 Prompt 版本被 {experiments_count} 個實驗使用中。如要刪除所有相關實驗，請使用 force=true"
+                detail=f"無法刪除：此 Prompt 版本被 {experiments_count} 個實驗使用中。如要刪除所有相關實驗，請使用 force=true",
             )
 
         # Delete all related experiments
@@ -509,14 +524,11 @@ async def delete_prompt_version(
 
         return {
             "success": True,
-            "message": f"Prompt 版本 {version} 及其 {experiments_count} 個實驗已刪除"
+            "message": f"Prompt 版本 {version} 及其 {experiments_count} 個實驗已刪除",
         }
 
     # No experiments using this version
-    return {
-        "success": True,
-        "message": f"Prompt 版本 {version} 未被使用，已移除"
-    }
+    return {"success": True, "message": f"Prompt 版本 {version} 未被使用，已移除"}
 
 
 @router.get("/prompts/compare")
@@ -532,13 +544,17 @@ async def compare_prompt_versions(
     )
 
     # Get experiments for both versions
-    exp1 = db.query(EvaluationExperiment).filter(
-        EvaluationExperiment.instruction_version == version1
-    ).first()
+    exp1 = (
+        db.query(EvaluationExperiment)
+        .filter(EvaluationExperiment.instruction_version == version1)
+        .first()
+    )
 
-    exp2 = db.query(EvaluationExperiment).filter(
-        EvaluationExperiment.instruction_version == version2
-    ).first()
+    exp2 = (
+        db.query(EvaluationExperiment)
+        .filter(EvaluationExperiment.instruction_version == version2)
+        .first()
+    )
 
     if not exp1:
         raise HTTPException(status_code=404, detail=f"Version {version1} not found")
@@ -546,13 +562,17 @@ async def compare_prompt_versions(
         raise HTTPException(status_code=404, detail=f"Version {version2} not found")
 
     # Get all experiments for each version to calculate average metrics
-    all_exp1 = db.query(EvaluationExperiment).filter(
-        EvaluationExperiment.instruction_version == version1
-    ).all()
+    all_exp1 = (
+        db.query(EvaluationExperiment)
+        .filter(EvaluationExperiment.instruction_version == version1)
+        .all()
+    )
 
-    all_exp2 = db.query(EvaluationExperiment).filter(
-        EvaluationExperiment.instruction_version == version2
-    ).all()
+    all_exp2 = (
+        db.query(EvaluationExperiment)
+        .filter(EvaluationExperiment.instruction_version == version2)
+        .all()
+    )
 
     # Calculate metrics and diff
     metrics1 = calculate_average_metrics(all_exp1)
@@ -565,17 +585,17 @@ async def compare_prompt_versions(
             "template": exp1.instruction_template,
             "hash": exp1.instruction_hash,
             "experiments_count": len(all_exp1),
-            "metrics": metrics1
+            "metrics": metrics1,
         },
         "version2": {
             "version": version2,
             "template": exp2.instruction_template,
             "hash": exp2.instruction_hash,
             "experiments_count": len(all_exp2),
-            "metrics": metrics2
+            "metrics": metrics2,
         },
         "diff": diff,
-        "template_identical": exp1.instruction_hash == exp2.instruction_hash
+        "template_identical": exp1.instruction_hash == exp2.instruction_hash,
     }
 
 
@@ -591,15 +611,14 @@ async def get_recommendations(db: Session = Depends(get_db)):
         find_low_performing_strategies,
     )
 
-    experiments = db.query(EvaluationExperiment).filter(
-        EvaluationExperiment.status == "completed"
-    ).all()
+    experiments = (
+        db.query(EvaluationExperiment)
+        .filter(EvaluationExperiment.status == "completed")
+        .all()
+    )
 
     if not experiments:
-        return {
-            "recommendations": [],
-            "summary": "尚無實驗數據，建議先執行評估實驗。"
-        }
+        return {"recommendations": [], "summary": "尚無實驗數據，建議先執行評估實驗。"}
 
     recommendations = []
 
@@ -608,54 +627,65 @@ async def get_recommendations(db: Session = Depends(get_db)):
     best_strategy, best_avg = find_best_chunk_strategy(strategy_performance)
 
     if best_strategy:
-        recommendations.append({
-            "type": "best_chunk_strategy",
-            "priority": "high",
-            "title": f"推薦使用 {best_strategy} 切分策略",
-            "description": f"基於 {strategy_performance[best_strategy]['count']} 個實驗的數據，此策略平均分數最高 ({best_avg:.3f})",
-            "action": f"在新實驗中使用 chunk_strategy='{best_strategy}'",
-            "impact": "high"
-        })
+        recommendations.append(
+            {
+                "type": "best_chunk_strategy",
+                "priority": "high",
+                "title": f"推薦使用 {best_strategy} 切分策略",
+                "description": f"基於 {strategy_performance[best_strategy]['count']} 個實驗的數據，此策略平均分數最高 ({best_avg:.3f})",
+                "action": f"在新實驗中使用 chunk_strategy='{best_strategy}'",
+                "impact": "high",
+            }
+        )
 
     # Analyze instruction versions
     version_performance = analyze_instruction_version_performance(experiments)
     best_version, best_version_avg = find_best_instruction_version(version_performance)
 
     if best_version:
-        recommendations.append({
-            "type": "best_prompt_version",
-            "priority": "high",
-            "title": f"推薦使用 Prompt {best_version}",
-            "description": f"基於 {version_performance[best_version]['count']} 個實驗，此版本平均效果最佳",
-            "action": f"使用 instruction_version='{best_version}'",
-            "impact": "medium"
-        })
+        recommendations.append(
+            {
+                "type": "best_prompt_version",
+                "priority": "high",
+                "title": f"推薦使用 Prompt {best_version}",
+                "description": f"基於 {version_performance[best_version]['count']} 個實驗，此版本平均效果最佳",
+                "action": f"使用 instruction_version='{best_version}'",
+                "impact": "medium",
+            }
+        )
 
     # Check for low-performing areas
     low_performers = find_low_performing_strategies(experiments, threshold=0.5)
 
     if low_performers:
-        recommendations.append({
-            "type": "avoid_strategy",
-            "priority": "medium",
-            "title": "避免使用低效策略",
-            "description": f"以下策略表現較差: {', '.join(low_performers)}",
-            "action": "考慮更換不同的 chunk 參數組合",
-            "impact": "medium"
-        })
+        recommendations.append(
+            {
+                "type": "avoid_strategy",
+                "priority": "medium",
+                "title": "避免使用低效策略",
+                "description": f"以下策略表現較差: {', '.join(low_performers)}",
+                "action": "考慮更換不同的 chunk 參數組合",
+                "impact": "medium",
+            }
+        )
 
     # Check coverage
     coverage_metrics = calculate_coverage_metrics(experiments)
 
-    if coverage_metrics['coverage_percent'] < 50 and coverage_metrics['total_cells'] > 0:
-        recommendations.append({
-            "type": "increase_coverage",
-            "priority": "low",
-            "title": "增加測試覆蓋率",
-            "description": f"目前評估矩陣覆蓋率僅 {coverage_metrics['coverage_percent']:.1f}%",
-            "action": "執行更多策略與測試集的組合實驗",
-            "impact": "low"
-        })
+    if (
+        coverage_metrics["coverage_percent"] < 50
+        and coverage_metrics["total_cells"] > 0
+    ):
+        recommendations.append(
+            {
+                "type": "increase_coverage",
+                "priority": "low",
+                "title": "增加測試覆蓋率",
+                "description": f"目前評估矩陣覆蓋率僅 {coverage_metrics['coverage_percent']:.1f}%",
+                "action": "執行更多策略與測試集的組合實驗",
+                "impact": "low",
+            }
+        )
 
     # Summary
     summary = f"分析了 {len(experiments)} 個實驗，生成了 {len(recommendations)} 個建議"
@@ -668,6 +698,6 @@ async def get_recommendations(db: Session = Depends(get_db)):
             "unique_strategies": len(strategy_performance),
             "unique_prompt_versions": len(version_performance),
             "best_strategy": best_strategy,
-            "best_prompt_version": best_version
-        }
+            "best_prompt_version": best_version,
+        },
     }

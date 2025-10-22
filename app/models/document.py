@@ -19,7 +19,9 @@ class Datasource(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    documents = relationship("Document", back_populates="datasource", cascade="all, delete-orphan")
+    documents = relationship(
+        "Document", back_populates="datasource", cascade="all, delete-orphan"
+    )
 
 
 class Document(Base):
@@ -41,11 +43,15 @@ class Document(Base):
     text_length = Column(Integer)  # Original extracted text length in characters
     meta_json = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     # Relationships
     datasource = relationship("Datasource", back_populates="documents")
-    chunks = relationship("Chunk", back_populates="document", cascade="all, delete-orphan")
+    chunks = relationship(
+        "Chunk", back_populates="document", cascade="all, delete-orphan"
+    )
 
 
 class Chunk(Base):
@@ -60,7 +66,9 @@ class Chunk(Base):
         nullable=False,
         index=True,
     )
-    chunk_strategy = Column(String(100), default="rec_400_80", nullable=False, index=True)  # NEW: chunking strategy tag
+    chunk_strategy = Column(
+        String(100), default="rec_400_80", nullable=False, index=True
+    )  # NEW: chunking strategy tag
     ordinal = Column(Integer, nullable=False)  # Order in document
     text = Column(Text, nullable=False)
     meta_json = Column(JSON, default={})

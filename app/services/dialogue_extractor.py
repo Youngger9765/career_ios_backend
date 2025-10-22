@@ -17,11 +17,7 @@ class DialogueExtractor:
     def __init__(self, openai_service: OpenAIService):
         self.openai_service = openai_service
 
-    async def extract(
-        self,
-        transcript: str,
-        num_participants: int
-    ) -> List[Dict]:
+    async def extract(self, transcript: str, num_participants: int) -> List[Dict]:
         """
         Extract 5-10 key dialogue excerpts from transcript
 
@@ -44,7 +40,7 @@ class DialogueExtractor:
         # Call LLM to extract dialogues
         response = await self.openai_service.chat_completion(
             messages=[{"role": "user", "content": excerpt_prompt}],
-            temperature=0.3  # Low temperature for consistency
+            temperature=0.3,  # Low temperature for consistency
         )
 
         # Parse JSON from response
@@ -56,15 +52,21 @@ class DialogueExtractor:
         """Build LLM prompt for extracting key dialogues"""
         # Build speaker labels and examples based on num_participants
         if num_participants == 2:
-            speaker_instruction = '- speaker 使用 "speaker1"（通常為諮詢師）和 "speaker2"（通常為個案）'
+            speaker_instruction = (
+                '- speaker 使用 "speaker1"（通常為諮詢師）和 "speaker2"（通常為個案）'
+            )
             speaker_example = """  "dialogues": [
     {{"speaker": "speaker1", "order": 1, "text": "諮詢師的話"}},
     {{"speaker": "speaker2", "order": 2, "text": "個案的話"}},
     {{"speaker": "speaker1", "order": 3, "text": "諮詢師的話"}}
   ]"""
         else:
-            speaker_labels = ", ".join([f'"speaker{i+1}"' for i in range(num_participants)])
-            speaker_instruction = f"- speaker 使用 {speaker_labels}，根據逐字稿上下文判斷每位說話者"
+            speaker_labels = ", ".join(
+                [f'"speaker{i+1}"' for i in range(num_participants)]
+            )
+            speaker_instruction = (
+                f"- speaker 使用 {speaker_labels}，根據逐字稿上下文判斷每位說話者"
+            )
             speaker_example = """  "dialogues": [
     {{"speaker": "speaker1", "order": 1, "text": "說話內容"}},
     {{"speaker": "speaker2", "order": 2, "text": "說話內容"}},

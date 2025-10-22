@@ -10,7 +10,9 @@ class PipelineRun(Base):
     id = Column(Integer, primary_key=True, index=True)
     scope = Column(String(50), nullable=False)  # ingest, reembed
     target_id = Column(Integer, index=True)
-    status = Column(String(50), default="queued", index=True)  # queued, running, completed, failed
+    status = Column(
+        String(50), default="queued", index=True
+    )  # queued, running, completed, failed
     steps_json = Column(JSON, default=[])
     started_at = Column(DateTime(timezone=True))
     ended_at = Column(DateTime(timezone=True))

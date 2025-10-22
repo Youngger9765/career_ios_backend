@@ -26,7 +26,9 @@ class Report(Base, BaseModel):
     status = Column(SQLEnum(ReportStatus), default=ReportStatus.DRAFT, nullable=False)
 
     # Report content - 結構化報告內容
-    content_json = Column(JSON)  # 包含：主訴問題、成因分析、晤談目標、介入策略、成效評估、關鍵對話
+    content_json = Column(
+        JSON
+    )  # 包含：主訴問題、成因分析、晤談目標、介入策略、成效評估、關鍵對話
 
     # RAG Agent 引用
     citations_json = Column(JSON)  # RAG檢索的理論引用
@@ -49,5 +51,7 @@ class Report(Base, BaseModel):
 
     # Relationships
     session = relationship("Session", back_populates="reports")
-    created_by = relationship("User", foreign_keys=[created_by_id], back_populates="reports")
+    created_by = relationship(
+        "User", foreign_keys=[created_by_id], back_populates="reports"
+    )
     reviewed_by = relationship("User", foreign_keys=[reviewed_by_id])

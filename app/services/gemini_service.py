@@ -8,6 +8,7 @@ from vertexai.generative_models import GenerativeModel
 # Import settings when available
 try:
     from app.core.config import settings
+
     PROJECT_ID = getattr(settings, "GCS_PROJECT", "groovy-iris-473015-h3")
     LOCATION = getattr(settings, "VERTEX_LOCATION", "us-central1")
 except ImportError:
@@ -59,7 +60,7 @@ class GeminiService:
             generation_config={
                 "temperature": temperature,
                 "max_output_tokens": max_tokens,
-            }
+            },
         )
         return response.text
 

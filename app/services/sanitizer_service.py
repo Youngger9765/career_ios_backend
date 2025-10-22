@@ -13,8 +13,12 @@ class SanitizerService:
             "id_card": re.compile(r"[A-Z]\d{9}"),  # 台灣身分證字號
             "phone": re.compile(r"09\d{8}"),  # 手機號碼
             "landline": re.compile(r"0[2-8]-?\d{7,8}"),  # 市話
-            "email": re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"),  # Email
-            "credit_card": re.compile(r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b"),  # 信用卡號
+            "email": re.compile(
+                r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+            ),  # Email
+            "credit_card": re.compile(
+                r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b"
+            ),  # 信用卡號
             "address_number": re.compile(r"\d+號"),  # 地址門牌號碼
         }
 

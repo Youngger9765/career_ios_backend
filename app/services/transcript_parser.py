@@ -48,8 +48,7 @@ class TranscriptParser:
 
         # Call LLM to parse transcript
         response = await self.openai_service.chat_completion(
-            messages=[{"role": "user", "content": parse_prompt}],
-            temperature=0.3
+            messages=[{"role": "user", "content": parse_prompt}], temperature=0.3
         )
 
         # Parse JSON from response
@@ -150,5 +149,7 @@ class TranscriptParser:
             "counseling_goals": parsed_data.get("counseling_goals", []),
             "counselor_techniques": parsed_data.get("counselor_techniques", []),
             "session_content": parsed_data.get("session_content", ""),
-            "counselor_self_evaluation": parsed_data.get("counselor_self_evaluation", ""),
+            "counselor_self_evaluation": parsed_data.get(
+                "counselor_self_evaluation", ""
+            ),
         }
