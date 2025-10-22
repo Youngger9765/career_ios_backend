@@ -1,15 +1,16 @@
 """Report quality summary generation"""
 
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
 from openai import AsyncOpenAI
 
-from app.utils.report_validators import (
-    validate_report_structure,
-    validate_citations,
-    calculate_quality_score
-)
 from app.utils.report_grader import grade_report_with_llm
+from app.utils.report_validators import (
+    calculate_quality_score,
+    validate_citations,
+    validate_report_structure,
+)
 
 
 def generate_quality_summary(
@@ -105,7 +106,7 @@ async def generate_quality_summary_with_llm(
     )
 
     # 同時保留舊的驗證器結果作為參考
-    structure_validation = validate_report_structure(report_text, use_legacy=use_legacy)
+    # structure_validation = validate_report_structure(report_text, use_legacy=use_legacy)
     citation_validation = validate_citations(report_text, use_legacy=use_legacy)
 
     critical_sections_cited_count = sum(

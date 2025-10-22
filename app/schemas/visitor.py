@@ -1,5 +1,6 @@
-from typing import Optional, List
-from app.schemas.base import BaseSchema, BaseResponse
+from typing import List, Optional
+
+from app.schemas.base import BaseResponse, BaseSchema
 
 
 class VisitorBase(BaseSchema):

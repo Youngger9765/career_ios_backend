@@ -1,8 +1,9 @@
 """Report comparison endpoint for A/B testing"""
 
+from pathlib import Path
+
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
-from pathlib import Path
 
 router = APIRouter()
 

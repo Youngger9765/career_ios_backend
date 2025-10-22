@@ -7,8 +7,9 @@ TDD Approach:
 3. Refactor rag_report.py to use it (GREEN)
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import HTTPException
 
 # Import will fail initially - this is expected (RED phase)

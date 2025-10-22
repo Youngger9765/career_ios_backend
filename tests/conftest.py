@@ -1,9 +1,10 @@
 """
 Pytest configuration and fixtures
 """
-import pytest
 import os
 from typing import Generator
+
+import pytest
 from fastapi.testclient import TestClient
 
 # Set test environment

@@ -1,8 +1,9 @@
-from typing import Optional, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, Optional
 from uuid import UUID
-from app.schemas.base import BaseSchema, BaseResponse
-from app.models.job import JobType, JobStatus
+
+from app.models.job import JobStatus, JobType
+from app.schemas.base import BaseResponse, BaseSchema
 
 
 class JobBase(BaseSchema):

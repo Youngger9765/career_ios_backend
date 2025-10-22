@@ -1,8 +1,8 @@
 """Pytest fixtures for RAG tests"""
 
-import pytest
 from io import BytesIO
 
+import pytest
 from pypdf import PdfWriter
 
 

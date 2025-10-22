@@ -1,5 +1,4 @@
 """Tests for app configuration and settings"""
-import pytest
 
 
 class TestSettingsConfig:

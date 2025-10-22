@@ -1,8 +1,9 @@
 """Report Generation Service - 整合 RAG Agent 生成個案報告"""
 
 import logging
-import httpx
 from typing import Dict, List, Optional
+
+import httpx
 from openai import AsyncOpenAI
 
 from app.core.config import settings

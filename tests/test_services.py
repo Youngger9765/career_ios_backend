@@ -2,11 +2,13 @@
 Service layer tests for Career Counseling API
 Tests for STT, Sanitizer, and Report Generation services
 """
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from app.services.stt_service import STTService
-from app.services.sanitizer_service import SanitizerService
+
+import pytest
+
 from app.services.report_service import ReportGenerationService
+from app.services.sanitizer_service import SanitizerService
+from app.services.stt_service import STTService
 
 
 class TestSTTService:

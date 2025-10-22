@@ -7,7 +7,6 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-
 router = APIRouter(prefix="/api/rag/evaluation/chunk-strategies", tags=["chunk-strategies"])
 
 

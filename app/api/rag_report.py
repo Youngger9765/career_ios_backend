@@ -1,15 +1,15 @@
 """API endpoints for case report generation"""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.services.dialogue_extractor import DialogueExtractor
 from app.services.gemini_service import gemini_service
 from app.services.openai_service import OpenAIService
-from app.services.transcript_parser import TranscriptParser
 from app.services.rag_retriever import RAGRetriever
-from app.services.dialogue_extractor import DialogueExtractor
+from app.services.transcript_parser import TranscriptParser
 
 
 # Report schemas for structured output

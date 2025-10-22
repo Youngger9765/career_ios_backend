@@ -61,6 +61,7 @@ async def chat_with_rag(request: ChatRequest, db: AsyncSession = Depends(get_db)
 
         # Step 0.5: Get available documents from database
         from sqlalchemy import select
+
         from app.models.document import Document
 
         result = db.execute(select(Document.title).distinct())

@@ -4,7 +4,8 @@ Uses OpenAI to evaluate report quality like a real supervisor would.
 """
 
 import json
-from typing import Dict, Any
+from typing import Any, Dict
+
 from openai import AsyncOpenAI
 
 

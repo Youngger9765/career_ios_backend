@@ -1,7 +1,8 @@
-from typing import Optional
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
-from app.schemas.base import BaseSchema, BaseResponse
+
+from app.schemas.base import BaseResponse, BaseSchema
 
 
 class SessionBase(BaseSchema):

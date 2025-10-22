@@ -1,7 +1,8 @@
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID
-from app.schemas.base import BaseSchema, BaseResponse
+
 from app.models.report import ReportStatus
+from app.schemas.base import BaseResponse, BaseSchema
 
 
 class ReportBase(BaseSchema):

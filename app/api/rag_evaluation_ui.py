@@ -7,9 +7,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.api.chunk_strategies import get_all_strategies
 from app.database import get_db
 from app.models.evaluation import EvaluationExperiment, EvaluationTestSet
-from app.api.chunk_strategies import get_all_strategies
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ async def evaluation_matrix(request: Request, db: Session = Depends(get_db)):
     try:
         # 1. 獲取所有testsets
         logger.debug("Step 1: Fetching testsets...")
-        testsets_objs = db.query(EvaluationTestSet).filter(EvaluationTestSet.is_active == True).all()
+        testsets_objs = db.query(EvaluationTestSet).filter(EvaluationTestSet.is_active.is_(True)).all()
         testsets = [{"id": str(ts.id), "name": ts.name} for ts in testsets_objs]
         logger.info(f"Found {len(testsets)} testsets")
 

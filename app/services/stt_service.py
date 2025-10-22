@@ -1,6 +1,7 @@
 """Speech-to-Text Service using OpenAI Whisper API"""
 
 import os
+
 from openai import AsyncOpenAI
 
 from app.core.config import settings

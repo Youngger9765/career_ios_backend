@@ -1,11 +1,10 @@
 """Unit tests for report validators"""
 
-import pytest
 from app.utils.report_validators import (
-    validate_report_structure,
-    validate_citations,
+    calculate_quality_score,
     extract_section,
-    calculate_quality_score
+    validate_citations,
+    validate_report_structure,
 )
 
 

@@ -1,6 +1,6 @@
 """Database models for RAG evaluation system"""
 
-from sqlalchemy import Column, Float, Integer, String, Text, Boolean, ForeignKey, JSON
+from sqlalchemy import JSON, Boolean, Column, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 

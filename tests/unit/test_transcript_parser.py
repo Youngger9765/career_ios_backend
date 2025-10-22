@@ -7,9 +7,10 @@ TDD Approach:
 3. Refactor rag_report.py to use it (GREEN)
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock
 import json
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 # Import will fail initially - this is expected (RED phase)
 try:

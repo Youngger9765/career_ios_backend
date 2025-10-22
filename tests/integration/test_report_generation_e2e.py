@@ -4,15 +4,16 @@ Tests the complete flow:
 1. Transcript parsing → 2. RAG query → 3. Report generation → 4. Quality validation
 """
 
+
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
+
 from app.utils.rag_query_builder import build_enhanced_query
-from app.utils.report_validators import (
-    validate_report_structure,
-    validate_citations,
-    calculate_quality_score
-)
 from app.utils.report_quality import generate_quality_summary
+from app.utils.report_validators import (
+    calculate_quality_score,
+    validate_citations,
+    validate_report_structure,
+)
 
 
 class TestReportGenerationE2E:

@@ -254,13 +254,13 @@ async def get_evaluation_matrix(
     - Chunk Strategies (from chunk_strategies API)
     - Experiments results
     """
-    from collections import defaultdict
-    from app.models.evaluation import EvaluationTestSet
+
     from app.api.chunk_strategies import list_chunk_strategies
+    from app.models.evaluation import EvaluationTestSet
 
     # Get all testsets
     testsets_db = db.query(EvaluationTestSet).filter(
-        EvaluationTestSet.is_active == True
+        EvaluationTestSet.is_active.is_(True)
     ).all()
     testsets = [{"id": str(ts.id), "name": ts.name} for ts in testsets_db]
 
@@ -277,7 +277,7 @@ async def get_evaluation_matrix(
     experiments = db.query(EvaluationExperiment).all()
 
     # Build matrix: strategy -> prompt -> testset -> experiment
-    matrix = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: None)))
+    # matrix = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: None)))
 
     # For now, create a simpler matrix structure
     # Future: add testset_id to EvaluationExperiment model

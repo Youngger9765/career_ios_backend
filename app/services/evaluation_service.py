@@ -162,8 +162,9 @@ class EvaluationService:
             experiment.config_json = config
 
             # STEP 1: Generate answers using RAG for each test case
-            from app.services.openai_service import OpenAIService
             from sqlalchemy import String, bindparam
+
+            from app.services.openai_service import OpenAIService
 
             openai_service = OpenAIService()
 

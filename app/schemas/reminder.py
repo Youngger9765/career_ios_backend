@@ -1,8 +1,9 @@
-from typing import Optional
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
-from app.schemas.base import BaseSchema, BaseResponse
-from app.models.reminder import ReminderType, ReminderStatus
+
+from app.models.reminder import ReminderStatus, ReminderType
+from app.schemas.base import BaseResponse, BaseSchema
 
 
 class ReminderBase(BaseSchema):

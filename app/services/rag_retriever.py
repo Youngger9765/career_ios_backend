@@ -4,7 +4,8 @@ RAGRetriever Service - 檢索相關理論文獻
 Extracted from app/api/rag_report.py to follow SRP (Single Responsibility Principle)
 """
 
-from typing import List, Dict
+from typing import Dict, List
+
 from fastapi import HTTPException
 from sqlalchemy import Float, Integer, String, bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession

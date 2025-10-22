@@ -1,9 +1,10 @@
 """
 Integration test fixtures
 """
-import pytest
-from httpx import AsyncClient, ASGITransport
 from typing import AsyncGenerator
+
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 
 @pytest.fixture

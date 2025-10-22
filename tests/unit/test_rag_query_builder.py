@@ -1,10 +1,9 @@
 """Unit tests for RAG query builder improvements (M2.1)"""
 
-import pytest
 from app.utils.rag_query_builder import (
     build_enhanced_query,
+    extract_career_stage,
     extract_key_demographics,
-    extract_career_stage
 )
 
 

@@ -1,8 +1,9 @@
 """Gemini service for chat completions using Vertex AI"""
 
+import os
+
 import vertexai
 from vertexai.generative_models import GenerativeModel
-import os
 
 # Import settings when available
 try:

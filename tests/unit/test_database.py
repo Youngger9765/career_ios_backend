@@ -47,8 +47,8 @@ class TestDatabaseBase:
 
     def test_base_is_declarative_base(self):
         """Test Base is a proper SQLAlchemy declarative base"""
+
         from app.core.database import Base
-        from sqlalchemy.orm import DeclarativeBase
 
         # SQLAlchemy 2.0: Base should be instance of DeclarativeBase or have registry
         assert hasattr(Base, 'registry') or isinstance(Base, type)
@@ -56,8 +56,9 @@ class TestDatabaseBase:
 
     def test_base_can_create_table_model(self):
         """Test Base can be used to create a model"""
-        from app.core.database import Base
         from sqlalchemy import Column, Integer, String
+
+        from app.core.database import Base
 
         # Create a test model
         class TestModel(Base):

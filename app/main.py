@@ -3,9 +3,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from app.core.config import settings
+
 # RAG API routers
-from app.api import rag_ingest, rag_search, rag_chat, rag_agents, rag_stats, rag_report, rag_evaluation, rag_evaluation_ui, evaluation_testsets, rag_evaluation_testsets_ui, chunk_strategies, comparison
+from app.api import (
+    chunk_strategies,
+    comparison,
+    evaluation_testsets,
+    rag_agents,
+    rag_chat,
+    rag_evaluation,
+    rag_evaluation_testsets_ui,
+    rag_evaluation_ui,
+    rag_ingest,
+    rag_report,
+    rag_search,
+    rag_stats,
+)
+from app.core.config import settings
 
 # Templates
 templates = Jinja2Templates(directory="app/templates")

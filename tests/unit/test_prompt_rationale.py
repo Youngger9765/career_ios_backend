@@ -1,9 +1,8 @@
 """Unit tests for prompt rationale requirements (M2.2)"""
 
-import pytest
 from app.utils.prompt_enhancer import (
     add_rationale_examples,
-    validate_prompt_has_rationale_requirements
+    validate_prompt_has_rationale_requirements,
 )
 
 

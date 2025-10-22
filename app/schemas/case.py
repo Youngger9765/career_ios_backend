@@ -1,7 +1,8 @@
 from typing import Optional
 from uuid import UUID
-from app.schemas.base import BaseSchema, BaseResponse
+
 from app.models.case import CaseStatus
+from app.schemas.base import BaseResponse, BaseSchema
 
 
 class CaseBase(BaseSchema):

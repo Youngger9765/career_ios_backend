@@ -1,7 +1,9 @@
-from pydantic import EmailStr, Field
 from typing import Optional
-from app.schemas.base import BaseSchema, BaseResponse
+
+from pydantic import EmailStr, Field
+
 from app.models.user import UserRole
+from app.schemas.base import BaseResponse, BaseSchema
 
 
 class UserBase(BaseSchema):
