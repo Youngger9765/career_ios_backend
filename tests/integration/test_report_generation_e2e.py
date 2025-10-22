@@ -7,6 +7,8 @@ Tests the complete flow:
 
 import pytest
 
+pytestmark = [pytest.mark.asyncio, pytest.mark.slow, pytest.mark.integration]
+
 from app.utils.rag_query_builder import build_enhanced_query
 from app.utils.report_quality import generate_quality_summary
 from app.utils.report_validators import (

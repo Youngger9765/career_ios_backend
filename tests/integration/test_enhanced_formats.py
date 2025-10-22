@@ -6,6 +6,8 @@ Tests JSON, HTML, and Markdown output formats
 import pytest
 from httpx import AsyncClient
 
+pytestmark = [pytest.mark.asyncio, pytest.mark.slow, pytest.mark.integration]
+
 # Sample transcript for testing
 SAMPLE_TRANSCRIPT = """Co: 你好，今天想聊什麼？
 Cl: 我最近工作壓力很大，不知道該不該轉職。我在一家科技公司當工程師已經三年了，薪水還可以，但每天加班到很晚,感覺快撐不下去了。
