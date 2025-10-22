@@ -11,6 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.services.gemini_service import gemini_service
 from app.services.openai_service import OpenAIService
+from app.services.transcript_parser import TranscriptParser
+from app.services.rag_retriever import RAGRetriever
+from app.services.dialogue_extractor import DialogueExtractor
 
 
 # Report schemas for structured output
@@ -522,111 +525,41 @@ async def generate_report(
     try:
         openai_service = OpenAIService()
 
-        # Step 1: Parse transcript
-        parse_prompt = f"""請分析以下職涯諮詢逐字稿，提取關鍵資訊：
+        # Step 1: Parse transcript using TranscriptParser service
+        parser = TranscriptParser(openai_service)
+        parsed_result = await parser.parse(request.transcript)
 
-逐字稿：
-{request.transcript}
+        # Extract data from standardized format
+        parsed_data = {
+            "client_name": parsed_result["client_info"]["name"],
+            "gender": parsed_result["client_info"]["gender"],
+            "age": parsed_result["client_info"]["age"],
+            "occupation": parsed_result["client_info"]["occupation"],
+            "education": parsed_result["client_info"]["education"],
+            "location": parsed_result["client_info"]["location"],
+            "economic_status": parsed_result["client_info"]["economic_status"],
+            "family_relations": parsed_result["client_info"]["family_relations"],
+            "other_info": parsed_result["client_info"]["other_info"],
+            "main_concerns": parsed_result["main_concerns"],
+            "counseling_goals": parsed_result["counseling_goals"],
+            "counselor_techniques": parsed_result["counselor_techniques"],
+            "session_content": parsed_result["session_content"],
+            "counselor_self_evaluation": parsed_result["counselor_self_evaluation"],
+        }
 
-請以 JSON 格式回答（只要 JSON，不要其他文字）：
-{{
-  "client_name": "案主化名",
-  "gender": "性別",
-  "age": "年齡（若未提及則填'未提及'）",
-  "occupation": "部門/職業或學校科系",
-  "education": "學歷（若未提及則填'未提及'）",
-  "location": "現居地（若未提及則填'未提及'）",
-  "economic_status": "經濟狀況描述（若未提及則填'未提及'）",
-  "family_relations": "家庭關係描述",
-  "other_info": ["其他重要資訊1", "其他重要資訊2"],
-  "main_concerns": ["主訴問題1", "主訴問題2"],
-  "counseling_goals": ["晤談目標1", "晤談目標2"],
-  "counselor_techniques": ["使用的諮詢技巧1", "技巧2"],
-  "session_content": "晤談內容概述",
-  "counselor_self_evaluation": "諮詢師對本次晤談的自我評估"
-}}
-"""
-
-        parse_response = await openai_service.chat_completion(
-            messages=[{"role": "user", "content": parse_prompt}], temperature=0.3
-        )
-
-        # Parse JSON from response
-        try:
-            parsed_data = json.loads(parse_response)
-        except json.JSONDecodeError:
-            import re
-            json_match = re.search(r"\{.*\}", parse_response, re.DOTALL)
-            if json_match:
-                parsed_data = json.loads(json_match.group(0))
-            else:
-                parsed_data = {
-                    "client_name": "未提供",
-                    "gender": "未提及",
-                    "age": "未提及",
-                    "occupation": "未提及",
-                    "education": "未提及",
-                    "location": "未提及",
-                    "economic_status": "未提及",
-                    "family_relations": "未提及",
-                    "other_info": [],
-                    "main_concerns": [],
-                    "counseling_goals": [],
-                    "counselor_techniques": [],
-                    "session_content": "無法解析",
-                    "counselor_self_evaluation": "無法解析",
-                }
-
-        # Step 2: RAG search for relevant theories
+        # Step 2: RAG search for relevant theories using RAGRetriever service
         main_concerns = parsed_data.get("main_concerns", [])
         techniques = parsed_data.get("counselor_techniques", [])
         search_terms = main_concerns[:3] + techniques[:2]
         search_query = " ".join(search_terms) if search_terms else "職涯諮詢 生涯發展"
 
-        query_embedding = await openai_service.create_embedding(search_query)
-        embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
-
-        query_sql = text(
-            """
-            SELECT
-                c.id as chunk_id,
-                c.text,
-                d.title as document_title,
-                1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
-            FROM chunks c
-            JOIN embeddings e ON c.id = e.chunk_id
-            JOIN documents d ON c.doc_id = d.id
-            WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
-            ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
-            LIMIT :top_k
-        """
-        ).bindparams(
-            bindparam("query_embedding", type_=String),
-            bindparam("threshold", type_=Float),
-            bindparam("top_k", type_=Integer),
+        retriever = RAGRetriever(openai_service)
+        theories = await retriever.search(
+            query=search_query,
+            top_k=request.top_k,
+            threshold=request.similarity_threshold,
+            db=db
         )
-
-        result = db.execute(
-            query_sql,
-            {
-                "query_embedding": embedding_str,
-                "threshold": request.similarity_threshold,
-                "top_k": request.top_k,
-            },
-        )
-
-        rows = result.fetchall()
-        theories = [
-            {"text": row.text, "document": row.document_title, "score": float(row.similarity_score)}
-            for row in rows
-        ]
-
-        # ⚠️ Enforce RAG usage: Fail if no theories found
-        if not theories:
-            raise HTTPException(
-                status_code=400,
-                detail="❌ RAG 檢索失敗：未找到相關理論文獻，無法生成報告。請檢查資料庫或降低 similarity_threshold。"
-            )
 
         # Step 3: Generate structured report with enhanced context format
         context_parts = []
@@ -849,61 +782,9 @@ async def generate_report(
                 max_tokens=8000  # Maximum tokens for comprehensive report generation
             )
 
-        # Step 4: Extract key dialogue excerpts
-        if request.num_participants == 2:
-            speaker_instruction = '- speaker 使用 "speaker1"（通常為諮詢師）和 "speaker2"（通常為個案）'
-            speaker_example = """  "dialogues": [
-    {{"speaker": "speaker1", "order": 1, "text": "諮詢師的話"}},
-    {{"speaker": "speaker2", "order": 2, "text": "個案的話"}},
-    {{"speaker": "speaker1", "order": 3, "text": "諮詢師的話"}}
-  ]"""
-        else:
-            speaker_labels = ", ".join([f'"speaker{i+1}"' for i in range(request.num_participants)])
-            speaker_instruction = f"- speaker 使用 {speaker_labels}，根據逐字稿上下文判斷每位說話者"
-            speaker_example = """  "dialogues": [
-    {{"speaker": "speaker1", "order": 1, "text": "說話內容"}},
-    {{"speaker": "speaker2", "order": 2, "text": "說話內容"}},
-    {{"speaker": "speaker1", "order": 3, "text": "說話內容"}}
-  ]"""
-
-        excerpt_prompt = f"""請從以下逐字稿中，挑選 5-10 句最能體現個案樣貌和諮詢重點的關鍵對話。
-
-逐字稿：
-{request.transcript}
-
-會談人數：{request.num_participants} 人
-
-請以 JSON 格式回答（只要 JSON，不要其他文字）：
-{{
-{speaker_example}
-}}
-
-注意：
-{speaker_instruction}
-- 請根據逐字稿的語境和內容，自動判斷每句話是誰說的
-- order 是對話順序編號
-- 挑選能展現個案核心議題、情緒狀態、或關鍵轉變的對話
-- 如果逐字稿中有明確標示說話者（如 Co:、Cl:、諮詢師：、個案：等），請參考這些標示
-"""
-
-        if request.rag_system == "gemini":
-            excerpt_response = await gemini_service.chat_completion(excerpt_prompt, temperature=0.3)
-        else:
-            excerpt_response = await openai_service.chat_completion(
-                messages=[{"role": "user", "content": excerpt_prompt}], temperature=0.3
-            )
-
-        try:
-            excerpt_data = json.loads(excerpt_response)
-            dialogues = excerpt_data.get("dialogues", [])
-        except json.JSONDecodeError:
-            import re
-            json_match = re.search(r"\{.*\}", excerpt_response, re.DOTALL)
-            if json_match:
-                excerpt_data = json.loads(json_match.group(0))
-                dialogues = excerpt_data.get("dialogues", [])
-            else:
-                dialogues = []
+        # Step 4: Extract key dialogue excerpts using DialogueExtractor service
+        extractor = DialogueExtractor(openai_service if request.rag_system != "gemini" else gemini_service)
+        dialogues = await extractor.extract(request.transcript, request.num_participants)
 
         # Build final report
         report = {
