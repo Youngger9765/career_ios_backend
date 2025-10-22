@@ -7,9 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50">
-    <div class="flex h-screen">
-        <!-- Sidebar -->
-        <div class="w-80 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg">
+    <div class="flex h-screen relative">
+        <!-- Mobile Overlay (behind sidebar) -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 opacity-0 pointer-events-none md:!hidden transition-opacity duration-300"></div>
+
+        <!-- Sidebar (above overlay) -->
+        <div id="sidebar" class="fixed md:static inset-y-0 left-0 w-80 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out overflow-y-auto">
+
             <h1 class="text-2xl font-bold mb-8 text-gray-800">RAG Console</h1>
 
             <!-- Navigation Items -->
@@ -83,11 +87,60 @@
         </div>
 
         <!-- Main Content -->
-        <div class="flex-1 p-8 overflow-auto bg-gray-50">
-            <div class="max-w-6xl mx-auto">
-                {% block page_content %}{% endblock %}
+        <div class="flex-1 flex flex-col overflow-auto bg-gray-50">
+            <!-- Mobile Header with Hamburger Menu -->
+            <div class="md:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200">
+                <h1 class="text-xl font-bold text-gray-800">RAG Console</h1>
+                <button id="menu-button" class="p-2 rounded-lg hover:bg-gray-100 transition" aria-label="Toggle menu">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Page Content -->
+            <div class="flex-1 p-4 md:p-8 overflow-auto">
+                <div class="max-w-6xl mx-auto">
+                    {% block page_content %}{% endblock %}
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- JavaScript for Sidebar Toggle -->
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        const menuButton = document.getElementById('menu-button');
+
+        function toggleSidebar() {
+            const isOpen = !sidebar.classList.contains('-translate-x-full');
+
+            if (isOpen) {
+                // Close sidebar
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                overlay.classList.remove('opacity-100', 'pointer-events-auto');
+            } else {
+                // Open sidebar
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+                overlay.classList.add('opacity-100', 'pointer-events-auto');
+            }
+        }
+
+        // Toggle sidebar when menu button is clicked
+        menuButton.addEventListener('click', toggleSidebar);
+
+        // Close sidebar when overlay is clicked
+        overlay.addEventListener('click', toggleSidebar);
+
+        // Close sidebar when ESC key is pressed
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !sidebar.classList.contains('-translate-x-full')) {
+                toggleSidebar();
+            }
+        });
+    </script>
 </body>
 </html>
