@@ -1,8 +1,11 @@
 """Storage service for file uploads to Supabase or local storage"""
 
+import logging
 import os
 from typing import Optional
 import httpx
+
+logger = logging.getLogger(__name__)
 
 # Import settings when available
 try:
@@ -29,10 +32,10 @@ class StorageService:
 
         if STORAGE_TYPE == "supabase" and self.supabase_url and self.supabase_key:
             self.enabled = True
-            print(f"✓ Storage service initialized for bucket: {self.bucket}")
+            logger.info(f"Storage service initialized for bucket: {self.bucket}")
         else:
             self.enabled = False
-            print("✗ Storage service disabled - missing configuration")
+            logger.warning("Storage service disabled - missing configuration")
 
     async def upload_file(
         self, file_content: bytes, file_path: str, content_type: str = "application/pdf"

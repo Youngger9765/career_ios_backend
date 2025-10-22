@@ -1,10 +1,13 @@
 """Report Generation Service - 整合 RAG Agent 生成個案報告"""
 
+import logging
 import httpx
 from typing import Dict, List, Optional
 from openai import AsyncOpenAI
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class ReportGenerationService:
@@ -159,7 +162,7 @@ class ReportGenerationService:
                     return []
 
         except Exception as e:
-            print(f"RAG retrieval error: {e}")
+            logger.error(f"RAG retrieval error: {e}", exc_info=True)
             return []
 
     async def _generate_structured_report(
