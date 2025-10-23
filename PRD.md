@@ -103,26 +103,55 @@
 
 ### 1.3 使用流程（User Flow）
 
-**流程 A：音訊上傳模式**
-1. 諮商師在 iOS App 進行會談並錄音
-2. 上傳音訊檔至後端 `POST /api/v1/sessions/{id}/upload-audio`
-3. 後端建立異步任務（Job），狀態：queued → processing
-4. Whisper STT 轉逐字稿 → 脫敏處理
-5. 任務完成，狀態：completed
-6. 進入報告生成流程
+**簡化的單一步驟流程**（推薦）：
 
-**流程 B：逐字稿直傳模式**
-1. iOS App 已完成逐字稿處理（本地或第三方）
-2. 直接上傳逐字稿 `POST /api/v1/sessions/{id}/upload-transcript`
-3. 跳過 STT，直接進入報告生成流程
+```
+諮商師操作流程：
+1. 在 iOS 進行會談並錄音
+2. iOS 本地將音訊轉成逐字稿（前端處理）
+3. iOS 發送單一 API 請求
 
-**報告生成流程（兩種模式共用）**
-1. 後端調用 RAG Agent API `POST /api/rag/chat`
-2. Agent 檢索理論知識庫，返回相關片段
-3. GPT-4 結合檢索結果生成報告
-4. 報告存為草稿，返回給 iOS 或顯示在 Web 前台
-5. 督導審核 → 通過 → 存入個案紀錄
-6. 可建立提醒與追蹤事項
+iOS 請求：
+POST /api/v1/reports/generate
+Body: {
+  "client_id": "uuid",              # 個案 ID（事先建立好）
+  "transcript": "案主：我最近...",   # 逐字稿內容
+  "session_date": "2024-10-25",
+  "report_type": "enhanced",        # legacy | enhanced
+  "rag_system": "openai"            # openai | gemini
+}
+
+後端自動處理：
+1. 建立 session 記錄（存逐字稿）
+2. 調用 RAG Agent 檢索理論文獻
+3. GPT-4 生成結構化報告
+4. 存報告到 DB（狀態：draft）
+5. 返回完整結果
+
+Response: {
+  "session_id": "uuid",
+  "report_id": "uuid",
+  "report": {
+    "client_info": {...},
+    "conceptualization": "...",
+    "theories": [...],
+    "dialogue_excerpts": [...]
+  },
+  "quality_summary": {...}
+}
+
+後續操作：
+- 查看歷史：GET /api/v1/clients/{client_id}/sessions
+- 重新生成：POST /api/v1/reports/generate (同一 client_id，不同 session_date)
+- 督導審核：POST /api/v1/reports/{report_id}/review
+```
+
+**為什麼是單一步驟？**
+- ✅ iOS 只需發一次請求
+- ✅ 後端自動處理 session + report 建立
+- ✅ 減少網路往返，降低失敗率
+- ✅ 交易一致性（session 和 report 同時建立）
+- ✅ 簡化前端邏輯
 
 ---
 
@@ -446,27 +475,54 @@ chat_logs(
 #### 個案管理（Clients）
 - `GET /api/v1/clients` - 列出諮商師的所有個案
 - `POST /api/v1/clients` - 建立新個案
+  ```json
+  Body: {
+    "name_alias": "小明",
+    "background_info": {
+      "age": "28歲",
+      "gender": "男性",
+      "occupation": "軟體工程師"
+    },
+    "tags": ["職涯迷茫", "轉職"]
+  }
+  ```
 - `GET /api/v1/clients/{id}` - 取得個案詳情
 - `PUT /api/v1/clients/{id}` - 更新個案資料
 - `DELETE /api/v1/clients/{id}` - 刪除/封存個案
 
-#### 會談管理（Sessions）- 雙輸入模式
-- `GET /api/v1/clients/{client_id}/sessions` - 列出個案的所有會談
-- `POST /api/v1/clients/{client_id}/sessions` - 建立新會談
-- `GET /api/v1/sessions/{id}` - 取得會談詳情
-- `POST /api/v1/sessions/{id}/upload-audio` - 上傳音訊（模式 1）
-- `POST /api/v1/sessions/{id}/upload-transcript` - 上傳逐字稿（模式 2）
-- `GET /api/v1/sessions/{id}/transcript` - 取得逐字稿（原始/脫敏）
-- `DELETE /api/v1/sessions/{id}` - 刪除會談
+#### 報告生成（核心 API）- 單一步驟
+- `POST /api/v1/reports/generate` - **生成報告（自動建立 session + report）**
+  ```json
+  Body: {
+    "client_id": "uuid",
+    "transcript": "案主：我最近工作很不順...",
+    "session_date": "2024-10-25",
+    "report_type": "enhanced",
+    "rag_system": "openai"
+  }
+  Response: {
+    "session_id": "uuid",
+    "report_id": "uuid",
+    "report": {...},
+    "quality_summary": {...}
+  }
+  ```
 
-#### 報告管理（Reports）
-- `POST /api/v1/sessions/{session_id}/reports` - 生成報告（調用 RAG Agent）
+#### 會談與報告查詢
+- `GET /api/v1/clients/{client_id}/sessions` - 列出個案的所有會談記錄
+- `GET /api/v1/sessions/{id}` - 取得會談詳情（含逐字稿）
 - `GET /api/v1/sessions/{session_id}/reports` - 列出會談的所有報告版本
-- `GET /api/v1/reports/{id}` - 取得特定報告
-- `PUT /api/v1/reports/{id}` - 更新報告內容
-- `PATCH /api/v1/reports/{id}/status` - 更新報告狀態（提交審核、通過、退回）
+- `GET /api/v1/reports/{id}` - 取得特定報告完整內容
+
+#### 報告審核（督導功能）
 - `POST /api/v1/reports/{id}/review` - 督導審核報告
-- `DELETE /api/v1/reports/{id}` - 刪除報告版本
+  ```json
+  Body: {
+    "status": "approved",  // approved | rejected
+    "review_comment": "分析深入，建議補充..."
+  }
+  ```
+- `GET /api/v1/reports/pending-review` - 列出待審核的報告
 
 #### 任務狀態
 - `GET /api/v1/jobs/{id}` - 查詢異步任務狀態
