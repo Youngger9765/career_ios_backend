@@ -63,104 +63,19 @@ router = APIRouter(prefix="/api/report", tags=["report"])
 
 
 def format_report_as_html(report: dict) -> str:
-    """Convert report to HTML format"""
-    html = "<html><body>"
-    html += "<h1>個案報告</h1>"
+    """Convert report to HTML format (refactored to use formatter)"""
+    from app.utils.report_formatters import HTMLReportFormatter
 
-    # Client info
-    html += "<h2>案主基本資料</h2><table border='1'>"
-    for key, value in report["client_info"].items():
-        if isinstance(value, list):
-            value = ", ".join(value)
-        html += f"<tr><th>{key}</th><td>{value}</td></tr>"
-    html += "</table>"
-
-    # Main concerns
-    html += "<h2>主訴問題</h2><ul>"
-    for concern in report["main_concerns"]:
-        html += f"<li>{concern}</li>"
-    html += "</ul>"
-
-    # Goals
-    html += "<h2>晤談目標</h2><ul>"
-    for goal in report["counseling_goals"]:
-        html += f"<li>{goal}</li>"
-    html += "</ul>"
-
-    # Techniques
-    html += "<h2>諮詢技巧</h2><ul>"
-    for technique in report["techniques"]:
-        html += f"<li>{technique}</li>"
-    html += "</ul>"
-
-    # Conceptualization
-    html += "<h2>個案概念化</h2>"
-    html += f"<pre>{report['conceptualization']}</pre>"
-
-    # Theories
-    html += "<h2>相關理論文獻</h2><ul>"
-    for theory in report["theories"]:
-        html += f"<li><b>{theory['document']}</b> (相似度: {theory['score']:.2f})<br>{theory['text'][:200]}...</li>"
-    html += "</ul>"
-
-    # Dialogues
-    html += "<h2>關鍵對話摘錄</h2><ol>"
-    for dialogue in report["dialogue_excerpts"]:
-        html += f"<li><b>{dialogue['speaker']}</b>: {dialogue['text']}</li>"
-    html += "</ol>"
-
-    html += "</body></html>"
-    return html
+    formatter = HTMLReportFormatter()
+    return formatter.format(report)
 
 
 def format_report_as_markdown(report: dict) -> str:
-    """Convert report to Markdown format"""
-    md = "# 個案報告\n\n"
+    """Convert report to Markdown format (refactored to use formatter)"""
+    from app.utils.report_formatters import MarkdownReportFormatter
 
-    # Client info
-    md += "## 案主基本資料\n\n"
-    for key, value in report["client_info"].items():
-        if isinstance(value, list):
-            value = ", ".join(value)
-        md += f"- **{key}**: {value}\n"
-    md += "\n"
-
-    # Main concerns
-    md += "## 主訴問題\n\n"
-    for concern in report["main_concerns"]:
-        md += f"- {concern}\n"
-    md += "\n"
-
-    # Goals
-    md += "## 晤談目標\n\n"
-    for goal in report["counseling_goals"]:
-        md += f"- {goal}\n"
-    md += "\n"
-
-    # Techniques
-    md += "## 諮詢技巧\n\n"
-    for technique in report["techniques"]:
-        md += f"- {technique}\n"
-    md += "\n"
-
-    # Conceptualization
-    md += "## 個案概念化\n\n"
-    md += f"{report['conceptualization']}\n\n"
-
-    # Theories
-    md += "## 相關理論文獻\n\n"
-    for i, theory in enumerate(report["theories"], 1):
-        md += f"### [{i}] {theory['document']}\n\n"
-        md += f"**相似度**: {theory['score']:.2f}\n\n"
-        md += f"{theory['text'][:200]}...\n\n"
-
-    # Dialogues
-    md += "## 關鍵對話摘錄\n\n"
-    for dialogue in report["dialogue_excerpts"]:
-        md += f"{dialogue['order']}. **{dialogue['speaker']}**: {dialogue['text']}\n"
-    md += "\n"
-
-    return md
+    formatter = MarkdownReportFormatter()
+    return formatter.format(report)
 
 
 class ReportRequest(BaseModel):
