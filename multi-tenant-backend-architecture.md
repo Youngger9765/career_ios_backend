@@ -205,55 +205,217 @@ Step 3: Deploy to Floating Island
 
 ### 統一 Schema (兩邊結構相同)
 
-**主要 Tables**:
+**設計原則**:
+1. **tenant_id 全表標記**：即使資料庫分開，仍保留 tenant_id 用於未來彈性、資料溯源、防呆
+2. **彈性 JSONB 存儲**：報告內容、背景資料等使用 JSONB，支援職游/浮島不同格式
+3. **版本控制**：reports 表支援同一 session 生成多個版本
+4. **審核流程**：reports 包含草稿、審核、通過狀態
 
+**完整資料表結構**:
+
+```sql
+-- 諮商師/老師（多租戶隔離）
+counselors (
+  id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,                    -- "career_journey" | "floating_island"
+  email TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'counselor',     -- counselor | supervisor | admin
+  metadata JSONB DEFAULT '{}',                -- 彈性欄位（專業證照、專長等）
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  CONSTRAINT counselors_email_tenant_unique UNIQUE (email, tenant_id)
+);
+CREATE INDEX idx_counselors_tenant ON counselors(tenant_id);
+
+-- 個案/學生（簡化設計，不需要 visitors 表）
+clients (
+  id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  counselor_id UUID NOT NULL REFERENCES counselors(id) ON DELETE CASCADE,
+  name_alias TEXT NOT NULL,                   -- 化名
+  background_info JSONB DEFAULT '{}',         -- 彈性存儲：年齡、性別、職業、教育等
+  tags TEXT[] DEFAULT '{}',                   -- 標籤：["職涯迷茫", "轉職"]
+  status TEXT DEFAULT 'active',               -- active | archived
+  created_by_app TEXT NOT NULL,               -- "career_journey" | "floating_island"
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_clients_counselor ON clients(counselor_id, tenant_id);
+CREATE INDEX idx_clients_tenant ON clients(tenant_id);
+
+-- 會談 Session（一個案多次會談）
+sessions (
+  id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  counselor_id UUID NOT NULL REFERENCES counselors(id) ON DELETE CASCADE,
+  session_date DATE NOT NULL,
+  session_number INTEGER,                     -- 第幾次會談（自動計算或手動設定）
+  room TEXT,                                  -- 會談地點（可選）
+
+  -- 輸入資料
+  input_type TEXT NOT NULL,                   -- "audio" | "transcript"
+  audio_path TEXT,                            -- Supabase Storage 路徑
+  transcript_raw TEXT,                        -- 原始逐字稿
+  transcript_sanitized TEXT,                  -- 脫敏後逐字稿
+
+  -- 處理狀態
+  processing_status TEXT DEFAULT 'pending',   -- pending | processing | completed | failed
+
+  metadata JSONB DEFAULT '{}',                -- 其他資訊（錄音時長、檔案大小等）
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_sessions_client ON sessions(client_id, tenant_id);
+CREATE INDEX idx_sessions_counselor ON sessions(counselor_id, tenant_id);
+CREATE INDEX idx_sessions_date ON sessions(session_date DESC);
+
+-- 異步任務（音訊模式使用）
+jobs (
+  id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  job_type TEXT NOT NULL,                     -- "stt" | "sanitize" | "report_generation"
+  status TEXT DEFAULT 'queued',               -- queued | processing | completed | failed
+  progress INTEGER DEFAULT 0,                 -- 0-100
+  error_message TEXT,
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_jobs_session ON jobs(session_id, tenant_id);
+CREATE INDEX idx_jobs_status ON jobs(status, tenant_id);
+
+-- 報告（含版本控制、審核流程）
+reports (
+  id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,      -- 冗餘但方便查詢
+  counselor_id UUID NOT NULL REFERENCES counselors(id) ON DELETE CASCADE, -- 冗餘但方便查詢
+
+  -- 版本控制
+  report_version INTEGER NOT NULL DEFAULT 1,  -- 同一 session 可重新生成
+  report_type TEXT NOT NULL,                  -- "legacy" | "enhanced" | 自定義格式
+
+  -- 報告內容（JSONB 彈性存儲，支援不同格式）
+  content JSONB NOT NULL,                     -- 報告主體內容
+  citations JSONB DEFAULT '[]',               -- RAG 檢索的理論引用
+  quality_metrics JSONB DEFAULT '{}',         -- 質量評分（可選）
+
+  -- RAG Agent 資訊
+  agent_id TEXT,                              -- 使用的 Agent ID（可選）
+
+  -- 審核流程
+  status TEXT DEFAULT 'draft',                -- draft | under_review | approved | rejected
+  reviewed_by UUID REFERENCES counselors(id), -- 督導 ID
+  reviewed_at TIMESTAMPTZ,
+  review_comment TEXT,                        -- 審核意見
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  CONSTRAINT reports_session_version_unique UNIQUE (session_id, report_version)
+);
+CREATE INDEX idx_reports_session ON reports(session_id, tenant_id);
+CREATE INDEX idx_reports_client ON reports(client_id, tenant_id);
+CREATE INDEX idx_reports_counselor ON reports(counselor_id, tenant_id);
+CREATE INDEX idx_reports_status ON reports(status, tenant_id);
+
+-- 提醒（回訪、追蹤事項）
+reminders (
+  id UUID PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  counselor_id UUID NOT NULL REFERENCES counselors(id) ON DELETE CASCADE,
+  due_date DATE NOT NULL,
+  content TEXT NOT NULL,
+  status TEXT DEFAULT 'pending',              -- pending | completed | cancelled
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_reminders_counselor ON reminders(counselor_id, due_date);
+CREATE INDEX idx_reminders_status ON reminders(status, tenant_id);
 ```
-counselors (諮詢師 / 老師)
-├─ id (UUID)
-├─ email
-├─ name
-├─ tenant_id (標記租戶)
-└─ metadata (JSONB 彈性欄位)
 
-clients (個案 / 學生)
-├─ id (UUID)
-├─ counselor_id (外鍵)
-├─ name
-├─ tenant_id
-├─ created_by_app (標記來源)
-└─ background_info (JSONB)
+**報告內容 JSONB 格式範例**:
 
-counseling_sessions (諮詢 / 輔導紀錄)
-├─ id (UUID)
-├─ client_id (外鍵)
-├─ counselor_id (外鍵)
-├─ session_date
-├─ audio_file_url
-├─ transcript (逐字稿)
-├─ tenant_id
-└─ created_by_app
+職游 Enhanced 格式：
+```json
+{
+  "format": "enhanced",
+  "version": "2.0",
+  "sections": {
+    "client_info": {...},
+    "main_issue": "...",
+    "problem_development": "...",
+    "multilevel_analysis": "...",
+    "professional_judgment": "...",
+    "goals_strategies": "...",
+    "counselor_reflection": "..."
+  },
+  "theories_applied": ["Super生涯發展理論", "Holland類型論"],
+  "metadata": {"word_count": 2500}
+}
+```
 
-case_reports (個案報告)
-├─ id (UUID)
-├─ session_id (外鍵)
-├─ client_id (外鍵)
-├─ report_content (JSONB)
-├─ report_pdf_url
-├─ tenant_id
-└─ created_by_app
+浮島教育諮詢格式：
+```json
+{
+  "format": "education_counseling",
+  "version": "1.0",
+  "sections": {
+    "student_profile": {...},
+    "academic_performance": "...",
+    "university_planning": [...],
+    "next_steps": "..."
+  },
+  "metadata": {"target_universities": ["台大", "清大"]}
+}
 ```
 
 ### Row-Level Security (RLS) 權限控制
 
-**職游 Supabase**:
-- `tenant_id = 'career_journey'` → 可看到所有資料（包含浮島建立的）
+**重要說明**：
+- 由於職游和浮島使用**完全分開的資料庫**（不同 Supabase Project）
+- RLS 不是必須的（資料庫層級已隔離）
+- 但仍建議加上 RLS 作為**額外安全層**，防止應用層錯誤
 
-**浮島 Supabase**:
-- `tenant_id = 'floating_island'` → 只能看到 `created_by_app = 'floating_island'` 的資料
+**RLS Policy 範例**：
 
-**實作方式**:
-- PostgreSQL RLS Policy
-- 根據 `current_setting('app.tenant_id')` 自動過濾
+```sql
+-- 諮商師只能看自己的個案
+CREATE POLICY counselor_access ON clients
+FOR SELECT
+USING (counselor_id = auth.uid());
+
+-- 諮商師只能看自己相關的會談
+CREATE POLICY counselor_sessions ON sessions
+FOR SELECT
+USING (counselor_id = auth.uid());
+
+-- 督導可以看所有報告
+CREATE POLICY supervisor_access ON reports
+FOR ALL
+USING (
+  (SELECT role FROM counselors WHERE id = auth.uid()) = 'supervisor'
+);
+
+-- tenant_id 驗證（防呆機制）
+CREATE POLICY tenant_isolation ON clients
+FOR ALL
+USING (tenant_id = current_setting('app.tenant_id', true)::text);
+```
+
+**為什麼即使資料庫分開，還要 tenant_id？**
+1. **未來彈性**：可能合併資料庫、做跨租戶分析
+2. **資料溯源**：備份時知道來源
+3. **開發/測試環境**：可以用單一 DB 測試多租戶
+4. **防呆機制**：避免部署錯誤導致資料混淆
 
 ---
 
@@ -261,15 +423,51 @@ case_reports (個案報告)
 
 ### 統一路由結構
 
+**核心 API 端點**：
+
 | 端點 | 職游顯示文案 | 浮島顯示文案 | 說明 |
 |------|------------|------------|------|
-| `GET /api/v1/counselors` | 諮詢師列表 | 老師列表 | 同一個 API |
-| `POST /api/v1/counselors` | 建立諮詢師 | 建立老師 | 同一個 API |
-| `GET /api/v1/clients` | 個案列表 | 學生列表 | 同一個 API，RLS 自動過濾 |
-| `POST /api/v1/clients` | 建立個案 | 建立學生 | 自動標記 `created_by_app` |
-| `POST /api/v1/sessions` | 建立諮詢 | 建立輔導 | 同一個 API |
-| `POST /api/v1/sessions/{id}/complete` | 完成諮詢 | 完成輔導 | 上傳錄音 + 標籤 |
-| `GET /api/v1/reports/{id}` | 取得個案報告 | 取得學生報告 | 同一個 API |
+| `GET /api/v1/clients` | 個案列表 | 學生列表 | 列出諮商師的所有個案 |
+| `POST /api/v1/clients` | 建立個案 | 建立學生 | 自動標記 `tenant_id` 和 `created_by_app` |
+| `GET /api/v1/clients/{id}` | 個案詳情 | 學生詳情 | 取得個案完整資料 |
+| `GET /api/v1/clients/{client_id}/sessions` | 個案會談列表 | 學生輔導列表 | 列出所有會談記錄 |
+| `POST /api/v1/clients/{client_id}/sessions` | 建立會談 | 建立輔導 | 建立新會談 Session |
+| `POST /api/v1/sessions/{id}/upload-audio` | 上傳音訊 | 上傳音訊 | 音訊模式（觸發 STT） |
+| `POST /api/v1/sessions/{id}/upload-transcript` | 上傳逐字稿 | 上傳逐字稿 | 逐字稿模式（跳過 STT） |
+| `POST /api/v1/sessions/{session_id}/reports` | 生成報告 | 生成報告 | 調用 RAG Agent 生成報告 |
+| `GET /api/v1/sessions/{session_id}/reports` | 報告版本列表 | 報告版本列表 | 列出所有報告版本 |
+| `GET /api/v1/reports/{id}` | 取得報告 | 取得報告 | 取得特定報告內容 |
+| `POST /api/v1/reports/{id}/review` | 督導審核 | 督導審核 | 督導審核報告 |
+
+**資料流程範例**：
+
+```
+1. 建立個案
+   POST /api/v1/clients
+   Body: { "name_alias": "小明", "background_info": {...} }
+
+2. 建立會談
+   POST /api/v1/clients/{client_id}/sessions
+   Body: { "session_date": "2024-10-25", "input_type": "audio" }
+
+3. 上傳音訊（模式 1）
+   POST /api/v1/sessions/{session_id}/upload-audio
+   Body: multipart/form-data (audio file)
+   → 觸發異步 Job（STT + 脫敏）
+
+   或上傳逐字稿（模式 2）
+   POST /api/v1/sessions/{session_id}/upload-transcript
+   Body: { "transcript": "案主：我最近工作很不順..." }
+
+4. 生成報告
+   POST /api/v1/sessions/{session_id}/reports
+   Body: { "report_type": "enhanced", "rag_system": "openai" }
+   → 調用 RAG Agent → 返回報告
+
+5. 查看報告
+   GET /api/v1/reports/{report_id}
+   → 返回完整報告 JSONB
+```
 
 ### 前端文案處理
 

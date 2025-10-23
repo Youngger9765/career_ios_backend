@@ -70,6 +70,9 @@ coverage.json
 .dmypy.json
 dmypy.json
 
+# Ruff
+.ruff_cache/
+
 # Pyre
 .pyre/
 
