@@ -21,9 +21,12 @@ class Report(Base, BaseModel):
     __tablename__ = "reports"
 
     session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
-    created_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False)
+    created_by_id = Column(UUID(as_uuid=True), ForeignKey("counselors.id"), nullable=False)
+    tenant_id = Column(String, nullable=False, index=True)
     version = Column(Integer, default=1)
     status = Column(SQLEnum(ReportStatus), default=ReportStatus.DRAFT, nullable=False)
+    mode = Column(String)  # 報告生成模式
 
     # Report content - 結構化報告內容
     content_json = Column(
@@ -45,13 +48,20 @@ class Report(Base, BaseModel):
     prompt_tokens = Column(Integer)
     completion_tokens = Column(Integer)
 
+    # Quality metrics
+    quality_score = Column(Integer)  # 0-100
+    quality_grade = Column(String)  # A, B, C, D, E
+    quality_strengths = Column(JSON)  # List of strengths
+    quality_weaknesses = Column(JSON)  # List of weaknesses
+
     # Review
-    reviewed_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    reviewed_by_id = Column(UUID(as_uuid=True), ForeignKey("counselors.id"))
     review_notes = Column(Text)
 
     # Relationships
     session = relationship("Session", back_populates="reports")
+    client = relationship("Client", back_populates="reports")
     created_by = relationship(
-        "User", foreign_keys=[created_by_id], back_populates="reports"
+        "Counselor", foreign_keys=[created_by_id], back_populates="reports"
     )
-    reviewed_by = relationship("User", foreign_keys=[reviewed_by_id])
+    reviewed_by = relationship("Counselor", foreign_keys=[reviewed_by_id])

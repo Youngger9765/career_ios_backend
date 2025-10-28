@@ -6,7 +6,9 @@ from fastapi.templating import Jinja2Templates
 
 # RAG API routers
 from app.api import (
+    auth,
     chunk_strategies,
+    clients,
     comparison,
     evaluation_testsets,
     rag_agents,
@@ -18,6 +20,7 @@ from app.api import (
     rag_report,
     rag_search,
     rag_stats,
+    reports,
 )
 from app.core.config import settings
 
@@ -41,6 +44,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include auth routes
+app.include_router(auth.router, prefix="/api")
+
+# Include client routes
+app.include_router(clients.router)
+
+# Include reports routes
+app.include_router(reports.router)
 
 # Include RAG API routes
 app.include_router(rag_ingest.router)

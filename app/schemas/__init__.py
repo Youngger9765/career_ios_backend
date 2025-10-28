@@ -1,32 +1,38 @@
 """Pydantic schemas for request/response models"""
 
+from .auth import CounselorInfo, LoginRequest, TokenResponse
 from .case import CaseCreate, CaseResponse, CaseUpdate
+from .client import ClientCreate, ClientListResponse, ClientResponse, ClientUpdate
 from .job import JobCreate, JobResponse
 from .reminder import ReminderCreate, ReminderResponse, ReminderUpdate
-from .report import ReportCreate, ReportResponse, ReportUpdate
+from .report import ReportListResponse, ReportResponse
 from .session import AudioUpload, SessionCreate, SessionResponse
-from .user import Token, UserCreate, UserLogin, UserResponse
-from .visitor import VisitorCreate, VisitorResponse, VisitorUpdate
 
 __all__ = [
-    "UserCreate",
-    "UserResponse",
-    "UserLogin",
-    "Token",
-    "VisitorCreate",
-    "VisitorResponse",
-    "VisitorUpdate",
+    # Auth
+    "LoginRequest",
+    "TokenResponse",
+    "CounselorInfo",
+    # Client
+    "ClientCreate",
+    "ClientResponse",
+    "ClientUpdate",
+    "ClientListResponse",
+    # Case
     "CaseCreate",
     "CaseResponse",
     "CaseUpdate",
+    # Session
     "SessionCreate",
     "SessionResponse",
     "AudioUpload",
+    # Job
     "JobResponse",
     "JobCreate",
-    "ReportCreate",
+    # Report
     "ReportResponse",
-    "ReportUpdate",
+    "ReportListResponse",
+    # Reminder
     "ReminderCreate",
     "ReminderResponse",
     "ReminderUpdate",
