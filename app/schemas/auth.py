@@ -39,3 +39,10 @@ class CounselorInfo(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CounselorUpdate(BaseModel):
+    """Counselor update request"""
+
+    full_name: Optional[str] = None
+    username: Optional[str] = None

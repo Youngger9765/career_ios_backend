@@ -13,7 +13,9 @@ class Session(Base, BaseModel):
     tenant_id = Column(String, nullable=False, index=True)
     session_number = Column(Integer, nullable=False)
     session_date = Column(DateTime(timezone=True), nullable=False)
-    duration_minutes = Column(Integer)
+    start_time = Column(DateTime(timezone=True))  # 開始時間
+    end_time = Column(DateTime(timezone=True))  # 結束時間
+    duration_minutes = Column(Integer)  # 保留向下兼容
     room_number = Column(String)
 
     # File paths/URLs

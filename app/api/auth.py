@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.core.security import create_access_token, verify_password
 from app.models.counselor import Counselor
-from app.schemas.auth import CounselorInfo, LoginRequest, TokenResponse
+from app.schemas.auth import CounselorInfo, CounselorUpdate, LoginRequest, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 settings = Settings()
@@ -101,3 +101,66 @@ def get_current_counselor(
         CounselorInfo with user details
     """
     return CounselorInfo.model_validate(current_user)
+
+
+@router.patch("/me", response_model=CounselorInfo)
+def update_current_counselor(
+    update_data: CounselorUpdate,
+    current_user: Counselor = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> CounselorInfo:
+    """
+    Update current authenticated counselor information
+
+    Args:
+        update_data: Fields to update (full_name, username)
+        current_user: Current authenticated counselor from JWT
+        db: Database session
+
+    Returns:
+        Updated CounselorInfo
+
+    Raises:
+        HTTPException: 400 if username already exists, 500 if update fails
+    """
+    try:
+        # Convert to dict and filter out None values
+        update_fields = {k: v for k, v in update_data.model_dump(exclude_unset=True).items() if v is not None}
+
+        if not update_fields:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No valid fields to update",
+            )
+
+        # Check username uniqueness if being updated (only if different from current)
+        if "username" in update_fields and update_fields["username"] != current_user.username:
+            result = db.execute(
+                select(Counselor).where(
+                    Counselor.username == update_fields["username"],
+                    Counselor.id != current_user.id,
+                )
+            )
+            if result.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Username '{update_fields['username']}' already exists",
+                )
+
+        # Update fields
+        for field, value in update_fields.items():
+            setattr(current_user, field, value)
+
+        db.commit()
+        db.refresh(current_user)
+
+        return CounselorInfo.model_validate(current_user)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update counselor info: {str(e)}",
+        )

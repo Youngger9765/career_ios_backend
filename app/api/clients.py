@@ -22,6 +22,39 @@ from app.schemas.client import (
 router = APIRouter(prefix="/api/v1/clients", tags=["Clients"])
 
 
+def _generate_client_code(db: Session, tenant_id: str) -> str:
+    """
+    Generate unique client code in format C0001, C0002, etc.
+
+    Args:
+        db: Database session
+        tenant_id: Tenant ID
+
+    Returns:
+        Generated client code
+    """
+    # Find the highest existing code number for this tenant
+    result = db.execute(
+        select(Client.code)
+        .where(Client.tenant_id == tenant_id)
+        .where(Client.code.like("C%"))
+        .order_by(Client.code.desc())
+    )
+    codes = result.scalars().all()
+
+    # Extract numbers from codes and find max
+    max_num = 0
+    for code in codes:
+        if code.startswith("C") and code[1:].isdigit():
+            num = int(code[1:])
+            if num > max_num:
+                max_num = num
+
+    # Generate next code
+    next_num = max_num + 1
+    return f"C{next_num:04d}"
+
+
 @router.post("", response_model=ClientResponse, status_code=status.HTTP_201_CREATED)
 def create_client(
     client_data: ClientCreate,
@@ -46,21 +79,28 @@ def create_client(
         HTTPException: 500 if database error occurs
     """
     try:
+        # Auto-generate code if not provided
+        client_code = client_data.code
+        if not client_code:
+            client_code = _generate_client_code(db, tenant_id)
+
         # Check if code already exists
         result = db.execute(
             select(Client).where(
-                Client.code == client_data.code, Client.tenant_id == tenant_id
+                Client.code == client_code, Client.tenant_id == tenant_id
             )
         )
         if result.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Client code '{client_data.code}' already exists",
+                detail=f"Client code '{client_code}' already exists",
             )
 
         # Create new client
+        client_dict = client_data.model_dump(exclude={"code"})
         client = Client(
-            **client_data.model_dump(),
+            **client_dict,
+            code=client_code,
             counselor_id=current_user.id,
             tenant_id=tenant_id,
         )

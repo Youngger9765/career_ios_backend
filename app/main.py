@@ -21,6 +21,7 @@ from app.api import (
     rag_search,
     rag_stats,
     reports,
+    sessions,
 )
 from app.core.config import settings
 
@@ -53,6 +54,9 @@ app.include_router(clients.router)
 
 # Include reports routes
 app.include_router(reports.router)
+
+# Include sessions routes
+app.include_router(sessions.router)
 
 # Include RAG API routes
 app.include_router(rag_ingest.router)
@@ -134,6 +138,12 @@ async def rag_chat_page(request: Request):
 async def rag_report_page(request: Request):
     """RAG Ops Console - Report Generation page"""
     return templates.TemplateResponse("rag/report.html", {"request": request})
+
+
+@app.get("/console", response_class=HTMLResponse)
+async def console_page(request: Request):
+    """Counseling System Debug Console"""
+    return templates.TemplateResponse("console.html", {"request": request})
 
 
 @app.get("/health")

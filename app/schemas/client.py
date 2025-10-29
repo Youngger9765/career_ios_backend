@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 class ClientBase(BaseModel):
     """Base client schema with common fields"""
 
-    code: str = Field(..., description="Anonymous client code")
+    code: Optional[str] = Field(None, description="Anonymous client code (auto-generated if not provided)")
     name: str = Field(..., description="Client name (pseudonym)")
     nickname: Optional[str] = Field(None, description="Nickname")
     age: Optional[int] = Field(None, ge=0, le=150, description="Age")
