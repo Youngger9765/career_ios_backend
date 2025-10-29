@@ -1,21 +1,118 @@
 """
 Reports query API
 """
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_tenant_id
+from app.models.case import Case
+from app.models.client import Client
 from app.models.counselor import Counselor
-from app.models.report import Report
-from app.schemas.report import ReportListResponse, ReportResponse
+from app.models.report import Report, ReportStatus
+from app.models.session import Session as SessionModel
+from app.schemas.report import (
+    ReportListResponse,
+    ReportResponse,
+    ReportUpdateRequest,
+    ReportUpdateResponse,
+)
 from app.utils.report_formatters import create_formatter
 
 router = APIRouter(prefix="/api/v1/reports", tags=["Reports"])
+
+
+async def _generate_report_background(
+    report_id: UUID,
+    transcript: str,
+    report_type: str,
+    rag_system: str,
+):
+    """
+    背景任務:生成報告內容 (異步版本)
+
+    Args:
+        report_id: Report UUID
+        transcript: 逐字稿
+        report_type: 報告類型 (enhanced/legacy)
+        rag_system: RAG 系統 (openai/gemini)
+    """
+    from app.api.rag_report import ReportRequest, generate_report as rag_generate
+    from app.core.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        # 查詢 report
+        result = db.execute(select(Report).where(Report.id == report_id))
+        report = result.scalar_one_or_none()
+
+        if not report:
+            return
+
+        # 生成報告
+        rag_request = ReportRequest(
+            transcript=transcript,
+            num_participants=2,
+            rag_system=rag_system,
+            top_k=7,
+            similarity_threshold=0.25,
+            output_format="json",
+            mode=report_type,
+        )
+
+        # 異步調用 RAG 生成 (在背景執行)
+        report_data = await rag_generate(rag_request, db)
+
+        # 更新 report
+        report.content_json = report_data
+        report.citations_json = report_data.get("theories_cited", [])
+        report.prompt_tokens = report_data.get("token_usage", {}).get("prompt_tokens", 0)
+        report.completion_tokens = report_data.get("token_usage", {}).get("completion_tokens", 0)
+        report.quality_score = report_data.get("quality_summary", {}).get("overall_score")
+        report.quality_grade = report_data.get("quality_summary", {}).get("grade")
+        report.quality_strengths = report_data.get("quality_summary", {}).get("strengths")
+        report.quality_weaknesses = report_data.get("quality_summary", {}).get("improvements_needed")
+        report.status = ReportStatus.DRAFT  # 生成完成,狀態改為 draft
+
+        db.commit()
+
+    except Exception as e:
+        # 生成失敗,標記為 failed
+        if report:
+            report.status = ReportStatus.FAILED
+            report.error_message = str(e)
+            db.commit()
+    finally:
+        db.close()
+
+
+class GenerateReportRequest(BaseModel):
+    """Request schema for generating report"""
+
+    session_id: UUID  # 必填：使用現有逐字稿生成報告
+    report_type: str = "enhanced"  # enhanced | legacy
+    rag_system: str = "openai"  # openai | gemini
+
+
+class ProcessingStatus(BaseModel):
+    """報告處理中的狀態"""
+    status: str  # "processing"
+    message: str
+
+
+class GenerateReportResponse(BaseModel):
+    """異步報告生成響應 (HTTP 202)"""
+
+    session_id: UUID
+    report_id: UUID
+    report: ProcessingStatus  # 處理中狀態
+    quality_summary: None = None  # 處理中時一定是 None
 
 
 @router.get("", response_model=ReportListResponse)
@@ -108,6 +205,7 @@ def get_report(
 def get_formatted_report(
     report_id: UUID,
     format: str = Query("markdown", regex="^(markdown|html)$"),
+    use_edited: bool = Query(True, description="Use edited version if available"),
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: Session = Depends(get_db),
@@ -118,6 +216,7 @@ def get_formatted_report(
     Args:
         report_id: Report UUID
         format: Output format ("markdown" or "html")
+        use_edited: Use edited version if available (default: True)
         current_user: Current authenticated counselor
         tenant_id: Tenant ID
         db: Database session
@@ -142,10 +241,215 @@ def get_formatted_report(
 
     # Format report using existing formatter
     formatter = create_formatter(format)
-    formatted_content = formatter.format(report.content_json)
+
+    # Use edited version if available and requested, otherwise use AI original
+    if use_edited and report.edited_content_json:
+        report_data = report.edited_content_json
+    else:
+        report_data = report.content_json
+
+    # Extract actual report content from wrapper
+    if isinstance(report_data, dict) and "report" in report_data:
+        report_data = report_data["report"]
+
+    formatted_content = formatter.format(report_data)
 
     return {
         "report_id": str(report_id),
         "format": format,
-        "content": formatted_content,
+        "formatted_content": formatted_content,
+        "is_edited": use_edited and report.edited_content_json is not None,
+        "edited_at": report.edited_at if report.edited_content_json else None,
     }
+
+
+@router.patch("/{report_id}", response_model=ReportUpdateResponse)
+def update_report(
+    report_id: UUID,
+    update_request: ReportUpdateRequest,
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+    db: Session = Depends(get_db),
+) -> ReportUpdateResponse:
+    """
+    Update report content (counselor edits)
+
+    Args:
+        report_id: Report UUID
+        update_request: Updated report content
+        current_user: Current authenticated counselor
+        tenant_id: Tenant ID
+        db: Database session
+
+    Returns:
+        Updated report with Markdown formatted content
+
+    Raises:
+        HTTPException: 404 if report not found, 500 if update fails
+    """
+    result = db.execute(
+        select(Report).where(
+            Report.id == report_id,
+            Report.created_by_id == current_user.id,
+            Report.tenant_id == tenant_id,
+        )
+    )
+    report = result.scalar_one_or_none()
+
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Report not found",
+        )
+
+    try:
+        # Update edited content
+        report.edited_content_json = update_request.edited_content_json
+        report.edited_at = datetime.now(timezone.utc).isoformat()
+        report.edit_count = (report.edit_count or 0) + 1
+
+        db.commit()
+        db.refresh(report)
+
+        # Generate Markdown for iOS display
+        formatter = create_formatter("markdown")
+        report_data = update_request.edited_content_json
+
+        # Extract actual report content from wrapper if needed
+        if isinstance(report_data, dict) and "report" in report_data:
+            report_data = report_data["report"]
+
+        formatted_markdown = formatter.format(report_data)
+
+        return ReportUpdateResponse(
+            id=report.id,
+            edited_content_json=report.edited_content_json,
+            edited_at=report.edited_at,
+            edit_count=report.edit_count,
+            formatted_markdown=formatted_markdown,
+        )
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update report: {str(e)}",
+        )
+
+
+@router.post("/generate", response_model=GenerateReportResponse, status_code=status.HTTP_202_ACCEPTED)
+async def generate_report(
+    request: GenerateReportRequest,
+    background_tasks: BackgroundTasks,
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+    db: Session = Depends(get_db),
+) -> GenerateReportResponse:
+    """
+    Generate counseling report from existing session (Async API)
+
+    Workflow:
+    1. 驗證 session 存在且屬於當前諮商師
+    2. 創建 Report (status: "processing")
+    3. 背景任務生成報告
+    4. 立即返回 report_id 和狀態
+
+    Args:
+        request: Report generation request (requires session_id)
+        background_tasks: FastAPI background tasks
+        current_user: Current authenticated counselor
+        tenant_id: Tenant ID
+        db: Database session
+
+    Returns:
+        Report ID with status "processing"
+
+    Raises:
+        HTTPException: 404 if session not found, 500 if creation fails
+    """
+    try:
+        # 驗證 session 存在且屬於當前諮商師
+        result = db.execute(
+            select(SessionModel, Client, Case)
+            .join(Case, SessionModel.case_id == Case.id)
+            .join(Client, Case.client_id == Client.id)
+            .where(
+                SessionModel.id == request.session_id,
+                Client.counselor_id == current_user.id,
+                Client.tenant_id == tenant_id,
+            )
+        )
+        row = result.first()
+
+        if not row:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Session not found or access denied",
+            )
+
+        session, client, case = row
+        transcript = session.transcript_text
+
+        # Check if there's already a report for this session (processing or draft)
+        existing_report_result = db.execute(
+            select(Report)
+            .where(Report.session_id == session.id)
+            .where(Report.status.in_([ReportStatus.PROCESSING, ReportStatus.DRAFT]))
+            .order_by(Report.created_at.desc())
+            .limit(1)
+        )
+        existing_report = existing_report_result.scalar_one_or_none()
+
+        if existing_report:
+            # Return existing report instead of creating a new one
+            return GenerateReportResponse(
+                session_id=session.id,
+                report_id=existing_report.id,
+                report=ProcessingStatus(
+                    status=existing_report.status.value.lower(),
+                    message=f"報告已存在（狀態：{existing_report.status.value}），返回現有報告"
+                ),
+                quality_summary=None,
+            )
+
+        # Step 3: Create report record with "processing" status
+        report = Report(
+            session_id=session.id,
+            client_id=client.id,
+            created_by_id=current_user.id,
+            tenant_id=tenant_id,
+            version=1,
+            status=ReportStatus.PROCESSING,  # 狀態:生成中
+            mode=request.report_type,
+            ai_model=f"gpt-4.1-mini" if request.rag_system == "openai" else "gemini-2.5-flash",
+        )
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+
+        # Step 4: 背景任務生成報告 (不阻塞)
+        background_tasks.add_task(
+            _generate_report_background,
+            report_id=report.id,
+            transcript=transcript,  # 使用上面準備好的 transcript 變數
+            report_type=request.report_type,
+            rag_system=request.rag_system,
+        )
+
+        # Step 5: 立即返回
+        return GenerateReportResponse(
+            session_id=session.id,
+            report_id=report.id,
+            report=ProcessingStatus(
+                status="processing",
+                message="報告生成中，請稍後查詢結果"
+            ),
+            quality_summary=None,
+        )
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate report: {str(e)}",
+        )

@@ -18,7 +18,10 @@ class ReportResponse(BaseModel):
     mode: Optional[str]
 
     # Report content
-    content_json: Dict[str, Any]
+    content_json: Optional[Dict[str, Any]]  # AI 原始生成 (處理中時為 None)
+    edited_content_json: Optional[Dict[str, Any]]  # 諮商師編輯版本
+    edited_at: Optional[str]  # 最後編輯時間
+    edit_count: Optional[int]  # 編輯次數
     citations_json: Optional[List[Dict[str, Any]]]
 
     # Quality metrics
@@ -26,6 +29,9 @@ class ReportResponse(BaseModel):
     quality_grade: Optional[str]
     quality_strengths: Optional[List[str]]
     quality_weaknesses: Optional[List[str]]
+
+    # Error handling
+    error_message: Optional[str]
 
     # AI metadata
     ai_model: Optional[str]
@@ -50,3 +56,19 @@ class ReportListResponse(BaseModel):
 
     total: int
     items: List[ReportResponse]
+
+
+class ReportUpdateRequest(BaseModel):
+    """Schema for updating report content"""
+
+    edited_content_json: Dict[str, Any]  # 完整的編輯後報告 JSON
+
+
+class ReportUpdateResponse(BaseModel):
+    """Schema for report update response"""
+
+    id: UUID
+    edited_content_json: Dict[str, Any]
+    edited_at: str
+    edit_count: int
+    formatted_markdown: str  # 返回 Markdown 格式
