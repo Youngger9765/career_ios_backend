@@ -180,7 +180,7 @@ def list_reports(
 @router.get("/{report_id}")
 def get_report(
     report_id: UUID,
-    format: Optional[str] = Query(None, regex="^(json|markdown|html)$"),
+    format: Optional[str] = Query(None, pattern="^(json|markdown|html)$"),
     use_edited: bool = Query(True, description="Use edited version if available"),
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
