@@ -30,21 +30,24 @@ router = APIRouter(prefix="/api/v1/reports", tags=["Reports"])
 
 async def _generate_report_background(
     report_id: UUID,
+    session_id: UUID,
     transcript: str,
     report_type: str,
     rag_system: str,
 ):
     """
-    背景任務:生成報告內容 (異步版本)
+    背景任務:生成報告內容 + 會談摘要 (異步版本)
 
     Args:
         report_id: Report UUID
+        session_id: Session UUID (用於更新摘要)
         transcript: 逐字稿
         report_type: 報告類型 (enhanced/legacy)
         rag_system: RAG 系統 (openai/gemini)
     """
     from app.api.rag_report import ReportRequest, generate_report as rag_generate
     from app.core.database import SessionLocal
+    from app.services.session_summary_service import session_summary_service
 
     db = SessionLocal()
     try:
@@ -81,6 +84,22 @@ async def _generate_report_background(
         report.status = ReportStatus.DRAFT  # 生成完成,狀態改為 draft
 
         db.commit()
+
+        # 【新增】異步生成會談摘要並更新 session
+        try:
+            summary = await session_summary_service.generate_summary(transcript, max_length=100)
+            if summary:
+                # 更新 session 的 summary 欄位
+                session_result = db.execute(
+                    select(SessionModel).where(SessionModel.id == session_id)
+                )
+                session_obj = session_result.scalar_one_or_none()
+                if session_obj:
+                    session_obj.summary = summary
+                    db.commit()
+        except Exception as summary_error:
+            # 摘要生成失敗不影響報告生成
+            print(f"Warning: Failed to generate session summary: {summary_error}")
 
     except Exception as e:
         # 生成失敗,標記為 failed
@@ -423,10 +442,11 @@ async def generate_report(
         db.commit()
         db.refresh(report)
 
-        # Step 4: 背景任務生成報告 (不阻塞)
+        # Step 4: 背景任務生成報告 + 摘要 (不阻塞)
         background_tasks.add_task(
             _generate_report_background,
             report_id=report.id,
+            session_id=session.id,  # 傳入 session_id 用於生成摘要
             transcript=transcript,  # 使用上面準備好的 transcript 變數
             report_type=request.report_type,
             rag_system=request.rag_system,

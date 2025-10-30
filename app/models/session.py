@@ -29,6 +29,7 @@ class Session(Base, BaseModel):
     # Additional content
     notes = Column(Text)
     key_points = Column(Text)
+    summary = Column(Text)  # 會談摘要（100字內，用於歷程展示）
 
     # Relationships
     case = relationship("Case", back_populates="sessions")

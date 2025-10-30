@@ -47,12 +47,14 @@ class SessionResponse(BaseModel):
     id: UUID
     client_id: UUID
     client_name: Optional[str] = None  # 個案姓名
+    client_code: Optional[str] = None  # 個案代碼
     case_id: UUID
     session_number: int
     session_date: datetime
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     transcript_text: str
+    summary: Optional[str] = None  # 會談摘要
     duration_minutes: Optional[int]
     notes: Optional[str]
     has_report: bool  # 是否已生成報告
@@ -261,6 +263,7 @@ def create_session(
 @router.get("", response_model=SessionListResponse)
 def list_sessions(
     client_id: Optional[UUID] = Query(None, description="Filter by client"),
+    search: Optional[str] = Query(None, description="Search by client name or code"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     current_user: Counselor = Depends(get_current_user),
@@ -272,6 +275,7 @@ def list_sessions(
 
     Args:
         client_id: 篩選特定個案
+        search: 搜尋個案姓名或代碼
         skip: 分頁偏移
         limit: 每頁筆數
         current_user: 當前諮商師
@@ -295,6 +299,16 @@ def list_sessions(
     # 篩選特定個案
     if client_id:
         query = query.where(Client.id == client_id)
+
+    # 搜尋功能（按個案姓名或代碼）
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.where(
+            or_(
+                Client.name.ilike(search_pattern),
+                Client.code.ilike(search_pattern),
+            )
+        )
 
     # 計算總數
     count_query = select(func.count()).select_from(query.subquery())
@@ -326,12 +340,14 @@ def list_sessions(
                 id=session.id,
                 client_id=client.id,
                 client_name=client.name,
+                client_code=client.code,  # 加入個案代碼
                 case_id=case.id,
                 session_number=session.session_number,
                 session_date=session.session_date,
                 start_time=session.start_time,
                 end_time=session.end_time,
                 transcript_text=session.transcript_text,
+                summary=session.summary,  # 加入會談摘要
                 duration_minutes=session.duration_minutes,
                 notes=session.notes,
                 has_report=has_report,
