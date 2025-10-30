@@ -138,10 +138,15 @@ def list_reports(
     Returns:
         Paginated list of reports
     """
-    # Base query - counselor's reports
-    query = select(Report).where(
-        Report.created_by_id == current_user.id,
-        Report.tenant_id == tenant_id,
+    # Base query - JOIN with session and client to get client_name and session_number
+    query = (
+        select(Report, Client.name, SessionModel.session_number)
+        .join(SessionModel, Report.session_id == SessionModel.id)
+        .join(Client, Report.client_id == Client.id)
+        .where(
+            Report.created_by_id == current_user.id,
+            Report.tenant_id == tenant_id,
+        )
     )
 
     # Filter by client if provided
@@ -156,90 +161,81 @@ def list_reports(
     # Get paginated results
     query = query.offset(skip).limit(limit).order_by(Report.created_at.desc())
     result = db.execute(query)
-    reports = result.scalars().all()
+    rows = result.all()
+
+    # Build response with client_name and session_number
+    items = []
+    for report, client_name, session_number in rows:
+        report_dict = ReportResponse.model_validate(report).model_dump()
+        report_dict['client_name'] = client_name
+        report_dict['session_number'] = session_number
+        items.append(ReportResponse(**report_dict))
 
     return ReportListResponse(
         total=total,
-        items=[ReportResponse.model_validate(r) for r in reports],
+        items=items,
     )
 
 
-@router.get("/{report_id}", response_model=ReportResponse)
+@router.get("/{report_id}")
 def get_report(
     report_id: UUID,
-    current_user: Counselor = Depends(get_current_user),
-    tenant_id: str = Depends(get_tenant_id),
-    db: Session = Depends(get_db),
-) -> ReportResponse:
-    """
-    Get specific report by ID
-
-    Args:
-        report_id: Report UUID
-        current_user: Current authenticated counselor
-        tenant_id: Tenant ID
-        db: Database session
-
-    Returns:
-        Report information
-    """
-    result = db.execute(
-        select(Report).where(
-            Report.id == report_id,
-            Report.created_by_id == current_user.id,
-            Report.tenant_id == tenant_id,
-        )
-    )
-    report = result.scalar_one_or_none()
-
-    if not report:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Report not found",
-        )
-
-    return ReportResponse.model_validate(report)
-
-
-@router.get("/{report_id}/formatted")
-def get_formatted_report(
-    report_id: UUID,
-    format: str = Query("markdown", regex="^(markdown|html)$"),
+    format: Optional[str] = Query(None, regex="^(json|markdown|html)$"),
     use_edited: bool = Query(True, description="Use edited version if available"),
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: Session = Depends(get_db),
-) -> dict:
+):
     """
-    Get formatted report (markdown or HTML)
+    Get report by ID with optional formatting
 
     Args:
         report_id: Report UUID
-        format: Output format ("markdown" or "html")
-        use_edited: Use edited version if available (default: True)
+        format: Output format - None/json (default, returns full metadata), markdown, or html
+        use_edited: Use edited version if available when formatting (default: True)
         current_user: Current authenticated counselor
         tenant_id: Tenant ID
-        db: Database session
+        db: Session: Database session
 
     Returns:
-        Formatted report content
+        - If format is None or 'json': ReportResponse (full metadata + JSON content)
+        - If format is 'markdown' or 'html': Formatted content dict
+
+    Examples:
+        GET /api/v1/reports/{id} → Full JSON metadata
+        GET /api/v1/reports/{id}?format=json → Full JSON metadata
+        GET /api/v1/reports/{id}?format=markdown → Markdown formatted content
+        GET /api/v1/reports/{id}?format=html → HTML formatted content
+        GET /api/v1/reports/{id}?format=markdown&use_edited=false → Markdown with AI original
     """
     result = db.execute(
-        select(Report).where(
+        select(Report, Client.name, SessionModel.session_number)
+        .join(SessionModel, Report.session_id == SessionModel.id)
+        .join(Client, Report.client_id == Client.id)
+        .where(
             Report.id == report_id,
             Report.created_by_id == current_user.id,
             Report.tenant_id == tenant_id,
         )
     )
-    report = result.scalar_one_or_none()
+    row = result.first()
 
-    if not report:
+    if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Report not found",
         )
 
-    # Format report using existing formatter
+    report, client_name, session_number = row
+
+    # If no format specified or format is 'json', return full metadata
+    if not format or format == 'json':
+        report_dict = ReportResponse.model_validate(report).model_dump()
+        report_dict['client_name'] = client_name
+        report_dict['session_number'] = session_number
+        return ReportResponse(**report_dict)
+
+    # Otherwise, return formatted content
     formatter = create_formatter(format)
 
     # Use edited version if available and requested, otherwise use AI original

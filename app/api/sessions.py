@@ -178,26 +178,25 @@ def create_session(
         # 計算 session_number (該個案的第幾次會談，按會談時間排序)
         # 查詢該 case 所有現有的 sessions，按 start_time 或 session_date 排序
         result = db.execute(
-            select(Session.start_time, Session.session_date)
+            select(Session.id, Session.start_time, Session.session_date)
             .where(Session.case_id == case.id)
             .order_by(
-                func.coalesce(Session.start_time, Session.session_date).asc()
+                func.coalesce(Session.start_time, Session.session_date).asc(),
+                Session.created_at.asc()  # 同一時間則按創建時間排序
             )
         )
-        existing_times = [
-            (row[0] if row[0] else row[1]) for row in result.all()
-        ]
+        existing_sessions = [(row[0], row[1] if row[1] else row[2]) for row in result.all()]
 
         # 找出新會談應該排在第幾次
         session_number = 1
-        for existing_time in existing_times:
+        for session_id, existing_time in existing_sessions:
             if new_sort_time > existing_time:
                 session_number += 1
             else:
                 break
 
         # 如果新會談插入到中間，需要更新後續所有 sessions 的 session_number
-        if session_number <= len(existing_times):
+        if session_number <= len(existing_sessions):
             # 更新所有 >= session_number 的 sessions，將它們的編號 +1
             db.execute(
                 Session.__table__.update()
@@ -301,10 +300,11 @@ def list_sessions(
     count_query = select(func.count()).select_from(query.subquery())
     total = db.execute(count_query).scalar()
 
-    # 分頁查詢 - 先按個案，再按會談編號排序
+    # 分頁查詢 - 先按個案，再按會談時間排序（確保順序正確）
     query = query.offset(skip).limit(limit).order_by(
         Case.id.asc(),
-        Session.session_number.asc()
+        func.coalesce(Session.start_time, Session.session_date).asc(),
+        Session.created_at.asc()  # 同一時間則按創建時間排序
     )
     results = db.execute(query).all()
 

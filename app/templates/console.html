@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>iOS API Test Console</title>
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -556,13 +558,6 @@
                 <div class="step-subtitle">PATCH /api/v1/reports/{id}</div>
             </div>
 
-            <div class="flow-step" data-step="formatted-report">
-                <div>
-                    <span class="step-number">17</span>
-                    <span class="step-title">格式化報告</span>
-                </div>
-                <div class="step-subtitle">GET /api/v1/reports/{id}/formatted</div>
-            </div>
         </div>
 
         <!-- Center Panel: Preview -->
@@ -1764,6 +1759,10 @@
                     ${data.items.map(report => `
                         <div class="info-card">
                             <div class="info-row">
+                                <span class="info-label">個案/次數</span>
+                                <span class="info-value">${report.client_name || 'N/A'} - 第 ${report.session_number || '?'} 次</span>
+                            </div>
+                            <div class="info-row">
                                 <span class="info-label">ID</span>
                                 <span class="info-value" style="font-size: 11px;">${report.id}</span>
                             </div>
@@ -1792,10 +1791,15 @@
                 subtitle: 'GET /api/v1/reports/{id}',
                 renderForm: () => {
                     const reportOptions = state.reports.map(r =>
-                        `<option value="${r.id}">Report #${r.version || 1} - ${new Date(r.created_at).toLocaleDateString('zh-TW')}</option>`
+                        `<option value="${r.id}">${r.client_name || 'Client'} - 第${r.session_number || '?'}次 (${new Date(r.created_at).toLocaleDateString('zh-TW')})</option>`
                     ).join('');
 
                     return `
+                        <div class="info-card" style="background: #e0f2fe; border-color: #3b82f6; margin-bottom: 16px;">
+                            <p style="color: #1e40af; font-size: 12px;">
+                                💡 支援多種輸出格式：不傳參數返回完整 metadata，或使用 format 參數輸出 Markdown/HTML
+                            </p>
+                        </div>
                         <div class="form-group">
                             <label>選擇報告</label>
                             <select id="view-report-id">
@@ -1803,69 +1807,159 @@
                                 ${reportOptions}
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label>輸出格式</label>
+                            <select id="view-report-format">
+                                <option value="">JSON metadata (預設)</option>
+                                <option value="markdown">Markdown</option>
+                                <option value="html">HTML</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>版本選擇</label>
+                            <select id="view-report-use-edited">
+                                <option value="true">編輯版 (優先)</option>
+                                <option value="false">AI 原始版</option>
+                            </select>
+                        </div>
                         <button class="btn btn-primary" onclick="executeViewReport()" ${!state.token || (!state.currentReport && state.reports.length === 0) ? 'disabled' : ''}>查看報告</button>
                     `;
                 },
                 execute: async () => {
                     const reportId = document.getElementById('view-report-id').value;
-                    const response = await fetch(`${BASE_URL}/api/v1/reports/${reportId}`, {
+                    const format = document.getElementById('view-report-format').value;
+                    const useEdited = document.getElementById('view-report-use-edited').value;
+
+                    let url = `${BASE_URL}/api/v1/reports/${reportId}`;
+                    const params = new URLSearchParams();
+                    if (format) params.append('format', format);
+                    params.append('use_edited', useEdited);
+
+                    if (params.toString()) {
+                        url += `?${params.toString()}`;
+                    }
+
+                    const response = await fetch(url, {
                         headers: { 'Authorization': `Bearer ${state.token}` }
                     });
                     const data = await response.json();
-                    return { response, data };
+                    return { response, data, format: format || 'json' };
                 },
-                renderPreview: (data) => {
-                    const content = data.content_json?.report || data.content_json || {};
-                    return `
-                        <div class="info-card">
-                            <h3>📄 報告詳情</h3>
-                            <div class="info-row">
-                                <span class="info-label">ID</span>
-                                <span class="info-value" style="font-size: 11px;">${data.id}</span>
+                renderPreview: (result) => {
+                    // Handle error response
+                    if (!result || !result.data) {
+                        return '<div class="info-card" style="background: #fee2e2; border-color: #ef4444;"><p style="color: #991b1b;">無法載入報告</p></div>';
+                    }
+
+                    const { data, format } = result;
+
+                    if (format === 'json') {
+                        const content = data.content_json?.report || data.content_json || {};
+                        return `
+                            <div class="info-card">
+                                <h3>📄 報告詳情 (JSON)</h3>
+                                <div class="info-row">
+                                    <span class="info-label">ID</span>
+                                    <span class="info-value" style="font-size: 11px;">${data.id}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">狀態</span>
+                                    <span class="info-value">${data.status}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">評分</span>
+                                    <span class="info-value">${data.quality_grade || 'N/A'} (${data.quality_score || 'N/A'})</span>
+                                </div>
                             </div>
-                            <div class="info-row">
-                                <span class="info-label">版本</span>
-                                <span class="info-value">${data.version}</span>
+                            <div style="background: #1e293b; border-radius: 8px; padding: 20px; max-height: 600px; overflow-y: auto;">
+                                <pre style="margin: 0; color: #e2e8f0; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;">${JSON.stringify(content, null, 2)}</pre>
                             </div>
-                            <div class="info-row">
-                                <span class="info-label">狀態</span>
-                                <span class="info-value">${data.status}</span>
+                        `;
+                    }
+
+                    // Markdown or HTML format - Render nicely
+                    const isEdited = (data.is_edited === true) ? '✏️ 編輯版' : '🤖 AI 原始版';
+                    const formattedContent = data.formatted_content || '';
+
+                    if (format === 'markdown') {
+                        // Use marked.js to render Markdown to HTML
+                        const htmlContent = marked.parse(formattedContent);
+
+                        return `
+                            <div class="info-card">
+                                <h3>📄 報告內容 (${isEdited})</h3>
+                                <div class="info-row">
+                                    <span class="info-label">格式</span>
+                                    <span class="info-value">Markdown (渲染)</span>
+                                </div>
+                                ${data.edited_at ? `
+                                <div class="info-row">
+                                    <span class="info-label">最後編輯</span>
+                                    <span class="info-value">${new Date(data.edited_at).toLocaleString('zh-TW')}</span>
+                                </div>
+                                ` : ''}
                             </div>
-                            <div class="info-row">
-                                <span class="info-label">評分</span>
-                                <span class="info-value">${data.quality_grade || 'N/A'} (${data.quality_score || 'N/A'})</span>
+                            <div class="markdown-content" style="max-height: 600px; overflow-y: auto; padding: 24px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1f2937;">
+                                ${htmlContent}
                             </div>
-                        </div>
-                        <div class="response-content" style="max-height: 400px;">${JSON.stringify(content, null, 2)}</div>
-                    `;
+                            <style>
+                                .markdown-content h1 { color: #1e40af; margin: 28px 0 14px; font-size: 28px; }
+                                .markdown-content h2 { color: #1e40af; margin: 24px 0 12px; font-size: 24px; }
+                                .markdown-content h3 { color: #1e40af; margin: 20px 0 10px; font-size: 20px; }
+                                .markdown-content p { margin: 12px 0; line-height: 1.8; }
+                                .markdown-content ul, .markdown-content ol { margin: 12px 0; padding-left: 24px; }
+                                .markdown-content li { margin: 4px 0; }
+                                .markdown-content strong { font-weight: 600; }
+                                .markdown-content code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; }
+                                .markdown-content pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; }
+                                .markdown-content blockquote { border-left: 4px solid #3b82f6; padding-left: 16px; color: #6b7280; margin: 12px 0; }
+                            </style>
+                        `;
+                    } else if (format === 'html') {
+                        // HTML format - render as HTML
+                        return `
+                            <div class="info-card">
+                                <h3>📄 報告內容 (${isEdited})</h3>
+                                <div class="info-row">
+                                    <span class="info-label">格式</span>
+                                    <span class="info-value">HTML</span>
+                                </div>
+                                ${data.edited_at ? `
+                                <div class="info-row">
+                                    <span class="info-label">最後編輯</span>
+                                    <span class="info-value">${new Date(data.edited_at).toLocaleString('zh-TW')}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div style="max-height: 600px; overflow-y: auto; padding: 24px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
+                                ${formattedContent}
+                            </div>
+                        `;
+                    } else {
+                        // Unknown format
+                        return `
+                            <div class="info-card">
+                                <h3>📄 報告內容 (${isEdited})</h3>
+                            </div>
+                            <div style="background: #1e293b; border-radius: 8px; padding: 20px; max-height: 600px; overflow-y: auto;">
+                                <pre style="margin: 0; color: #e2e8f0; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;">${formattedContent}</pre>
+                            </div>
+                        `;
+                    }
                 }
             },
             'update-report': {
                 title: '更新報告',
-                subtitle: 'PATCH /api/v1/reports/{id}',
+                subtitle: 'PATCH /api/v1/reports/{id} (僅供 iOS 使用)',
                 renderForm: () => {
-                    const reportOptions = state.reports.map(r =>
-                        `<option value="${r.id}">Report #${r.version || 1} - ${new Date(r.created_at).toLocaleDateString('zh-TW')}</option>`
-                    ).join('');
-
                     return `
-                        <div class="form-group">
-                            <label>選擇報告</label>
-                            <select id="update-report-id">
-                                ${state.currentReport ? `<option value="${state.currentReport.report_id}" selected>Current Report</option>` : ''}
-                                ${reportOptions}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>編輯後的報告內容 (JSON)</label>
-                            <textarea id="update-report-content" rows="10" placeholder='{"report": {...}}'></textarea>
-                        </div>
-                        <div class="info-card" style="background: #e0f2fe; border-color: #3b82f6;">
-                            <p style="color: #1e40af; font-size: 12px;">
-                                💡 提示：修改後的 JSON 會保存為 edited_content_json，AI 原始版本會保留在 content_json
+                        <div class="info-card" style="background: #fef3c7; border-color: #f59e0b;">
+                            <p style="color: #92400e; font-size: 12px;">
+                                ⚠️ 此 API 僅供 iOS App 使用，用於提交諮商師編輯後的報告內容。<br>
+                                Web Console 不提供編輯功能。
                             </p>
                         </div>
-                        <button class="btn btn-primary" onclick="executeUpdateReport()" ${!state.token || (!state.currentReport && state.reports.length === 0) ? 'disabled' : ''}>更新報告</button>
+                        <button class="btn btn-secondary" disabled>此功能僅供 iOS 使用</button>
                     `;
                 },
                 execute: async () => {
@@ -1910,52 +2004,6 @@
                         <h3>📝 格式化 Markdown</h3>
                         <div class="response-content" style="max-height: 400px; white-space: pre-wrap;">${data.formatted_markdown}</div>
                     </div>
-                `
-            },
-            'formatted-report': {
-                title: '格式化報告',
-                subtitle: 'GET /api/v1/reports/{id}/formatted',
-                renderForm: () => {
-                    const reportOptions = state.reports.map(r =>
-                        `<option value="${r.id}">Report #${r.version || 1} - ${new Date(r.created_at).toLocaleDateString('zh-TW')}</option>`
-                    ).join('');
-
-                    return `
-                        <div class="form-group">
-                            <label>選擇報告</label>
-                            <select id="formatted-report-id">
-                                ${state.currentReport ? `<option value="${state.currentReport.report_id}" selected>Current Report</option>` : ''}
-                                ${reportOptions}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>格式</label>
-                            <select id="formatted-format">
-                                <option value="markdown">Markdown</option>
-                                <option value="html">HTML</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" onclick="executeFormattedReport()" ${!state.token || (!state.currentReport && state.reports.length === 0) ? 'disabled' : ''}>取得格式化報告</button>
-                    `;
-                },
-                execute: async () => {
-                    const reportId = document.getElementById('formatted-report-id').value;
-                    const format = document.getElementById('formatted-format').value;
-                    const response = await fetch(`${BASE_URL}/api/v1/reports/${reportId}/formatted?format=${format}`, {
-                        headers: { 'Authorization': `Bearer ${state.token}` }
-                    });
-                    const data = await response.json();
-                    return { response, data };
-                },
-                renderPreview: (data) => `
-                    <div class="info-card">
-                        <h3>📝 格式化報告</h3>
-                        <div class="info-row">
-                            <span class="info-label">格式</span>
-                            <span class="info-value">${data.format}</span>
-                        </div>
-                    </div>
-                    <div class="response-content" style="max-height: 600px; white-space: pre-wrap;">${data.formatted_content}</div>
                 `
             }
         };
@@ -2008,7 +2056,8 @@
                     button.textContent = '處理中...';
                 }
 
-                const { response, data } = await stepConfig.execute();
+                const result = await stepConfig.execute();
+                const { response, data } = result;
 
                 // Show response
                 const responseSection = document.getElementById('response-section');
@@ -2023,7 +2072,10 @@
                     stepElement.classList.add('completed');
                     // Update preview
                     if (stepConfig.renderPreview) {
-                        document.getElementById('preview-content').innerHTML = stepConfig.renderPreview(data);
+                        // Pass the entire result object for steps that need it (like view-report)
+                        // Otherwise just pass data for backwards compatibility
+                        const previewArg = (stepKey === 'view-report') ? result : data;
+                        document.getElementById('preview-content').innerHTML = stepConfig.renderPreview(previewArg);
                     }
                 } else {
                     stepElement.classList.add('error');
@@ -2204,7 +2256,6 @@ Co: 聽起來這個策略很有效，繼續保持！`
         window.executeListReports = () => executeStep('list-reports');
         window.executeViewReport = () => executeStep('view-report');
         window.executeUpdateReport = () => executeStep('update-report');
-        window.executeFormattedReport = () => executeStep('formatted-report');
 
         // Auto-select first step
         selectStep('login');

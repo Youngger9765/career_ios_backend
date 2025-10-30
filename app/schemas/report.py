@@ -17,6 +17,10 @@ class ReportResponse(BaseModel):
     status: str
     mode: Optional[str]
 
+    # Session info (for list display)
+    client_name: Optional[str] = None  # 個案姓名
+    session_number: Optional[int] = None  # 第幾次會談
+
     # Report content
     content_json: Optional[Dict[str, Any]]  # AI 原始生成 (處理中時為 None)
     edited_content_json: Optional[Dict[str, Any]]  # 諮商師編輯版本
