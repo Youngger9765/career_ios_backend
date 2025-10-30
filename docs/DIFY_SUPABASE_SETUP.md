@@ -316,7 +316,7 @@ DB_PORT=6543
 DB_DATABASE=postgres
 
 # 或直接使用 Connection String
-DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.[PROJECT-REF]:YOUR_DB_PASSWORD_HERE@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
 
 # ========================================
 # Redis 設定 (使用 Docker 內建的 Redis)
@@ -324,12 +324,12 @@ DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-ap-southeast-1
 REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_DB=0
-REDIS_PASSWORD=difyai123456
+REDIS_PASSWORD=YOUR_REDIS_PASSWORD_HERE
 
 # ========================================
 # Celery 設定
 # ========================================
-CELERY_BROKER_URL=redis://:difyai123456@redis:6379/1
+CELERY_BROKER_URL=redis://:YOUR_REDIS_PASSWORD_HERE@redis:6379/1
 
 # ========================================
 # OpenAI API 設定
@@ -398,7 +398,7 @@ vim docker-compose.yaml
 #   restart: always
 #   environment:
 #     POSTGRES_USER: postgres
-#     POSTGRES_PASSWORD: difyai123456
+#     POSTGRES_PASSWORD: YOUR_REDIS_PASSWORD_HERE
 #     POSTGRES_DB: dify
 #   volumes:
 #     - ./volumes/db/data:/var/lib/postgresql/data
@@ -414,7 +414,7 @@ redis:
   restart: always
   volumes:
     - ./volumes/redis/data:/data
-  command: redis-server --requirepass difyai123456
+  command: redis-server --requirepass YOUR_REDIS_PASSWORD_HERE
   ports:
     - "6379:6379"
 ```
@@ -671,7 +671,7 @@ exit
 2. 檢查 Supabase 專案是否正常運行
 3. 測試連線：
    ```bash
-   psql "postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+   psql "postgresql://postgres.[PROJECT-REF]:YOUR_DB_PASSWORD_HERE@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
    ```
 
 ---
@@ -741,7 +741,7 @@ exit
 
 **方法 2：使用 pg_dump**
 ```bash
-pg_dump "postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres" > backup.sql
+pg_dump "postgresql://postgres.[PROJECT-REF]:YOUR_DB_PASSWORD_HERE@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres" > backup.sql
 ```
 
 ---

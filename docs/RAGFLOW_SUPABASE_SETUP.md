@@ -435,7 +435,7 @@ vim docker-compose.yml
 redis:
   image: redis:7-alpine
   restart: always
-  command: redis-server --requirepass ragflow123
+  command: redis-server --requirepass YOUR_REDIS_PASSWORD_HERE
   ports:
     - "6379:6379"
 
@@ -475,7 +475,7 @@ WEB_PORT=80
 # ========================================
 # Supabase Database 設定
 # ========================================
-DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.[PROJECT-REF]:YOUR_DB_PASSWORD_HERE@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
 
 # 或分開設定
 DB_TYPE=postgresql
@@ -500,7 +500,7 @@ STORAGE_TYPE=supabase  # 'local' or 'minio' or 'supabase'
 # ========================================
 REDIS_HOST=redis
 REDIS_PORT=6379
-REDIS_PASSWORD=ragflow123
+REDIS_PASSWORD=YOUR_REDIS_PASSWORD_HERE
 REDIS_DB=0
 
 # ========================================

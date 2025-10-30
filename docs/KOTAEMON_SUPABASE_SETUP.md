@@ -283,7 +283,7 @@ $$;
 2. 複製 **Connection String**：
 
 ```
-postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+postgresql://postgres.[PROJECT-REF]:YOUR_DB_PASSWORD_HERE@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
 ```
 
 3. 取得 API Keys (Settings → API)：
@@ -355,7 +355,7 @@ APP_PORT=7860
 # ========================================
 # Supabase Database 設定
 # ========================================
-DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.[PROJECT-REF]:YOUR_DB_PASSWORD_HERE@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
 
 # 或分開設定
 DB_HOST=aws-0-ap-southeast-1.pooler.supabase.com
@@ -671,7 +671,7 @@ docker compose up -d
 1. 檢查 `DATABASE_URL` 格式是否正確
 2. 測試連線：
    ```bash
-   psql "postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+   psql "postgresql://postgres.[PROJECT-REF]:YOUR_DB_PASSWORD_HERE@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
    ```
 
 3. 確認 Supabase 專案正常運行（Dashboard 可以打開）

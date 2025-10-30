@@ -164,7 +164,7 @@ CREATE INDEX IF NOT EXISTS idx_chat_message_session_id ON chat_message(session_i
 2. 複製 **Connection String (URI)**：
 
 ```
-postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+postgresql://postgres.[PROJECT-REF]:YOUR_DB_PASSWORD_HERE@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
 ```
 
 3. 取得 API Keys (Settings → API)：
@@ -249,7 +249,7 @@ touch .env
 # ========================================
 PORT=3000
 FLOWISE_USERNAME=admin
-FLOWISE_PASSWORD=admin123456
+FLOWISE_PASSWORD=YOUR_ADMIN_PASSWORD_HERE
 PASSPHRASE=your-secret-passphrase
 
 # ========================================
@@ -263,7 +263,7 @@ DATABASE_PASSWORD=[YOUR-SUPABASE-PASSWORD]
 DATABASE_NAME=postgres
 
 # 或直接使用 Connection String
-DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.[PROJECT-REF]:YOUR_DB_PASSWORD_HERE@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
 
 # ========================================
 # OpenAI API 設定
@@ -316,7 +316,7 @@ npm start
 1. 開啟 http://localhost:3000
 2. 使用設定的帳密登入：
    - **Username**: admin
-   - **Password**: admin123456
+   - **Password**: YOUR_ADMIN_PASSWORD_HERE
 
 ---
 

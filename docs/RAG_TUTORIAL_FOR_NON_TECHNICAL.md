@@ -677,8 +677,8 @@ CREATE INDEX idx_embeddings_chunk ON embeddings(chunk_id);
 **❌ 錯誤做法：直接寫在程式碼裡**
 ```python
 # ❌ 危險！千萬不要這樣做
-DATABASE_URL = "postgresql://admin:password123@db.example.com/mydb"
-OPENAI_API_KEY = "sk-proj-abc123..."
+DATABASE_URL = "postgresql://admin:YOUR_PASSWORD_HERE@db.example.com/mydb"
+OPENAI_API_KEY = "sk-YOUR_OPENAI_API_KEY_HERE"
 
 # 問題：
 # 1. 上傳到 GitHub 時，全世界都看得到你的密碼
@@ -726,12 +726,12 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 **Anon Key**（公開金鑰，前端可用）
 ```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6...
+your-supabase-anon-key-from-dashboard
 ```
 
 **Service Role Key**（私密金鑰，後端專用）⚠️ 千萬不要外洩
 ```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6...
+your-supabase-anon-key-from-dashboard
 ```
 
 4. **複製並儲存這兩個 Key**
@@ -759,7 +759,7 @@ https://xxxxx.supabase.co
 4. 點擊「Create secret key」
 5. **立即複製並儲存**（只會顯示一次！）
    ```
-   sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   sk-YOUR_OPENAI_API_KEY_STARTS_WITH_SK_PROJ
    ```
 6. 如果忘記了，只能刪除重建
 
@@ -821,12 +821,12 @@ DATABASE_URL_DIRECT=postgresql://postgres.xxxxx:你的密碼@aws-0-ap-northeast-
 SECRET_KEY=請用亂數產生至少32字元的密鑰例如a1b2c3d4e5f6...
 
 # === OpenAI API ===
-OPENAI_API_KEY=sk-proj-你的OpenAI金鑰
+OPENAI_API_KEY=sk-YOUR_OPENAI_API_KEY_HERE
 
 # === Supabase ===
 SUPABASE_URL=https://你的專案ID.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...你的Anon金鑰
-SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...你的Service金鑰
+SUPABASE_ANON_KEY=your-supabase-anon-key-here
+SUPABASE_SERVICE_KEY=your-supabase-service-key-here
 ```
 
 ---
@@ -859,7 +859,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 **✅ 正確格式**：
 ```bash
 DATABASE_URL=postgresql://user:pass@host:5432/db
-OPENAI_API_KEY=sk-proj-abc123
+OPENAI_API_KEY=sk-YOUR_OPENAI_API_KEY_HERE
 ```
 
 **❌ 錯誤格式**：
@@ -868,7 +868,7 @@ OPENAI_API_KEY=sk-proj-abc123
 DATABASE_URL = postgresql://...
 
 # ❌ 不要用引號（除非值本身包含空格）
-OPENAI_API_KEY="sk-proj-abc123"
+OPENAI_API_KEY="sk-YOUR_OPENAI_API_KEY_HERE"
 
 # ❌ 不要有換行
 DATABASE_URL=postgresql://user:pass
@@ -967,7 +967,7 @@ python test_env.py
 ```
 === 環境變數測試 ===
 DATABASE_URL: postgresql://postgres.xxxxx...
-OPENAI_API_KEY: sk-proj-abc123...
+OPENAI_API_KEY: sk-YOUR_OPENAI_API_KEY_HERE...
 SUPABASE_URL: https://xxxxx.supabase.co
 SECRET_KEY length: 64
 
@@ -1011,7 +1011,7 @@ DATABASE_URL_DIRECT=postgresql://YOUR_USER:YOUR_PASSWORD@YOUR_HOST:5432/YOUR_DAT
 SECRET_KEY=your-secret-key-min-32-chars
 
 # OpenAI API Key
-OPENAI_API_KEY=sk-proj-xxx
+OPENAI_API_KEY=sk-YOUR_OPENAI_KEY
 
 # Supabase
 SUPABASE_URL=https://your-project.supabase.co
@@ -1147,11 +1147,11 @@ A：**不一定**
 ```bash
 # 小明的 .env
 DATABASE_URL=postgresql://shared-dev-db/...
-OPENAI_API_KEY=sk-proj-xiaoming123...
+OPENAI_API_KEY=sk-XIAOMING_OPENAI_KEY
 
 # 小華的 .env
 DATABASE_URL=postgresql://shared-dev-db/...
-OPENAI_API_KEY=sk-proj-xiaohua456...
+OPENAI_API_KEY=sk-XIAOHUA_OPENAI_KEY
 ```
 
 ---
@@ -2670,9 +2670,9 @@ async function performSearch() {
 
 ```bash
 DATABASE_URL=postgresql://postgres.xxx:password@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
-OPENAI_API_KEY=sk-proj-xxx
+OPENAI_API_KEY=sk-YOUR_OPENAI_KEY
 SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_KEY=eyJhbGci...
+SUPABASE_SERVICE_KEY=your-supabase-key-here
 SECRET_KEY=your-secret-key-min-32-chars
 ```
 
@@ -2783,9 +2783,9 @@ gcloud run deploy rag-system \
   --region asia-east1 \
   --allow-unauthenticated \
   --set-env-vars DATABASE_URL="postgresql://postgres.xxx:password@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres" \
-  --set-env-vars OPENAI_API_KEY="sk-proj-xxx" \
+  --set-env-vars OPENAI_API_KEY="sk-YOUR_OPENAI_KEY" \
   --set-env-vars SUPABASE_URL="https://xxx.supabase.co" \
-  --set-env-vars SUPABASE_SERVICE_KEY="eyJhbGci..." \
+  --set-env-vars SUPABASE_SERVICE_KEY="your-supabase-key-here" \
   --set-env-vars SECRET_KEY="your-secret-key-min-32-chars"
 ```
 
@@ -3220,7 +3220,7 @@ Service URL: https://rag-api-xxx-uc.a.run.app
 # 建立 secrets
 echo -n "sk-xxx" | gcloud secrets create openai-api-key --data-file=-
 echo -n "https://xxx.supabase.co" | gcloud secrets create supabase-url --data-file=-
-echo -n "eyJhbGci..." | gcloud secrets create supabase-key --data-file=-
+echo -n "your-supabase-key-here" | gcloud secrets create supabase-key --data-file=-
 
 # 更新 Cloud Run 使用 secrets
 gcloud run services update rag-api \
@@ -3276,7 +3276,7 @@ cat key.json
 | `GCP_SA_KEY` | `key.json 完整內容` | Service Account 金鑰 |
 | `OPENAI_API_KEY` | `sk-...` | OpenAI API Key |
 | `SUPABASE_URL` | `https://xxx.supabase.co` | Supabase URL |
-| `SUPABASE_KEY` | `eyJhbGci...` | Supabase Key |
+| `SUPABASE_KEY` | `your-supabase-key-here` | Supabase Key |
 
 ---
 
