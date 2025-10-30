@@ -12,6 +12,130 @@
 
 ---
 
+## 📊 教學架構視覺化
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    RAG 系統完整學習路徑                           │
+└─────────────────────────────────────────────────────────────────┘
+
+第1部分：理解概念 🧠                    第2部分：技術原理 ⚙️
+┌────────────────────┐                 ┌────────────────────┐
+│  什麼是 RAG？       │────關聯───────▶ │  Embedding 原理     │
+│  • 開卷考試比喻     │                 │  • 文字→向量轉換    │
+│  • 解決 AI 限制     │                 │  • 語意相似度搜尋   │
+│  • 實際應用案例     │                 │  • OpenAI API       │
+└────────────────────┘                 └────────────────────┘
+         │                                       │
+         │                                       │
+         └──────────┬────────────────────────────┘
+                    ▼
+         第3部分：資料儲存 💾
+         ┌────────────────────┐
+         │  Supabase + pgvector │
+         │  • 向量資料庫        │
+         │  • 相似度搜尋引擎    │
+         │  • 資料表設計        │
+         └────────────────────┘
+                    │
+                    ▼
+         第4部分：實際操作 🚀
+         ┌────────────────────────────────────┐
+         │          RAG 系統運作流程            │
+         ├────────────────────────────────────┤
+         │  1️⃣ 上傳文件 (PDF)                 │
+         │     └─▶ 切片 (Chunking)            │
+         │         └─▶ 生成 Embedding          │
+         │             └─▶ 儲存到 Supabase     │
+         │                                     │
+         │  2️⃣ 使用者提問                      │
+         │     └─▶ 問題 Embedding              │
+         │         └─▶ 搜尋相似文本            │
+         │             └─▶ 找到相關段落        │
+         │                                     │
+         │  3️⃣ AI 生成答案                     │
+         │     └─▶ 問題 + 相關段落             │
+         │         └─▶ ChatGPT 回答            │
+         │             └─▶ 基於事實的答案      │
+         └────────────────────────────────────┘
+                    │
+                    ▼
+         第5部分：部署上線 ☁️
+         ┌────────────────────────────────────┐
+         │     Google Cloud Run 部署          │
+         ├────────────────────────────────────┤
+         │  • 只在有請求時計費（省錢）        │
+         │  • 自動擴展（彈性處理流量）        │
+         │  • 免費額度 200萬次請求/月         │
+         │  • CI/CD 自動部署（GitHub Actions）│
+         │  • Secret Manager 安全管理環境變數 │
+         └────────────────────────────────────┘
+```
+
+### 🎯 各章節學習目標與關聯
+
+| 章節 | 目的 | 關鍵產出 | 與其他章節的關係 |
+|------|------|----------|-----------------|
+| **1️⃣ RAG 基礎** | 建立概念框架 | 理解 RAG 價值 | 為後續技術章節提供動機 |
+| **2️⃣ Embedding** | 理解核心技術 | 知道如何將文字轉向量 | 連結「概念」與「實作」 |
+| **3️⃣ Supabase** | 建立資料基礎 | 完成資料庫設定 | 提供 Embedding 的儲存空間 |
+| **4️⃣ 實際操作** | 整合所有知識 | 可運作的 RAG 系統 | 驗證前三章的學習成果 |
+| **5️⃣ 部署上雲** | 產品化 | 24/7 可用的服務 | 從開發環境到生產環境 |
+
+### 📈 學習路徑建議
+
+```
+新手路徑（基礎理解）：
+1️⃣ → 2️⃣ → 4️⃣（跳過深入技術細節）
+
+完整學習路徑（全面掌握）：
+1️⃣ → 2️⃣ → 3️⃣ → 4️⃣ → 5️⃣
+
+快速部署路徑（已有系統）：
+3️⃣ → 4️⃣ → 5️⃣（直接建置）
+```
+
+### 🔑 核心概念關係圖
+
+```
+                    使用者問題
+                        │
+                        ▼
+        ┌───────────────────────────┐
+        │   Embedding 轉換          │
+        │   (OpenAI API)            │
+        └───────────────────────────┘
+                        │
+                        ▼
+        ┌───────────────────────────┐
+        │   向量相似度搜尋           │
+        │   (Supabase pgvector)     │
+        └───────────────────────────┘
+                        │
+                        ▼
+        ┌───────────────────────────┐
+        │   找到最相關的文件段落      │
+        │   (Top K 結果)            │
+        └───────────────────────────┘
+                        │
+                        ▼
+        ┌───────────────────────────┐
+        │   組合成 Prompt           │
+        │   問題 + 相關內容         │
+        └───────────────────────────┘
+                        │
+                        ▼
+        ┌───────────────────────────┐
+        │   AI 生成答案             │
+        │   (ChatGPT)               │
+        └───────────────────────────┘
+                        │
+                        ▼
+                    返回答案
+```
+
+---
+
 ## 📚 目錄
 
 ### [第 1 部分：RAG 基礎概念（15 分鐘）](#第-1-部分rag-基礎概念)
@@ -2999,6 +3123,466 @@ WHERE '{"hr"}' && tags
 4. 📈 監控使用量和成本
 5. 🔧 進階：研究 Hybrid Search、Re-ranking
 
+---
+
+## 部署上雲
+
+### 為什麼要部署到雲端？
+
+**本地開發 vs 雲端部署**：
+
+| 項目 | 本地開發 | 雲端部署 |
+|------|----------|----------|
+| 存取方式 | 只能在自己電腦 | 全球任何地方 |
+| 穩定性 | 關機就斷線 | 24/7 運行 |
+| 效能 | 受限於個人電腦 | 彈性擴充 |
+| 成本 | 免費（電費） | 按使用量付費 |
+| 適用場景 | 測試、開發 | 正式產品 |
+
+**什麼時候該部署？**
+- ✅ 需要讓團隊成員使用
+- ✅ 要整合到手機 App 或網站
+- ✅ 需要 24 小時不間斷服務
+- ✅ 流量超過本機負荷
+
+---
+
+### Google Cloud Run 部署（推薦）
+
+**優點**：
+- ✅ 只在有請求時計費（省錢）
+- ✅ 自動擴展（流量大自動加機器）
+- ✅ 免費額度豐富（每月 200 萬次請求免費）
+- ✅ Google 基礎建設穩定
+
+**缺點**：
+- ❌ 需要 Docker 知識
+- ❌ 設定較複雜
+
+**價格**：
+- 免費額度：每月 200 萬次請求、36 萬 vCPU-秒
+- 超額：約 $0.00002/次請求
+- 預估成本：輕量使用幾乎免費
+
+**部署步驟**：
+
+```bash
+# 1. 建立 Dockerfile（專案根目錄）
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+# 2. 建立 .dockerignore
+__pycache__
+*.pyc
+.env
+.git
+.venv
+venv/
+
+# 3. 安裝 Google Cloud CLI
+# macOS:
+brew install google-cloud-sdk
+
+# Windows:
+# 下載安裝器 https://cloud.google.com/sdk/docs/install
+
+# 4. 登入並設定專案
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+
+# 5. 啟用 Cloud Run API
+gcloud services enable run.googleapis.com
+gcloud services enable cloudbuild.googleapis.com
+
+# 6. 部署（一鍵完成 build + deploy）
+gcloud run deploy rag-api \
+  --source . \
+  --platform managed \
+  --region asia-east1 \
+  --allow-unauthenticated \
+  --set-env-vars OPENAI_API_KEY=sk-...,SUPABASE_URL=https://...,SUPABASE_KEY=eyJh...
+
+# 7. 取得部署網址
+部署完成後會顯示：
+Service URL: https://rag-api-xxx-uc.a.run.app
+```
+
+**設定環境變數（推薦用 Secret Manager）**：
+```bash
+# 建立 secrets
+echo -n "sk-xxx" | gcloud secrets create openai-api-key --data-file=-
+echo -n "https://xxx.supabase.co" | gcloud secrets create supabase-url --data-file=-
+echo -n "eyJhbGci..." | gcloud secrets create supabase-key --data-file=-
+
+# 更新 Cloud Run 使用 secrets
+gcloud run services update rag-api \
+  --update-secrets OPENAI_API_KEY=openai-api-key:latest,SUPABASE_URL=supabase-url:latest,SUPABASE_KEY=supabase-key:latest
+```
+
+---
+
+### 設定 GitHub Actions CI/CD
+
+**自動部署流程**：每次 push 到 `main` 分支自動部署到 Cloud Run
+
+**步驟 1：建立 Service Account**
+
+```bash
+# 1. 建立 Service Account
+gcloud iam service-accounts create github-actions \
+  --description="GitHub Actions deployment" \
+  --display-name="github-actions"
+
+# 2. 賦予權限
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:github-actions@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/run.admin"
+
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:github-actions@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/storage.admin"
+
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:github-actions@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountUser"
+
+# 3. 建立金鑰（JSON）
+gcloud iam service-accounts keys create key.json \
+  --iam-account=github-actions@YOUR_PROJECT_ID.iam.gserviceaccount.com
+
+# 4. 查看 key.json 內容（等下要貼到 GitHub Secrets）
+cat key.json
+```
+
+---
+
+**步驟 2：設定 GitHub Secrets**
+
+前往你的 GitHub Repository → Settings → Secrets and variables → Actions → New repository secret
+
+新增以下 Secrets：
+
+| Secret Name | Value | 說明 |
+|-------------|-------|------|
+| `GCP_PROJECT_ID` | `your-project-id` | GCP 專案 ID |
+| `GCP_SA_KEY` | `key.json 完整內容` | Service Account 金鑰 |
+| `OPENAI_API_KEY` | `sk-...` | OpenAI API Key |
+| `SUPABASE_URL` | `https://xxx.supabase.co` | Supabase URL |
+| `SUPABASE_KEY` | `eyJhbGci...` | Supabase Key |
+
+---
+
+**步驟 3：建立 GitHub Actions Workflow**
+
+建立檔案：`.github/workflows/deploy.yml`
+
+```yaml
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main  # 當 push 到 main 分支時觸發
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  SERVICE_NAME: rag-api
+  REGION: asia-east1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout 程式碼
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. 驗證 GCP
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # 3. 設定 Cloud SDK
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 4. 建立 .env 檔案（從 GitHub Secrets）
+      - name: Create .env file
+        run: |
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env
+
+      # 5. 部署到 Cloud Run
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --source . \
+            --platform managed \
+            --region ${{ env.REGION }} \
+            --allow-unauthenticated \
+            --set-env-vars OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},SUPABASE_URL=${{ secrets.SUPABASE_URL }},SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}
+
+      # 6. 顯示部署網址
+      - name: Show deployment URL
+        run: |
+          echo "Deployment complete!"
+          gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)'
+```
+
+---
+
+**步驟 4：觸發自動部署**
+
+```bash
+# 提交 workflow 設定
+git add .github/workflows/deploy.yml
+git commit -m "ci: add Cloud Run deployment workflow"
+git push origin main
+
+# 查看部署進度
+# 前往 GitHub Repository → Actions 查看執行狀態
+```
+
+---
+
+**進階：使用 Secret Manager（推薦生產環境）**
+
+不在 GitHub Actions 中明文設定環境變數，改用 GCP Secret Manager：
+
+```yaml
+# 修改 deploy.yml 的部署步驟
+- name: Deploy to Cloud Run with Secret Manager
+  run: |
+    gcloud run deploy ${{ env.SERVICE_NAME }} \
+      --source . \
+      --platform managed \
+      --region ${{ env.REGION }} \
+      --allow-unauthenticated \
+      --update-secrets OPENAI_API_KEY=openai-api-key:latest,SUPABASE_URL=supabase-url:latest,SUPABASE_KEY=supabase-key:latest
+```
+
+這樣環境變數就不會出現在 GitHub Actions logs 中，更安全！
+
+---
+
+### 部署後檢查清單
+
+**部署完成後必做**：
+
+```bash
+# 1. 健康檢查
+curl https://your-deployed-url/health
+
+# 2. 測試上傳
+curl -X POST "https://your-deployed-url/ingest" \
+  -F "file=@test.pdf"
+
+# 3. 測試搜尋
+curl -X POST "https://your-deployed-url/search" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "什麼是 RAG？", "top_k": 3}'
+
+# 4. 監控日誌
+gcloud run logs read rag-api --limit 50
+
+# 5. 設定 CORS（如果前端呼叫）
+# 在 app/main.py 加入：
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 正式環境改成你的網域
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
+---
+
+### 成本估算與省錢技巧
+
+**每月成本預估（1000 次 API 呼叫）**：
+
+| 項目 | Cloud Run |
+|------|-----------|
+| 運算 | 免費（在免費額度內） |
+| OpenAI API | $5-20 |
+| Supabase | 免費 |
+| **總計** | **$5-20/月** |
+
+**省錢技巧**：
+
+1. **快取常見查詢**：
+   ```python
+   # 使用 Redis 或記憶體快取
+   from functools import lru_cache
+
+   @lru_cache(maxsize=100)
+   def cached_search(query: str):
+       return search_vectors(query)
+   ```
+
+2. **批次處理上傳**：
+   ```python
+   # 一次上傳多個文件，減少 API 呼叫
+   async def batch_ingest(files: List[UploadFile]):
+       embeddings = await openai.Embedding.create(
+           input=[chunk for file in files for chunk in chunks],
+           model="text-embedding-3-small"  # 使用較小模型
+       )
+   ```
+
+3. **使用較小的 Embedding 模型**：
+   ```python
+   # text-embedding-3-small（便宜 5 倍）
+   # 而非 text-embedding-3-large
+   ```
+
+4. **設定最大 token 限制**：
+   ```python
+   # 限制每次搜尋的結果數量
+   TOP_K_LIMIT = 5
+   MAX_CONTEXT_LENGTH = 3000
+   ```
+
+---
+
+### 疑難排解
+
+**常見問題**：
+
+1. **部署後 500 錯誤**
+   ```bash
+   # 檢查環境變數是否正確設定
+   gcloud run services describe rag-api --region asia-east1
+
+   # 檢查日誌
+   gcloud run logs read rag-api --region asia-east1 --limit 50
+   ```
+
+2. **CORS 錯誤**
+   ```python
+   # 確保加入 CORS middleware（見上方範例）
+   ```
+
+3. **檔案上傳失敗（檔案太大）**
+   ```python
+   # 設定最大檔案大小（app/main.py）
+   app.add_middleware(
+       LimitUploadSize, max_upload_size=10_000_000  # 10MB
+   )
+   ```
+
+4. **冷啟動太慢**
+   ```bash
+   # 設定最小實例數（避免冷啟動，但會增加成本）
+   gcloud run services update rag-api \
+     --region asia-east1 \
+     --min-instances 1
+   ```
+
+5. **OpenAI API 超時**
+   ```python
+   # 增加 timeout
+   openai.timeout = 30  # 秒
+   ```
+
+---
+
+### 生產環境最佳實踐
+
+**必做項目**：
+
+1. **設定日誌監控**
+   ```python
+   import logging
+   logging.basicConfig(level=logging.INFO)
+
+   @app.middleware("http")
+   async def log_requests(request: Request, call_next):
+       logging.info(f"{request.method} {request.url}")
+       response = await call_next(request)
+       return response
+   ```
+
+2. **加入速率限制**
+   ```bash
+   pip install slowapi
+
+   # app/main.py
+   from slowapi import Limiter
+   from slowapi.util import get_remote_address
+
+   limiter = Limiter(key_func=get_remote_address)
+   app.state.limiter = limiter
+
+   @app.post("/search")
+   @limiter.limit("10/minute")  # 每分鐘最多 10 次
+   async def search(request: Request):
+       ...
+   ```
+
+3. **健康檢查端點**
+   ```python
+   @app.get("/health")
+   async def health():
+       # 檢查資料庫連線
+       try:
+           supabase.table("documents").select("id").limit(1).execute()
+           return {"status": "healthy"}
+       except:
+           raise HTTPException(status_code=503, detail="Database unavailable")
+   ```
+
+4. **版本管理**
+   ```python
+   @app.get("/version")
+   async def version():
+       return {"version": "1.0.0", "updated": "2024-10-30"}
+   ```
+
+5. **錯誤追蹤（Sentry）**
+   ```bash
+   pip install sentry-sdk
+
+   # app/main.py
+   import sentry_sdk
+   sentry_sdk.init(dsn="https://xxx@sentry.io/xxx")
+   ```
+
+---
+
+### 部署流程總結
+
+**建議流程**：
+1. 本地開發測試（確保功能正常）
+2. 設定 GCP 專案與 Cloud Run
+3. 設定 GitHub Secrets
+4. 建立 CI/CD Workflow
+5. Push 程式碼自動部署
+6. 測試生產環境
+
+**為什麼選擇 Cloud Run？**
+- ✅ 只在有請求時計費（省錢）
+- ✅ 自動擴展（流量大自動增加實例）
+- ✅ 免費額度豐富（每月 200 萬次請求）
+- ✅ 與 GCP 生態整合完善
+- ✅ 支援 Docker 容器化部署
+
+---
+
 **需要幫助？**
 - 📧 Email: your-email@example.com
 - 💬 Slack: #rag-support
@@ -3007,5 +3591,5 @@ WHERE '{"hr"}' && tags
 ---
 
 **最後更新**：2024-10-30
-**版本**：v1.0
+**版本**：v1.1
 **作者**：Claude Code
