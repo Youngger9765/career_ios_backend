@@ -1,5 +1,8 @@
-from sqlalchemy import JSON, Column, ForeignKey, Integer, String, Text
+from datetime import date
+
+from sqlalchemy import JSON, Column, Date, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -15,7 +18,8 @@ class Client(Base, BaseModel):
     nickname = Column(String)  # Optional nickname
 
     # Basic demographics
-    age = Column(Integer)
+    birth_date = Column(Date)  # Birth date for accurate age calculation
+    age = Column(Integer)  # Auto-calculated from birth_date, updated on each save
     gender = Column(String)
     occupation = Column(String)
     education = Column(String)

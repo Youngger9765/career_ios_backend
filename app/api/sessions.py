@@ -2,7 +2,7 @@
 Sessions (逐字稿) API
 """
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -15,6 +15,7 @@ from app.core.deps import get_current_user, get_tenant_id
 from app.models.case import Case
 from app.models.client import Client
 from app.models.counselor import Counselor
+from app.models.report import Report, ReportStatus
 from app.models.session import Session
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["Sessions"])
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/api/v1/sessions", tags=["Sessions"])
 
 # Schemas
 class SessionCreateRequest(BaseModel):
-    """創建逐字稿請求"""
+    """創建會談記錄請求"""
     client_id: UUID
     session_date: str  # YYYY-MM-DD
     start_time: Optional[str] = None  # YYYY-MM-DD HH:MM
@@ -30,20 +31,22 @@ class SessionCreateRequest(BaseModel):
     transcript: str
     duration_minutes: Optional[int] = None  # 保留向下兼容
     notes: Optional[str] = None
+    reflection: Optional[dict] = None  # 諮商師反思（JSON 格式，彈性支援不同租戶需求）
 
 
 class SessionUpdateRequest(BaseModel):
-    """更新逐字稿請求"""
+    """更新會談記錄請求"""
     session_date: Optional[str] = None  # YYYY-MM-DD
     start_time: Optional[str] = None  # YYYY-MM-DD HH:MM
     end_time: Optional[str] = None  # YYYY-MM-DD HH:MM
     transcript: Optional[str] = None
     notes: Optional[str] = None
     duration_minutes: Optional[int] = None  # 保留向下兼容
+    reflection: Optional[dict] = None  # 諮商師反思
 
 
 class SessionResponse(BaseModel):
-    """逐字稿響應"""
+    """會談記錄響應"""
     id: UUID
     client_id: UUID
     client_name: Optional[str] = None  # 個案姓名
@@ -54,9 +57,10 @@ class SessionResponse(BaseModel):
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     transcript_text: str
-    summary: Optional[str] = None  # 會談摘要
+    summary: Optional[str] = None  # 會談摘要（AI 生成）
     duration_minutes: Optional[int]
     notes: Optional[str]
+    reflection: Optional[dict] = None  # 諮商師反思（人類撰寫）
     has_report: bool  # 是否已生成報告
     created_at: datetime
     updated_at: Optional[datetime]
@@ -221,6 +225,7 @@ def create_session(
             source_type="transcript",
             duration_minutes=request.duration_minutes,
             notes=request.notes,
+            reflection=request.reflection or {},
         )
         db.add(session)
         db.commit()
@@ -247,6 +252,7 @@ def create_session(
             transcript_text=session.transcript_text,
             duration_minutes=session.duration_minutes,
             notes=session.notes,
+            reflection=session.reflection,
             has_report=False,  # 剛創建,還沒報告
             created_at=session.created_at,
             updated_at=session.updated_at,
@@ -350,6 +356,7 @@ def list_sessions(
                 summary=session.summary,  # 加入會談摘要
                 duration_minutes=session.duration_minutes,
                 notes=session.notes,
+                reflection=session.reflection,
                 has_report=has_report,
                 created_at=session.created_at,
                 updated_at=session.updated_at,
@@ -357,6 +364,121 @@ def list_sessions(
         )
 
     return SessionListResponse(total=total, items=items)
+
+
+# Timeline Response Schemas
+class TimelineSessionItem(BaseModel):
+    """單次會談的時間線資訊"""
+
+    session_id: UUID
+    session_number: int
+    date: str  # YYYY-MM-DD
+    time_range: Optional[str] = None  # "HH:MM-HH:MM" or None
+    summary: Optional[str] = None  # 會談摘要
+    has_report: bool  # 是否有報告
+    report_id: Optional[UUID] = None  # 報告 ID
+
+
+class SessionTimelineResponse(BaseModel):
+    """會談歷程時間線響應"""
+
+    client_id: UUID
+    client_name: str
+    client_code: str
+    total_sessions: int
+    sessions: List[TimelineSessionItem]
+
+
+@router.get("/timeline", response_model=SessionTimelineResponse)
+def get_session_timeline(
+    client_id: UUID = Query(..., description="個案 UUID"),
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+    db: DBSession = Depends(get_db),
+) -> SessionTimelineResponse:
+    """
+    取得個案的會談歷程時間線
+
+    回傳個案的所有會談記錄，包含：
+    - 會談次數、日期、時間
+    - 會談摘要（100字內）
+    - 是否有報告
+
+    Args:
+        client_id: 個案 UUID (query parameter)
+        current_user: 當前認證諮商師
+        tenant_id: 租戶 ID
+        db: Database session
+
+    Returns:
+        會談歷程時間線
+
+    Raises:
+        HTTPException: 404 if client not found
+
+    Example:
+        GET /api/v1/sessions/timeline?client_id=xxx-xxx-xxx
+    """
+    # 驗證 client 存在且屬於當前諮商師
+    client_result = db.execute(
+        select(Client).where(
+            Client.id == client_id,
+            Client.counselor_id == current_user.id,
+            Client.tenant_id == tenant_id,
+        )
+    )
+    client = client_result.scalar_one_or_none()
+
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found",
+        )
+
+    # 查詢所有會談記錄（JOIN case + session + report）
+    query = (
+        select(Session, Report.id.label("report_id"))
+        .join(Case, Session.case_id == Case.id)
+        .outerjoin(
+            Report,
+            (Report.session_id == Session.id) & (Report.status == ReportStatus.DRAFT),
+        )  # 只取 draft 狀態的報告
+        .where(Case.client_id == client_id, Session.tenant_id == tenant_id)
+        .order_by(Session.session_date.asc())  # 按日期排序
+    )
+
+    result = db.execute(query)
+    rows = result.all()
+
+    # 組裝時間線資料
+    timeline_sessions = []
+    for session, report_id in rows:
+        # 格式化時間範圍
+        time_range = None
+        if session.start_time and session.end_time:
+            start = session.start_time.strftime("%H:%M")
+            end = session.end_time.strftime("%H:%M")
+            time_range = f"{start}-{end}"
+
+        timeline_sessions.append(
+            TimelineSessionItem(
+                session_id=session.id,
+                session_number=session.session_number,
+                date=session.session_date.strftime("%Y-%m-%d"),
+                time_range=time_range,
+                summary=session.summary,  # 來自 summary 欄位
+                has_report=report_id is not None,
+                report_id=report_id,
+            )
+        )
+
+    return SessionTimelineResponse(
+        client_id=client.id,
+        client_name=client.name,
+        client_code=client.code,
+        total_sessions=len(timeline_sessions),
+        sessions=timeline_sessions,
+    )
 
 
 @router.get("/{session_id}", response_model=SessionResponse)
@@ -413,14 +535,17 @@ def get_session(
         id=session.id,
         client_id=client.id,
         client_name=client.name,
+        client_code=client.code,
         case_id=case.id,
         session_number=session.session_number,
         session_date=session.session_date,
         start_time=session.start_time,
         end_time=session.end_time,
         transcript_text=session.transcript_text,
+        summary=session.summary,
         duration_minutes=session.duration_minutes,
         notes=session.notes,
+        reflection=session.reflection,
         has_report=has_report,
         created_at=session.created_at,
         updated_at=session.updated_at,
@@ -523,6 +648,9 @@ def update_session(
         if request.duration_minutes is not None:
             session.duration_minutes = request.duration_minutes
 
+        if request.reflection is not None:
+            session.reflection = request.reflection
+
         # 如果 session_date 或 start_time 改變，需要重新計算 session_number
         # 決定新的排序時間：優先使用 start_time，若無則使用 session_date
         new_sort_time = session.start_time if session.start_time else session.session_date
@@ -590,14 +718,17 @@ def update_session(
             id=session.id,
             client_id=client.id,
             client_name=client.name,
+            client_code=client.code,
             case_id=case.id,
             session_number=session.session_number,
             session_date=session.session_date,
             start_time=session.start_time,
             end_time=session.end_time,
             transcript_text=session.transcript_text,
+            summary=session.summary,
             duration_minutes=session.duration_minutes,
             notes=session.notes,
+            reflection=session.reflection,
             has_report=has_report,
             created_at=session.created_at,
             updated_at=session.updated_at,
@@ -686,3 +817,144 @@ def delete_session(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete session: {str(e)}",
         )
+
+
+# Reflection CRUD Endpoints
+class ReflectionRequest(BaseModel):
+    """諮商師反思請求"""
+    working_with_client: Optional[str] = None
+    feeling_source: Optional[str] = None
+    current_challenges: Optional[str] = None
+    supervision_topics: Optional[str] = None
+
+
+class ReflectionResponse(BaseModel):
+    """諮商師反思響應"""
+    session_id: UUID
+    reflection: Optional[dict] = None
+    updated_at: datetime
+
+
+@router.get("/{session_id}/reflection", response_model=ReflectionResponse)
+def get_reflection(
+    session_id: UUID,
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+    db: DBSession = Depends(get_db),
+) -> ReflectionResponse:
+    """
+    取得會談的諮商師反思
+
+    Args:
+        session_id: Session UUID
+        current_user: 當前諮商師
+        tenant_id: 租戶 ID
+        db: 數據庫 session
+
+    Returns:
+        反思內容
+
+    Raises:
+        HTTPException: 404 if not found
+    """
+    result = db.execute(
+        select(Session, Client)
+        .join(Case, Session.case_id == Case.id)
+        .join(Client, Case.client_id == Client.id)
+        .where(
+            Session.id == session_id,
+            Client.counselor_id == current_user.id,
+            Client.tenant_id == tenant_id,
+        )
+    )
+    row = result.first()
+
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found",
+        )
+
+    session, _ = row
+
+    return ReflectionResponse(
+        session_id=session.id,
+        reflection=session.reflection,
+        updated_at=session.updated_at or session.created_at,
+    )
+
+
+@router.put("/{session_id}/reflection", response_model=ReflectionResponse)
+def update_reflection(
+    session_id: UUID,
+    reflection_data: ReflectionRequest,
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+    db: DBSession = Depends(get_db),
+) -> ReflectionResponse:
+    """
+    更新或建立會談的諮商師反思
+
+    Args:
+        session_id: Session UUID
+        reflection_data: 反思內容
+        current_user: 當前諮商師
+        tenant_id: 租戶 ID
+        db: 數據庫 session
+
+    Returns:
+        更新後的反思內容
+
+    Raises:
+        HTTPException: 404 if session not found, 500 if update fails
+    """
+    result = db.execute(
+        select(Session, Client)
+        .join(Case, Session.case_id == Case.id)
+        .join(Client, Case.client_id == Client.id)
+        .where(
+            Session.id == session_id,
+            Client.counselor_id == current_user.id,
+            Client.tenant_id == tenant_id,
+        )
+    )
+    row = result.first()
+
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found",
+        )
+
+    session, _ = row
+
+    try:
+        # Build reflection dict from request
+        reflection = {}
+        if reflection_data.working_with_client:
+            reflection["working_with_client"] = reflection_data.working_with_client
+        if reflection_data.feeling_source:
+            reflection["feeling_source"] = reflection_data.feeling_source
+        if reflection_data.current_challenges:
+            reflection["current_challenges"] = reflection_data.current_challenges
+        if reflection_data.supervision_topics:
+            reflection["supervision_topics"] = reflection_data.supervision_topics
+
+        session.reflection = reflection
+        db.commit()
+        db.refresh(session)
+
+        return ReflectionResponse(
+            session_id=session.id,
+            reflection=session.reflection,
+            updated_at=session.updated_at,
+        )
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update reflection: {str(e)}",
+        )
+
+

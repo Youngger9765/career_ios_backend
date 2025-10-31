@@ -1,11 +1,11 @@
 """
 Client (個案) schemas
 """
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class ClientBase(BaseModel):
@@ -14,7 +14,7 @@ class ClientBase(BaseModel):
     code: Optional[str] = Field(None, description="Anonymous client code (auto-generated if not provided)")
     name: str = Field(..., description="Client name (pseudonym)")
     nickname: Optional[str] = Field(None, description="Nickname")
-    age: Optional[int] = Field(None, ge=0, le=150, description="Age")
+    birth_date: Optional[date] = Field(None, description="Birth date (age will be auto-calculated)")
     gender: Optional[str] = Field(None, description="Gender")
     occupation: Optional[str] = Field(None, description="Occupation")
     education: Optional[str] = Field(None, description="Education level")
@@ -38,7 +38,7 @@ class ClientUpdate(BaseModel):
     code: Optional[str] = None
     name: Optional[str] = None
     nickname: Optional[str] = None
-    age: Optional[int] = Field(None, ge=0, le=150)
+    birth_date: Optional[date] = None
     gender: Optional[str] = None
     occupation: Optional[str] = None
     education: Optional[str] = None
@@ -56,6 +56,7 @@ class ClientResponse(ClientBase):
     id: UUID
     counselor_id: UUID
     tenant_id: str
+    age: Optional[int] = Field(None, description="Age (auto-calculated from birth_date)")
     created_at: datetime
     updated_at: Optional[datetime]
 

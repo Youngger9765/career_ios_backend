@@ -177,8 +177,13 @@ def list_reports(
     total_result = db.execute(count_query)
     total = total_result.scalar()
 
-    # Get paginated results
-    query = query.offset(skip).limit(limit).order_by(Report.created_at.desc())
+    # Get paginated results - order by session_number when filtering by client_id
+    if client_id:
+        query = query.order_by(SessionModel.session_number.asc())
+    else:
+        query = query.order_by(Report.created_at.desc())
+
+    query = query.offset(skip).limit(limit)
     result = db.execute(query)
     rows = result.all()
 

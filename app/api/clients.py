@@ -15,7 +15,7 @@ from app.core.deps import get_current_user, get_tenant_id
 from app.models.case import Case
 from app.models.client import Client
 from app.models.counselor import Counselor
-from app.models.report import Report
+from app.models.report import Report, ReportStatus
 from app.models.session import Session as SessionModel
 from app.schemas.client import (
     ClientCreate,
@@ -103,6 +103,17 @@ def create_client(
 
         # Create new client
         client_dict = client_data.model_dump(exclude={"code"})
+
+        # Auto-calculate age from birth_date if provided
+        if client_dict.get("birth_date") and not client_dict.get("age"):
+            from datetime import date
+            birth_date = client_dict["birth_date"]
+            today = date.today()
+            age = today.year - birth_date.year
+            if (today.month, today.day) < (birth_date.month, birth_date.day):
+                age -= 1
+            client_dict["age"] = age
+
         client = Client(
             **client_dict,
             code=client_code,
@@ -266,6 +277,16 @@ def update_client(
     try:
         # Update fields
         update_data = client_data.model_dump(exclude_unset=True)
+
+        # Auto-calculate age from birth_date if updated
+        if "birth_date" in update_data and update_data["birth_date"]:
+            from datetime import date
+            birth_date = update_data["birth_date"]
+            today = date.today()
+            age = today.year - birth_date.year
+            if (today.month, today.day) < (birth_date.month, birth_date.day):
+                age -= 1
+            update_data["age"] = age
 
         # Check if code is being updated and if it conflicts with existing client
         if "code" in update_data and update_data["code"] != client.code:
@@ -433,7 +454,7 @@ def get_client_timeline(
         .join(Case, SessionModel.case_id == Case.id)
         .outerjoin(
             Report,
-            (Report.session_id == SessionModel.id) & (Report.status == "draft"),
+            (Report.session_id == SessionModel.id) & (Report.status == ReportStatus.DRAFT),
         )  # 只取 draft 狀態的報告
         .where(Case.client_id == client_id, SessionModel.tenant_id == tenant_id)
         .order_by(SessionModel.session_date.asc())  # 按日期排序

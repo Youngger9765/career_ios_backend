@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -29,7 +29,8 @@ class Session(Base, BaseModel):
     # Additional content
     notes = Column(Text)
     key_points = Column(Text)
-    summary = Column(Text)  # 會談摘要（100字內，用於歷程展示）
+    summary = Column(Text)  # 會談摘要（100字內，用於歷程展示，AI 生成）
+    reflection = Column(JSON, default=dict)  # 諮商師反思（人類撰寫，格式彈性以支援不同租戶需求）
 
     # Relationships
     case = relationship("Case", back_populates="sessions")
