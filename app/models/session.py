@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -10,9 +10,12 @@ class Session(Base, BaseModel):
     __tablename__ = "sessions"
 
     case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id"), nullable=False)
+    tenant_id = Column(String, nullable=False, index=True)
     session_number = Column(Integer, nullable=False)
     session_date = Column(DateTime(timezone=True), nullable=False)
-    duration_minutes = Column(Integer)
+    start_time = Column(DateTime(timezone=True))  # 開始時間
+    end_time = Column(DateTime(timezone=True))  # 結束時間
+    duration_minutes = Column(Integer)  # 保留向下兼容
     room_number = Column(String)
 
     # File paths/URLs
@@ -26,6 +29,8 @@ class Session(Base, BaseModel):
     # Additional content
     notes = Column(Text)
     key_points = Column(Text)
+    summary = Column(Text)  # 會談摘要（100字內，用於歷程展示，AI 生成）
+    reflection = Column(JSON, default=dict)  # 諮商師反思（人類撰寫，格式彈性以支援不同租戶需求）
 
     # Relationships
     case = relationship("Case", back_populates="sessions")

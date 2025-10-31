@@ -1,0 +1,4 @@
+email,username,full_name,password,role,tenant_id
+young@career.com,young,Young Chen,password123,admin,career
+counselor1@career.com,counselor1,Counselor One,pass123,counselor,career
+counselor2@career.com,counselor2,Counselor Two,pass456,counselor,career

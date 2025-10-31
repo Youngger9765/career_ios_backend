@@ -30,10 +30,10 @@ class Settings(BaseSettings):
     REDIS_URL: Optional[str] = None
 
     # Security
-    SECRET_KEY: str = "your-secret-key-here-change-in-production"
+    SECRET_KEY: str  # REQUIRED: Must be set in .env (generate with: openssl rand -hex 32)
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # 7 days
 
     # OpenAI
     OPENAI_API_KEY: Optional[str] = None

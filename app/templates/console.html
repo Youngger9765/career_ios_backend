@@ -1,0 +1,3056 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iOS API Test Console</title>
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Left Sidebar - Flow */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%);
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .flow-group-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            padding: 14px 12px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.18));
+            border-radius: 10px;
+            border-left: 4px solid #10b981;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .flow-group-title:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.25));
+            transform: translateX(2px);
+        }
+
+        .flow-group-title:first-of-type {
+            margin-top: 0;
+        }
+
+        .flow-group-title::after {
+            content: '▼';
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+
+        .flow-group-title.collapsed::after {
+            transform: rotate(-90deg);
+        }
+
+        .flow-group-content {
+            max-height: 2000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.3s;
+            opacity: 1;
+            margin-bottom: 8px;
+            padding-left: 8px;
+        }
+
+        .flow-group-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .flow-step {
+            margin-bottom: 8px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .flow-step:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .flow-step.active {
+            background: rgba(255, 255, 255, 0.15);
+            border-left-color: #10b981;
+        }
+
+        .flow-step.completed {
+            background: rgba(16, 185, 129, 0.2);
+            border-left-color: #10b981;
+        }
+
+        .flow-step.error {
+            background: rgba(239, 68, 68, 0.2);
+            border-left-color: #ef4444;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-right: 10px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .flow-step.completed .step-number {
+            background: #10b981;
+        }
+
+        .flow-step.error .step-number {
+            background: #ef4444;
+        }
+
+        .step-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.95);
+        }
+
+        .step-subtitle {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 2px;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Center Panel - Preview */
+        .preview-panel {
+            flex: 1;
+            background: #f9fafb;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .preview-header {
+            margin-bottom: 20px;
+        }
+
+        .preview-header h1 {
+            font-size: 24px;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .preview-header p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .preview-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            min-height: 400px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9ca3af;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        /* Right Panel - Actions & Response */
+        .action-panel {
+            width: 420px;
+            background: white;
+            border-left: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .action-header {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .action-header h3 {
+            font-size: 16px;
+            color: #111827;
+            margin-bottom: 4px;
+        }
+
+        .action-header p {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .action-form {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .response-section {
+            border-top: 1px solid #e5e7eb;
+            padding: 20px;
+            background: #f9fafb;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .response-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 10px;
+        }
+
+        .response-content {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .status-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* Report Preview Styles */
+        .report-section {
+            margin-bottom: 24px;
+        }
+
+        .report-section h3 {
+            font-size: 18px;
+            color: #111827;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .report-section h4 {
+            font-size: 14px;
+            color: #374151;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .report-section p {
+            font-size: 14px;
+            color: #4b5563;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .theory-item {
+            background: #f0f9ff;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .theory-meta {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 6px;
+        }
+
+        .dialogue-item {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+        }
+
+        .dialogue-speaker {
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+
+        .dialogue-content {
+            font-size: 14px;
+            color: #374151;
+            line-height: 1.5;
+        }
+
+        .quality-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .quality-grade {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .quality-score {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .info-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .info-value {
+            font-size: 13px;
+            color: #111827;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Sidebar: Flow Steps -->
+        <div class="sidebar">
+            <h2>📱 iOS API 測試流程</h2>
+
+            <!-- 諮商師管理 -->
+            <div class="flow-group-title" data-group="auth">👤 認證管理 Auth</div>
+            <div class="flow-group-content" data-group-content="auth">
+                <div class="flow-step" data-step="login">
+                    <div>
+                        <span class="step-number">1</span>
+                        <span class="step-title">登入驗證</span>
+                    </div>
+                    <div class="step-subtitle">POST /auth/login</div>
+                </div>
+
+                <div class="flow-step" data-step="me">
+                    <div>
+                        <span class="step-number">2</span>
+                        <span class="step-title">取得諮商師資訊</span>
+                    </div>
+                    <div class="step-subtitle">GET /auth/me</div>
+                </div>
+
+                <div class="flow-step" data-step="update-counselor">
+                    <div>
+                        <span class="step-number">3</span>
+                        <span class="step-title">更新諮商師資訊</span>
+                    </div>
+                    <div class="step-subtitle">PATCH /auth/me</div>
+                </div>
+            </div>
+
+            <!-- 個案管理 -->
+            <div class="flow-group-title" data-group="client">👥 個案管理 Client</div>
+            <div class="flow-group-content" data-group-content="client">
+
+            <div class="flow-step" data-step="list-clients">
+                <div>
+                    <span class="step-number">4</span>
+                    <span class="step-title">列出個案</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/clients</div>
+            </div>
+
+            <div class="flow-step" data-step="create-client">
+                <div>
+                    <span class="step-number">5</span>
+                    <span class="step-title">建立個案</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/clients</div>
+            </div>
+
+            <div class="flow-step" data-step="view-client">
+                <div>
+                    <span class="step-number">6</span>
+                    <span class="step-title">查看個案</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/clients/{id}</div>
+            </div>
+
+            <div class="flow-step" data-step="update-client">
+                <div>
+                    <span class="step-number">7</span>
+                    <span class="step-title">更新個案</span>
+                </div>
+                <div class="step-subtitle">PATCH /api/v1/clients/{id}</div>
+            </div>
+
+            <div class="flow-step" data-step="delete-client">
+                <div>
+                    <span class="step-number">8</span>
+                    <span class="step-title">刪除個案</span>
+                </div>
+                <div class="step-subtitle">DELETE /api/v1/clients/{id}</div>
+            </div>
+            </div>
+
+            <!-- 會談管理 -->
+            <div class="flow-group-title" data-group="session">📝 會談管理 Session</div>
+            <div class="flow-group-content" data-group-content="session">
+
+            <div class="flow-step" data-step="create-session">
+                <div>
+                    <span class="step-number">9</span>
+                    <span class="step-title">建立會談記錄</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/sessions</div>
+            </div>
+
+            <div class="flow-step" data-step="list-sessions">
+                <div>
+                    <span class="step-number">10</span>
+                    <span class="step-title">列出會談記錄</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/sessions</div>
+            </div>
+
+            <div class="flow-step" data-step="view-session">
+                <div>
+                    <span class="step-number">11</span>
+                    <span class="step-title">查看會談詳情</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/sessions/{id}</div>
+            </div>
+
+            <div class="flow-step" data-step="update-session">
+                <div>
+                    <span class="step-number">12</span>
+                    <span class="step-title">更新會談記錄</span>
+                </div>
+                <div class="step-subtitle">PATCH /api/v1/sessions/{id}</div>
+            </div>
+
+            <div class="flow-step" data-step="delete-session">
+                <div>
+                    <span class="step-number">13</span>
+                    <span class="step-title">刪除會談記錄</span>
+                </div>
+                <div class="step-subtitle">DELETE /api/v1/sessions/{id}</div>
+            </div>
+
+            <div class="flow-step" data-step="client-timeline">
+                <div>
+                    <span class="step-number">14</span>
+                    <span class="step-title">查看個案歷程</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/sessions/timeline</div>
+            </div>
+
+            <div class="flow-step" data-step="get-reflection">
+                <div>
+                    <span class="step-number">15</span>
+                    <span class="step-title">查看反思</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/sessions/{id}/reflection</div>
+            </div>
+
+            <div class="flow-step" data-step="update-reflection">
+                <div>
+                    <span class="step-number">16</span>
+                    <span class="step-title">更新反思</span>
+                </div>
+                <div class="step-subtitle">PUT /api/v1/sessions/{id}/reflection</div>
+            </div>
+            </div>
+
+            <!-- 報告管理 -->
+            <div class="flow-group-title" data-group="report">📄 報告管理 Report</div>
+            <div class="flow-group-content" data-group-content="report">
+
+            <div class="flow-step" data-step="generate-report">
+                <div>
+                    <span class="step-number">17</span>
+                    <span class="step-title">生成報告</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/reports/generate</div>
+            </div>
+
+            <div class="flow-step" data-step="list-reports">
+                <div>
+                    <span class="step-number">18</span>
+                    <span class="step-title">列出報告</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/reports</div>
+            </div>
+
+            <div class="flow-step" data-step="view-report">
+                <div>
+                    <span class="step-number">19</span>
+                    <span class="step-title">查看報告</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/reports/{id}</div>
+            </div>
+
+            <div class="flow-step" data-step="update-report">
+                <div>
+                    <span class="step-number">20</span>
+                    <span class="step-title">更新報告</span>
+                </div>
+                <div class="step-subtitle">PATCH /api/v1/reports/{id}</div>
+            </div>
+            </div>
+
+        </div>
+
+        <!-- Center Panel: Preview -->
+        <div class="preview-panel">
+            <div class="preview-header">
+                <h1 id="preview-title">iOS API 測試控制台</h1>
+                <p id="preview-subtitle">選擇左側流程步驟開始測試</p>
+            </div>
+            <div class="preview-content" id="preview-content">
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p>請從左側選擇 API 步驟</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Actions & Response -->
+        <div class="action-panel">
+            <div class="action-header">
+                <h3 id="action-title">請選擇步驟</h3>
+                <p id="action-subtitle">填寫參數並執行 API 呼叫</p>
+            </div>
+
+            <div class="action-form" id="action-form">
+                <div class="empty-state">
+                    <p>請從左側選擇步驟</p>
+                </div>
+            </div>
+
+            <div class="response-section" id="response-section" style="display: none;">
+                <div class="response-title">Response</div>
+                <div id="response-status"></div>
+                <div class="response-content" id="response-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let state = {
+            token: localStorage.getItem('token') || '',
+            currentUser: null,
+            clients: [],
+            sessions: [],
+            reports: [],
+            currentClient: null,
+            currentSession: null,
+            currentReport: null
+        };
+
+        const BASE_URL = window.location.origin;
+
+        // Step configurations
+        const steps = {
+            login: {
+                title: '登入驗證',
+                subtitle: 'POST /auth/login',
+                renderForm: () => `
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="email" value="test@career.com" />
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="password" value="password123" />
+                    </div>
+                    <button class="btn btn-primary" onclick="executeLogin()">登入</button>
+                `,
+                execute: async () => {
+                    const email = document.getElementById('email').value;
+                    const password = document.getElementById('password').value;
+
+                    const response = await fetch(`${BASE_URL}/api/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.token = data.access_token;
+                        localStorage.setItem('token', state.token);
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>🔐 登入成功</h3>
+                        <div class="info-row">
+                            <span class="info-label">Token Type</span>
+                            <span class="info-value">${data.token_type}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Expires In</span>
+                            <span class="info-value">${data.expires_in}s</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Access Token</span>
+                            <span class="info-value" style="font-size: 11px; word-break: break-all;">${data.access_token.substring(0, 40)}...</span>
+                        </div>
+                    </div>
+                `
+            },
+            me: {
+                title: '取得當前用戶',
+                subtitle: 'GET /auth/me',
+                renderForm: () => `
+                    <div class="info-card">
+                        <p style="font-size: 13px; color: #6b7280;">需要先登入取得 Token</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="executeMe()" ${!state.token ? 'disabled' : ''}>取得用戶資訊</button>
+                `,
+                execute: async () => {
+                    const response = await fetch(`${BASE_URL}/api/auth/me`, {
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.currentUser = data;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>👤 用戶資訊</h3>
+                        <div class="info-row">
+                            <span class="info-label">姓名</span>
+                            <span class="info-value">${data.full_name}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Email</span>
+                            <span class="info-value">${data.email}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">角色</span>
+                            <span class="info-value">${data.role}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">租戶</span>
+                            <span class="info-value">${data.tenant_id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">狀態</span>
+                            <span class="info-value">${data.is_active ? '✅ 啟用' : '❌ 停用'}</span>
+                        </div>
+                    </div>
+                `
+            },
+            'list-clients': {
+                title: '列出個案',
+                subtitle: 'GET /api/v1/clients',
+                renderForm: () => `
+                    <div class="form-group">
+                        <label>Search (optional)</label>
+                        <input type="text" id="search" placeholder="搜尋姓名、代碼..." />
+                    </div>
+                    <button class="btn btn-primary" onclick="executeListClients()" ${!state.token ? 'disabled' : ''}>查詢個案</button>
+                `,
+                execute: async () => {
+                    const search = document.getElementById('search').value;
+                    const params = new URLSearchParams();
+                    if (search) params.append('search', search);
+
+                    const response = await fetch(`${BASE_URL}/api/v1/clients?${params}`, {
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.clients = data.items;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <h3>📋 個案列表 (共 ${data.total} 筆)</h3>
+                    ${data.items.map(client => `
+                        <div class="info-card">
+                            <div class="info-row">
+                                <span class="info-label">姓名</span>
+                                <span class="info-value">${client.name}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">代碼</span>
+                                <span class="info-value">${client.code}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">年齡</span>
+                                <span class="info-value">${client.age || 'N/A'}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">建立時間</span>
+                                <span class="info-value">${new Date(client.created_at).toLocaleString('zh-TW')}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                `
+            },
+            'create-client': {
+                title: '建立個案',
+                subtitle: 'POST /api/v1/clients',
+                renderForm: () => `
+                    <div class="form-group">
+                        <label>姓名 *</label>
+                        <input type="text" id="client-name" placeholder="請輸入姓名" required />
+                    </div>
+                    <div class="form-group">
+                        <label>暱稱</label>
+                        <input type="text" id="client-nickname" placeholder="請輸入暱稱" />
+                    </div>
+                    <div class="form-group">
+                        <label>出生日期 (必填，用於自動計算年齡)</label>
+                        <input type="date" id="client-birth-date" required />
+                    </div>
+                    <div class="form-group">
+                        <label>性別</label>
+                        <select id="client-gender">
+                            <option value="">請選擇</option>
+                            <option value="male">男性</option>
+                            <option value="female">女性</option>
+                            <option value="other">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>職業</label>
+                        <input type="text" id="client-occupation" placeholder="請輸入職業" />
+                    </div>
+                    <div class="form-group">
+                        <label>學歷</label>
+                        <input type="text" id="client-education" placeholder="例如：國立OO大學" />
+                    </div>
+                    <div class="form-group">
+                        <label>現居地</label>
+                        <input type="text" id="client-location" placeholder="例如：台北市" />
+                    </div>
+                    <div class="form-group">
+                        <label>經濟狀況</label>
+                        <input type="text" id="client-economic-status" placeholder="例如：可負擔日常及進修" />
+                    </div>
+                    <div class="form-group">
+                        <label>家庭關係</label>
+                        <textarea id="client-family-relations" rows="2" placeholder="例如：父母支持升學；與哥哥同住"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>其他重要資訊</label>
+                        <textarea id="client-other-info" rows="2" placeholder="例如：近半年考慮轉職；對職涯方向感到迷惘"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>備註 (私人)</label>
+                        <textarea id="client-notes" rows="2" placeholder="諮商師私人備註"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="executeCreateClient()" ${!state.token ? 'disabled' : ''}>建立個案</button>
+                        <button class="btn btn-secondary" onclick="quickFillRandomClient()" ${!state.token ? 'disabled' : ''} style="background: #6366f1;">🎲 快速填入測試資料</button>
+                    </div>
+                `,
+                execute: async () => {
+                    const clientData = {
+                        name: document.getElementById('client-name').value,
+                        nickname: document.getElementById('client-nickname').value || undefined,
+                        birth_date: document.getElementById('client-birth-date').value || undefined,
+                        gender: document.getElementById('client-gender').value || undefined,
+                        occupation: document.getElementById('client-occupation').value || undefined,
+                        education: document.getElementById('client-education').value || undefined,
+                        location: document.getElementById('client-location').value || undefined,
+                        economic_status: document.getElementById('client-economic-status').value || undefined,
+                        family_relations: document.getElementById('client-family-relations').value || undefined,
+                        notes: document.getElementById('client-notes').value || undefined
+                    };
+
+                    // Handle other_info as JSON string
+                    const otherInfoText = document.getElementById('client-other-info').value.trim();
+                    if (otherInfoText) {
+                        clientData.other_info = { description: otherInfoText };
+                    }
+
+                    // Code is always auto-generated, don't send it
+
+                    // Remove undefined values
+                    Object.keys(clientData).forEach(key => clientData[key] === undefined && delete clientData[key]);
+
+                    const response = await fetch(`${BASE_URL}/api/v1/clients`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(clientData)
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.currentClient = data;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>✅ 個案建立成功</h3>
+                        <div class="info-row">
+                            <span class="info-label">ID</span>
+                            <span class="info-value" style="font-size: 11px;">${data.id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">姓名</span>
+                            <span class="info-value">${data.name}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">代碼</span>
+                            <span class="info-value">${data.code}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">年齡</span>
+                            <span class="info-value">${data.age}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">性別</span>
+                            <span class="info-value">${data.gender}</span>
+                        </div>
+                    </div>
+                `
+            },
+            'view-client': {
+                title: '查看個案',
+                subtitle: 'GET /api/v1/clients/{id}',
+                init: async () => {
+                    // Refresh client list before showing view form
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/clients`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.clients = data.items;
+                                // Re-render form with updated list
+                                document.getElementById('action-form').innerHTML = steps['view-client'].renderForm();
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh client list:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    const clientOptions = state.clients.map(c =>
+                        `<option value="${c.id}">${c.name} (${c.code})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="form-group">
+                            <label>選擇個案 *</label>
+                            <select id="view-client-id">
+                                ${state.currentClient ? `<option value="${state.currentClient.id}" selected>${state.currentClient.name} (${state.currentClient.code})</option>` : ''}
+                                ${clientOptions}
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeViewClient()" ${!state.token || state.clients.length === 0 ? 'disabled' : ''}>查看個案</button>
+                    `;
+                },
+                execute: async () => {
+                    const clientId = document.getElementById('view-client-id').value;
+
+                    const response = await fetch(`${BASE_URL}/api/v1/clients/${clientId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`
+                        }
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.currentClient = data;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>👤 個案資訊</h3>
+                        <div class="info-row">
+                            <span class="info-label">ID</span>
+                            <span class="info-value" style="font-size: 11px;">${data.id || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">姓名</span>
+                            <span class="info-value">${data.name || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">代碼</span>
+                            <span class="info-value">${data.code || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">暱稱</span>
+                            <span class="info-value">${data.nickname || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">出生日期</span>
+                            <span class="info-value">${data.birth_date || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">年齡</span>
+                            <span class="info-value">${data.age || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">性別</span>
+                            <span class="info-value">${data.gender || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">職業</span>
+                            <span class="info-value">${data.occupation || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">學歷</span>
+                            <span class="info-value">${data.education || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">現居地</span>
+                            <span class="info-value">${data.location || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">經歷狀況</span>
+                            <span class="info-value">${data.economic_status || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">家庭關係</span>
+                            <span class="info-value">${data.family_relations || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">其他重要資訊</span>
+                            <span class="info-value">${data.other_info && data.other_info.description ? data.other_info.description : (data.other_info && Object.keys(data.other_info).length > 0 ? JSON.stringify(data.other_info) : 'N/A')}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">標籤</span>
+                            <span class="info-value">${data.tags && data.tags.length > 0 ? data.tags.join(', ') : 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">備註</span>
+                            <span class="info-value">${data.notes || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">建立時間</span>
+                            <span class="info-value">${new Date(data.created_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                    </div>
+                `
+            },
+            'client-timeline': {
+                title: '查看個案歷程',
+                subtitle: 'GET /api/v1/sessions/timeline',
+                init: async () => {
+                    // Refresh client list before showing timeline form
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/clients`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.clients = data.items;
+                                // Re-render form with updated list
+                                document.getElementById('action-form').innerHTML = steps['client-timeline'].renderForm();
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh client list:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    const clientOptions = state.clients.map(c =>
+                        `<option value="${c.id}">${c.name} (${c.code})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="form-group">
+                            <label>選擇個案 *</label>
+                            <select id="timeline-client-id">
+                                ${state.currentClient ? `<option value="${state.currentClient.id}" selected>${state.currentClient.name} (${state.currentClient.code})</option>` : ''}
+                                ${clientOptions}
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeClientTimeline()" ${!state.token || state.clients.length === 0 ? 'disabled' : ''}>查看歷程</button>
+                    `;
+                },
+                execute: async () => {
+                    const clientId = document.getElementById('timeline-client-id').value;
+
+                    const response = await fetch(`${BASE_URL}/api/v1/sessions/timeline?client_id=${clientId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`
+                        }
+                    });
+                    const data = await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => {
+                    if (!data.sessions || data.sessions.length === 0) {
+                        return `
+                            <div class="info-card">
+                                <h3>📅 個案歷程</h3>
+                                <p style="color: #6b7280; font-size: 14px; margin-top: 12px;">此個案尚無諮商記錄</p>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="info-card">
+                            <h3>📅 個案歷程 - ${data.client_name} (${data.client_code})</h3>
+                            <div style="margin-top: 16px;">
+                                <p style="color: #374151; font-size: 14px; margin-bottom: 12px;">共 ${data.total_sessions} 次諮商</p>
+                                ${data.sessions.map(session => {
+                                    // Remove surrounding quotes from summary if present
+                                    let cleanSummary = session.summary;
+                                    if (cleanSummary && cleanSummary.startsWith('"') && cleanSummary.endsWith('"')) {
+                                        cleanSummary = cleanSummary.slice(1, -1);
+                                    }
+                                    // Also handle escaped quotes
+                                    if (cleanSummary) {
+                                        cleanSummary = cleanSummary.replace(/\\"/g, '"');
+                                    }
+
+                                    return `
+                                    <div style="border-left: 3px solid #3b82f6; padding-left: 12px; margin-bottom: 20px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                            <div style="font-weight: 600; color: #1f2937; font-size: 15px;">
+                                                ● 第${session.session_number}次 | ${session.date} ${session.time_range || ''}
+                                            </div>
+                                            ${session.has_report ? `
+                                                <span style="background: #10b981; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; white-space: nowrap;">
+                                                    已出報告
+                                                </span>
+                                            ` : `
+                                                <span style="background: #9ca3af; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; white-space: nowrap;">
+                                                    未出報告
+                                                </span>
+                                            `}
+                                        </div>
+                                        ${cleanSummary ? `
+                                            <div style="font-size: 14px; color: #374151; line-height: 1.6;">
+                                                ${cleanSummary}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            'get-reflection': {
+                title: '查看反思',
+                subtitle: 'GET /api/v1/sessions/{id}/reflection',
+                init: async () => {
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.sessions = data.items;
+                                document.getElementById('action-form').innerHTML = steps['get-reflection'].renderForm();
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh session list:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    const sessionOptions = (state.sessions || []).map(s =>
+                        `<option value="${s.id}">${s.client_name || '未知'} - 第 ${s.session_number} 次 (${new Date(s.session_date).toLocaleDateString('zh-TW')})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="form-group">
+                            <label>選擇會談記錄 *</label>
+                            <select id="reflection-session-id">
+                                ${sessionOptions}
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeGetReflection()" ${!state.token || !state.sessions?.length ? 'disabled' : ''}>查看反思</button>
+                    `;
+                },
+                execute: async () => {
+                    const sessionId = document.getElementById('reflection-session-id').value;
+                    const response = await fetch(`${BASE_URL}/api/v1/sessions/${sessionId}/reflection`, {
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    });
+                    const data = await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>💭 諮商師反思</h3>
+                        <div class="info-row">
+                            <span class="info-label">Session ID</span>
+                            <span class="info-value" style="font-size: 11px;">${data.session_id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">更新時間</span>
+                            <span class="info-value">${new Date(data.updated_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                    </div>
+                    ${data.reflection && Object.keys(data.reflection).length > 0 ? `
+                        <div class="info-card">
+                            <h4>反思內容</h4>
+                            ${data.reflection.working_with_client ? `
+                                <div style="margin-bottom: 12px;">
+                                    <strong style="color: #2563eb;">我和這個人工作的感受是？</strong>
+                                    <p style="font-size: 13px; margin-top: 4px; line-height: 1.6;">${data.reflection.working_with_client}</p>
+                                </div>
+                            ` : ''}
+                            ${data.reflection.feeling_source ? `
+                                <div style="margin-bottom: 12px;">
+                                    <strong style="color: #2563eb;">這個感受的原因是？</strong>
+                                    <p style="font-size: 13px; margin-top: 4px; line-height: 1.6;">${data.reflection.feeling_source}</p>
+                                </div>
+                            ` : ''}
+                            ${data.reflection.current_challenges ? `
+                                <div style="margin-bottom: 12px;">
+                                    <strong style="color: #2563eb;">目前的困難／想更深入的地方是？</strong>
+                                    <p style="font-size: 13px; margin-top: 4px; line-height: 1.6;">${data.reflection.current_challenges}</p>
+                                </div>
+                            ` : ''}
+                            ${data.reflection.supervision_topics ? `
+                                <div style="margin-bottom: 12px;">
+                                    <strong style="color: #2563eb;">我會想找督導討論的問題是？</strong>
+                                    <p style="font-size: 13px; margin-top: 4px; line-height: 1.6;">${data.reflection.supervision_topics}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : '<div class="info-card"><p style="color: #6b7280;">此會談尚無反思記錄</p></div>'}
+                `
+            },
+            'update-reflection': {
+                title: '更新反思',
+                subtitle: 'PUT /api/v1/sessions/{id}/reflection',
+                init: async () => {
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.sessions = data.items;
+                                document.getElementById('action-form').innerHTML = steps['update-reflection'].renderForm();
+                                setTimeout(() => loadReflectionForUpdate(), 100);
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh session list:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    const sessionOptions = (state.sessions || []).map(s =>
+                        `<option value="${s.id}">${s.client_name || '未知'} - 第 ${s.session_number} 次 (${new Date(s.session_date).toLocaleDateString('zh-TW')})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="form-group">
+                            <label>選擇會談記錄 *</label>
+                            <select id="update-reflection-session-id" onchange="loadReflectionForUpdate()">
+                                ${sessionOptions}
+                            </select>
+                        </div>
+                        <div class="info-card" style="background: #eff6ff; border-color: #3b82f6;">
+                            <h4 style="color: #1e40af; margin-bottom: 12px;">諮商師反思</h4>
+                            <div class="form-group">
+                                <label>我和這個人工作的感受是？</label>
+                                <textarea id="put-reflection-working" placeholder="例如：整體過程流暢輕鬆，逐漸贏得信任..." rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>這個感受的原因是？</label>
+                                <textarea id="put-reflection-source" placeholder="例如：個案從緊張到逐步放鬆，願意開放心態分享更多..." rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>目前的困難／想更深入的地方是？</label>
+                                <textarea id="put-reflection-challenges" placeholder="例如：當肯定個案時，仍會有自我懷疑反應..." rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>我會想找督導討論的問題是？</label>
+                                <textarea id="put-reflection-supervision" placeholder="例如：如何在支持與挑戰間拿捏節奏..." rows="2"></textarea>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeUpdateReflection()" ${!state.token || !state.sessions?.length ? 'disabled' : ''}>更新反思</button>
+                    `;
+                },
+                execute: async () => {
+                    const sessionId = document.getElementById('update-reflection-session-id').value;
+                    const requestBody = {};
+
+                    const working = document.getElementById('put-reflection-working').value;
+                    const source = document.getElementById('put-reflection-source').value;
+                    const challenges = document.getElementById('put-reflection-challenges').value;
+                    const supervision = document.getElementById('put-reflection-supervision').value;
+
+                    if (working) requestBody.working_with_client = working;
+                    if (source) requestBody.feeling_source = source;
+                    if (challenges) requestBody.current_challenges = challenges;
+                    if (supervision) requestBody.supervision_topics = supervision;
+
+                    const response = await fetch(`${BASE_URL}/api/v1/sessions/${sessionId}/reflection`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+                    const data = await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card" style="border-color: #10b981;">
+                        <h3 style="color: #10b981;">✅ 反思更新成功</h3>
+                        <div class="info-row">
+                            <span class="info-label">Session ID</span>
+                            <span class="info-value" style="font-size: 11px;">${data.session_id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">更新時間</span>
+                            <span class="info-value">${new Date(data.updated_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                    </div>
+                `
+            },
+            'update-client': {
+                title: '更新個案',
+                subtitle: 'PATCH /api/v1/clients/{id}',
+                init: async () => {
+                    // Refresh client list before showing update form
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/clients`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.clients = data.items;
+                                // Re-render form with updated list
+                                document.getElementById('action-form').innerHTML = steps['update-client'].renderForm();
+                                // Load data for first/current client
+                                setTimeout(() => loadClientDataForUpdate(), 100);
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh client list:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    // Filter out currentClient from the list to avoid duplicates
+                    const filteredClients = state.currentClient
+                        ? state.clients.filter(c => c.id !== state.currentClient.id)
+                        : state.clients;
+
+                    const clientOptions = filteredClients.map(c =>
+                        `<option value="${c.id}">${c.name} (${c.code})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="form-group">
+                            <label>選擇個案 *</label>
+                            <select id="update-client-id" onchange="loadClientDataForUpdate()">
+                                ${state.currentClient ? `<option value="${state.currentClient.id}" selected>${state.currentClient.name} (${state.currentClient.code})</option>` : ''}
+                                ${clientOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>暱稱</label>
+                            <input type="text" id="update-client-nickname" placeholder="更新暱稱" />
+                        </div>
+                        <div class="form-group">
+                            <label>出生日期 (更新後將自動重新計算年齡)</label>
+                            <input type="date" id="update-client-birth-date" />
+                        </div>
+                        <div class="form-group">
+                            <label>職業</label>
+                            <input type="text" id="update-client-occupation" placeholder="更新職業" />
+                        </div>
+                        <div class="form-group">
+                            <label>標籤 (逗號分隔)</label>
+                            <input type="text" id="update-client-tags" placeholder="例: 職涯諮詢,轉職" />
+                        </div>
+                        <button class="btn btn-primary" onclick="executeUpdateClient()" ${!state.token || (!state.currentClient && state.clients.length === 0) ? 'disabled' : ''}>更新個案</button>
+                    `;
+                },
+                execute: async () => {
+                    const clientId = document.getElementById('update-client-id').value;
+                    const updateData = {};
+
+                    const nickname = document.getElementById('update-client-nickname').value;
+                    const birthDate = document.getElementById('update-client-birth-date').value;
+                    const occupation = document.getElementById('update-client-occupation').value;
+                    const tags = document.getElementById('update-client-tags').value;
+
+                    if (nickname) updateData.nickname = nickname;
+                    if (birthDate) updateData.birth_date = birthDate;
+                    if (occupation) updateData.occupation = occupation;
+                    if (tags) updateData.tags = tags.split(',').map(t => t.trim());
+
+                    const response = await fetch(`${BASE_URL}/api/v1/clients/${clientId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(updateData)
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.currentClient = data;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>✅ 個案更新成功</h3>
+                        <div class="info-row">
+                            <span class="info-label">姓名</span>
+                            <span class="info-value">${data.name}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">暱稱</span>
+                            <span class="info-value">${data.nickname || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">年齡</span>
+                            <span class="info-value">${data.age || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">職業</span>
+                            <span class="info-value">${data.occupation || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">標籤</span>
+                            <span class="info-value">${data.tags?.join(', ') || 'N/A'}</span>
+                        </div>
+                    </div>
+                `
+            },
+            'delete-client': {
+                title: '刪除個案',
+                subtitle: 'DELETE /api/v1/clients/{id}',
+                init: async () => {
+                    // Refresh client list before showing delete form
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/clients`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.clients = data.items;
+                                // Re-render form with updated list
+                                document.getElementById('action-form').innerHTML = steps['delete-client'].renderForm();
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh client list:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    const clientOptions = state.clients.map(c =>
+                        `<option value="${c.id}">${c.name} (${c.code})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="form-group">
+                            <label>選擇要刪除的個案 *</label>
+                            <select id="delete-client-id">
+                                ${clientOptions}
+                            </select>
+                        </div>
+                        <div class="info-card" style="background: #fee2e2; border-color: #ef4444;">
+                            <p style="color: #991b1b; font-size: 13px;">⚠️ 警告：刪除個案後無法復原!</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeDeleteClient()" ${!state.token || state.clients.length === 0 ? 'disabled' : ''} style="background: #ef4444;">刪除個案</button>
+                    `;
+                },
+                execute: async () => {
+                    const clientId = document.getElementById('delete-client-id').value;
+
+                    const response = await fetch(`${BASE_URL}/api/v1/clients/${clientId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`
+                        }
+                    });
+
+                    // DELETE returns 204 No Content, no JSON to parse
+                    const data = response.status === 204 ? { success: true, message: '個案已刪除' } : await response.json();
+
+                    // Remove deleted client from state
+                    if (response.status === 204) {
+                        state.clients = state.clients.filter(c => c.id !== clientId);
+                        if (state.currentClient?.id === clientId) {
+                            state.currentClient = null;
+                        }
+                        // Refresh the dropdown list
+                        document.getElementById('action-form').innerHTML = steps['delete-client'].renderForm();
+                    }
+
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card" style="border-color: #10b981;">
+                        <h3 style="color: #10b981;">✅ 個案刪除成功</h3>
+                        <p style="color: #065f46; font-size: 14px; margin-top: 12px;">該個案已從系統中移除</p>
+                    </div>
+                `
+            },
+            'create-session': {
+                title: '建立會談記錄',
+                subtitle: 'POST /api/v1/sessions',
+                renderForm: () => {
+                    const clientOptions = state.clients.map(c =>
+                        `<option value="${c.id}">${c.name} (${c.code})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="form-group">
+                            <label>選擇個案 *</label>
+                            <select id="session-client-id">
+                                ${clientOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>會談日期 *</label>
+                            <input type="date" id="session-date" value="${new Date().toISOString().split('T')[0]}" />
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div class="form-group">
+                                <label>開始時間</label>
+                                <input type="time" id="session-start-time" />
+                            </div>
+                            <div class="form-group">
+                                <label>結束時間</label>
+                                <input type="time" id="session-end-time" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>逐字稿內容 *</label>
+                            <textarea id="session-transcript" placeholder="輸入會談逐字稿..." rows="10"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>備註</label>
+                            <textarea id="session-notes" placeholder="選填" rows="3"></textarea>
+                        </div>
+                        <div class="info-card" style="background: #eff6ff; border-color: #3b82f6;">
+                            <h4 style="color: #1e40af; margin-bottom: 12px;">諮商師反思（選填）</h4>
+                            <div class="form-group">
+                                <label>我和這個人工作的感受是？</label>
+                                <textarea id="reflection-working" placeholder="例如：整體過程流暢輕鬆，逐漸贏得信任..." rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>這個感受的原因是？</label>
+                                <textarea id="reflection-source" placeholder="例如：個案從緊張到逐步放鬆，願意開放心態分享更多..." rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>目前的困難／想更深入的地方是？</label>
+                                <textarea id="reflection-challenges" placeholder="例如：當肯定個案時，仍會有自我懷疑反應..." rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>我會想找督導討論的問題是？</label>
+                                <textarea id="reflection-supervision" placeholder="例如：如何在支持與挑戰間拿捏節奏..." rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary" onclick="executeCreateSession()" ${!state.token || state.clients.length === 0 ? 'disabled' : ''}>建立會談記錄</button>
+                            <button class="btn btn-secondary" onclick="quickFillSessionData()" ${!state.token ? 'disabled' : ''} style="background: #6366f1;">🎲 快速填入測試資料</button>
+                        </div>
+                    `;
+                },
+                execute: async () => {
+                    const sessionDate = document.getElementById('session-date').value;
+                    const startTime = document.getElementById('session-start-time').value;
+                    const endTime = document.getElementById('session-end-time').value;
+
+                    // Validate session_date is not empty
+                    if (!sessionDate) {
+                        throw new Error('會談日期為必填欄位');
+                    }
+
+                    const requestBody = {
+                        client_id: document.getElementById('session-client-id').value,
+                        session_date: sessionDate,  // Should be in YYYY-MM-DD format from input[type=date]
+                        transcript: document.getElementById('session-transcript').value,
+                        notes: document.getElementById('session-notes').value || null
+                    };
+
+                    // Add start_time and end_time if provided (non-empty)
+                    if (startTime && startTime.trim()) {
+                        requestBody.start_time = `${sessionDate} ${startTime}`;
+                    }
+                    if (endTime && endTime.trim()) {
+                        requestBody.end_time = `${sessionDate} ${endTime}`;
+                    }
+
+                    // Add reflection if any field is filled
+                    const reflectionWorking = document.getElementById('reflection-working').value;
+                    const reflectionSource = document.getElementById('reflection-source').value;
+                    const reflectionChallenges = document.getElementById('reflection-challenges').value;
+                    const reflectionSupervision = document.getElementById('reflection-supervision').value;
+
+                    if (reflectionWorking || reflectionSource || reflectionChallenges || reflectionSupervision) {
+                        requestBody.reflection = {};
+                        if (reflectionWorking) requestBody.reflection.working_with_client = reflectionWorking;
+                        if (reflectionSource) requestBody.reflection.feeling_source = reflectionSource;
+                        if (reflectionChallenges) requestBody.reflection.current_challenges = reflectionChallenges;
+                        if (reflectionSupervision) requestBody.reflection.supervision_topics = reflectionSupervision;
+                    }
+
+                    const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.sessions = state.sessions || [];
+                        state.sessions.push(data);
+                        state.currentSession = data;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>📝 逐字稿已儲存</h3>
+                        <div class="info-row">
+                            <span class="info-label">Session ID</span>
+                            <span class="info-value">${data.id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">會談編號</span>
+                            <span class="info-value">第 ${data.session_number} 次</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">會談日期</span>
+                            <span class="info-value">${new Date(data.session_date).toLocaleDateString('zh-TW')}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">已生成報告</span>
+                            <span class="info-value">${data.has_report ? '是' : '否'}</span>
+                        </div>
+                    </div>
+                `
+            },
+            'list-sessions': {
+                title: '列出會談記錄',
+                subtitle: 'GET /api/v1/sessions',
+                init: async () => {
+                    // Refresh client list before showing form
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/clients`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.clients = data.items;
+                                // Re-render form with updated list
+                                document.getElementById('action-form').innerHTML = steps['list-sessions'].renderForm();
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh client list:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    const clientOptions = state.clients.map(c =>
+                        `<option value="${c.id}">${c.name} (${c.code})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="form-group">
+                            <label>篩選個案 (可選)</label>
+                            <select id="filter-session-client-id">
+                                <option value="">全部</option>
+                                ${clientOptions}
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeListSessions()" ${!state.token ? 'disabled' : ''}>列出逐字稿</button>
+                    `;
+                },
+                execute: async () => {
+                    const clientId = document.getElementById('filter-session-client-id').value;
+                    const url = clientId
+                        ? `${BASE_URL}/api/v1/sessions?client_id=${clientId}`
+                        : `${BASE_URL}/api/v1/sessions`;
+
+                    const response = await fetch(url, {
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.sessions = data.items;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => {
+                    if (data.total === 0) {
+                        return `<div class="empty-state"><p>尚無逐字稿記錄</p></div>`;
+                    }
+                    return `
+                        <div class="info-card">
+                            <h3>📝 逐字稿列表 (${data.total})</h3>
+                        </div>
+                        ${data.items.map(s => `
+                            <div class="info-card" style="cursor: pointer;" onclick="state.currentSession = ${JSON.stringify(s).replace(/"/g, '&quot;')}; showStep('view-session');">
+                                <div class="info-row">
+                                    <span class="info-label">個案姓名</span>
+                                    <span class="info-value">${s.client_name || 'N/A'}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">會談日期</span>
+                                    <span class="info-value">${new Date(s.session_date).toLocaleDateString('zh-TW')}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">會談編號</span>
+                                    <span class="info-value">第 ${s.session_number} 次</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">已生成報告</span>
+                                    <span class="info-value">${s.has_report ? '✅ 是' : '❌ 否'}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    `;
+                }
+            },
+            'view-session': {
+                title: '查看會談詳情',
+                subtitle: 'GET /api/v1/sessions/{id}',
+                init: async () => {
+                    // Refresh session list before showing view form
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.sessions = data.items;
+                                // Re-render form with updated list
+                                document.getElementById('action-form').innerHTML = steps['view-session'].renderForm();
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh session list:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    const sessionOptions = (state.sessions || []).map(s =>
+                        `<option value="${s.id}">${s.client_name || '未知'} - 第 ${s.session_number} 次 (${new Date(s.session_date).toLocaleDateString('zh-TW')})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="form-group">
+                            <label>選擇會談記錄 *</label>
+                            <select id="view-session-id">
+                                ${sessionOptions}
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeViewSession()" ${!state.token || !state.sessions?.length ? 'disabled' : ''}>查看會談詳情</button>
+                    `;
+                },
+                execute: async () => {
+                    const sessionId = document.getElementById('view-session-id').value;
+
+                    const response = await fetch(`${BASE_URL}/api/v1/sessions/${sessionId}`, {
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.currentSession = data;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>📝 會談詳情</h3>
+                        <div class="info-row">
+                            <span class="info-label">個案姓名</span>
+                            <span class="info-value">${data.client_name || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">會談日期</span>
+                            <span class="info-value">${new Date(data.session_date).toLocaleDateString('zh-TW')}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">會談編號</span>
+                            <span class="info-value">第 ${data.session_number} 次</span>
+                        </div>
+                        ${data.start_time ? `
+                        <div class="info-row">
+                            <span class="info-label">開始時間</span>
+                            <span class="info-value">${new Date(data.start_time).toLocaleTimeString('zh-TW', {hour: '2-digit', minute: '2-digit'})}</span>
+                        </div>
+                        ` : ''}
+                        ${data.end_time ? `
+                        <div class="info-row">
+                            <span class="info-label">結束時間</span>
+                            <span class="info-value">${new Date(data.end_time).toLocaleTimeString('zh-TW', {hour: '2-digit', minute: '2-digit'})}</span>
+                        </div>
+                        ` : ''}
+                        <div class="info-row">
+                            <span class="info-label">已生成報告</span>
+                            <span class="info-value">${data.has_report ? '✅ 是' : '❌ 否'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">建立時間</span>
+                            <span class="info-value">${new Date(data.created_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                        ${data.updated_at ? `
+                        <div class="info-row">
+                            <span class="info-label">更新時間</span>
+                            <span class="info-value">${new Date(data.updated_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="info-card">
+                        <h4>逐字稿內容</h4>
+                        <p style="white-space: pre-wrap; font-size: 13px; line-height: 1.6;">${data.transcript_text}</p>
+                    </div>
+                    ${data.summary ? `
+                        <div class="info-card">
+                            <h4>會談摘要（AI 生成）</h4>
+                            <p style="font-size: 13px; line-height: 1.6;">${data.summary}</p>
+                        </div>
+                    ` : ''}
+                    ${data.notes ? `
+                        <div class="info-card">
+                            <h4>備註（人類撰寫）</h4>
+                            <p style="font-size: 13px;">${data.notes}</p>
+                        </div>
+                    ` : ''}
+                    ${data.reflection && Object.keys(data.reflection).length > 0 ? `
+                        <div class="info-card">
+                            <h4>諮商師反思（人類撰寫）</h4>
+                            ${data.reflection.working_with_client ? `
+                                <div style="margin-bottom: 12px;">
+                                    <strong style="color: #2563eb;">我和這個人工作的感受是？</strong>
+                                    <p style="font-size: 13px; margin-top: 4px; line-height: 1.6;">${data.reflection.working_with_client}</p>
+                                </div>
+                            ` : ''}
+                            ${data.reflection.feeling_source ? `
+                                <div style="margin-bottom: 12px;">
+                                    <strong style="color: #2563eb;">這個感受的原因是？</strong>
+                                    <p style="font-size: 13px; margin-top: 4px; line-height: 1.6;">${data.reflection.feeling_source}</p>
+                                </div>
+                            ` : ''}
+                            ${data.reflection.current_challenges ? `
+                                <div style="margin-bottom: 12px;">
+                                    <strong style="color: #2563eb;">目前的困難／想更深入的地方是？</strong>
+                                    <p style="font-size: 13px; margin-top: 4px; line-height: 1.6;">${data.reflection.current_challenges}</p>
+                                </div>
+                            ` : ''}
+                            ${data.reflection.supervision_topics ? `
+                                <div style="margin-bottom: 12px;">
+                                    <strong style="color: #2563eb;">我會想找督導討論的問題是？</strong>
+                                    <p style="font-size: 13px; margin-top: 4px; line-height: 1.6;">${data.reflection.supervision_topics}</p>
+                                </div>
+                            ` : ''}
+                            ${!data.reflection.working_with_client && !data.reflection.feeling_source && !data.reflection.current_challenges && !data.reflection.supervision_topics ? `
+                                <p style="font-size: 13px; color: #6b7280;">（自訂格式反思資料）</p>
+                                <pre style="font-size: 12px; background: #f3f4f6; padding: 12px; border-radius: 4px; overflow-x: auto;">${JSON.stringify(data.reflection, null, 2)}</pre>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                `
+            },
+            'update-session': {
+                title: '更新會談記錄',
+                subtitle: 'PATCH /api/v1/sessions/{id}',
+                init: async () => {
+                    // Refresh session list before showing update form
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.sessions = data.items;
+                                // Re-render form with updated list
+                                document.getElementById('action-form').innerHTML = steps['update-session'].renderForm();
+                                // Load data for first session
+                                setTimeout(() => loadSessionForUpdate(), 100);
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh session list:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    const sessionOptions = (state.sessions || []).map(s =>
+                        `<option value="${s.id}">${s.client_name || '未知'} - 第 ${s.session_number} 次 (${new Date(s.session_date).toLocaleDateString('zh-TW')})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="form-group">
+                            <label>選擇會談記錄 *</label>
+                            <select id="update-session-id" onchange="loadSessionForUpdate()">
+                                ${sessionOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>會談日期</label>
+                            <input type="date" id="update-session-date" />
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div class="form-group">
+                                <label>開始時間</label>
+                                <input type="time" id="update-session-start-time" />
+                            </div>
+                            <div class="form-group">
+                                <label>結束時間</label>
+                                <input type="time" id="update-session-end-time" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>逐字稿內容</label>
+                            <textarea id="update-session-transcript" placeholder="更新逐字稿..." rows="10"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>備註</label>
+                            <textarea id="update-session-notes" placeholder="更新備註" rows="3"></textarea>
+                        </div>
+                        <div class="info-card" style="background: #eff6ff; border-color: #3b82f6;">
+                            <h4 style="color: #1e40af; margin-bottom: 12px;">諮商師反思（選填）</h4>
+                            <div class="form-group">
+                                <label>我和這個人工作的感受是？</label>
+                                <textarea id="update-reflection-working" placeholder="例如：整體過程流暢輕鬆，逐漸贏得信任..." rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>這個感受的原因是？</label>
+                                <textarea id="update-reflection-source" placeholder="例如：個案從緊張到逐步放鬆，願意開放心態分享更多..." rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>目前的困難／想更深入的地方是？</label>
+                                <textarea id="update-reflection-challenges" placeholder="例如：當肯定個案時，仍會有自我懷疑反應..." rows="2"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>我會想找督導討論的問題是？</label>
+                                <textarea id="update-reflection-supervision" placeholder="例如：如何在支持與挑戰間拿捏節奏..." rows="2"></textarea>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeUpdateSession()" ${!state.token || !state.sessions?.length ? 'disabled' : ''}>更新會談記錄</button>
+                    `;
+                },
+                execute: async () => {
+                    const sessionId = document.getElementById('update-session-id').value;
+                    const updateData = {};
+
+                    const sessionDate = document.getElementById('update-session-date').value;
+                    const startTime = document.getElementById('update-session-start-time').value;
+                    const endTime = document.getElementById('update-session-end-time').value;
+                    const transcript = document.getElementById('update-session-transcript').value;
+                    const notes = document.getElementById('update-session-notes').value;
+
+                    if (sessionDate) updateData.session_date = sessionDate;
+                    if (startTime && sessionDate) updateData.start_time = `${sessionDate} ${startTime}`;
+                    if (endTime && sessionDate) updateData.end_time = `${sessionDate} ${endTime}`;
+                    if (transcript) updateData.transcript = transcript;
+                    if (notes) updateData.notes = notes;
+
+                    // Add reflection if any field is filled
+                    const reflectionWorking = document.getElementById('update-reflection-working').value;
+                    const reflectionSource = document.getElementById('update-reflection-source').value;
+                    const reflectionChallenges = document.getElementById('update-reflection-challenges').value;
+                    const reflectionSupervision = document.getElementById('update-reflection-supervision').value;
+
+                    if (reflectionWorking || reflectionSource || reflectionChallenges || reflectionSupervision) {
+                        updateData.reflection = {};
+                        if (reflectionWorking) updateData.reflection.working_with_client = reflectionWorking;
+                        if (reflectionSource) updateData.reflection.feeling_source = reflectionSource;
+                        if (reflectionChallenges) updateData.reflection.current_challenges = reflectionChallenges;
+                        if (reflectionSupervision) updateData.reflection.supervision_topics = reflectionSupervision;
+                    }
+
+                    const response = await fetch(`${BASE_URL}/api/v1/sessions/${sessionId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(updateData)
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.currentSession = data;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card" style="border-color: #10b981;">
+                        <h3 style="color: #10b981;">✅ 會談記錄更新成功</h3>
+                        <div class="info-row">
+                            <span class="info-label">會談日期</span>
+                            <span class="info-value">${new Date(data.session_date).toLocaleDateString('zh-TW')}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">更新時間</span>
+                            <span class="info-value">${new Date(data.updated_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                    </div>
+                `
+            },
+            'delete-session': {
+                title: '刪除會談記錄',
+                subtitle: 'DELETE /api/v1/sessions/{id}',
+                init: async () => {
+                    // Refresh session list before showing delete form
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.sessions = data.items;
+                                // Re-render form with updated list
+                                document.getElementById('action-form').innerHTML = steps['delete-session'].renderForm();
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh session list:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    const sessionOptions = (state.sessions || []).map(s =>
+                        `<option value="${s.id}">${s.client_name || '未知'} - 第 ${s.session_number} 次 (${new Date(s.session_date).toLocaleDateString('zh-TW')})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="form-group">
+                            <label>選擇會談記錄 *</label>
+                            <select id="delete-session-id">
+                                ${sessionOptions}
+                            </select>
+                        </div>
+                        <div class="info-card" style="background: #fee2e2; border-color: #ef4444;">
+                            <p style="color: #991b1b; font-size: 13px;">⚠️ 警告：無法刪除已生成報告的會談記錄!</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeDeleteSession()" ${!state.token || !state.sessions?.length ? 'disabled' : ''} style="background: #ef4444;">刪除會談記錄</button>
+                    `;
+                },
+                execute: async () => {
+                    const sessionId = document.getElementById('delete-session-id').value;
+
+                    const response = await fetch(`${BASE_URL}/api/v1/sessions/${sessionId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    });
+
+                    const data = response.status === 204 ? { success: true, message: '逐字稿已刪除' } : await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card" style="border-color: #10b981;">
+                        <h3 style="color: #10b981;">✅ 逐字稿刪除成功</h3>
+                        <p style="color: #065f46; font-size: 14px; margin-top: 12px;">該逐字稿已從系統中移除</p>
+                    </div>
+                `
+            },
+            'update-counselor': {
+                title: '更新諮商師資訊',
+                subtitle: 'PATCH /api/auth/me',
+                renderForm: () => `
+                    <div class="info-card">
+                        <p style="font-size: 13px; color: #6b7280;">當前用戶: ${state.currentUser?.full_name || 'N/A'}</p>
+                    </div>
+                    <div class="form-group">
+                        <label>全名</label>
+                        <input type="text" id="update-counselor-fullname" placeholder="更新全名" value="${state.currentUser?.full_name || ''}" />
+                    </div>
+                    <div class="form-group">
+                        <label>用戶名</label>
+                        <input type="text" id="update-counselor-username" placeholder="更新用戶名" value="${state.currentUser?.username || ''}" />
+                    </div>
+                    <button class="btn btn-primary" onclick="executeUpdateCounselor()" ${!state.token || !state.currentUser ? 'disabled' : ''}>更新資訊</button>
+                `,
+                execute: async () => {
+                    const updateData = {};
+
+                    const fullName = document.getElementById('update-counselor-fullname').value;
+                    const username = document.getElementById('update-counselor-username').value;
+
+                    if (fullName) updateData.full_name = fullName;
+                    if (username) updateData.username = username;
+
+                    const response = await fetch(`${BASE_URL}/api/auth/me`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(updateData)
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.currentUser = data;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>✅ 諮商師資訊更新成功</h3>
+                        <div class="info-row">
+                            <span class="info-label">全名</span>
+                            <span class="info-value">${data.full_name}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">用戶名</span>
+                            <span class="info-value">${data.username}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Email</span>
+                            <span class="info-value">${data.email}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">角色</span>
+                            <span class="info-value">${data.role}</span>
+                        </div>
+                    </div>
+                `
+            },
+            'generate-report': {
+                title: '生成報告',
+                subtitle: 'POST /api/v1/reports/generate',
+                init: async () => {
+                    // Refresh sessions list to get latest data with has_report status
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.sessions = data.items;
+                                // Re-render form with updated list
+                                document.getElementById('action-form').innerHTML = steps['generate-report'].renderForm();
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh session list:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    // Filter sessions that don't have reports yet
+                    const sessionsWithoutReports = (state.sessions || []).filter(s => !s.has_report);
+
+                    if (sessionsWithoutReports.length === 0) {
+                        return `
+                            <div class="info-card" style="background: #fef3c7; border-color: #f59e0b;">
+                                <p style="color: #92400e;">⚠️ 沒有未生成報告的逐字稿。請先儲存逐字稿。</p>
+                            </div>
+                        `;
+                    }
+
+                    const sessionOptions = sessionsWithoutReports.map(s =>
+                        `<option value="${s.id}">${s.client_name} - 第${s.session_number}次 (${new Date(s.session_date).toLocaleDateString('zh-TW')})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="form-group">
+                            <label>選擇會談記錄 * (僅顯示未生成報告的記錄)</label>
+                            <select id="report-session-id">
+                                ${sessionOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>報告類型</label>
+                            <select id="report-type">
+                                <option value="enhanced">Enhanced (10段式)</option>
+                                <option value="legacy">Legacy (5段式)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>RAG 系統</label>
+                            <select id="report-rag">
+                                <option value="openai">OpenAI (GPT-4.1 Mini)</option>
+                                <option value="gemini">Gemini 2.5 Flash</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeGenerateReport()" ${!state.token ? 'disabled' : ''}>生成報告</button>
+                    `;
+                },
+                execute: async () => {
+                    const reportData = {
+                        session_id: document.getElementById('report-session-id').value,
+                        report_type: document.getElementById('report-type').value,
+                        rag_system: document.getElementById('report-rag').value
+                    };
+
+                    const response = await fetch(`${BASE_URL}/api/v1/reports/generate`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(reportData)
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.currentReport = data;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => {
+                    // 檢查是否是 processing 狀態
+                    if (data.report?.status === 'processing') {
+                        // 開始輪詢
+                        setTimeout(() => pollReportStatus(data.report_id), 3000);
+
+                        return `
+                            <div class="info-card" style="background: #fef3c7; border-color: #f59e0b;">
+                                <h3>⏳ 報告生成中...</h3>
+                                <p style="color: #92400e; margin-top: 12px;">逐字稿已保存，報告正在背景生成中，請稍候</p>
+                                <div class="info-row">
+                                    <span class="info-label">Report ID</span>
+                                    <span class="info-value" style="font-size: 11px;">${data.report_id}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Session ID</span>
+                                    <span class="info-value" style="font-size: 11px;">${data.session_id}</span>
+                                </div>
+                                <div id="polling-status" style="margin-top: 16px; padding: 12px; background: white; border-radius: 6px;">
+                                    <p style="font-size: 13px; color: #6b7280;">正在查詢狀態...</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    const report = data.report?.report || {};
+                    const quality = data.quality_summary || {};
+
+                    return `
+                        ${quality.grade ? `
+                            <div class="quality-summary">
+                                <div class="quality-grade">${quality.grade}</div>
+                                <div class="quality-score">評分：${quality.overall_score} / 100</div>
+                            </div>
+                        ` : ''}
+
+                        <div class="info-card">
+                            <h3>📊 報告基本資訊</h3>
+                            <div class="info-row">
+                                <span class="info-label">Report ID</span>
+                                <span class="info-value" style="font-size: 11px;">${data.report_id}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Session ID</span>
+                                <span class="info-value" style="font-size: 11px;">${data.session_id}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">模式</span>
+                                <span class="info-value">${data.report?.mode || 'N/A'}</span>
+                            </div>
+                        </div>
+
+                        ${report.client_info ? `
+                            <div class="report-section">
+                                <h3>👤 案主資料</h3>
+                                <div class="info-card">
+                                    <div class="info-row">
+                                        <span class="info-label">姓名</span>
+                                        <span class="info-value">${report.client_info.name || 'N/A'}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">性別</span>
+                                        <span class="info-value">${report.client_info.gender || 'N/A'}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">年齡</span>
+                                        <span class="info-value">${report.client_info.age || 'N/A'}</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">職業</span>
+                                        <span class="info-value">${report.client_info.occupation || 'N/A'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${report.main_concerns?.length ? `
+                            <div class="report-section">
+                                <h3>🎯 主要議題</h3>
+                                <ul>
+                                    ${report.main_concerns.map(c => `<li>${c}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        ${report.conceptualization ? `
+                            <div class="report-section">
+                                <h3>💡 個案概念化</h3>
+                                <p>${report.conceptualization}</p>
+                            </div>
+                        ` : ''}
+
+                        ${report.theories?.length ? `
+                            <div class="report-section">
+                                <h3>📚 理論引用</h3>
+                                ${report.theories.slice(0, 3).map(t => `
+                                    <div class="theory-item">
+                                        <p>${t.text}</p>
+                                        <div class="theory-meta">
+                                            相似度: ${(t.score * 100).toFixed(1)}% | 來源: ${t.document}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    `;
+                }
+            },
+            'list-reports': {
+                title: '列出報告',
+                subtitle: 'GET /api/v1/reports',
+                renderForm: () => {
+                    const hasClients = state.clients.length > 0;
+                    const clientOptions = state.clients.map(c =>
+                        `<option value="${c.id}">${c.name} (${c.code})</option>`
+                    ).join('');
+                    return `
+                        ${!hasClients ? '<div class="alert alert-warning" style="background: #fff3cd; border: 1px solid #ffc107; padding: 12px; border-radius: 6px; margin-bottom: 16px; color: #856404;"><strong>⚠️ 提示：</strong> 請先執行「列出個案」步驟以載入個案清單，才能使用篩選功能</div>' : ''}
+                        <div class="form-group">
+                            <label>篩選個案 (選填)</label>
+                            <select id="filter-client-id" ${!hasClients ? 'disabled' : ''}>
+                                <option value="">全部個案</option>
+                                ${clientOptions}
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeListReports()" ${!state.token ? 'disabled' : ''}>查詢報告</button>
+                    `;
+                },
+                execute: async () => {
+                    const clientId = document.getElementById('filter-client-id')?.value;
+                    const url = clientId
+                        ? `${BASE_URL}/api/v1/reports?client_id=${clientId}`
+                        : `${BASE_URL}/api/v1/reports`;
+
+                    const response = await fetch(url, {
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.reports = data.items;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <h3>📋 報告列表 (共 ${data.total} 筆)</h3>
+                    ${data.items.map(report => `
+                        <div class="info-card">
+                            <div class="info-row">
+                                <span class="info-label">個案/次數</span>
+                                <span class="info-value">${report.client_name || 'N/A'} - 第 ${report.session_number || '?'} 次</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">ID</span>
+                                <span class="info-value" style="font-size: 11px;">${report.id}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">模式</span>
+                                <span class="info-value">${report.mode}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">狀態</span>
+                                <span class="info-value">${report.status}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">評分</span>
+                                <span class="info-value">${report.quality_grade || 'N/A'}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">建立時間</span>
+                                <span class="info-value">${new Date(report.created_at).toLocaleString('zh-TW')}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                `
+            },
+            'view-report': {
+                title: '查看報告',
+                subtitle: 'GET /api/v1/reports/{id}',
+                renderForm: () => {
+                    const reportOptions = state.reports.map(r =>
+                        `<option value="${r.id}">${r.client_name || 'Client'} - 第${r.session_number || '?'}次 (${new Date(r.created_at).toLocaleDateString('zh-TW')})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="info-card" style="background: #e0f2fe; border-color: #3b82f6; margin-bottom: 16px;">
+                            <p style="color: #1e40af; font-size: 12px;">
+                                💡 支援多種輸出格式：不傳參數返回完整 metadata，或使用 format 參數輸出 Markdown/HTML
+                            </p>
+                        </div>
+                        <div class="form-group">
+                            <label>選擇報告</label>
+                            <select id="view-report-id">
+                                ${state.currentReport ? `<option value="${state.currentReport.report_id}" selected>Current Report</option>` : ''}
+                                ${reportOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>輸出格式</label>
+                            <select id="view-report-format">
+                                <option value="">JSON metadata (預設)</option>
+                                <option value="markdown">Markdown</option>
+                                <option value="html">HTML</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>版本選擇</label>
+                            <select id="view-report-use-edited">
+                                <option value="true">編輯版 (優先)</option>
+                                <option value="false">AI 原始版</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeViewReport()" ${!state.token || (!state.currentReport && state.reports.length === 0) ? 'disabled' : ''}>查看報告</button>
+                    `;
+                },
+                execute: async () => {
+                    const reportId = document.getElementById('view-report-id').value;
+                    const format = document.getElementById('view-report-format').value;
+                    const useEdited = document.getElementById('view-report-use-edited').value;
+
+                    let url = `${BASE_URL}/api/v1/reports/${reportId}`;
+                    const params = new URLSearchParams();
+                    if (format) params.append('format', format);
+                    params.append('use_edited', useEdited);
+
+                    if (params.toString()) {
+                        url += `?${params.toString()}`;
+                    }
+
+                    const response = await fetch(url, {
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    });
+                    const data = await response.json();
+                    return { response, data, format: format || 'json' };
+                },
+                renderPreview: (result) => {
+                    // Handle error response
+                    if (!result || !result.data) {
+                        return '<div class="info-card" style="background: #fee2e2; border-color: #ef4444;"><p style="color: #991b1b;">無法載入報告</p></div>';
+                    }
+
+                    const { data, format } = result;
+
+                    if (format === 'json') {
+                        const content = data.content_json?.report || data.content_json || {};
+                        return `
+                            <div class="info-card">
+                                <h3>📄 報告詳情 (JSON)</h3>
+                                <div class="info-row">
+                                    <span class="info-label">ID</span>
+                                    <span class="info-value" style="font-size: 11px;">${data.id}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">狀態</span>
+                                    <span class="info-value">${data.status}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">評分</span>
+                                    <span class="info-value">${data.quality_grade || 'N/A'} (${data.quality_score || 'N/A'})</span>
+                                </div>
+                            </div>
+                            <div style="background: #1e293b; border-radius: 8px; padding: 20px; max-height: 600px; overflow-y: auto;">
+                                <pre style="margin: 0; color: #e2e8f0; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;">${JSON.stringify(content, null, 2)}</pre>
+                            </div>
+                        `;
+                    }
+
+                    // Markdown or HTML format - Render nicely
+                    const isEdited = (data.is_edited === true) ? '✏️ 編輯版' : '🤖 AI 原始版';
+                    const formattedContent = data.formatted_content || '';
+
+                    if (format === 'markdown') {
+                        // Use marked.js to render Markdown to HTML
+                        const htmlContent = marked.parse(formattedContent);
+
+                        return `
+                            <div class="info-card">
+                                <h3>📄 報告內容 (${isEdited})</h3>
+                                <div class="info-row">
+                                    <span class="info-label">格式</span>
+                                    <span class="info-value">Markdown (渲染)</span>
+                                </div>
+                                ${data.edited_at ? `
+                                <div class="info-row">
+                                    <span class="info-label">最後編輯</span>
+                                    <span class="info-value">${new Date(data.edited_at).toLocaleString('zh-TW')}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div class="markdown-content" style="max-height: 600px; overflow-y: auto; padding: 24px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1f2937;">
+                                ${htmlContent}
+                            </div>
+                            <style>
+                                .markdown-content h1 { color: #1e40af; margin: 28px 0 14px; font-size: 28px; }
+                                .markdown-content h2 { color: #1e40af; margin: 24px 0 12px; font-size: 24px; }
+                                .markdown-content h3 { color: #1e40af; margin: 20px 0 10px; font-size: 20px; }
+                                .markdown-content p { margin: 12px 0; line-height: 1.8; }
+                                .markdown-content ul, .markdown-content ol { margin: 12px 0; padding-left: 24px; }
+                                .markdown-content li { margin: 4px 0; }
+                                .markdown-content strong { font-weight: 600; }
+                                .markdown-content code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; }
+                                .markdown-content pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; }
+                                .markdown-content blockquote { border-left: 4px solid #3b82f6; padding-left: 16px; color: #6b7280; margin: 12px 0; }
+                            </style>
+                        `;
+                    } else if (format === 'html') {
+                        // HTML format - render as HTML
+                        return `
+                            <div class="info-card">
+                                <h3>📄 報告內容 (${isEdited})</h3>
+                                <div class="info-row">
+                                    <span class="info-label">格式</span>
+                                    <span class="info-value">HTML</span>
+                                </div>
+                                ${data.edited_at ? `
+                                <div class="info-row">
+                                    <span class="info-label">最後編輯</span>
+                                    <span class="info-value">${new Date(data.edited_at).toLocaleString('zh-TW')}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div style="max-height: 600px; overflow-y: auto; padding: 24px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
+                                ${formattedContent}
+                            </div>
+                        `;
+                    } else {
+                        // Unknown format
+                        return `
+                            <div class="info-card">
+                                <h3>📄 報告內容 (${isEdited})</h3>
+                            </div>
+                            <div style="background: #1e293b; border-radius: 8px; padding: 20px; max-height: 600px; overflow-y: auto;">
+                                <pre style="margin: 0; color: #e2e8f0; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;">${formattedContent}</pre>
+                            </div>
+                        `;
+                    }
+                }
+            },
+            'update-report': {
+                title: '更新報告',
+                subtitle: 'PATCH /api/v1/reports/{id} (僅供 iOS 使用)',
+                renderForm: () => {
+                    return `
+                        <div class="info-card" style="background: #fef3c7; border-color: #f59e0b;">
+                            <p style="color: #92400e; font-size: 12px;">
+                                ⚠️ 此 API 僅供 iOS App 使用，用於提交諮商師編輯後的報告內容。<br>
+                                Web Console 不提供編輯功能。
+                            </p>
+                        </div>
+                        <button class="btn btn-secondary" disabled>此功能僅供 iOS 使用</button>
+                    `;
+                },
+                execute: async () => {
+                    const reportId = document.getElementById('update-report-id').value;
+                    const contentText = document.getElementById('update-report-content').value;
+
+                    let editedContent;
+                    try {
+                        editedContent = JSON.parse(contentText);
+                    } catch (e) {
+                        throw new Error('Invalid JSON format');
+                    }
+
+                    const response = await fetch(`${BASE_URL}/api/v1/reports/${reportId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ edited_content_json: editedContent })
+                    });
+                    const data = await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>✅ 報告更新成功</h3>
+                        <div class="info-row">
+                            <span class="info-label">Report ID</span>
+                            <span class="info-value" style="font-size: 11px;">${data.id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">編輯時間</span>
+                            <span class="info-value">${new Date(data.edited_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">編輯次數</span>
+                            <span class="info-value">${data.edit_count}</span>
+                        </div>
+                    </div>
+                    <div class="report-section">
+                        <h3>📝 格式化 Markdown</h3>
+                        <div class="response-content" style="max-height: 400px; white-space: pre-wrap;">${data.formatted_markdown}</div>
+                    </div>
+                `
+            }
+        };
+
+        // Event handlers
+        document.querySelectorAll('.flow-step').forEach(step => {
+            step.addEventListener('click', () => {
+                const stepKey = step.dataset.step;
+                selectStep(stepKey);
+            });
+        });
+
+        function selectStep(stepKey) {
+            // Update active state
+            document.querySelectorAll('.flow-step').forEach(s => s.classList.remove('active'));
+            document.querySelector(`[data-step="${stepKey}"]`).classList.add('active');
+
+            // Update UI
+            const stepConfig = steps[stepKey];
+            document.getElementById('action-title').textContent = stepConfig.title;
+            document.getElementById('action-subtitle').textContent = stepConfig.subtitle;
+            document.getElementById('action-form').innerHTML = stepConfig.renderForm();
+
+            // Call init function if exists
+            if (stepConfig.init) {
+                stepConfig.init();
+            }
+
+            document.getElementById('preview-title').textContent = stepConfig.title;
+            document.getElementById('preview-subtitle').textContent = stepConfig.subtitle;
+
+            // Clear preview content when switching steps
+            document.getElementById('preview-content').innerHTML = `
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p>填寫參數並執行 API</p>
+                </div>
+            `;
+
+            // Hide response initially
+            document.getElementById('response-section').style.display = 'none';
+        }
+
+        async function executeStep(stepKey) {
+            const stepConfig = steps[stepKey];
+            const stepElement = document.querySelector(`[data-step="${stepKey}"]`);
+
+            // Find the button in the action form and disable it with loading state
+            const button = document.querySelector('#action-form .btn-primary');
+            const originalText = button?.textContent;
+
+            try {
+                stepElement.classList.remove('completed', 'error');
+
+                // Set loading state
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = '處理中...';
+                }
+
+                const result = await stepConfig.execute();
+                const { response, data } = result;
+
+                // Show response
+                const responseSection = document.getElementById('response-section');
+                const responseStatus = document.getElementById('response-status');
+                const responseContent = document.getElementById('response-content');
+
+                responseSection.style.display = 'block';
+                responseStatus.innerHTML = `<span class="status-badge status-${response.ok ? 'success' : 'error'}">${response.status} ${response.statusText}</span>`;
+                responseContent.textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok) {
+                    stepElement.classList.add('completed');
+                    // Update preview
+                    if (stepConfig.renderPreview) {
+                        // Pass the entire result object for steps that need it (like view-report)
+                        // Otherwise just pass data for backwards compatibility
+                        const previewArg = (stepKey === 'view-report') ? result : data;
+                        document.getElementById('preview-content').innerHTML = stepConfig.renderPreview(previewArg);
+                    }
+                } else {
+                    stepElement.classList.add('error');
+                    document.getElementById('preview-content').innerHTML = `
+                        <div class="info-card" style="border-color: #ef4444;">
+                            <h3 style="color: #ef4444;">❌ 錯誤</h3>
+                            <p style="color: #991b1b;">${data.detail || '請求失敗'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                stepElement.classList.add('error');
+                document.getElementById('response-section').style.display = 'block';
+                document.getElementById('response-status').innerHTML = `<span class="status-badge status-error">Error</span>`;
+                document.getElementById('response-content').textContent = error.message;
+            } finally {
+                // Restore button state
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = originalText;
+                }
+            }
+        }
+
+        // 輪詢報告狀態
+        async function pollReportStatus(reportId) {
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/reports/${reportId}`, {
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+                const data = await response.json();
+
+                const pollingDiv = document.getElementById('polling-status');
+                if (!pollingDiv) return;
+
+                if (data.status === 'processing') {
+                    pollingDiv.innerHTML = `<p style="font-size: 13px; color: #f59e0b;">⏳ 處理中... (${new Date().toLocaleTimeString('zh-TW')})</p>`;
+                    setTimeout(() => pollReportStatus(reportId), 3000);
+                } else if (data.status === 'draft') {
+                    pollingDiv.innerHTML = `<p style="font-size: 13px; color: #10b981;">✅ 報告生成完成!</p>`;
+                    // 自動重新載入查看報告
+                    setTimeout(() => {
+                        document.getElementById('preview-content').innerHTML = steps['generate-report'].renderPreview({
+                            report_id: data.id,
+                            session_id: data.session_id,
+                            report: { report: data.content_json.report || data.content_json },
+                            quality_summary: {
+                                grade: data.quality_grade,
+                                overall_score: data.quality_score,
+                                strengths: data.quality_strengths,
+                                improvements_needed: data.quality_weaknesses
+                            }
+                        });
+                    }, 1000);
+                } else if (data.status === 'failed') {
+                    pollingDiv.innerHTML = `
+                        <p style="font-size: 13px; color: #ef4444;">❌ 生成失敗</p>
+                        <p style="font-size: 12px; color: #991b1b; margin-top: 8px;">${data.error_message || '未知錯誤'}</p>
+                    `;
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+            }
+        }
+
+        // Helper: Load session data when selecting for update
+        window.loadSessionForUpdate = function() {
+            const sessionId = document.getElementById('update-session-id').value;
+            const session = state.sessions.find(s => s.id === sessionId);
+            if (session) {
+                // Set date
+                const sessionDate = new Date(session.session_date);
+                document.getElementById('update-session-date').value = sessionDate.toISOString().split('T')[0];
+
+                // Set times
+                if (session.start_time) {
+                    const startTime = new Date(session.start_time);
+                    document.getElementById('update-session-start-time').value =
+                        `${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`;
+                }
+                if (session.end_time) {
+                    const endTime = new Date(session.end_time);
+                    document.getElementById('update-session-end-time').value =
+                        `${String(endTime.getHours()).padStart(2, '0')}:${String(endTime.getMinutes()).padStart(2, '0')}`;
+                }
+
+                document.getElementById('update-session-transcript').value = session.transcript_text || '';
+                document.getElementById('update-session-notes').value = session.notes || '';
+
+                // Load reflection data if exists
+                if (session.reflection) {
+                    document.getElementById('update-reflection-working').value = session.reflection.working_with_client || '';
+                    document.getElementById('update-reflection-source').value = session.reflection.feeling_source || '';
+                    document.getElementById('update-reflection-challenges').value = session.reflection.current_challenges || '';
+                    document.getElementById('update-reflection-supervision').value = session.reflection.supervision_topics || '';
+                } else {
+                    document.getElementById('update-reflection-working').value = '';
+                    document.getElementById('update-reflection-source').value = '';
+                    document.getElementById('update-reflection-challenges').value = '';
+                    document.getElementById('update-reflection-supervision').value = '';
+                }
+            }
+        };
+
+        // Load reflection data for update form
+        window.loadReflectionForUpdate = function() {
+            const sessionId = document.getElementById('update-reflection-session-id').value;
+            const session = state.sessions.find(s => s.id === sessionId);
+            if (session && session.reflection) {
+                document.getElementById('put-reflection-working').value = session.reflection.working_with_client || '';
+                document.getElementById('put-reflection-source').value = session.reflection.feeling_source || '';
+                document.getElementById('put-reflection-challenges').value = session.reflection.current_challenges || '';
+                document.getElementById('put-reflection-supervision').value = session.reflection.supervision_topics || '';
+            } else {
+                document.getElementById('put-reflection-working').value = '';
+                document.getElementById('put-reflection-source').value = '';
+                document.getElementById('put-reflection-challenges').value = '';
+                document.getElementById('put-reflection-supervision').value = '';
+            }
+        };
+
+        // Load client data for update form
+        window.loadClientDataForUpdate = async () => {
+            const clientId = document.getElementById('update-client-id')?.value;
+            if (!clientId) return;
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/clients/${clientId}`, {
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+
+                if (response.ok) {
+                    const client = await response.json();
+                    document.getElementById('update-client-nickname').value = client.nickname || '';
+                    document.getElementById('update-client-birth-date').value = client.birth_date || '';
+                    document.getElementById('update-client-occupation').value = client.occupation || '';
+                    document.getElementById('update-client-tags').value = client.tags?.join(', ') || '';
+                }
+            } catch (error) {
+                console.error('Failed to load client data:', error);
+            }
+        };
+
+        // Quick fill session test data
+        window.quickFillSessionData = () => {
+            const sampleTranscripts = [
+                `Co: 你好，今天想聊些什麼呢？
+Cl: 最近工作壓力很大，覺得快要撐不下去了。
+Co: 可以多說一些嗎？是什麼樣的壓力？
+Cl: 主管總是對我的工作不滿意，不管我怎麼做都覺得不夠好。
+Co: 聽起來你感到很挫折，可以分享一個具體的例子嗎？
+Cl: 上週我做了一份企劃案，花了很多心力，但主管只看了一眼就說這不是他要的。`,
+                `Co: 上次提到的職涯方向，有新的想法嗎？
+Cl: 我一直在思考，但還是很迷茫。
+Co: 迷茫的感覺是什麼？
+Cl: 不知道自己適合做什麼，也不確定現在的工作是不是對的選擇。
+Co: 讓我們先從你的興趣開始聊起吧。`,
+                `Co: 今天看起來心情不錯？
+Cl: 對啊，這週工作順利很多，主管也稱讚了我。
+Co: 很高興聽到這個消息！是什麼改變了？
+Cl: 我開始用你上次建議的方法，先確認主管的需求再開始做。
+Co: 聽起來這個策略很有效，繼續保持！`
+            ];
+
+            const sampleReflections = [
+                {
+                    working: '整體過程流暢輕鬆，逐漸贏得信任。首次面對職場PUA案例，獲得新的輔導經驗。',
+                    source: '個案從緊張到逐步放鬆，願意開放心態分享更多。能夠建立良好的治療同盟。',
+                    challenges: '當肯定個案時，仍會有自我懷疑反應；但已逐漸能接受讚賞。需要更多時間探索其內在認知模式。',
+                    supervision: '如何在支持與挑戰間拿捏節奏，以及量表與質化紀錄整合方式。特別是如何處理職場創傷。'
+                },
+                {
+                    working: '個案展現出強烈的改變動機，工作配合度高，讓會談進展順利。',
+                    source: '個案對自己的困境有清楚的認知，也願意嘗試新的方法，這讓諮商過程更有效率。',
+                    challenges: '個案有時會過度理性化自己的情緒，需要引導其更深入地覺察感受。',
+                    supervision: '如何幫助個案在理性思考與情緒覺察間取得平衡？是否需要引入更多情緒焦點技術？'
+                },
+                {
+                    working: '今天的會談充滿正向能量，看到個案的進步感到很欣慰。',
+                    source: '個案能夠主動分享成功經驗，展現出更多的自信和自我效能感。',
+                    challenges: '需要協助個案將這次的成功經驗內化，避免未來遇到挫折時回到原點。',
+                    supervision: '如何強化個案的成功經驗，建立長期的因應策略？下一步的介入重點應該放在哪裡？'
+                }
+            ];
+
+            const randomIndex = Math.floor(Math.random() * sampleTranscripts.length);
+            const randomTranscript = sampleTranscripts[randomIndex];
+            const randomReflection = sampleReflections[randomIndex];
+            const today = new Date();
+            const startHour = 14 + Math.floor(Math.random() * 3); // 14-16點
+            const endHour = startHour + 1;
+
+            document.getElementById('session-date').value = today.toISOString().split('T')[0];
+            document.getElementById('session-start-time').value = `${startHour}:00`;
+            document.getElementById('session-end-time').value = `${endHour}:00`;
+            document.getElementById('session-transcript').value = randomTranscript;
+            document.getElementById('session-notes').value = '測試會談記錄';
+
+            // Fill reflection fields
+            document.getElementById('reflection-working').value = randomReflection.working;
+            document.getElementById('reflection-source').value = randomReflection.source;
+            document.getElementById('reflection-challenges').value = randomReflection.challenges;
+            document.getElementById('reflection-supervision').value = randomReflection.supervision;
+        };
+
+        // Quick fill random client data
+        window.quickFillRandomClient = () => {
+            const names = ['王小明', '李小華', '陳大同', '張美玲', '林志強', '黃淑芬', '劉建國', '吳佳穎'];
+            const nicknames = ['小明', '小華', '大同', '美玲', '阿強', '芬芬', '建國', '佳佳'];
+            const occupations = ['工程師', '設計師', '教師', '醫生', '護理師', '會計師', '業務', '行政'];
+            const genders = ['male', 'female'];
+            const educations = ['高中畢業', '國立台灣大學', '私立東吳大學', '國立政治大學', '私立輔仁大學', '國立成功大學'];
+            const locations = ['台北市', '新北市', '台中市', '台南市', '高雄市', '桃園市'];
+            const economicStatuses = ['可負擔日常及進修', '經濟穩定', '需家人支持', '獨立自主', '收入穩定'];
+            const familyRelations = [
+                '父母支持；與哥哥同住',
+                '單親家庭；母親為主要支持',
+                '已婚；配偶關係良好',
+                '與父母同住；關係融洽',
+                '獨居；與家人保持聯繫',
+                '與伴侶同居；家人知情'
+            ];
+            const notes = [
+                '初次諮商，對職涯發展有疑問',
+                '曾有轉職經驗，希望確認方向',
+                '對未來感到焦慮，需要引導',
+                '積極主動，目標明確',
+                '需要建立信任關係'
+            ];
+            const otherInfos = [
+                '近半年考慮轉職；對職涯方向感到迷惘',
+                '曾在科技業工作三年；希望轉換跑道',
+                '對目前工作感到倦怠；想探索新可能',
+                '準備出國進修；需要釐清職涯規劃',
+                '剛畢業一年；對未來感到不確定'
+            ];
+
+            const randomIndex = Math.floor(Math.random() * names.length);
+
+            // Generate random birth date (20-50 years old)
+            const today = new Date();
+            const age = Math.floor(Math.random() * 30) + 20;
+            const birthYear = today.getFullYear() - age;
+            const birthMonth = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
+            const birthDay = String(Math.floor(Math.random() * 28) + 1).padStart(2, '0');
+            const birthDate = `${birthYear}-${birthMonth}-${birthDay}`;
+
+            try {
+                const fields = [
+                    { id: 'client-name', value: names[randomIndex] },
+                    { id: 'client-nickname', value: nicknames[randomIndex] },
+                    { id: 'client-birth-date', value: birthDate },
+                    { id: 'client-gender', value: genders[Math.floor(Math.random() * genders.length)] },
+                    { id: 'client-occupation', value: occupations[Math.floor(Math.random() * occupations.length)] },
+                    { id: 'client-education', value: educations[Math.floor(Math.random() * educations.length)] },
+                    { id: 'client-location', value: locations[Math.floor(Math.random() * locations.length)] },
+                    { id: 'client-economic-status', value: economicStatuses[Math.floor(Math.random() * economicStatuses.length)] },
+                    { id: 'client-family-relations', value: familyRelations[Math.floor(Math.random() * familyRelations.length)] },
+                    { id: 'client-other-info', value: otherInfos[Math.floor(Math.random() * otherInfos.length)] },
+                    { id: 'client-notes', value: notes[Math.floor(Math.random() * notes.length)] }
+                ];
+
+                fields.forEach(field => {
+                    const element = document.getElementById(field.id);
+                    if (element) {
+                        element.value = field.value;
+                    } else {
+                        console.warn(`Element not found: ${field.id}`);
+                    }
+                });
+            } catch (error) {
+                console.error('Error filling form:', error);
+                alert('填入資料時發生錯誤，請確認已在「建立個案」頁面');
+            }
+        };
+
+        // Step execution functions
+        window.executeLogin = () => executeStep('login');
+        window.executeMe = () => executeStep('me');
+        window.executeListClients = () => executeStep('list-clients');
+        window.executeCreateClient = () => executeStep('create-client');
+        window.executeViewClient = () => executeStep('view-client');
+        window.executeClientTimeline = () => executeStep('client-timeline');
+        window.executeUpdateClient = () => executeStep('update-client');
+        window.executeDeleteClient = () => executeStep('delete-client');
+        window.executeCreateSession = () => executeStep('create-session');
+        window.executeListSessions = () => executeStep('list-sessions');
+        window.executeViewSession = () => executeStep('view-session');
+        window.executeUpdateSession = () => executeStep('update-session');
+        window.executeDeleteSession = () => executeStep('delete-session');
+        window.executeGetReflection = () => executeStep('get-reflection');
+        window.executeUpdateReflection = () => executeStep('update-reflection');
+        window.executeUpdateCounselor = () => executeStep('update-counselor');
+        window.executeGenerateReport = () => executeStep('generate-report');
+        window.executeListReports = () => executeStep('list-reports');
+        window.executeViewReport = () => executeStep('view-report');
+        window.executeUpdateReport = () => executeStep('update-report');
+
+        // Auto-select first step
+        selectStep('login');
+
+        // Load token from localStorage on startup
+        if (state.token) {
+            fetch(`${BASE_URL}/api/auth/me`, {
+                headers: { 'Authorization': `Bearer ${state.token}` }
+            }).then(r => r.json()).then(data => {
+                if (data.email) {
+                    state.currentUser = data;
+                    console.log('Token valid, user:', data.email);
+                }
+            }).catch(() => {
+                localStorage.removeItem('token');
+                state.token = '';
+            });
+        }
+
+        // Group collapse functionality
+        document.querySelectorAll('.flow-group-title').forEach(title => {
+            title.addEventListener('click', () => {
+                const groupName = title.dataset.group;
+                const content = document.querySelector(`[data-group-content="${groupName}"]`);
+                title.classList.toggle('collapsed');
+                content.classList.toggle('collapsed');
+            });
+        });
+    </script>
+</body>
+</html>

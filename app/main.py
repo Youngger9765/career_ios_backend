@@ -6,7 +6,9 @@ from fastapi.templating import Jinja2Templates
 
 # RAG API routers
 from app.api import (
+    auth,
     chunk_strategies,
+    clients,
     comparison,
     evaluation_testsets,
     rag_agents,
@@ -18,6 +20,8 @@ from app.api import (
     rag_report,
     rag_search,
     rag_stats,
+    reports,
+    sessions,
 )
 from app.core.config import settings
 
@@ -42,6 +46,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include auth routes
+app.include_router(auth.router, prefix="/api")
+
+# Include client routes
+app.include_router(clients.router)
+
+# Include reports routes
+app.include_router(reports.router)
+
+# Include sessions routes
+app.include_router(sessions.router)
+
 # Include RAG API routes
 app.include_router(rag_ingest.router)
 app.include_router(rag_search.router)
@@ -60,19 +76,13 @@ app.include_router(comparison.router, tags=["comparison"])
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "message": "Career Counseling Backend API",
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    """Root endpoint - Homepage with entry points"""
+    return templates.TemplateResponse("index.html", {
+        "request": request,
         "version": settings.APP_VERSION,
-        "docs": "/docs",
-        "rag_console": "/rag",
-        "api": {
-            "v1": "/api/v1",
-            "rag": "/api/rag",
-        },
-    }
+    })
 
 
 # RAG Ops Console (FastAPI Templates)
@@ -122,6 +132,12 @@ async def rag_chat_page(request: Request):
 async def rag_report_page(request: Request):
     """RAG Ops Console - Report Generation page"""
     return templates.TemplateResponse("rag/report.html", {"request": request})
+
+
+@app.get("/console", response_class=HTMLResponse)
+async def console_page(request: Request):
+    """Counseling System Debug Console"""
+    return templates.TemplateResponse("console.html", {"request": request})
 
 
 @app.get("/health")

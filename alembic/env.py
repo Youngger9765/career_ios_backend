@@ -13,13 +13,14 @@ from app.core.config import settings
 from app.core.database import Base
 
 # Import all models so Alembic can detect them
-from app.models.user import User
-from app.models.visitor import Visitor
+from app.models.counselor import Counselor
+from app.models.client import Client
 from app.models.case import Case
 from app.models.session import Session
 from app.models.report import Report
 from app.models.job import Job
 from app.models.reminder import Reminder
+from app.models.refresh_token import RefreshToken
 from app.models.agent import Agent, AgentVersion
 from app.models.document import Document, Chunk, Embedding, Datasource
 from app.models.collection import Collection, CollectionItem

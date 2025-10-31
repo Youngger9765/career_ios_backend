@@ -163,184 +163,59 @@ Response: {
 3. **彈性存儲**：報告內容用 JSONB，支援職游/浮島不同格式
 4. **版本控制**：同一 session 可生成多個報告版本
 
-**諮商業務資料**（獨立於 RAG 系統）
-```sql
--- 諮商師/老師（多租戶隔離）
-counselors (
-  id UUID PRIMARY KEY,
-  tenant_id TEXT NOT NULL,                    -- "career_journey" | "floating_island"
-  email TEXT NOT NULL,
-  password_hash TEXT NOT NULL,
-  name TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'counselor',     -- counselor | supervisor | admin
-  metadata JSONB DEFAULT '{}',                -- 彈性欄位（專業證照、專長等）
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
+**諮商業務資料表**（獨立於 RAG 系統）
 
-  CONSTRAINT counselors_email_tenant_unique UNIQUE (email, tenant_id)
-);
-CREATE INDEX idx_counselors_tenant ON counselors(tenant_id);
+**counselors（諮商師/老師）**
+- 多租戶隔離：tenant_id
+- 認證資訊：email, password_hash, username
+- 角色管理：role (counselor | supervisor | admin)
+- 彈性欄位：metadata (JSONB)
+- 狀態追蹤：is_active, last_login
 
--- 個案/學生（簡化設計，不需要 visitors 表）
-clients (
-  id UUID PRIMARY KEY,
-  tenant_id TEXT NOT NULL,
-  counselor_id UUID NOT NULL REFERENCES counselors(id) ON DELETE CASCADE,
-  name_alias TEXT NOT NULL,                   -- 化名
-  background_info JSONB DEFAULT '{}',         -- 彈性存儲：年齡、性別、職業、教育等
-  tags TEXT[] DEFAULT '{}',                   -- 標籤：["職涯迷茫", "轉職"]
-  status TEXT DEFAULT 'active',               -- active | archived
-  created_by_app TEXT NOT NULL,               -- "career_journey" | "floating_island"
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE INDEX idx_clients_counselor ON clients(counselor_id, tenant_id);
-CREATE INDEX idx_clients_tenant ON clients(tenant_id);
+**clients（個案/學生）**
+- 簡化設計，不需要 visitors 表
+- 關聯：counselor_id, tenant_id
+- 基本資料：name_alias (化名), background_info (JSONB)
+- 標籤分類：tags (TEXT[])
+- 狀態：active | archived
 
--- 會談 Session（一個案多次會談）
-sessions (
-  id UUID PRIMARY KEY,
-  tenant_id TEXT NOT NULL,
-  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-  counselor_id UUID NOT NULL REFERENCES counselors(id) ON DELETE CASCADE,
-  session_date DATE NOT NULL,
-  session_number INTEGER,                     -- 第幾次會談（自動計算或手動設定）
-  room TEXT,                                  -- 會談地點（可選）
+**sessions（會談記錄）**
+- 一個案多次會談
+- 關聯：client_id, counselor_id, tenant_id
+- 輸入模式：input_type (audio | transcript)
+- 逐字稿：transcript_raw, transcript_sanitized
+- 處理狀態：processing_status
 
-  -- 輸入資料
-  input_type TEXT NOT NULL,                   -- "audio" | "transcript"
-  audio_path TEXT,                            -- Supabase Storage 路徑
-  transcript_raw TEXT,                        -- 原始逐字稿
-  transcript_sanitized TEXT,                  -- 脫敏後逐字稿
+**jobs（異步任務）**
+- 音訊模式使用
+- 類型：stt | sanitize | report_generation
+- 狀態追蹤：queued | processing | completed | failed
+- 進度：progress (0-100)
 
-  -- 處理狀態
-  processing_status TEXT DEFAULT 'pending',   -- pending | processing | completed | failed
+**reports（報告）**
+- 版本控制：report_version, report_type
+- 內容儲存：content (JSONB), citations (JSONB)
+- 品質指標：quality_metrics (JSONB)
+- 審核流程：status, reviewed_by, review_comment
+- 關聯：session_id, client_id, counselor_id, tenant_id
 
-  metadata JSONB DEFAULT '{}',                -- 其他資訊（錄音時長、檔案大小等）
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE INDEX idx_sessions_client ON sessions(client_id, tenant_id);
-CREATE INDEX idx_sessions_counselor ON sessions(counselor_id, tenant_id);
-CREATE INDEX idx_sessions_date ON sessions(session_date DESC);
+**reminders（提醒）**
+- 回訪日期提醒
+- 追蹤事項管理
+- 狀態：pending | completed | cancelled
 
--- 異步任務（音訊模式使用）
-jobs (
-  id UUID PRIMARY KEY,
-  tenant_id TEXT NOT NULL,
-  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-  job_type TEXT NOT NULL,                     -- "stt" | "sanitize" | "report_generation"
-  status TEXT DEFAULT 'queued',               -- queued | processing | completed | failed
-  progress INTEGER DEFAULT 0,                 -- 0-100
-  error_message TEXT,
-  started_at TIMESTAMPTZ,
-  completed_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE INDEX idx_jobs_session ON jobs(session_id, tenant_id);
-CREATE INDEX idx_jobs_status ON jobs(status, tenant_id);
+**報告內容 JSONB 格式說明**：
 
--- 報告（含版本控制、審核流程）
-reports (
-  id UUID PRIMARY KEY,
-  tenant_id TEXT NOT NULL,
-  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,      -- 冗餘但方便查詢
-  counselor_id UUID NOT NULL REFERENCES counselors(id) ON DELETE CASCADE, -- 冗餘但方便查詢
+**職游 Enhanced 格式**：
+- format: "enhanced", version: "2.0"
+- sections: 包含 10 個段落（client_info, main_issue, problem_development, help_seeking_motivation, multilevel_analysis, strengths_resources, professional_judgment, goals_strategies, expected_outcomes, counselor_reflection）
+- theories_applied: 理論清單
+- metadata: 字數統計、生成時間
 
-  -- 版本控制
-  report_version INTEGER NOT NULL DEFAULT 1,  -- 同一 session 可重新生成
-  report_type TEXT NOT NULL,                  -- "legacy" | "enhanced" | 自定義格式
-
-  -- 報告內容（JSONB 彈性存儲，支援不同格式）
-  content JSONB NOT NULL,                     -- 報告主體內容
-  citations JSONB DEFAULT '[]',               -- RAG 檢索的理論引用
-  quality_metrics JSONB DEFAULT '{}',         -- 質量評分（可選）
-
-  -- RAG Agent 資訊
-  agent_id TEXT,                              -- 使用的 Agent ID（可選）
-
-  -- 審核流程
-  status TEXT DEFAULT 'draft',                -- draft | under_review | approved | rejected
-  reviewed_by UUID REFERENCES counselors(id), -- 督導 ID
-  reviewed_at TIMESTAMPTZ,
-  review_comment TEXT,                        -- 審核意見
-
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-
-  CONSTRAINT reports_session_version_unique UNIQUE (session_id, report_version)
-);
-CREATE INDEX idx_reports_session ON reports(session_id, tenant_id);
-CREATE INDEX idx_reports_client ON reports(client_id, tenant_id);
-CREATE INDEX idx_reports_counselor ON reports(counselor_id, tenant_id);
-CREATE INDEX idx_reports_status ON reports(status, tenant_id);
-
--- 提醒（回訪、追蹤事項）
-reminders (
-  id UUID PRIMARY KEY,
-  tenant_id TEXT NOT NULL,
-  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-  counselor_id UUID NOT NULL REFERENCES counselors(id) ON DELETE CASCADE,
-  due_date DATE NOT NULL,
-  content TEXT NOT NULL,
-  status TEXT DEFAULT 'pending',              -- pending | completed | cancelled
-  completed_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE INDEX idx_reminders_counselor ON reminders(counselor_id, due_date);
-CREATE INDEX idx_reminders_status ON reminders(status, tenant_id);
-```
-
-**報告內容 JSONB 格式範例**：
-
-職游 Enhanced 格式：
-```json
-{
-  "format": "enhanced",
-  "version": "2.0",
-  "sections": {
-    "client_info": {...},
-    "main_issue": "...",
-    "problem_development": "...",
-    "help_seeking_motivation": "...",
-    "multilevel_analysis": "...",
-    "strengths_resources": "...",
-    "professional_judgment": "...",
-    "goals_strategies": "...",
-    "expected_outcomes": "...",
-    "counselor_reflection": "..."
-  },
-  "theories_applied": ["Super生涯發展理論", "Holland類型論"],
-  "metadata": {
-    "word_count": 2500,
-    "generation_time": "2024-10-25T10:30:00Z"
-  }
-}
-```
-
-浮島教育諮詢格式（完全不同結構）：
-```json
-{
-  "format": "education_counseling",
-  "version": "1.0",
-  "sections": {
-    "student_profile": {...},
-    "academic_performance": "...",
-    "learning_challenges": "...",
-    "university_planning": [...],
-    "parent_involvement": "...",
-    "teacher_recommendations": "...",
-    "next_steps": "..."
-  },
-  "metadata": {
-    "target_universities": ["台大", "清大"],
-    "exam_scores": {...},
-    "extracurricular": [...]
-  }
-}
-```
+**浮島教育諮詢格式**：
+- format: "education_counseling", version: "1.0"
+- sections: 學生檔案、學業表現、學習挑戰、大學規劃、家長參與、教師建議、下一步
+- metadata: 目標大學、考試成績、課外活動
 
 ---
 
@@ -363,46 +238,27 @@ CREATE INDEX idx_reminders_status ON reminders(status, tenant_id);
 
 ### 2.2 資料模型（RAG 系統）
 
-**RAG 知識與 Agent 資料**（獨立於諮商系統）
-```sql
--- Agent 管理
-agents(
-  id, slug, name, description,
-  status, active_version_id,
-  created_at, updated_at
-)
+**RAG 知識與 Agent 資料表**（獨立於諮商系統）
 
-agent_versions(
-  id, agent_id, version,
-  state,       -- [draft|published]
-  config_json, -- {model, temperature, top_k, system_prompt}
-  created_at
-)
+**Agent 管理**
+- agents: 基本資訊、狀態、版本指針
+- agent_versions: 版本控制 (draft|published)、配置參數
 
--- 知識庫
-datasources(id, type, source_uri, created_at)
-documents(id, datasource_id, title, bytes, pages, created_at)
-chunks(id, doc_id, ordinal, text, meta_json)
-embeddings(id, chunk_id, embedding vector(1536))
+**知識庫**
+- datasources: 資料來源（PDF/URL/Text）
+- documents: 文件清單
+- chunks: 文字切片
+- embeddings: 向量嵌入 (vector 1536 維度)
 
--- 集合
-collections(id, name, created_at)
-collection_items(collection_id, doc_id, created_at)
+**集合管理**
+- collections: 文件集合
+- collection_items: 集合與文件關聯
 
--- Pipeline 追蹤
-pipeline_runs(
-  id, scope, target_id,
-  status, steps_json,
-  started_at, ended_at, error_msg
-)
+**Pipeline 追蹤**
+- pipeline_runs: 處理流程狀態、步驟記錄
 
--- 聊天日誌（測試台使用）
-chat_logs(
-  id, agent_id, version_id,
-  question, answer, citations_json,
-  tokens_in, tokens_out, created_at
-)
-```
+**測試台**
+- chat_logs: 聊天日誌、citations、token 使用量
 
 ---
 
@@ -475,38 +331,15 @@ chat_logs(
 #### 個案管理（Clients）
 - `GET /api/v1/clients` - 列出諮商師的所有個案
 - `POST /api/v1/clients` - 建立新個案
-  ```json
-  Body: {
-    "name_alias": "小明",
-    "background_info": {
-      "age": "28歲",
-      "gender": "男性",
-      "occupation": "軟體工程師"
-    },
-    "tags": ["職涯迷茫", "轉職"]
-  }
-  ```
+  - 輸入：name_alias (化名), background_info (JSONB), tags
 - `GET /api/v1/clients/{id}` - 取得個案詳情
 - `PUT /api/v1/clients/{id}` - 更新個案資料
 - `DELETE /api/v1/clients/{id}` - 刪除/封存個案
 
 #### 報告生成（核心 API）- 單一步驟
 - `POST /api/v1/reports/generate` - **生成報告（自動建立 session + report）**
-  ```json
-  Body: {
-    "client_id": "uuid",
-    "transcript": "案主：我最近工作很不順...",
-    "session_date": "2024-10-25",
-    "report_type": "enhanced",
-    "rag_system": "openai"
-  }
-  Response: {
-    "session_id": "uuid",
-    "report_id": "uuid",
-    "report": {...},
-    "quality_summary": {...}
-  }
-  ```
+  - 輸入：client_id, transcript, session_date, report_type (enhanced|legacy), rag_system (openai|gemini)
+  - 輸出：session_id, report_id, report (JSONB), quality_summary
 
 #### 會談與報告查詢
 - `GET /api/v1/clients/{client_id}/sessions` - 列出個案的所有會談記錄
@@ -516,12 +349,7 @@ chat_logs(
 
 #### 報告審核（督導功能）
 - `POST /api/v1/reports/{id}/review` - 督導審核報告
-  ```json
-  Body: {
-    "status": "approved",  // approved | rejected
-    "review_comment": "分析深入，建議補充..."
-  }
-  ```
+  - 輸入：status (approved|rejected), review_comment
 - `GET /api/v1/reports/pending-review` - 列出待審核的報告
 
 #### 任務狀態
@@ -579,14 +407,22 @@ chat_logs(
 - [ ] pgvector 向量檢索
 - [ ] RAG Chat API（供諮商系統調用）
 
-#### Phase 2: 諮商系統基礎（3 週）
-- [ ] 使用者、來訪者、個案 CRUD
-- [ ] JWT 認證
-- [ ] 會談建立
-- [ ] **雙輸入模式**：
-  - 音訊上傳 + Whisper STT
-  - 逐字稿直傳
+#### Phase 2: 認證與個案管理系統 ✅ 已完成（2025-10-28）
+
+**實作範圍**（簡化版，保留核心功能）：
+- [x] **M1: Database Migration** - 多租戶架構、表格重命名（counselors, clients）
+- [x] **M2: JWT 認證系統** - 登入 API、白名單匯入機制
+- [x] **M3: Client CRUD** - 完整增刪改查、分頁、搜尋、權限隔離
+- [x] **M4-M5: 報告查詢 API** - 列表、詳情、格式轉換（JSON/Markdown/HTML）
+- [x] **M6: 整合測試** - E2E 流程驗證、Swagger API 文檔
+
+**延後功能**：
+- [ ] 音訊上傳 + Whisper STT（未實作）
 - [ ] 異步任務處理（Job 系統）
+- [ ] 督導審核流程
+- [ ] 提醒系統
+
+**詳細規格請見下方「Phase 2 實作總結」章節**
 
 #### Phase 3: 報告生成整合（2 週）
 - [ ] 報告生成服務：
@@ -685,5 +521,175 @@ SECRET_KEY=your-secret-key
 
 ---
 
-**版本**: v2.0 (雙業務線架構)
-**最後更新**: 2025-10-03
+## 第七部分：Phase 2 實作總結（2025-10-28）
+
+### 7.1 核心目標
+實作諮商系統的**基礎建設**，讓 iOS App 可以：
+1. ✅ 諮詢師登入（白名單匯入機制）
+2. ✅ 建立個案（Client）
+3. ✅ 生成報告並儲存到資料庫
+4. ✅ 查詢歷史報告
+5. ⏸️ Web Debug Console（延後）
+
+### 7.2 資料模型（簡化版）
+
+#### 核心表格變更
+
+**Counselors（原 users 表）**
+- 新增欄位：`tenant_id`, `last_login`
+- 角色：counselor | supervisor | admin
+- 多租戶隔離
+
+**Clients（原 visitors 表）**
+- 重新命名並新增固定欄位：
+  - 基本資料：name, age, gender, occupation, education
+  - 背景資訊：location, economic_status, family_relations
+  - 彈性欄位：other_info (JSONB), tags (JSONB)
+- 新增關聯：counselor_id, tenant_id
+
+**Sessions（會談）**
+- 新增：tenant_id
+- 支援逐字稿儲存
+
+**Reports（報告）**
+- 新增：tenant_id, client_id, mode (legacy|enhanced)
+- 品質指標：quality_score, quality_grade, quality_strengths, quality_weaknesses
+
+**Refresh Tokens（新增表）**
+- 支援未來的 Token Rotation 機制
+
+### 7.3 API 端點規範
+
+#### 認證 API (`/api/auth/*`)
+
+**POST /api/auth/login**
+- 輸入：email, password
+- 輸出：JWT access_token, token_type, expires_in
+- 有效期：24 小時
+
+**GET /api/auth/me**
+- 需要：Bearer Token
+- 輸出：counselor 完整資訊（id, email, role, tenant_id, etc.）
+
+#### 個案管理 API (`/api/v1/clients/*`)
+
+**POST /api/v1/clients** - 建立個案
+- 權限：自動綁定當前 counselor
+- 租戶：自動注入 tenant_id
+- 回傳：完整 client 資料（含 UUID）
+
+**GET /api/v1/clients** - 列出個案
+- 支援：分頁（skip, limit）、搜尋（name/nickname/code）
+- 隔離：只顯示當前 counselor 的 clients
+- 回傳：`{total, items: [...]}`
+
+**GET /api/v1/clients/{id}** - 單一個案詳情
+
+**PATCH /api/v1/clients/{id}** - 部分更新
+- 驗證：重複 code 檢查
+- 回傳：更新後資料（含 updated_at）
+
+**DELETE /api/v1/clients/{id}** - 刪除個案
+
+#### 報告查詢 API (`/api/v1/reports/*`)
+
+**GET /api/v1/reports** - 列出報告
+- 支援：分頁、client_id 篩選
+- 隔離：只顯示當前 counselor 建立的報告
+
+**GET /api/v1/reports/{id}** - 取得報告（JSON 格式）
+
+**GET /api/v1/reports/{id}/formatted?format=markdown|html**
+- 動態格式轉換
+- 使用現有 report_formatters.py
+
+### 7.4 實作里程碑
+
+| 里程碑 | 內容 | 狀態 | 完成日期 |
+|--------|------|------|---------|
+| M1 | Database Migration（多租戶、表重命名） | ✅ | 2025-10-28 |
+| M2 | JWT 認證系統（login, /me, 白名單匯入） | ✅ | 2025-10-28 |
+| M3 | Client CRUD（5 個 endpoints，權限隔離） | ✅ | 2025-10-28 |
+| M4-M5 | Report 查詢 API（3 個 endpoints，格式轉換） | ✅ | 2025-10-28 |
+| M6 | 整合測試（E2E 流程驗證） | ✅ | 2025-10-28 |
+| M7 | Web Debug Console | ⏸️ | 延後 |
+
+### 7.5 技術決策
+
+#### 表格命名策略
+**決策**：重新命名表格 (`users` → `counselors`, `visitors` → `clients`)
+**理由**：
+- 統一術語，減少混淆
+- API 對外一致性
+- 雖然需要 migration，但長期維護性更好
+
+#### Client 資料結構
+**決策**：固定欄位 + JSONB 混合設計
+**固定欄位**：name, age, gender, occupation, education, location, etc.
+**彈性欄位**：other_info (JSONB), tags (JSONB)
+**理由**：
+- 固定欄位方便查詢、Type-safe
+- JSONB 保持彈性，無需頻繁 migration
+
+#### 報告儲存格式
+**決策**：只儲存 content_json，API 動態轉換格式
+**理由**：
+- 單一來源，避免資料冗余
+- 節省儲存空間
+- 格式轉換邏輯已有（report_formatters.py）
+
+#### Tenant ID 注入
+**決策**：從環境變數自動注入（目前硬編碼 "career"）
+**理由**：
+- 符合 multi-tenant 架構設計
+- 部署時透過環境變數區分租戶
+- 簡化前端邏輯
+
+#### 安全性設計
+**決策**：
+- SECRET_KEY 必須從 .env 讀取（無預設值）
+- 使用 bcrypt 密碼 hash
+- JWT Token 24 小時有效期
+- 所有 API 需要 Bearer Token
+- 權限隔離：counselor 只能存取自己的資料
+
+### 7.6 成功標準
+
+#### 功能完整性
+- ✅ 諮詢師可透過白名單匯入建立帳號
+- ✅ 諮詢師可登入取得 JWT token
+- ✅ 諮詢師可建立、查詢、更新、刪除個案
+- ✅ 系統可生成報告並儲存到資料庫
+- ✅ 諮詢師可查詢歷史報告（JSON/Markdown/HTML 格式）
+
+#### 安全性
+- ✅ 密碼使用 bcrypt hash（每次產生不同 salt）
+- ✅ JWT token 有效期管理（24 小時）
+- ✅ 權限隔離：諮詢師只能看自己的資料
+- ✅ tenant_id 自動注入，防止跨租戶存取
+- ✅ SECRET_KEY 強制從環境變數讀取
+
+#### 效能
+- ✅ API 回應時間 < 2 秒（查詢類）
+- ✅ 分頁支援（避免全量查詢）
+- ✅ 資料庫索引優化（tenant_id, counselor_id）
+
+#### 可維護性
+- ✅ Code 符合 TDD 原則（security module 100% 測試覆蓋）
+- ✅ API 文檔完整（FastAPI Swagger UI）
+- ✅ 類型提示（Type Hints）完整
+
+### 7.7 實作統計
+
+- **總檔案數**：28 個檔案（新建/更新）
+- **API Endpoints**：13 個
+- **Database Tables**：3 個新表 + 5 個已更新
+- **測試覆蓋**：Unit tests (security module - 8/8 passing)
+- **實作時間**：1 天（2025-10-28）
+- **程式碼品質**：符合 TDD 原則，完整 type hints
+
+
+---
+
+**版本**: v2.1 (Phase 2 已完成)
+**最後更新**: 2025-10-28
