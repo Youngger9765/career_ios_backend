@@ -76,19 +76,13 @@ app.include_router(comparison.router, tags=["comparison"])
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "message": "Career Counseling Backend API",
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    """Root endpoint - Homepage with entry points"""
+    return templates.TemplateResponse("index.html", {
+        "request": request,
         "version": settings.APP_VERSION,
-        "docs": "/docs",
-        "rag_console": "/rag",
-        "api": {
-            "v1": "/api/v1",
-            "rag": "/api/rag",
-        },
-    }
+    })
 
 
 # RAG Ops Console (FastAPI Templates)
