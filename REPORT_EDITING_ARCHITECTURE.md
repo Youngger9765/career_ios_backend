@@ -199,6 +199,69 @@ alembic upgrade head
 
 遷移文件: `alembic/versions/20251029_1826_d8c67e925aa7_add_report_editing_fields.py`
 
+## 🧠 諮商師反思整合 ⭐️ NEW
+
+### 反思在報告中的角色
+
+諮商師反思是報告「四、個人化分析」章節的重要組成部分。
+
+**資料來源:**
+- **反思內容**: 來自 `GET /api/v1/sessions/{id}/reflection`
+- **儲存位置**: `sessions.reflection` (JSON 欄位)
+- **撰寫方式**: 諮商師人工撰寫，非 AI 生成
+
+**反思問題結構:**
+```json
+{
+  "working_with_client": "我和這個人工作的感受是？",
+  "feeling_source": "這個感受的原因是？",
+  "current_challenges": "目前的困難／想更深入的地方是？",
+  "supervision_topics": "我會想找督導討論的問題是？"
+}
+```
+
+### 在報告中顯示反思
+
+**方案 1: 從 Session 取得反思（推薦）**
+```swift
+// 1. 取得報告
+let report = try await getReport(reportId: reportId, useEdited: true)
+
+// 2. 取得該報告對應的 session_id
+let sessionId = report.session_id
+
+// 3. 取得反思內容
+let reflection = try await getReflection(sessionId: sessionId)
+
+// 4. 在報告 UI 中顯示反思章節
+```
+
+**方案 2: 未來可考慮在報告 API 中包含反思**
+```json
+// GET /api/v1/reports/{id}?include_reflection=true
+{
+  "report": {...},
+  "session": {
+    "id": "uuid",
+    "reflection": {...}
+  }
+}
+```
+
+### 編輯流程
+
+1. **反思獨立編輯**: 使用 `PUT /api/v1/sessions/{id}/reflection` 更新
+2. **與報告分離**: 反思不屬於報告內容，是會談記錄的一部分
+3. **顯示在報告中**: 報告查看時動態取得並顯示反思內容
+
+### 資料一致性
+
+- 反思存在 `sessions` 表，與會談記錄綁定
+- 報告存在 `reports` 表，通過 `session_id` 關聯
+- 修改反思不影響報告版本，但查看報告時會顯示最新反思
+
+---
+
 ## 🚀 下一步
 
 建議在 iOS App 實作:
@@ -208,8 +271,10 @@ alembic upgrade head
 3. **自動保存**: 編輯時每 30 秒自動保存草稿
 4. **離線編輯**: 本地緩存,網路恢復時同步
 5. **編輯歷史**: 顯示編輯次數和最後編輯時間
+6. **反思編輯器**: ⭐️ 實作獨立的反思撰寫/編輯介面
+7. **報告+反思整合視圖**: ⭐️ 查看報告時動態載入並顯示反思內容
 
 ---
 
-**最後更新:** 2025-10-29
+**最後更新:** 2025-10-31
 **架構設計:** 雙版本存儲 (AI Original + User Edited)

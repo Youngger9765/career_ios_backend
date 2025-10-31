@@ -9,10 +9,12 @@
 ## 📋 目錄
 
 1. [認證 APIs](#認證-apis) (1-3)
-2. [個案管理 APIs](#個案管理-apis) (4-8)
-3. [報告 APIs](#報告-apis) (9-14)
-4. [完整使用流程](#完整使用流程)
-5. [錯誤處理](#錯誤處理)
+2. [個案管理 APIs](#個案管理-apis) (4-9)
+3. [會談記錄管理 APIs](#會談記錄管理-apis) (10-17)
+4. [諮商師反思 APIs](#諮商師反思-apis) (18-19)
+5. [報告 APIs](#報告-apis) (20-24)
+6. [完整使用流程](#完整使用流程)
+7. [錯誤處理](#錯誤處理)
 
 ## API 列表
 
@@ -27,20 +29,25 @@
 6. GET /api/v1/clients/{id} - 取得單一個案
 7. PATCH /api/v1/clients/{id} - 更新個案
 8. DELETE /api/v1/clients/{id} - 刪除個案
+9. GET /api/v1/sessions/timeline - 取得個案會談歷程時間線 ⭐️ NEW
 
-### 📝 逐字稿管理 APIs
-9. POST /api/v1/sessions - 儲存逐字稿
-10. GET /api/v1/sessions - 列出逐字稿
-11. GET /api/v1/sessions/{id} - 查看逐字稿
-12. PATCH /api/v1/sessions/{id} - 更新逐字稿
-13. DELETE /api/v1/sessions/{id} - 刪除逐字稿
+### 📝 會談記錄管理 APIs
+10. POST /api/v1/sessions - 建立會談記錄
+11. GET /api/v1/sessions - 列出會談記錄
+12. GET /api/v1/sessions/{id} - 查看會談記錄
+13. PATCH /api/v1/sessions/{id} - 更新會談記錄
+14. DELETE /api/v1/sessions/{id} - 刪除會談記錄
+
+### 🧠 諮商師反思 APIs ⭐️ NEW
+15. GET /api/v1/sessions/{id}/reflection - 取得反思內容
+16. PUT /api/v1/sessions/{id}/reflection - 更新反思內容
 
 ### 📄 報告 APIs
-14. POST /api/v1/reports/generate - 生成報告 (從已儲存的逐字稿生成，需提供 session_id)
-15. GET /api/v1/reports - 列出報告
-16. GET /api/v1/reports/{id} - 取得單一報告
-17. PATCH /api/v1/reports/{id} - 更新報告 (編輯)
-18. GET /api/v1/reports/{id}/formatted - 取得格式化報告 (Markdown/HTML)
+17. POST /api/v1/reports/generate - 生成報告 (從已儲存的會談記錄生成，需提供 session_id)
+18. GET /api/v1/reports - 列出報告
+19. GET /api/v1/reports/{id} - 取得單一報告
+20. PATCH /api/v1/reports/{id} - 更新報告 (編輯)
+21. GET /api/v1/reports/{id}/formatted - 取得格式化報告 (Markdown/HTML)
 
 ---
 
@@ -225,16 +232,23 @@ Content-Type: application/json
   "name": "王小明",
   "code": "C001",  // optional: 如果不提供，後端會自動生成流水號 (C0001, C0002...)
   "nickname": "小明",
-  "age": 25,
+  "birth_date": "1998-05-15",  // ⭐️ NEW: 出生日期 (YYYY-MM-DD)，age 會自動計算
   "gender": "male",
   "occupation": "工程師",
   "education": "大學",
   "location": "台北市",
   "economic_status": "中等",
   "family_relations": "父母健在",
-  "tags": ["職涯諮詢", "轉職"]
+  "tags": ["職涯諮詢", "轉職"],
+  "notes": "初次諮詢，對職涯方向感到迷惘"
 }
 ```
+
+**📝 重要說明:**
+- `code`: 可選，不提供時系統自動生成 (C0001, C0002...)
+- `birth_date`: ⭐️ 建議提供出生日期而非直接提供 age，系統會自動計算年齡
+- `age`: 如果提供 birth_date，age 會被自動覆蓋；只在沒有 birth_date 時才手動填寫
+- 所有欄位除了 `name` 外都是 optional
 
 **Response (201):**
 ```json
@@ -421,9 +435,105 @@ Authorization: Bearer {access_token}
 
 ---
 
-## 📝 逐字稿管理 APIs
+### 9. 取得個案會談歷程時間線 ⭐️ NEW
 
-### 9. 儲存逐字稿
+**Endpoint:** `GET /api/v1/sessions/timeline`
+
+**描述:** 取得個案的所有會談記錄時間線，包含會談次數、日期、時間範圍、摘要、是否有報告等資訊。適合在個案詳情頁面顯示完整的諮商歷程。
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `client_id` **(必填)**: 個案 UUID
+
+**Request Example:**
+```
+GET /api/v1/sessions/timeline?client_id=550e8400-e29b-41d4-a716-446655440000
+```
+
+**Response (200):**
+```json
+{
+  "client_id": "550e8400-e29b-41d4-a716-446655440000",
+  "client_name": "王小明",
+  "client_code": "C0001",
+  "total_sessions": 4,
+  "sessions": [
+    {
+      "session_id": "uuid-1",
+      "session_number": 1,
+      "date": "2024-08-26",
+      "time_range": "20:30-21:30",
+      "summary": "初談建立關係，確認諮詢目標與工作歷程。個案表現出疲憊與焦慮狀態...",
+      "has_report": true,
+      "report_id": "report-uuid-1"
+    },
+    {
+      "session_id": "uuid-2",
+      "session_number": 2,
+      "date": "2024-08-30",
+      "time_range": "20:30-21:30",
+      "summary": "進行職游旅人牌卡盤點，歸納熱情關鍵字：表達自我、美感呈現...",
+      "has_report": true,
+      "report_id": "report-uuid-2"
+    },
+    {
+      "session_id": "uuid-3",
+      "session_number": 3,
+      "date": "2024-09-06",
+      "time_range": null,
+      "summary": "盤點職能卡與24個特質。優勢：自我覺察、尊重包容...",
+      "has_report": false,
+      "report_id": null
+    }
+  ]
+}
+```
+
+**欄位說明:**
+- `time_range`: 會談時間範圍 (HH:MM-HH:MM)，如果沒有設定 start_time/end_time 則為 null
+- `summary`: AI 自動生成的 100 字內會談摘要，用於快速瀏覽
+- `has_report`: 是否已生成報告
+- `report_id`: 報告 ID，沒有報告時為 null
+
+**Swift 範例:**
+```swift
+struct TimelineSession: Codable {
+    let session_id: UUID
+    let session_number: Int
+    let date: String
+    let time_range: String?
+    let summary: String?
+    let has_report: Bool
+    let report_id: UUID?
+}
+
+struct ClientTimelineResponse: Codable {
+    let client_id: UUID
+    let client_name: String
+    let client_code: String
+    let total_sessions: Int
+    let sessions: [TimelineSession]
+}
+
+func getClientTimeline(token: String, clientId: UUID) async throws -> ClientTimelineResponse {
+    let url = URL(string: "\(baseURL)/api/v1/sessions/timeline?client_id=\(clientId.uuidString)")!
+    var request = URLRequest(url: url)
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    return try JSONDecoder().decode(ClientTimelineResponse.self, from: data)
+}
+```
+
+---
+
+## 📝 會談記錄管理 APIs
+
+### 10. 建立會談記錄
 
 **Endpoint:** `POST /api/v1/sessions`
 
@@ -455,9 +565,23 @@ Content-Type: application/json
   "end_time": "2024-01-15 15:00",          // optional，會談結束時間
   "transcript": "逐字稿內容...",             // 必填
   "duration_minutes": 50,                  // optional (保留向下兼容)
-  "notes": "備註說明"                       // optional
+  "notes": "備註說明",                       // optional，諮商師人工撰寫的備註
+  "reflection": {                          // ⭐️ NEW optional，諮商師反思（人類撰寫）
+    "working_with_client": "整體過程流暢輕鬆，逐漸贏得信任...",
+    "feeling_source": "個案從緊張到逐步放鬆...",
+    "current_challenges": "當肯定個案時，仍會有自我懷疑反應...",
+    "supervision_topics": "如何在支持與挑戰間拿捏節奏..."
+  }
 }
 ```
+
+**📝 欄位說明:**
+- `notes`: 諮商師對本次會談的簡短備註
+- `reflection`: ⭐️ 諮商師對本次會談的深度反思，包含 4 個反思問題（選填）
+  - `working_with_client`: 我和這個人工作的感受是？
+  - `feeling_source`: 這個感受的原因是？
+  - `current_challenges`: 目前的困難／想更深入的地方是？
+  - `supervision_topics`: 我會想找督導討論的問題是？
 
 **Response (201):**
 ```json
@@ -643,9 +767,144 @@ Authorization: Bearer {access_token}
 
 ---
 
+## 🧠 諮商師反思 APIs
+
+### 15. 取得反思內容 ⭐️ NEW
+
+**Endpoint:** `GET /api/v1/sessions/{session_id}/reflection`
+
+**描述:** 取得諮商師對特定會談的反思內容。反思是諮商師人工撰寫的內容，用於深度自我覺察和督導討論。
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200):**
+```json
+{
+  "session_id": "uuid",
+  "reflection": {
+    "working_with_client": "整體過程流暢輕鬆，逐漸贏得信任。首次面對職場PUA案例，獲得新的輔導經驗。",
+    "feeling_source": "個案從緊張到逐步放鬆，願意開放心態分享更多。能夠建立良好的治療同盟。",
+    "current_challenges": "當肯定個案時，仍會有自我懷疑反應；但已逐漸能接受讚賞。需要更多時間探索其內在認知模式。",
+    "supervision_topics": "如何在支持與挑戰間拿捏節奏，以及量表與質化紀錄整合方式。特別是如何處理職場創傷。"
+  },
+  "updated_at": "2024-10-30T18:20:00Z"
+}
+```
+
+**Response (200) - 沒有反思時:**
+```json
+{
+  "session_id": "uuid",
+  "reflection": null,
+  "updated_at": null
+}
+```
+
+**Swift 範例:**
+```swift
+struct ReflectionResponse: Codable {
+    let session_id: UUID
+    let reflection: Reflection?
+    let updated_at: String?
+}
+
+struct Reflection: Codable {
+    let working_with_client: String?
+    let feeling_source: String?
+    let current_challenges: String?
+    let supervision_topics: String?
+}
+
+func getReflection(token: String, sessionId: UUID) async throws -> ReflectionResponse {
+    let url = URL(string: "\(baseURL)/api/v1/sessions/\(sessionId.uuidString)/reflection")!
+    var request = URLRequest(url: url)
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    return try JSONDecoder().decode(ReflectionResponse.self, from: data)
+}
+```
+
+---
+
+### 16. 更新反思內容 ⭐️ NEW
+
+**Endpoint:** `PUT /api/v1/sessions/{session_id}/reflection`
+
+**描述:** 更新或新增諮商師對特定會談的反思。可以只填寫部分問題，未填寫的問題不會被儲存。
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "working_with_client": "整體過程流暢輕鬆，逐漸贏得信任。首次面對職場PUA案例，獲得新的輔導經驗。",
+  "feeling_source": "個案從緊張到逐步放鬆，願意開放心態分享更多。",
+  "current_challenges": "當肯定個案時，仍會有自我懷疑反應；但已逐漸能接受讚賞。",
+  "supervision_topics": "如何在支持與挑戰間拿捏節奏，以及量表與質化紀錄整合方式。"
+}
+```
+
+**📝 說明:**
+- 所有欄位都是 optional
+- 只會保存有內容的欄位（空字串或 null 會被忽略）
+- 可以用來清空反思：傳送所有欄位為空字串或 null
+
+**Response (200):**
+```json
+{
+  "session_id": "uuid",
+  "reflection": {
+    "working_with_client": "整體過程流暢輕鬆，逐漸贏得信任。首次面對職場PUA案例，獲得新的輔導經驗。",
+    "feeling_source": "個案從緊張到逐步放鬆，願意開放心態分享更多。",
+    "current_challenges": "當肯定個案時，仍會有自我懷疑反應；但已逐漸能接受讚賞。",
+    "supervision_topics": "如何在支持與挑戰間拿捏節奏，以及量表與質化紀錄整合方式。"
+  },
+  "updated_at": "2024-10-30T18:25:00Z"
+}
+```
+
+**Swift 範例:**
+```swift
+struct ReflectionUpdateRequest: Codable {
+    let working_with_client: String?
+    let feeling_source: String?
+    let current_challenges: String?
+    let supervision_topics: String?
+}
+
+func updateReflection(token: String, sessionId: UUID, reflection: ReflectionUpdateRequest) async throws -> ReflectionResponse {
+    let url = URL(string: "\(baseURL)/api/v1/sessions/\(sessionId.uuidString)/reflection")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "PUT"
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    request.httpBody = try JSONEncoder().encode(reflection)
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    return try JSONDecoder().decode(ReflectionResponse.self, from: data)
+}
+```
+
+**💡 使用場景:**
+1. **撰寫反思**: 會談後諮商師填寫反思問題
+2. **補充反思**: 稍後回顧時補充遺漏的問題
+3. **督導前整理**: 督導前重新整理反思內容
+4. **生成報告時**: 反思內容會被包含在報告的「四、個人化分析」章節
+
+---
+
 ## 📄 報告 APIs
 
-### 14. 生成報告（異步 API ⚡️）
+### 17. 生成報告（異步 API ⚡️）
 
 **Endpoint:** `POST /api/v1/reports/generate`
 
@@ -936,7 +1195,7 @@ func generateAndWaitForReport(
 
 ---
 
-### 15. 列出報告
+### 18. 列出報告
 
 **Endpoint:** `GET /api/v1/reports`
 
@@ -970,7 +1229,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 16. 取得單一報告
+### 19. 取得單一報告
 
 **Endpoint:** `GET /api/v1/reports/{report_id}`
 
@@ -983,7 +1242,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 17. 更新報告 (諮商師編輯)
+### 20. 更新報告 (諮商師編輯)
 
 **Endpoint:** `PATCH /api/v1/reports/{report_id}`
 
@@ -1061,7 +1320,7 @@ func updateReport(token: String, reportId: UUID, editedContent: [String: Any]) a
 
 ---
 
-### 18. 取得格式化報告
+### 21. 取得格式化報告
 
 **Endpoint:** `GET /api/v1/reports/{report_id}/formatted`
 

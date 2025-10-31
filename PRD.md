@@ -52,9 +52,11 @@
 * 角色分級：諮商師 / 督導 / 管理員
 
 #### 個案管理
-* 建立來訪者資料
+* 建立來訪者資料（支援出生日期，自動計算年齡）
 * 個案（諮商師 + 來訪者的關係）
-* 會談紀錄（日期、房間、逐字稿）
+* 會談紀錄（日期、時間範圍、房間、逐字稿）
+* ⭐️ **會談歷程時間線**: 查看個案的所有會談記錄，包含日期、摘要、是否有報告
+* ⭐️ **諮商師反思**: 諮商師對每次會談的深度反思（人工撰寫，4 個反思問題）
 
 #### 雙輸入模式
 
@@ -216,6 +218,78 @@ Response: {
 - format: "education_counseling", version: "1.0"
 - sections: 學生檔案、學業表現、學習挑戰、大學規劃、家長參與、教師建議、下一步
 - metadata: 目標大學、考試成績、課外活動
+
+---
+
+### 1.6 Phase 2 新增功能 (2025-10-30 完成) ⭐️
+
+#### 諮商師反思系統
+
+**需求背景:**
+- 報告「四、個人化分析」章節需要諮商師人工撰寫的反思內容
+- 反思是督導討論的重要素材
+- 需要結構化但保持彈性，支援不同租戶需求
+
+**功能設計:**
+- **儲存位置**: `sessions.reflection` (JSON 欄位，與會談記錄綁定)
+- **撰寫時機**: 會談後，諮商師撰寫反思
+- **4 個反思問題**:
+  1. 我和這個人工作的感受是？ (`working_with_client`)
+  2. 這個感受的原因是？ (`feeling_source`)
+  3. 目前的困難／想更深入的地方是？ (`current_challenges`)
+  4. 我會想找督導討論的問題是？ (`supervision_topics`)
+
+**API 端點:**
+- `GET /api/v1/sessions/{id}/reflection` - 取得反思
+- `PUT /api/v1/sessions/{id}/reflection` - 更新反思
+- 整合於會談建立/更新: `POST/PATCH /api/v1/sessions` 可包含 `reflection` 欄位
+
+**與報告的關聯:**
+- 報告查看時，透過 `session_id` 取得反思並顯示
+- 反思不屬於報告內容，是會談記錄的一部分
+- 修改反思不影響報告版本
+
+#### 會談歷程時間線
+
+**需求背景:**
+- iOS App 需要在個案詳情頁顯示完整的會談歷程
+- 設計師要求顯示：會談次數、日期、時間、摘要、是否有報告
+
+**功能設計:**
+- **API 端點**: `GET /api/v1/sessions/timeline?client_id={id}`
+- **回傳資訊**:
+  - 個案基本資訊 (id, name, code)
+  - 總會談次數
+  - 每次會談：session_number, date, time_range, summary, has_report, report_id
+
+**會談摘要自動生成:**
+- 生成報告時，AI 自動生成 100 字內的會談摘要
+- 儲存於 `sessions.summary` 欄位
+- 用於時間線快速瀏覽，不需點進詳情就能了解會談內容
+
+#### 出生日期與年齡自動計算
+
+**需求背景:**
+- 原本儲存靜態 `age` 欄位，資料會過期
+- 應該儲存 `birth_date`，動態計算年齡
+
+**功能設計:**
+- 新增 `clients.birth_date` 欄位 (DATE 類型)
+- 建立/更新個案時，如果提供 `birth_date`，自動計算 `age`
+- 考慮閏年和生日是否已過的邏輯
+- 保留 `age` 欄位向下兼容
+
+#### 會談時間範圍
+
+**需求背景:**
+- 原本只有 `duration_minutes`，無法記錄實際開始/結束時間
+- 設計師要求顯示 "20:30-21:30" 格式
+
+**功能設計:**
+- 新增 `sessions.start_time` (DateTime with timezone)
+- 新增 `sessions.end_time` (DateTime with timezone)
+- 保留 `duration_minutes` 向下兼容
+- Timeline API 自動格式化為 "HH:MM-HH:MM"
 
 ---
 
