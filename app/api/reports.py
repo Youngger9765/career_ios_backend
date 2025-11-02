@@ -72,8 +72,13 @@ async def _generate_report_background(
         # 異步調用 RAG 生成 (在背景執行)
         report_data = await rag_generate(rag_request, db)
 
+        # 生成 Markdown 格式
+        markdown_formatter = create_formatter("markdown")
+        content_markdown = markdown_formatter.format(report_data)
+
         # 更新 report
         report.content_json = report_data
+        report.content_markdown = content_markdown
         report.citations_json = report_data.get("theories_cited", [])
         report.prompt_tokens = report_data.get("token_usage", {}).get("prompt_tokens", 0)
         report.completion_tokens = report_data.get("token_usage", {}).get("completion_tokens", 0)
@@ -213,6 +218,10 @@ def get_report(
     """
     Get report by ID with optional formatting
 
+    **⭐️ NEW: Markdown fields included in response**
+    - content_markdown: AI-generated Markdown (always present after generation)
+    - edited_content_markdown: Edited Markdown (present after editing)
+
     Args:
         report_id: Report UUID
         format: Output format - None/json (default, returns full metadata), markdown, or html
@@ -222,15 +231,17 @@ def get_report(
         db: Session: Database session
 
     Returns:
-        - If format is None or 'json': ReportResponse (full metadata + JSON content)
-        - If format is 'markdown' or 'html': Formatted content dict
+        - If format is None or 'json': ReportResponse (full metadata + JSON + Markdown)
+        - If format is 'markdown' or 'html': Formatted content dict (for backward compatibility)
 
     Examples:
-        GET /api/v1/reports/{id} → Full JSON metadata
-        GET /api/v1/reports/{id}?format=json → Full JSON metadata
-        GET /api/v1/reports/{id}?format=markdown → Markdown formatted content
-        GET /api/v1/reports/{id}?format=html → HTML formatted content
-        GET /api/v1/reports/{id}?format=markdown&use_edited=false → Markdown with AI original
+        GET /api/v1/reports/{id} → Full JSON metadata (includes content_markdown, edited_content_markdown)
+        GET /api/v1/reports/{id}?format=json → Same as above
+        GET /api/v1/reports/{id}?format=markdown → Dynamically formatted Markdown (legacy)
+        GET /api/v1/reports/{id}?format=html → Dynamically formatted HTML (legacy)
+
+    **Recommended for iOS:**
+    Use default format (no query param) and access `content_markdown` or `edited_content_markdown` directly.
     """
     result = db.execute(
         select(Report, Client.name, SessionModel.session_number)
@@ -294,15 +305,22 @@ def update_report(
     """
     Update report content (counselor edits)
 
+    This endpoint automatically generates and saves both JSON and Markdown versions
+    of the edited report.
+
     Args:
         report_id: Report UUID
-        update_request: Updated report content
+        update_request: Updated report content (JSON format)
         current_user: Current authenticated counselor
         tenant_id: Tenant ID
         db: Database session
 
     Returns:
-        Updated report with Markdown formatted content
+        Updated report with:
+        - edited_content_json: The edited JSON content
+        - edited_content_markdown: The edited Markdown content (auto-generated)
+        - edited_at: Timestamp of the edit
+        - edit_count: Number of edits made
 
     Raises:
         HTTPException: 404 if report not found, 500 if update fails
@@ -323,15 +341,7 @@ def update_report(
         )
 
     try:
-        # Update edited content
-        report.edited_content_json = update_request.edited_content_json
-        report.edited_at = datetime.now(timezone.utc).isoformat()
-        report.edit_count = (report.edit_count or 0) + 1
-
-        db.commit()
-        db.refresh(report)
-
-        # Generate Markdown for iOS display
+        # Generate Markdown from edited content
         formatter = create_formatter("markdown")
         report_data = update_request.edited_content_json
 
@@ -339,14 +349,23 @@ def update_report(
         if isinstance(report_data, dict) and "report" in report_data:
             report_data = report_data["report"]
 
-        formatted_markdown = formatter.format(report_data)
+        edited_markdown = formatter.format(report_data)
+
+        # Update edited content
+        report.edited_content_json = update_request.edited_content_json
+        report.edited_content_markdown = edited_markdown
+        report.edited_at = datetime.now(timezone.utc).isoformat()
+        report.edit_count = (report.edit_count or 0) + 1
+
+        db.commit()
+        db.refresh(report)
 
         return ReportUpdateResponse(
             id=report.id,
             edited_content_json=report.edited_content_json,
+            edited_content_markdown=report.edited_content_markdown,
             edited_at=report.edited_at,
             edit_count=report.edit_count,
-            formatted_markdown=formatted_markdown,
         )
 
     except Exception as e:

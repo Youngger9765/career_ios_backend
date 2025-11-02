@@ -997,6 +997,8 @@ Content-Type: application/json
       "completion_tokens": 800
     }
   },
+  "content_markdown": "# 個案報告\n\n## 案主基本資料\n\n- **name**: 陳小明\n- **gender**: 男性\n...",  // ⭐️ NEW: AI 原始生成的 Markdown
+  "edited_content_markdown": null,  // ⭐️ NEW: 編輯後的 Markdown (未編輯時為 null)
   "quality_summary": {
     "overall_score": 85,
     "grade": "B+",
@@ -1005,6 +1007,11 @@ Content-Type: application/json
   }
 }
 ```
+
+**⭐️ 新增欄位說明:**
+- `content_markdown`: AI 原始生成的 Markdown 格式 (與 content_json 同步生成)
+- `edited_content_markdown`: 諮商師編輯後的 Markdown 格式 (編輯後才會有值)
+- **iOS 可直接使用 Markdown 欄位渲染，無需處理 JSON**
 
 **Swift 範例:**
 ```swift
@@ -1041,6 +1048,8 @@ struct ReportDetail: Codable {
     let id: UUID
     let status: String  // "processing" | "draft" | "failed"
     let content_json: ReportData?
+    let content_markdown: String?  // ⭐️ NEW: AI 原始生成的 Markdown
+    let edited_content_markdown: String?  // ⭐️ NEW: 編輯後的 Markdown
     let quality_score: Int?
     let quality_grade: String?
     let error_message: String?  // 如果 status == "failed"
@@ -1277,9 +1286,9 @@ Content-Type: application/json
 {
   "id": "uuid",
   "edited_content_json": {...},
+  "edited_content_markdown": "# 個案報告\n\n## 案主基本資料\n...",  // ⭐️ UPDATED: 儲存的 Markdown (不再是動態生成)
   "edited_at": "2025-10-29T10:30:00Z",
-  "edit_count": 1,
-  "formatted_markdown": "# 個案報告\n\n## 案主基本資料\n..."
+  "edit_count": 1
 }
 ```
 
@@ -1292,9 +1301,9 @@ struct UpdateReportRequest: Codable {
 struct UpdateReportResponse: Codable {
     let id: UUID
     let edited_content_json: [String: Any]
+    let edited_content_markdown: String  // ⭐️ UPDATED: 儲存的 Markdown
     let edited_at: String
     let edit_count: Int
-    let formatted_markdown: String
 }
 
 func updateReport(token: String, reportId: UUID, editedContent: [String: Any]) async throws -> UpdateReportResponse {
@@ -1313,10 +1322,23 @@ func updateReport(token: String, reportId: UUID, editedContent: [String: Any]) a
 ```
 
 **重要說明:**
-- AI 原始生成的報告保存在 `content_json` (不可變)
-- 諮商師編輯的版本保存在 `edited_content_json`
-- 返回的 `formatted_markdown` 可直接在 iOS 顯示
+- AI 原始生成的報告保存在 `content_json` 和 `content_markdown` (不可變)
+- 諮商師編輯的版本保存在 `edited_content_json` 和 `edited_content_markdown`
+- **推薦使用 Markdown 欄位直接渲染**，無需解析 JSON
 - 可用於實現報告編輯器功能
+
+**⭐️ Markdown 欄位使用建議:**
+```swift
+// 渲染報告時，優先使用 Markdown
+func getReportMarkdown(report: ReportDetail) -> String {
+    // 1. 優先使用編輯過的版本
+    if let editedMarkdown = report.edited_content_markdown {
+        return editedMarkdown
+    }
+    // 2. 沒有編輯過就用原始版本
+    return report.content_markdown ?? ""
+}
+```
 
 ---
 

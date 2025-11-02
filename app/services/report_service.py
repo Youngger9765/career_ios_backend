@@ -7,6 +7,7 @@ import httpx
 from openai import AsyncOpenAI
 
 from app.core.config import settings
+from app.utils.report_formatters import create_formatter
 
 logger = logging.getLogger(__name__)
 
@@ -68,16 +69,24 @@ class ReportGenerationService:
             transcript, num_participants
         )
 
+        # 構建報告 JSON
+        content_json = {
+            "client_info": parsed_info.get("client_info", {}),
+            "session_summary": parsed_info.get("session_summary", {}),
+            "main_concerns": main_concerns,
+            "counseling_goals": parsed_info.get("counseling_goals", []),
+            "techniques": parsed_info.get("counselor_techniques", []),
+            "conceptualization": report_content,
+            "dialogue_excerpts": dialogue_excerpts,
+        }
+
+        # Step 5: 生成 Markdown 格式
+        markdown_formatter = create_formatter("markdown")
+        content_markdown = markdown_formatter.format(content_json)
+
         return {
-            "content_json": {
-                "client_info": parsed_info.get("client_info", {}),
-                "session_summary": parsed_info.get("session_summary", {}),
-                "main_concerns": main_concerns,
-                "counseling_goals": parsed_info.get("counseling_goals", []),
-                "techniques": parsed_info.get("counselor_techniques", []),
-                "conceptualization": report_content,
-                "dialogue_excerpts": dialogue_excerpts,
-            },
+            "content_json": content_json,
+            "content_markdown": content_markdown,
             "citations_json": citations,
             "agent_id": agent_id,
             "metadata": {

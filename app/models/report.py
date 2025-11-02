@@ -34,9 +34,11 @@ class Report(Base, BaseModel):
     content_json = Column(
         JSON
     )  # AI 原始生成的報告 (不可變，用於審計和回溯)
+    content_markdown = Column(Text)  # AI 原始生成的 Markdown 格式 (不可變)
 
     # User edited content - 諮商師編輯後的版本
     edited_content_json = Column(JSON)  # 諮商師手動編輯的報告內容
+    edited_content_markdown = Column(Text)  # 諮商師編輯後的 Markdown 格式
     edited_at = Column(String)  # ISO 8601 timestamp of last edit
     edit_count = Column(Integer, default=0)  # 編輯次數
 

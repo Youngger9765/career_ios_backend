@@ -6,7 +6,7 @@
 
 ## 🗄️ 數據庫架構
 
-### Report Model 新增欄位
+### Report Model 欄位
 
 ```python
 # app/models/report.py
@@ -14,12 +14,19 @@
 class Report(Base, BaseModel):
     # AI 原始生成的報告 (不可變)
     content_json = Column(JSON)  # AI 生成的原始報告,永遠保留
+    content_markdown = Column(Text)  # ⭐️ NEW: AI 生成的 Markdown 格式
 
     # 諮商師編輯後的版本
     edited_content_json = Column(JSON)  # 手動編輯的報告內容
+    edited_content_markdown = Column(Text)  # ⭐️ NEW: 編輯後的 Markdown 格式
     edited_at = Column(String)  # ISO 8601 timestamp
     edit_count = Column(Integer, default=0)  # 編輯次數
 ```
+
+**⭐️ 2025-11-02 更新:**
+- 新增 `content_markdown` 和 `edited_content_markdown` 欄位
+- 報告生成時同步產生 JSON 和 Markdown 兩種格式
+- iOS 可直接使用 Markdown 欄位渲染，無需解析 JSON
 
 ### 優點
 
@@ -53,17 +60,18 @@ class Report(Base, BaseModel):
 {
   "id": "uuid",
   "edited_content_json": {...},
+  "edited_content_markdown": "# 個案報告\n\n## 案主基本資料\n...",
   "edited_at": "2025-10-29T10:30:00Z",
-  "edit_count": 1,
-  "formatted_markdown": "# 個案報告\n\n## 案主基本資料\n..."
+  "edit_count": 1
 }
 ```
 
 **功能:**
-- 保存諮商師編輯後的報告內容
+- 保存諮商師編輯後的報告內容 (JSON 和 Markdown)
+- 自動從 JSON 生成 Markdown 並儲存
 - 自動更新 `edited_at` 時間戳
 - 遞增 `edit_count` 計數器
-- 返回格式化的 Markdown (供 iOS 顯示)
+- 返回儲存的 Markdown (iOS 可直接使用)
 
 ### 2. 取得格式化報告 (增強版)
 
@@ -91,30 +99,53 @@ class Report(Base, BaseModel):
 
 ## 📱 iOS App 使用流程
 
-### 標準流程
+### ⭐️ 推薦流程 (2025-11-02 更新)
 
 ```swift
-// 1. 生成報告
+// 1. 生成報告 (異步)
 let reportResponse = try await generateReport(...)
 
-// 2. 取得格式化報告 (自動使用編輯版本)
-let formatted = try await getFormattedReport(
-    reportId: reportResponse.report_id,
-    format: "markdown",
-    useEdited: true  // 預設會用編輯版本
-)
+// 2. 輪詢直到報告生成完成
+var report = try await getReport(reportId: reportResponse.report_id)
+while report.status == "processing" {
+    try await Task.sleep(nanoseconds: 2_000_000_000) // 2 秒
+    report = try await getReport(reportId: reportResponse.report_id)
+}
 
-// 3. 在編輯器中顯示
-editor.setMarkdown(formatted.formatted_content)
+// 3. 直接取得 Markdown 渲染
+let markdown = report.content_markdown  // 使用 AI 原始版本
+// 或
+let markdown = report.edited_content_markdown ?? report.content_markdown  // 優先使用編輯版本
 
-// 4. 諮商師編輯後,更新報告
+// 4. 在 Markdown viewer 中顯示
+markdownView.load(markdown: markdown)
+
+// 5. 諮商師編輯後,更新報告
 let updatedReport = try await updateReport(
-    reportId: reportResponse.report_id,
+    reportId: report.id,
     editedContent: modifiedJSON
 )
 
-// 5. 顯示更新後的 Markdown
-editor.setMarkdown(updatedReport.formatted_markdown)
+// 6. 顯示更新後的 Markdown (已儲存,無需動態生成)
+markdownView.load(markdown: updatedReport.edited_content_markdown)
+```
+
+**優點:**
+- ✅ 不需要動態生成 Markdown (已儲存在資料庫)
+- ✅ 更快的渲染速度 (直接讀取欄位)
+- ✅ 離線友好 (可以快取 Markdown)
+- ✅ 簡化程式碼 (不需要 JSON 轉 Markdown 的邏輯)
+
+### 舊版流程 (仍支援,用於向下兼容)
+
+```swift
+// 使用 format 參數動態生成 Markdown (legacy)
+let formatted = try await getFormattedReport(
+    reportId: reportResponse.report_id,
+    format: "markdown",
+    useEdited: true
+)
+editor.setMarkdown(formatted.formatted_content)
 ```
 
 ### 比對 AI 原始版本
