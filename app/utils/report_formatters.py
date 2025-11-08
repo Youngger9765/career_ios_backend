@@ -187,6 +187,34 @@ class MarkdownReportFormatter(ReportFormatter):
         return content
 
 
+# Helper function to unwrap RAG response
+def unwrap_report(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extract actual report from wrapped RAG API response
+
+    RAG API returns: {"mode": "...", "report": {...}, "quality_summary": {...}}
+    Formatters need: {"client_info": {...}, "main_concerns": [...], ...}
+
+    Args:
+        data: Either wrapped RAG response or already unwrapped report
+
+    Returns:
+        Unwrapped report data
+
+    Examples:
+        >>> wrapped = {"mode": "enhanced", "report": {"client_info": {...}}}
+        >>> unwrap_report(wrapped)
+        {"client_info": {...}}
+
+        >>> already_unwrapped = {"client_info": {...}}
+        >>> unwrap_report(already_unwrapped)
+        {"client_info": {...}}
+    """
+    if isinstance(data, dict) and "report" in data:
+        return data["report"]
+    return data
+
+
 # Factory function for easy access
 def create_formatter(format_type: str) -> ReportFormatter:
     """

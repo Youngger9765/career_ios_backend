@@ -225,6 +225,89 @@ class TestFormatReportAsMarkdown:
         assert "## 晤談目標" in md
 
 
+class TestWrappedJSONHandling:
+    """Test handling of wrapped JSON from RAG API (Bug fix for markdown generation)
+
+    Context: RAG API returns wrapped JSON like {"mode": ..., "report": {...}, ...}
+    but formatters expect unwrapped report data.
+    This was causing content_markdown to be empty (only skeleton headers).
+    """
+
+    @pytest.fixture
+    def wrapped_rag_response(self, sample_report):
+        """Simulates actual RAG API response structure"""
+        return {
+            "mode": "enhanced",
+            "report": sample_report,  # Actual report nested here
+            "format": "json",
+            "quality_summary": {
+                "overall_score": 85,
+                "grade": "良好"
+            }
+        }
+
+    def test_formatter_with_wrapped_json_produces_empty_skeleton(self, wrapped_rag_response):
+        """
+        Document the bug: Formatter with wrapped JSON produces only headers (85 chars)
+
+        This test documents what happens when wrapped JSON is passed to formatter.
+        It should produce empty skeleton, which is the BUG we're fixing.
+        """
+        from app.utils.report_formatters import create_formatter
+
+        formatter = create_formatter("markdown")
+
+        # Passing wrapped JSON directly (wrong behavior)
+        buggy_markdown = formatter.format(wrapped_rag_response)
+
+        # This is what HAPPENS (not what we want)
+        assert len(buggy_markdown) == 85, "Wrapped JSON produces empty skeleton (85 chars)"
+        assert "小明" not in buggy_markdown, "Wrapped JSON loses actual content"
+
+    def test_unwrap_helper_extracts_report_from_wrapped_json(self, wrapped_rag_response):
+        """
+        Test the unwrap_report() helper function
+
+        This is the ACTUAL FIX we're testing in TDD fashion.
+        """
+        from app.utils.report_formatters import unwrap_report
+
+        # The fix: use unwrap_report() helper
+        actual_report = unwrap_report(wrapped_rag_response)
+
+        # Verify unwrap worked correctly
+        assert "client_info" in actual_report, "Should extract actual report"
+        assert "main_concerns" in actual_report
+        assert actual_report["client_info"]["name"] == "小明"
+
+    def test_unwrap_helper_is_idempotent(self, sample_report):
+        """unwrap_report() should be safe to call on already-unwrapped data"""
+        from app.utils.report_formatters import unwrap_report
+
+        # Calling unwrap on already-unwrapped data should return same data
+        result = unwrap_report(sample_report)
+        assert result == sample_report
+
+    def test_formatter_with_unwrapped_json_produces_full_content(self, wrapped_rag_response):
+        """
+        Test that formatter works correctly with unwrapped data
+
+        This is the EXPECTED BEHAVIOR after the fix.
+        """
+        from app.utils.report_formatters import create_formatter, unwrap_report
+
+        formatter = create_formatter("markdown")
+
+        # Apply the fix: unwrap before formatting (using helper function)
+        correct_markdown = formatter.format(unwrap_report(wrapped_rag_response))
+
+        # These assertions verify the fix works
+        assert len(correct_markdown) > 200, "Should generate full markdown content"
+        assert "小明" in correct_markdown, "Should contain client name"
+        assert "職涯迷茫" in correct_markdown, "Should contain main concerns"
+        assert "Super生涯發展理論" in correct_markdown, "Should contain theories"
+
+
 class TestReportFormatterRefactoring:
     """Test refactored formatter with common logic extraction"""
 

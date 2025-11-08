@@ -23,7 +23,7 @@ from app.schemas.report import (
     ReportUpdateRequest,
     ReportUpdateResponse,
 )
-from app.utils.report_formatters import create_formatter
+from app.utils.report_formatters import create_formatter, unwrap_report
 
 router = APIRouter(prefix="/api/v1/reports", tags=["Reports"])
 
@@ -74,7 +74,8 @@ async def _generate_report_background(
 
         # 生成 Markdown 格式
         markdown_formatter = create_formatter("markdown")
-        content_markdown = markdown_formatter.format(report_data)
+        # Extract actual report from wrapper (fix for wrapped JSON bug)
+        content_markdown = markdown_formatter.format(unwrap_report(report_data))
 
         # 更新 report
         report.content_json = report_data
@@ -280,10 +281,7 @@ def get_report(
         report_data = report.content_json
 
     # Extract actual report content from wrapper
-    if isinstance(report_data, dict) and "report" in report_data:
-        report_data = report_data["report"]
-
-    formatted_content = formatter.format(report_data)
+    formatted_content = formatter.format(unwrap_report(report_data))
 
     return {
         "report_id": str(report_id),
@@ -346,10 +344,7 @@ def update_report(
         report_data = update_request.edited_content_json
 
         # Extract actual report content from wrapper if needed
-        if isinstance(report_data, dict) and "report" in report_data:
-            report_data = report_data["report"]
-
-        edited_markdown = formatter.format(report_data)
+        edited_markdown = formatter.format(unwrap_report(report_data))
 
         # Update edited content
         report.edited_content_json = update_request.edited_content_json
