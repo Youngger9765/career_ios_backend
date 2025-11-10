@@ -67,7 +67,8 @@ class ReportListResponse(BaseModel):
 class ReportUpdateRequest(BaseModel):
     """Schema for updating report content"""
 
-    edited_content_json: Dict[str, Any]  # 完整的編輯後報告 JSON
+    edited_content_json: Optional[Dict[str, Any]] = None  # 完整的編輯後報告 JSON（選填）
+    edited_content_markdown: Optional[str] = None  # 前端編輯後的 Markdown 字串（選填）
 
 
 class ReportUpdateResponse(BaseModel):

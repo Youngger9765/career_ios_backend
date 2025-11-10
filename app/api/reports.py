@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, attributes
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_tenant_id
@@ -339,32 +339,70 @@ def update_report(
         )
 
     try:
-        # Generate Markdown from edited content
-        formatter = create_formatter("markdown")
-        report_data = update_request.edited_content_json
+        # 前端可以傳 edited_content_json 或 edited_content_markdown，或兩者都傳
+        if not update_request.edited_content_json and not update_request.edited_content_markdown:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Must provide either edited_content_json or edited_content_markdown",
+            )
 
-        # Extract actual report content from wrapper if needed
-        edited_markdown = formatter.format(unwrap_report(report_data))
+        # Update edited_content_json if provided
+        if update_request.edited_content_json:
+            report.edited_content_json = update_request.edited_content_json
+            attributes.flag_modified(report, "edited_content_json")
 
-        # Update edited content
-        report.edited_content_json = update_request.edited_content_json
-        report.edited_content_markdown = edited_markdown
+        # Update edited_content_markdown if provided (前端直接傳)
+        if update_request.edited_content_markdown:
+            report.edited_content_markdown = update_request.edited_content_markdown
+            attributes.flag_modified(report, "edited_content_markdown")
+        # 如果只傳 JSON 沒傳 Markdown，自動生成（向後相容）
+        elif update_request.edited_content_json:
+            formatter = create_formatter("markdown")
+            report_data = update_request.edited_content_json
+            edited_markdown = formatter.format(unwrap_report(report_data))
+            report.edited_content_markdown = edited_markdown
+            attributes.flag_modified(report, "edited_content_markdown")
+
+        # Update metadata
         report.edited_at = datetime.now(timezone.utc).isoformat()
         report.edit_count = (report.edit_count or 0) + 1
 
+        # Explicitly flush to detect any database errors before commit
+        db.flush()
         db.commit()
-        db.refresh(report)
+
+        # Verify the data was actually saved by querying it again
+        verification_result = db.execute(
+            select(Report).where(Report.id == report_id)
+        )
+        verified_report = verification_result.scalar_one_or_none()
+
+        if not verified_report:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Report update failed: verification query returned no results",
+            )
+
+        # Log for debugging
+        print(f"[DEBUG] Report {verified_report.id} updated and verified:")
+        print(f"  - edited_content_json present: {bool(verified_report.edited_content_json)}")
+        print(f"  - edited_content_markdown length: {len(verified_report.edited_content_markdown) if verified_report.edited_content_markdown else 0}")
+        print(f"  - edited_at: {verified_report.edited_at}")
+        print(f"  - edit_count: {verified_report.edit_count}")
 
         return ReportUpdateResponse(
-            id=report.id,
-            edited_content_json=report.edited_content_json,
-            edited_content_markdown=report.edited_content_markdown,
-            edited_at=report.edited_at,
-            edit_count=report.edit_count,
+            id=verified_report.id,
+            edited_content_json=verified_report.edited_content_json,
+            edited_content_markdown=verified_report.edited_content_markdown,
+            edited_at=verified_report.edited_at,
+            edit_count=verified_report.edit_count,
         )
 
     except Exception as e:
         db.rollback()
+        print(f"[ERROR] Failed to update report {report_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update report: {str(e)}",
