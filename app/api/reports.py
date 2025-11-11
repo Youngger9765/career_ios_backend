@@ -340,7 +340,7 @@ def update_report(
 
     try:
         # 前端可以傳 edited_content_json 或 edited_content_markdown，或兩者都傳
-        if not update_request.edited_content_json and not update_request.edited_content_markdown:
+        if update_request.edited_content_json is None and update_request.edited_content_markdown is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Must provide either edited_content_json or edited_content_markdown",
