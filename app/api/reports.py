@@ -388,6 +388,10 @@ def update_report(
             edit_count=verified_report.edit_count,
         )
 
+    except HTTPException:
+        # Re-raise HTTPException (like 400 validation errors) without wrapping
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         print(f"[ERROR] Failed to update report {report_id}: {str(e)}")
