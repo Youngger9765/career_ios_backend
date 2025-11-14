@@ -75,7 +75,7 @@ class ReportUpdateResponse(BaseModel):
     """Schema for report update response"""
 
     id: UUID
-    edited_content_json: Dict[str, Any]
-    edited_content_markdown: str  # 儲存的 Markdown 格式
+    edited_content_json: Optional[Dict[str, Any]]  # Optional when only markdown is updated
+    edited_content_markdown: Optional[str]  # Optional when only JSON is updated
     edited_at: str
     edit_count: int
