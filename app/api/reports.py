@@ -340,32 +340,18 @@ def update_report(
 
     try:
         # 前端可以傳 edited_content_json 或 edited_content_markdown，或兩者都傳
-        # 檢查是否至少有一個有效值（不是 None 且不是空字典）
-        has_json = update_request.edited_content_json is not None and update_request.edited_content_json != {}
+        # 檢查是否至少有一個有效值
         has_markdown = update_request.edited_content_markdown is not None and update_request.edited_content_markdown.strip() != ""
 
-        if not has_json and not has_markdown:
+        if not has_markdown:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Must provide either edited_content_json or edited_content_markdown",
+                detail="Must provide edited_content_markdown",
             )
 
-        # Update edited_content_json if provided (非空字典)
-        if has_json:
-            report.edited_content_json = update_request.edited_content_json
-            attributes.flag_modified(report, "edited_content_json")
-
-        # Update edited_content_markdown if provided (前端直接傳)
-        if has_markdown:
-            report.edited_content_markdown = update_request.edited_content_markdown
-            attributes.flag_modified(report, "edited_content_markdown")
-        # 如果只傳 JSON 沒傳 Markdown，自動生成（向後相容）
-        elif has_json:
-            formatter = create_formatter("markdown")
-            report_data = update_request.edited_content_json
-            edited_markdown = formatter.format(unwrap_report(report_data))
-            report.edited_content_markdown = edited_markdown
-            attributes.flag_modified(report, "edited_content_markdown")
+        # Update edited_content_markdown (前端直接傳)
+        report.edited_content_markdown = update_request.edited_content_markdown
+        attributes.flag_modified(report, "edited_content_markdown")
 
         # Update metadata
         report.edited_at = datetime.now(timezone.utc).isoformat()

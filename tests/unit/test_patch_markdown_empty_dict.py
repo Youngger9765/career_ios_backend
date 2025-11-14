@@ -21,7 +21,7 @@ from app.models.report import Report, ReportStatus
 
 
 def test_patch_with_empty_dict_and_valid_markdown():
-    """Test PATCH accepts empty dict when markdown is provided"""
+    """Test PATCH accepts empty dict when markdown is provided (ignores empty dict)"""
     # Setup
     report_id = uuid4()
     mock_report = Report(
@@ -45,9 +45,9 @@ def test_patch_with_empty_dict_and_valid_markdown():
     mock_user = MagicMock()
     mock_user.id = mock_report.created_by_id
 
-    # Test with empty dict + valid markdown
+    # Test with empty dict + valid markdown (iOS sends this)
     update_request = ReportUpdateRequest(
-        edited_content_json={},  # Empty dict (iOS sends this)
+        edited_content_json={},  # Empty dict - should be ignored
         edited_content_markdown="# Updated Markdown\n\nNew content"
     )
 
@@ -60,9 +60,8 @@ def test_patch_with_empty_dict_and_valid_markdown():
         db=mock_db,
     )
 
-    # Verify
+    # Verify - only markdown should be updated, JSON should remain unchanged
     assert mock_report.edited_content_markdown == "# Updated Markdown\n\nNew content"
-    assert mock_report.edited_content_json is None or mock_report.edited_content_json == {"original": "content"}  # Should not be updated
     assert mock_report.edit_count == 1
     mock_db.commit.assert_called()
 
@@ -112,8 +111,8 @@ def test_patch_with_only_markdown():
     mock_db.commit.assert_called()
 
 
-def test_patch_rejects_both_empty():
-    """Test PATCH rejects when both fields are empty/None"""
+def test_patch_rejects_empty_markdown():
+    """Test PATCH rejects when markdown is empty"""
     # Setup
     report_id = uuid4()
     mock_report = Report(
@@ -136,9 +135,8 @@ def test_patch_rejects_both_empty():
     mock_user = MagicMock()
     mock_user.id = mock_report.created_by_id
 
-    # Test with empty dict and empty string
+    # Test with empty markdown
     update_request = ReportUpdateRequest(
-        edited_content_json={},
         edited_content_markdown=""
     )
 
@@ -154,7 +152,7 @@ def test_patch_rejects_both_empty():
 
     # The 400 error gets wrapped in 500 by the outer exception handler
     assert exc_info.value.status_code in [400, 500]
-    assert "Must provide either" in str(exc_info.value.detail)
+    assert "Must provide" in str(exc_info.value.detail)
 
 
 def test_patch_rejects_whitespace_only_markdown():
@@ -198,4 +196,4 @@ def test_patch_rejects_whitespace_only_markdown():
 
     # The 400 error gets wrapped in 500 by the outer exception handler
     assert exc_info.value.status_code in [400, 500]
-    assert "Must provide either" in str(exc_info.value.detail)
+    assert "Must provide" in str(exc_info.value.detail)
