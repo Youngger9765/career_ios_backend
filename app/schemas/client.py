@@ -11,14 +11,31 @@ from pydantic import BaseModel, Field, computed_field
 class ClientBase(BaseModel):
     """Base client schema with common fields"""
 
+    # Core identification
     code: Optional[str] = Field(None, description="Anonymous client code (auto-generated if not provided)")
-    name: str = Field(..., description="Client name (pseudonym)")
+    name: str = Field(..., description="Client real name")
     nickname: Optional[str] = Field(None, description="Nickname")
-    birth_date: Optional[date] = Field(None, description="Birth date (age will be auto-calculated)")
-    gender: Optional[str] = Field(None, description="Gender")
+
+    # Required fields
+    email: str = Field(..., description="Email address for consultation or records")
+    gender: str = Field(..., description="Gender: 男／女／其他／不透露")
+    birth_date: date = Field(..., description="Birth date (Western calendar, 1900-2025)")
+    identity_option: str = Field(..., description="Identity: 學生／社會新鮮人／轉職者／在職者／其他")
+    current_status: str = Field(..., description="Current situation for quick case classification")
+    phone: str = Field(..., description="Mobile phone number")
+
+    # Optional fields
+    education: Optional[str] = Field(None, description="Education: 高中／大學／研究所等")
+    current_job: Optional[str] = Field(None, description="Current job (occupation/years of experience)")
+    career_status: Optional[str] = Field(None, description="Career status: 探索中／轉職準備／面試中／已在職等")
     occupation: Optional[str] = Field(None, description="Occupation")
-    education: Optional[str] = Field(None, description="Education level")
     location: Optional[str] = Field(None, description="Location/residence")
+
+    # Consultation and medical history
+    has_consultation_history: Optional[str] = Field(None, description="Past consultation experience (Yes/No + text)")
+    has_mental_health_history: Optional[str] = Field(None, description="Mental/psychiatric history (Yes/No + text, sensitive)")
+
+    # Additional information
     economic_status: Optional[str] = Field(None, description="Economic status")
     family_relations: Optional[str] = Field(None, description="Family relations description")
     other_info: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Other flexible information")
@@ -35,14 +52,31 @@ class ClientCreate(ClientBase):
 class ClientUpdate(BaseModel):
     """Schema for updating client (all fields optional)"""
 
+    # Core identification
     code: Optional[str] = None
     name: Optional[str] = None
     nickname: Optional[str] = None
-    birth_date: Optional[date] = None
+
+    # Required fields (optional in update)
+    email: Optional[str] = None
     gender: Optional[str] = None
-    occupation: Optional[str] = None
+    birth_date: Optional[date] = None
+    identity_option: Optional[str] = None
+    current_status: Optional[str] = None
+    phone: Optional[str] = None
+
+    # Optional fields
     education: Optional[str] = None
+    current_job: Optional[str] = None
+    career_status: Optional[str] = None
+    occupation: Optional[str] = None
     location: Optional[str] = None
+
+    # Consultation and medical history
+    has_consultation_history: Optional[str] = None
+    has_mental_health_history: Optional[str] = None
+
+    # Additional information
     economic_status: Optional[str] = None
     family_relations: Optional[str] = None
     other_info: Optional[Dict[str, Any]] = None

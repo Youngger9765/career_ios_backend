@@ -27,7 +27,7 @@ def login(
     Login endpoint - authenticate counselor and return JWT token
 
     Args:
-        credentials: Email and password
+        credentials: Email, password, and tenant_id
         db: Database session
 
     Returns:
@@ -36,9 +36,12 @@ def login(
     Raises:
         HTTPException: 401 if credentials are invalid, 403 if account inactive
     """
-    # Query counselor by email
+    # Query counselor by email AND tenant_id
     result = db.execute(
-        select(Counselor).where(Counselor.email == credentials.email)
+        select(Counselor).where(
+            Counselor.email == credentials.email,
+            Counselor.tenant_id == credentials.tenant_id
+        )
     )
     counselor = result.scalar_one_or_none()
 
@@ -48,7 +51,7 @@ def login(
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect email, password, or tenant ID",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

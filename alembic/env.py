@@ -33,8 +33,8 @@ from app.models.evaluation import EvaluationExperiment, EvaluationResult, Evalua
 config = context.config
 
 # Override sqlalchemy.url with the one from settings
-# Use DATABASE_URL_DIRECT from .env if available, otherwise use DATABASE_URL
-database_url = os.getenv("DATABASE_URL_DIRECT") or settings.DATABASE_URL
+# Use DATABASE_URL (pooler connection) which is more reliable
+database_url = os.getenv("DATABASE_URL") or settings.DATABASE_URL
 config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging.

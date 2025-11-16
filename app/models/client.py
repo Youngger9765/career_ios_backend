@@ -17,13 +17,25 @@ class Client(Base, BaseModel):
     name = Column(String, nullable=False)  # Real name
     nickname = Column(String)  # Optional nickname
 
-    # Basic demographics
-    birth_date = Column(Date)  # Birth date for accurate age calculation
+    # Required fields
+    email = Column(String, nullable=False, index=True)  # Email address for consultation or records
+    gender = Column(String, nullable=False)  # Gender: 男／女／其他／不透露
+    birth_date = Column(Date, nullable=False)  # Birth date (Western calendar, 1900-2025)
+    identity_option = Column(String, nullable=False)  # Identity: 學生／社會新鮮人／轉職者／在職者／其他
+    current_status = Column(String, nullable=False)  # Current situation for quick case classification
+    phone = Column(String, nullable=False)  # Mobile phone number
+
+    # Optional fields
     age = Column(Integer)  # Auto-calculated from birth_date, updated on each save
-    gender = Column(String)
+    education = Column(String)  # Education: 高中／大學／研究所等
+    current_job = Column(String)  # Current job (occupation/years of experience)
+    career_status = Column(String)  # Career status: 探索中／轉職準備／面試中／已在職等
     occupation = Column(String)
-    education = Column(String)
     location = Column(String)
+
+    # Consultation and medical history
+    has_consultation_history = Column(String)  # Yes/No + supplementary text
+    has_mental_health_history = Column(String)  # Yes/No + supplementary text (sensitive)
 
     # Additional information
     economic_status = Column(String)

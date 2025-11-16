@@ -493,9 +493,25 @@
             <div class="flow-group-title" data-group="client">👥 個案管理 Client</div>
             <div class="flow-group-content" data-group-content="client">
 
-            <div class="flow-step" data-step="list-clients">
+            <div class="flow-step" data-step="get-client-field-schema">
                 <div>
                     <span class="step-number">4</span>
+                    <span class="step-title">取得 Client 欄位配置</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/field-schemas/client</div>
+            </div>
+
+            <div class="flow-step" data-step="get-case-field-schema">
+                <div>
+                    <span class="step-number">5</span>
+                    <span class="step-title">取得 Case 欄位配置</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/field-schemas/case</div>
+            </div>
+
+            <div class="flow-step" data-step="list-clients">
+                <div>
+                    <span class="step-number">6</span>
                     <span class="step-title">列出個案</span>
                 </div>
                 <div class="step-subtitle">GET /api/v1/clients</div>
@@ -503,7 +519,7 @@
 
             <div class="flow-step" data-step="create-client">
                 <div>
-                    <span class="step-number">5</span>
+                    <span class="step-number">7</span>
                     <span class="step-title">建立個案</span>
                 </div>
                 <div class="step-subtitle">POST /api/v1/clients</div>
@@ -511,7 +527,7 @@
 
             <div class="flow-step" data-step="view-client">
                 <div>
-                    <span class="step-number">6</span>
+                    <span class="step-number">8</span>
                     <span class="step-title">查看個案</span>
                 </div>
                 <div class="step-subtitle">GET /api/v1/clients/{id}</div>
@@ -519,7 +535,7 @@
 
             <div class="flow-step" data-step="update-client">
                 <div>
-                    <span class="step-number">7</span>
+                    <span class="step-number">9</span>
                     <span class="step-title">更新個案</span>
                 </div>
                 <div class="step-subtitle">PATCH /api/v1/clients/{id}</div>
@@ -527,7 +543,7 @@
 
             <div class="flow-step" data-step="delete-client">
                 <div>
-                    <span class="step-number">8</span>
+                    <span class="step-number">10</span>
                     <span class="step-title">刪除個案</span>
                 </div>
                 <div class="step-subtitle">DELETE /api/v1/clients/{id}</div>
@@ -701,8 +717,15 @@
                 subtitle: 'POST /auth/login',
                 renderForm: () => `
                     <div class="form-group">
+                        <label>Tenant ID</label>
+                        <select id="tenant_id" onchange="document.getElementById('email').value = this.value === 'career' ? 'admin@career.com' : 'admin@island.com'">
+                            <option value="career">Career (職涯諮詢)</option>
+                            <option value="island">Island (升學浮島)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label>Email</label>
-                        <input type="email" id="email" value="test@career.com" />
+                        <input type="email" id="email" value="admin@career.com" />
                     </div>
                     <div class="form-group">
                         <label>Password</label>
@@ -711,13 +734,14 @@
                     <button class="btn btn-primary" onclick="executeLogin()">登入</button>
                 `,
                 execute: async () => {
+                    const tenant_id = document.getElementById('tenant_id').value;
                     const email = document.getElementById('email').value;
                     const password = document.getElementById('password').value;
 
                     const response = await fetch(`${BASE_URL}/api/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, password })
+                        body: JSON.stringify({ tenant_id, email, password })
                     });
 
                     const data = await response.json();
@@ -787,6 +811,166 @@
                             <span class="info-label">狀態</span>
                             <span class="info-value">${data.is_active ? '✅ 啟用' : '❌ 停用'}</span>
                         </div>
+                    </div>
+                `
+            },
+            'get-client-field-schema': {
+                title: '取得 Client 欄位配置',
+                subtitle: 'GET /api/v1/field-schemas/client',
+                renderForm: () => `
+                    <p>取得當前租戶的 Client 表單欄位配置，用於動態生成表單</p>
+                    <button class="btn btn-primary" onclick="executeGetClientFieldSchema()" ${!state.token ? 'disabled' : ''}>取得配置</button>
+                `,
+                execute: async () => {
+                    const response = await fetch(`${BASE_URL}/api/v1/field-schemas/client`, {
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`
+                        }
+                    });
+
+                    const data = await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="response-card">
+                        <h4>📋 ${data.tenant_id.toUpperCase()} - ${data.form_type.toUpperCase()} 表單配置</h4>
+                        ${data.sections.map(section => `
+                            <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                                <h5 style="margin: 0 0 10px 0; color: #1e40af;">📌 ${section.title}</h5>
+                                ${section.description ? `<p style="color: #6b7280; margin: 0 0 15px 0;">${section.description}</p>` : ''}
+                                <div style="display: grid; gap: 12px;">
+                                    ${section.fields.map(field => `
+                                        <div style="padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                                <div>
+                                                    <strong style="color: #111827;">${field.label}</strong>
+                                                    ${field.required ? '<span style="color: #ef4444; margin-left: 4px;">*</span>' : ''}
+                                                </div>
+                                                <span style="background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 12px;">${field.type}</span>
+                                            </div>
+                                            <div style="font-size: 13px; color: #6b7280;">
+                                                <div><strong>Key:</strong> ${field.key}</div>
+                                                ${field.placeholder ? `<div><strong>Placeholder:</strong> ${field.placeholder}</div>` : ''}
+                                                ${field.help_text ? `<div><strong>說明:</strong> ${field.help_text}</div>` : ''}
+                                                ${field.options ? `<div><strong>選項:</strong> ${field.options.join(', ')}</div>` : ''}
+                                                ${field.default_value ? `<div><strong>預設值:</strong> ${field.default_value}</div>` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `,
+                renderResponse: (data) => `
+                    <div class="response-card">
+                        <h4>📋 ${data.tenant_id.toUpperCase()} - ${data.form_type.toUpperCase()} 表單配置</h4>
+                        ${data.sections.map(section => `
+                            <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                                <h5 style="margin: 0 0 10px 0; color: #1e40af;">📌 ${section.title}</h5>
+                                ${section.description ? `<p style="color: #6b7280; margin: 0 0 15px 0;">${section.description}</p>` : ''}
+                                <div style="display: grid; gap: 12px;">
+                                    ${section.fields.map(field => `
+                                        <div style="padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                                <div>
+                                                    <strong style="color: #111827;">${field.label}</strong>
+                                                    ${field.required ? '<span style="color: #ef4444; margin-left: 4px;">*</span>' : ''}
+                                                </div>
+                                                <span style="background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 12px;">${field.type}</span>
+                                            </div>
+                                            <div style="font-size: 13px; color: #6b7280;">
+                                                <div><strong>Key:</strong> ${field.key}</div>
+                                                ${field.placeholder ? `<div><strong>Placeholder:</strong> ${field.placeholder}</div>` : ''}
+                                                ${field.help_text ? `<div><strong>說明:</strong> ${field.help_text}</div>` : ''}
+                                                ${field.options ? `<div><strong>選項:</strong> ${field.options.join(', ')}</div>` : ''}
+                                                ${field.default_value ? `<div><strong>預設值:</strong> ${field.default_value}</div>` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `
+            },
+            'get-case-field-schema': {
+                title: '取得 Case 欄位配置',
+                subtitle: 'GET /api/v1/field-schemas/case',
+                renderForm: () => `
+                    <p>取得當前租戶的個案 (Case) 表單欄位配置，用於動態生成表單</p>
+                    <button class="btn btn-primary" onclick="executeGetCaseFieldSchema()" ${!state.token ? 'disabled' : ''}>取得配置</button>
+                `,
+                execute: async () => {
+                    const response = await fetch(`${BASE_URL}/api/v1/field-schemas/case`, {
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`
+                        }
+                    });
+
+                    const data = await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="response-card">
+                        <h4>📋 ${data.tenant_id.toUpperCase()} - ${data.form_type.toUpperCase()} 表單配置</h4>
+                        ${data.sections.map(section => `
+                            <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #10b981;">
+                                <h5 style="margin: 0 0 10px 0; color: #059669;">📌 ${section.title}</h5>
+                                ${section.description ? `<p style="color: #6b7280; margin: 0 0 15px 0;">${section.description}</p>` : ''}
+                                <div style="display: grid; gap: 12px;">
+                                    ${section.fields.map(field => `
+                                        <div style="padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                                <div>
+                                                    <strong style="color: #111827;">${field.label}</strong>
+                                                    ${field.required ? '<span style="color: #ef4444; margin-left: 4px;">*</span>' : ''}
+                                                </div>
+                                                <span style="background: #d1fae5; color: #059669; padding: 2px 8px; border-radius: 4px; font-size: 12px;">${field.type}</span>
+                                            </div>
+                                            <div style="font-size: 13px; color: #6b7280;">
+                                                <div><strong>Key:</strong> ${field.key}</div>
+                                                ${field.placeholder ? `<div><strong>Placeholder:</strong> ${field.placeholder}</div>` : ''}
+                                                ${field.help_text ? `<div><strong>說明:</strong> ${field.help_text}</div>` : ''}
+                                                ${field.options ? `<div><strong>選項:</strong> ${field.options.join(', ')}</div>` : ''}
+                                                ${field.default_value ? `<div><strong>預設值:</strong> ${field.default_value}</div>` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `,
+                renderResponse: (data) => `
+                    <div class="response-card">
+                        <h4>📋 ${data.tenant_id.toUpperCase()} - ${data.form_type.toUpperCase()} 表單配置</h4>
+                        ${data.sections.map(section => `
+                            <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #10b981;">
+                                <h5 style="margin: 0 0 10px 0; color: #059669;">📌 ${section.title}</h5>
+                                ${section.description ? `<p style="color: #6b7280; margin: 0 0 15px 0;">${section.description}</p>` : ''}
+                                <div style="display: grid; gap: 12px;">
+                                    ${section.fields.map(field => `
+                                        <div style="padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                                <div>
+                                                    <strong style="color: #111827;">${field.label}</strong>
+                                                    ${field.required ? '<span style="color: #ef4444; margin-left: 4px;">*</span>' : ''}
+                                                </div>
+                                                <span style="background: #d1fae5; color: #059669; padding: 2px 8px; border-radius: 4px; font-size: 12px;">${field.type}</span>
+                                            </div>
+                                            <div style="font-size: 13px; color: #6b7280;">
+                                                <div><strong>Key:</strong> ${field.key}</div>
+                                                ${field.placeholder ? `<div><strong>Placeholder:</strong> ${field.placeholder}</div>` : ''}
+                                                ${field.help_text ? `<div><strong>說明:</strong> ${field.help_text}</div>` : ''}
+                                                ${field.options ? `<div><strong>選項:</strong> ${field.options.join(', ')}</div>` : ''}
+                                                ${field.default_value ? `<div><strong>預設值:</strong> ${field.default_value}</div>` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
                 `
             },
@@ -3005,6 +3189,8 @@ Co: 聽起來這個策略很有效，繼續保持！`
         // Step execution functions
         window.executeLogin = () => executeStep('login');
         window.executeMe = () => executeStep('me');
+        window.executeGetClientFieldSchema = () => executeStep('get-client-field-schema');
+        window.executeGetCaseFieldSchema = () => executeStep('get-case-field-schema');
         window.executeListClients = () => executeStep('list-clients');
         window.executeCreateClient = () => executeStep('create-client');
         window.executeViewClient = () => executeStep('view-client');

@@ -43,17 +43,24 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Get counselor email from token
+    # Get counselor email and tenant_id from token
     email: Optional[str] = payload.get("sub")
-    if email is None:
+    tenant_id: Optional[str] = payload.get("tenant_id")
+
+    if email is None or tenant_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Query counselor from database
-    result = db.execute(select(Counselor).where(Counselor.email == email))
+    # Query counselor from database (must match both email AND tenant_id)
+    result = db.execute(
+        select(Counselor).where(
+            Counselor.email == email,
+            Counselor.tenant_id == tenant_id
+        )
+    )
     counselor = result.scalar_one_or_none()
 
     if counselor is None:
@@ -72,15 +79,16 @@ def get_current_user(
     return counselor
 
 
-def get_tenant_id() -> str:
+def get_tenant_id(
+    current_user: Counselor = Depends(get_current_user),
+) -> str:
     """
-    Get tenant_id from environment variable
+    Get tenant_id from current authenticated user's JWT token
 
-    For now, returns hardcoded 'career'
-    In production, this should read from environment
+    Args:
+        current_user: Current authenticated counselor
 
     Returns:
-        Tenant ID string
+        Tenant ID string from user's profile
     """
-    # TODO: Read from environment variable
-    return "career"
+    return current_user.tenant_id

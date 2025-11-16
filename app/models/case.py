@@ -26,6 +26,7 @@ class Case(Base, BaseModel):
     status = Column(SQLEnum(CaseStatus), default=CaseStatus.ACTIVE, nullable=False)
     summary = Column(Text)
     goals = Column(Text)
+    problem_description = Column(Text)  # 問題敘述（諮詢目的）
 
     # Relationships
     counselor = relationship("Counselor", back_populates="cases")

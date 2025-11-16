@@ -10,6 +10,7 @@ class CaseBase(BaseSchema):
     status: CaseStatus = CaseStatus.ACTIVE
     summary: Optional[str] = None
     goals: Optional[str] = None
+    problem_description: Optional[str] = None
 
 
 class CaseCreate(CaseBase):
@@ -21,6 +22,7 @@ class CaseUpdate(BaseSchema):
     status: Optional[CaseStatus] = None
     summary: Optional[str] = None
     goals: Optional[str] = None
+    problem_description: Optional[str] = None
 
 
 class CaseResponse(BaseResponse, CaseBase):

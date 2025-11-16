@@ -11,6 +11,7 @@ from app.api import (
     clients,
     comparison,
     evaluation_testsets,
+    field_schemas,
     rag_agents,
     rag_chat,
     rag_evaluation,
@@ -51,6 +52,9 @@ app.include_router(auth.router, prefix="/api")
 
 # Include client routes
 app.include_router(clients.router)
+
+# Include field schema routes
+app.include_router(field_schemas.router)
 
 # Include reports routes
 app.include_router(reports.router)

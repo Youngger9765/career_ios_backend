@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Boolean, Column, DateTime, String
+from sqlalchemy import Boolean, Column, DateTime, String, UniqueConstraint
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
@@ -18,7 +18,7 @@ class Counselor(Base, BaseModel):
     __tablename__ = "counselors"
 
     # Authentication fields
-    email = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, index=True, nullable=False)  # Removed unique=True
     username = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=False)
     hashed_password = Column(String, nullable=False)
@@ -26,6 +26,11 @@ class Counselor(Base, BaseModel):
     # Multi-tenant & role
     tenant_id = Column(String, nullable=False, index=True)
     role = Column(SQLEnum(CounselorRole), default=CounselorRole.COUNSELOR, nullable=False)
+
+    # Unique constraint: email + tenant_id combination must be unique
+    __table_args__ = (
+        UniqueConstraint('email', 'tenant_id', name='uq_counselor_email_tenant'),
+    )
 
     # Status & metadata
     is_active = Column(Boolean, default=True)
