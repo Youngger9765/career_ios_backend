@@ -489,8 +489,8 @@
                 </div>
             </div>
 
-            <!-- 個案管理 -->
-            <div class="flow-group-title" data-group="client">👥 個案管理 Client</div>
+            <!-- 客戶管理 -->
+            <div class="flow-group-title" data-group="client">👥 客戶管理 Client</div>
             <div class="flow-group-content" data-group-content="client">
 
             <div class="flow-step" data-step="get-client-field-schema">
@@ -501,52 +501,97 @@
                 <div class="step-subtitle">GET /api/v1/field-schemas/client</div>
             </div>
 
-            <div class="flow-step" data-step="get-case-field-schema">
-                <div>
-                    <span class="step-number">5</span>
-                    <span class="step-title">取得 Case 欄位配置</span>
-                </div>
-                <div class="step-subtitle">GET /api/v1/field-schemas/case</div>
-            </div>
-
             <div class="flow-step" data-step="list-clients">
                 <div>
-                    <span class="step-number">6</span>
-                    <span class="step-title">列出個案</span>
+                    <span class="step-number">5</span>
+                    <span class="step-title">列出客戶</span>
                 </div>
                 <div class="step-subtitle">GET /api/v1/clients</div>
             </div>
 
             <div class="flow-step" data-step="create-client">
                 <div>
-                    <span class="step-number">7</span>
-                    <span class="step-title">建立個案</span>
+                    <span class="step-number">6</span>
+                    <span class="step-title">建立客戶</span>
                 </div>
                 <div class="step-subtitle">POST /api/v1/clients</div>
             </div>
 
             <div class="flow-step" data-step="view-client">
                 <div>
-                    <span class="step-number">8</span>
-                    <span class="step-title">查看個案</span>
+                    <span class="step-number">7</span>
+                    <span class="step-title">查看客戶</span>
                 </div>
                 <div class="step-subtitle">GET /api/v1/clients/{id}</div>
             </div>
 
             <div class="flow-step" data-step="update-client">
                 <div>
-                    <span class="step-number">9</span>
-                    <span class="step-title">更新個案</span>
+                    <span class="step-number">8</span>
+                    <span class="step-title">更新客戶</span>
                 </div>
                 <div class="step-subtitle">PATCH /api/v1/clients/{id}</div>
             </div>
 
             <div class="flow-step" data-step="delete-client">
                 <div>
-                    <span class="step-number">10</span>
-                    <span class="step-title">刪除個案</span>
+                    <span class="step-number">9</span>
+                    <span class="step-title">刪除客戶</span>
                 </div>
                 <div class="step-subtitle">DELETE /api/v1/clients/{id}</div>
+            </div>
+            </div>
+
+            <!-- 個案管理 -->
+            <div class="flow-group-title" data-group="case">📋 個案管理 Case</div>
+            <div class="flow-group-content" data-group-content="case">
+
+            <div class="flow-step" data-step="get-case-field-schema">
+                <div>
+                    <span class="step-number">10</span>
+                    <span class="step-title">取得 Case 欄位配置</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/field-schemas/case</div>
+            </div>
+
+            <div class="flow-step" data-step="list-cases">
+                <div>
+                    <span class="step-number">11</span>
+                    <span class="step-title">列出個案</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/cases</div>
+            </div>
+
+            <div class="flow-step" data-step="create-case">
+                <div>
+                    <span class="step-number">12</span>
+                    <span class="step-title">建立個案</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/cases</div>
+            </div>
+
+            <div class="flow-step" data-step="view-case">
+                <div>
+                    <span class="step-number">13</span>
+                    <span class="step-title">查看個案</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/cases/{id}</div>
+            </div>
+
+            <div class="flow-step" data-step="update-case">
+                <div>
+                    <span class="step-number">14</span>
+                    <span class="step-title">更新個案</span>
+                </div>
+                <div class="step-subtitle">PATCH /api/v1/cases/{id}</div>
+            </div>
+
+            <div class="flow-step" data-step="delete-case">
+                <div>
+                    <span class="step-number">15</span>
+                    <span class="step-title">刪除個案</span>
+                </div>
+                <div class="step-subtitle">DELETE /api/v1/cases/{id}</div>
             </div>
             </div>
 
@@ -1023,9 +1068,81 @@
                 `
             },
             'create-client': {
-                title: '建立個案',
+                title: '建立客戶',
                 subtitle: 'POST /api/v1/clients',
-                renderForm: () => `
+                init: async function() {
+                    // Fetch client field schema
+                    if (!state.clientFieldSchema) {
+                        try {
+                            const clientRes = await fetch(`${BASE_URL}/api/v1/field-schemas/client`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+
+                            if (clientRes.ok) {
+                                state.clientFieldSchema = await clientRes.json();
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch client schema:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    if (!state.clientFieldSchema) {
+                        return `<p>載入欄位配置中...</p>`;
+                    }
+
+                    let formHtml = '';
+
+                    // Render Client fields dynamically
+                    const clientSchema = state.clientFieldSchema;
+
+                    clientSchema.sections.forEach(section => {
+                        formHtml += `<h4 style="margin: 20px 0 10px 0; color: #1e40af; border-bottom: 1px solid #dbeafe; padding-bottom: 6px;">${section.title}</h4>`;
+                        if (section.description) {
+                            formHtml += `<p style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">${section.description}</p>`;
+                        }
+
+                        section.fields.forEach(field => {
+                            const required = field.required ? ' *' : '';
+                            const inputId = `client-${field.key}`;
+
+                            formHtml += `<div class="form-group">`;
+                            formHtml += `<label>${field.label}${required}</label>`;
+
+                            if (field.type === 'textarea') {
+                                formHtml += `<textarea id="${inputId}" placeholder="${field.placeholder || ''}" ${field.required ? 'required' : ''}></textarea>`;
+                            } else if (field.type === 'single_select') {
+                                formHtml += `<select id="${inputId}" ${field.required ? 'required' : ''}>`;
+                                formHtml += `<option value="">請選擇</option>`;
+                                field.options.forEach(opt => {
+                                    formHtml += `<option value="${opt}">${opt}</option>`;
+                                });
+                                formHtml += `</select>`;
+                            } else if (field.type === 'date') {
+                                formHtml += `<input type="date" id="${inputId}" ${field.required ? 'required' : ''} />`;
+                            } else if (field.type === 'email') {
+                                formHtml += `<input type="email" id="${inputId}" placeholder="${field.placeholder || ''}" ${field.required ? 'required' : ''} />`;
+                            } else if (field.type === 'phone') {
+                                formHtml += `<input type="tel" id="${inputId}" placeholder="${field.placeholder || ''}" ${field.required ? 'required' : ''} />`;
+                            } else {
+                                formHtml += `<input type="text" id="${inputId}" placeholder="${field.placeholder || ''}" ${field.required ? 'required' : ''} />`;
+                            }
+
+                            if (field.help_text) {
+                                formHtml += `<small style="color: #6b7280; font-size: 12px;">${field.help_text}</small>`;
+                            }
+                            formHtml += `</div>`;
+                        });
+                    });
+
+                    formHtml += `<div style="display: flex; gap: 10px; margin-top: 24px;">`;
+                    formHtml += `<button class="btn btn-primary" onclick="executeCreateClient()" ${!state.token ? 'disabled' : ''}>建立客戶</button>`;
+                    formHtml += `<button class="btn btn-secondary" onclick="quickFillClient()" ${!state.token ? 'disabled' : ''} style="background: #6366f1;">🎲 快速填入測試資料</button>`;
+                    formHtml += `</div>`;
+
+                    return formHtml;
+                },
+                renderForm_old: () => `
                     <div class="form-group">
                         <label>姓名 *</label>
                         <input type="text" id="client-name" placeholder="請輸入姓名" required />
@@ -1081,30 +1198,30 @@
                     </div>
                 `,
                 execute: async () => {
-                    const clientData = {
-                        name: document.getElementById('client-name').value,
-                        nickname: document.getElementById('client-nickname').value || undefined,
-                        birth_date: document.getElementById('client-birth-date').value || undefined,
-                        gender: document.getElementById('client-gender').value || undefined,
-                        occupation: document.getElementById('client-occupation').value || undefined,
-                        education: document.getElementById('client-education').value || undefined,
-                        location: document.getElementById('client-location').value || undefined,
-                        economic_status: document.getElementById('client-economic-status').value || undefined,
-                        family_relations: document.getElementById('client-family-relations').value || undefined,
-                        notes: document.getElementById('client-notes').value || undefined
-                    };
-
-                    // Handle other_info as JSON string
-                    const otherInfoText = document.getElementById('client-other-info').value.trim();
-                    if (otherInfoText) {
-                        clientData.other_info = { description: otherInfoText };
+                    if (!state.clientFieldSchema) {
+                        throw new Error('Client schema not loaded');
                     }
 
-                    // Code is always auto-generated, don't send it
+                    // Collect Client data from form
+                    const clientData = {};
+                    state.clientFieldSchema.sections.forEach(section => {
+                        section.fields.forEach(field => {
+                            const inputId = `client-${field.key}`;
+                            const element = document.getElementById(inputId);
+                            if (element && element.value) {
+                                clientData[field.key] = element.value;
+                            }
+                        });
+                    });
 
-                    // Remove undefined values
-                    Object.keys(clientData).forEach(key => clientData[key] === undefined && delete clientData[key]);
+                    // Remove empty values
+                    Object.keys(clientData).forEach(key => {
+                        if (clientData[key] === '' || clientData[key] === undefined) {
+                            delete clientData[key];
+                        }
+                    });
 
+                    // Create Client
                     const response = await fetch(`${BASE_URL}/api/v1/clients`, {
                         method: 'POST',
                         headers: {
@@ -1114,16 +1231,22 @@
                         body: JSON.stringify(clientData)
                     });
                     const data = await response.json();
+
                     if (response.ok) {
                         state.currentClient = data;
+                        // Add to clients list
+                        state.clients = state.clients || [];
+                        state.clients.push(data);
                     }
+
                     return { response, data };
                 },
-                renderPreview: (data) => `
+                renderPreview: (data) => {
+                    return `
                     <div class="info-card">
-                        <h3>✅ 個案建立成功</h3>
+                        <h3>✅ 客戶建立成功</h3>
                         <div class="info-row">
-                            <span class="info-label">ID</span>
+                            <span class="info-label">客戶 ID</span>
                             <span class="info-value" style="font-size: 11px;">${data.id}</span>
                         </div>
                         <div class="info-row">
@@ -1135,20 +1258,39 @@
                             <span class="info-value">${data.code}</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">年齡</span>
-                            <span class="info-value">${data.age}</span>
+                            <span class="info-label">Email</span>
+                            <span class="info-value">${data.email || 'N/A'}</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">性別</span>
-                            <span class="info-value">${data.gender}</span>
+                            <span class="info-label">電話</span>
+                            <span class="info-value">${data.phone || 'N/A'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">建立時間</span>
+                            <span class="info-value">${new Date(data.created_at).toLocaleString('zh-TW')}</span>
                         </div>
                     </div>
-                `
+                `;
+                }
             },
             'view-client': {
                 title: '查看個案',
                 subtitle: 'GET /api/v1/clients/{id}',
                 init: async () => {
+                    // Load field schemas if not already loaded
+                    if (!state.clientFieldSchema || !state.caseFieldSchema) {
+                        const [clientRes, caseRes] = await Promise.all([
+                            fetch(`${BASE_URL}/api/v1/field-schemas/client`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            }),
+                            fetch(`${BASE_URL}/api/v1/field-schemas/case`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            })
+                        ]);
+                        if (clientRes.ok) state.clientFieldSchema = await clientRes.json();
+                        if (caseRes.ok) state.caseFieldSchema = await caseRes.json();
+                    }
+
                     // Refresh client list before showing view form
                     if (state.token) {
                         try {
@@ -1185,87 +1327,158 @@
                 execute: async () => {
                     const clientId = document.getElementById('view-client-id').value;
 
-                    const response = await fetch(`${BASE_URL}/api/v1/clients/${clientId}`, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${state.token}`
-                        }
-                    });
-                    const data = await response.json();
-                    if (response.ok) {
-                        state.currentClient = data;
+                    // Fetch client data and their cases in parallel
+                    const [clientResponse, casesResponse] = await Promise.all([
+                        fetch(`${BASE_URL}/api/v1/clients/${clientId}`, {
+                            method: 'GET',
+                            headers: { 'Authorization': `Bearer ${state.token}` }
+                        }),
+                        fetch(`${BASE_URL}/api/v1/cases?client_id=${clientId}`, {
+                            method: 'GET',
+                            headers: { 'Authorization': `Bearer ${state.token}` }
+                        })
+                    ]);
+
+                    const clientData = await clientResponse.json();
+                    let casesData = null;
+
+                    if (casesResponse.ok) {
+                        casesData = await casesResponse.json();
                     }
-                    return { response, data };
+
+                    if (clientResponse.ok) {
+                        state.currentClient = clientData;
+                    }
+
+                    return {
+                        response: clientResponse,
+                        data: {
+                            client: clientData,
+                            cases: casesData
+                        }
+                    };
                 },
-                renderPreview: (data) => `
-                    <div class="info-card">
-                        <h3>👤 個案資訊</h3>
+                renderPreview: (data) => {
+                    if (!state.clientFieldSchema || !state.caseFieldSchema) {
+                        return '<div class="info-card"><p>載入欄位配置中...</p></div>';
+                    }
+
+                    const client = data.client;
+                    const cases = data.cases;
+
+                    let html = '<div class="info-card">';
+
+                    // Render client sections dynamically
+                    state.clientFieldSchema.sections.forEach(section => {
+                        html += `
+                            <h3 style="color: #3b82f6; margin-top: ${section.order > 1 ? '20px' : '0'}; margin-bottom: 12px;">
+                                👤 ${section.title}
+                            </h3>
+                        `;
+
+                        section.fields.forEach(field => {
+                            let value = client[field.key];
+
+                            // Format value based on type
+                            if (value === null || value === undefined || value === '') {
+                                value = 'N/A';
+                            } else if (field.type === 'date' && value) {
+                                value = new Date(value).toLocaleDateString('zh-TW');
+                            } else if (Array.isArray(value)) {
+                                value = value.join(', ');
+                            } else if (typeof value === 'object') {
+                                value = JSON.stringify(value);
+                            }
+
+                            html += `
+                                <div class="info-row">
+                                    <span class="info-label">${field.label}</span>
+                                    <span class="info-value">${value}</span>
+                                </div>
+                            `;
+                        });
+                    });
+
+                    // Show metadata
+                    html += `
+                        <h3 style="color: #6b7280; margin-top: 20px; margin-bottom: 12px;">ℹ️ 系統資訊</h3>
                         <div class="info-row">
-                            <span class="info-label">ID</span>
-                            <span class="info-value" style="font-size: 11px;">${data.id || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">姓名</span>
-                            <span class="info-value">${data.name || 'N/A'}</span>
+                            <span class="info-label">客戶 ID</span>
+                            <span class="info-value" style="font-size: 11px;">${client.id}</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">代碼</span>
-                            <span class="info-value">${data.code || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">暱稱</span>
-                            <span class="info-value">${data.nickname || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">出生日期</span>
-                            <span class="info-value">${data.birth_date || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">年齡</span>
-                            <span class="info-value">${data.age || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">性別</span>
-                            <span class="info-value">${data.gender || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">職業</span>
-                            <span class="info-value">${data.occupation || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">學歷</span>
-                            <span class="info-value">${data.education || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">現居地</span>
-                            <span class="info-value">${data.location || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">經歷狀況</span>
-                            <span class="info-value">${data.economic_status || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">家庭關係</span>
-                            <span class="info-value">${data.family_relations || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">其他重要資訊</span>
-                            <span class="info-value">${data.other_info && data.other_info.description ? data.other_info.description : (data.other_info && Object.keys(data.other_info).length > 0 ? JSON.stringify(data.other_info) : 'N/A')}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">標籤</span>
-                            <span class="info-value">${data.tags && data.tags.length > 0 ? data.tags.join(', ') : 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">備註</span>
-                            <span class="info-value">${data.notes || 'N/A'}</span>
+                            <span class="info-value">${client.code}</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">建立時間</span>
-                            <span class="info-value">${new Date(data.created_at).toLocaleString('zh-TW')}</span>
+                            <span class="info-value">${new Date(client.created_at).toLocaleString('zh-TW')}</span>
                         </div>
-                    </div>
-                `
+                    `;
+
+                    html += '</div>';
+
+                    // Render cases if available
+                    if (cases && cases.items && cases.items.length > 0) {
+                        cases.items.forEach((caseItem, index) => {
+                            html += '<div class="info-card" style="margin-top: 16px;">';
+
+                            state.caseFieldSchema.sections.forEach(section => {
+                                html += `
+                                    <h3 style="color: #10b981; margin-top: ${section.order > 1 ? '20px' : '0'}; margin-bottom: 12px;">
+                                        📋 ${section.title} ${cases.items.length > 1 ? `#${index + 1}` : ''}
+                                    </h3>
+                                `;
+
+                                section.fields.forEach(field => {
+                                    let value = caseItem[field.key];
+
+                                    // Format value based on type
+                                    if (value === null || value === undefined || value === '') {
+                                        value = 'N/A';
+                                    } else if (field.type === 'date' && value) {
+                                        value = new Date(value).toLocaleDateString('zh-TW');
+                                    } else if (Array.isArray(value)) {
+                                        value = value.join(', ');
+                                    } else if (typeof value === 'object') {
+                                        value = JSON.stringify(value);
+                                    }
+
+                                    html += `
+                                        <div class="info-row">
+                                            <span class="info-label">${field.label}</span>
+                                            <span class="info-value">${value}</span>
+                                        </div>
+                                    `;
+                                });
+                            });
+
+                            // Case metadata
+                            html += `
+                                <h3 style="color: #6b7280; margin-top: 20px; margin-bottom: 12px;">ℹ️ Case 系統資訊</h3>
+                                <div class="info-row">
+                                    <span class="info-label">Case ID</span>
+                                    <span class="info-value" style="font-size: 11px;">${caseItem.id}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">建立時間</span>
+                                    <span class="info-value">${new Date(caseItem.created_at).toLocaleString('zh-TW')}</span>
+                                </div>
+                            `;
+
+                            html += '</div>';
+                        });
+                    } else {
+                        html += `
+                            <div class="info-card" style="margin-top: 16px;">
+                                <h3 style="color: #6b7280;">📋 關聯的 Cases</h3>
+                                <p style="color: #6b7280; font-size: 14px; margin-top: 12px;">此客戶尚無 Case 記錄</p>
+                            </div>
+                        `;
+                    }
+
+                    return html;
+                }
             },
             'client-timeline': {
                 title: '查看個案歷程',
@@ -1551,8 +1764,22 @@
             },
             'update-client': {
                 title: '更新個案',
-                subtitle: 'PATCH /api/v1/clients/{id}',
+                subtitle: 'PATCH /api/v1/clients/{id} + PATCH /api/v1/cases/{id}',
                 init: async () => {
+                    // Load field schemas if not already loaded
+                    if (!state.clientFieldSchema || !state.caseFieldSchema) {
+                        const [clientRes, caseRes] = await Promise.all([
+                            fetch(`${BASE_URL}/api/v1/field-schemas/client`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            }),
+                            fetch(`${BASE_URL}/api/v1/field-schemas/case`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            })
+                        ]);
+                        if (clientRes.ok) state.clientFieldSchema = await clientRes.json();
+                        if (caseRes.ok) state.caseFieldSchema = await caseRes.json();
+                    }
+
                     // Refresh client list before showing update form
                     if (state.token) {
                         try {
@@ -2840,7 +3067,7 @@
             });
         });
 
-        function selectStep(stepKey) {
+        async function selectStep(stepKey) {
             // Update active state
             document.querySelectorAll('.flow-step').forEach(s => s.classList.remove('active'));
             document.querySelector(`[data-step="${stepKey}"]`).classList.add('active');
@@ -2849,12 +3076,14 @@
             const stepConfig = steps[stepKey];
             document.getElementById('action-title').textContent = stepConfig.title;
             document.getElementById('action-subtitle').textContent = stepConfig.subtitle;
-            document.getElementById('action-form').innerHTML = stepConfig.renderForm();
 
-            // Call init function if exists
+            // Call init function if exists (await if async)
             if (stepConfig.init) {
-                stepConfig.init();
+                await stepConfig.init();
             }
+
+            // Render form after init completes
+            document.getElementById('action-form').innerHTML = stepConfig.renderForm();
 
             document.getElementById('preview-title').textContent = stepConfig.title;
             document.getElementById('preview-subtitle').textContent = stepConfig.subtitle;
@@ -3184,6 +3413,91 @@ Co: 聽起來這個策略很有效，繼續保持！`
                 console.error('Error filling form:', error);
                 alert('填入資料時發生錯誤，請確認已在「建立個案」頁面');
             }
+        };
+
+        // Quick fill function for dynamic client form
+        window.quickFillDynamicClient = () => {
+            if (!state.clientFieldSchema || !state.caseFieldSchema) {
+                alert('欄位配置未載入');
+                return;
+            }
+
+            const randomNames = ['王大明', '李小華', '張美麗', '陳建國', '林雅婷', '吳志偉'];
+            const randomEmails = ['test1@example.com', 'test2@example.com', 'user@test.com'];
+            const randomPhones = ['0912345678', '0987654321', '0923456789'];
+
+            // Fill Client fields
+            state.clientFieldSchema.sections.forEach(section => {
+                section.fields.forEach(field => {
+                    const inputId = `client-${field.key}`;
+                    const element = document.getElementById(inputId);
+                    if (!element) return;
+
+                    switch (field.type) {
+                        case 'text':
+                            if (field.key === 'name') {
+                                element.value = randomNames[Math.floor(Math.random() * randomNames.length)];
+                            } else if (field.key === 'location') {
+                                element.value = ['台北市', '新北市', '台中市', '高雄市'][Math.floor(Math.random() * 4)];
+                            } else if (field.key === 'current_job') {
+                                element.value = '軟體工程師 / 3年';
+                            } else if (field.key === 'current_status') {
+                                element.value = '探索中';
+                            } else {
+                                element.value = '測試資料';
+                            }
+                            break;
+                        case 'email':
+                            element.value = randomEmails[Math.floor(Math.random() * randomEmails.length)];
+                            break;
+                        case 'phone':
+                            element.value = randomPhones[Math.floor(Math.random() * randomPhones.length)];
+                            break;
+                        case 'date':
+                            element.value = '1990-01-15';
+                            break;
+                        case 'single_select':
+                            if (field.options && field.options.length > 0) {
+                                const randomIndex = Math.floor(Math.random() * field.options.length);
+                                element.value = field.options[randomIndex];
+                            }
+                            break;
+                        case 'textarea':
+                            element.value = '這是測試資料';
+                            break;
+                    }
+                });
+            });
+
+            // Fill Case fields
+            state.caseFieldSchema.sections.forEach(section => {
+                section.fields.forEach(field => {
+                    if (field.key === 'case_number') return; // Skip auto-generated
+                    const inputId = `case-${field.key}`;
+                    const element = document.getElementById(inputId);
+                    if (!element) return;
+
+                    switch (field.type) {
+                        case 'single_select':
+                            if (field.options && field.options.length > 0) {
+                                // Use default value if available, otherwise random
+                                element.value = field.default_value || field.options[0];
+                            }
+                            break;
+                        case 'textarea':
+                            if (field.key === 'problem_description') {
+                                element.value = '希望釐清職涯方向，探索適合的發展路徑';
+                            } else if (field.key === 'goals') {
+                                element.value = '協助個案探索職涯方向、準備面試技巧';
+                            } else if (field.key === 'summary') {
+                                element.value = '個案對未來感到迷惘，希望透過諮詢找到方向';
+                            } else {
+                                element.value = '測試資料';
+                            }
+                            break;
+                    }
+                });
+            });
         };
 
         // Step execution functions

@@ -6,7 +6,7 @@ from app.schemas.base import BaseResponse, BaseSchema
 
 
 class CaseBase(BaseSchema):
-    case_number: str
+    case_number: Optional[str] = None
     status: CaseStatus = CaseStatus.ACTIVE
     summary: Optional[str] = None
     goals: Optional[str] = None
@@ -14,8 +14,7 @@ class CaseBase(BaseSchema):
 
 
 class CaseCreate(CaseBase):
-    counselor_id: UUID
-    visitor_id: UUID
+    client_id: UUID
 
 
 class CaseUpdate(BaseSchema):
@@ -27,4 +26,4 @@ class CaseUpdate(BaseSchema):
 
 class CaseResponse(BaseResponse, CaseBase):
     counselor_id: UUID
-    visitor_id: UUID
+    client_id: UUID
