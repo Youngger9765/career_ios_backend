@@ -9,6 +9,9 @@ FastAPI 後端服務，支援 iOS App 的職涯諮詢功能，整合 RAG Agent �
 2. **RAG Ops 線** - AI Agent 管理、知識庫維護、向量搜尋
 
 ### 關鍵特性
+- 🏢 **多租戶架構** - JWT 認證 + 租戶隔離，支援多組織使用
+- 🎨 **動態欄位配置** - 租戶級別自訂 Client/Case 欄位
+- 📋 **客戶與個案管理** - 完整 CRUD + 自動編號生成
 - 🎤 **雙輸入模式** - 支援音訊上傳（STT）或直接逐字稿
 - 🤖 **AI 報告生成** - RAG Agent + GPT-4 自動生成專業報告
 - 🔒 **文字脫敏** - 自動識別並脫敏 6 種敏感資料
@@ -57,6 +60,11 @@ MOCK_MODE=true poetry run uvicorn app.main:app --reload
 - **ReDoc**: http://localhost:8000/redoc
 - **RAG Ops Console**: http://localhost:8000/rag
 - **諮商前台**: http://localhost:8000/console
+
+詳細文件：
+- **[Client & Case Management API](docs/API_CLIENT_CASE_MANAGEMENT.md)** - 客戶與個案管理完整文件
+- **[Report Edit API](docs/API_REPORT_EDIT.md)** - 報告編輯 API 說明
+- **[iOS API Simple](docs/iOS_API_SIMPLE.md)** - iOS 開發快速上手
 
 ## 🗄️ Database Migration
 
@@ -256,7 +264,36 @@ git add . && git commit -m "feat: add example endpoint"
 
 ## 📖 核心 API
 
-### 諮商 API（`/api/v1`）
+### 🔐 認證與多租戶
+所有 API 請求需包含 JWT Token：
+```http
+Authorization: Bearer <token>
+```
+系統自動從 JWT 提取 `tenant_id`，實現租戶隔離。
+
+### 👥 客戶與個案管理 API（`/api/v1`）
+
+#### Field Schemas（動態欄位配置）
+- `GET /api/v1/field-schemas/client` - 取得 Client 欄位配置
+- `GET /api/v1/field-schemas/case` - 取得 Case 欄位配置
+
+#### Clients（客戶管理）
+- `GET /api/v1/clients` - 列出客戶（分頁）
+- `POST /api/v1/clients` - 建立客戶（自動生成編號 C0001）
+- `GET /api/v1/clients/{id}` - 查看客戶
+- `PATCH /api/v1/clients/{id}` - 更新客戶
+- `DELETE /api/v1/clients/{id}` - 刪除客戶
+
+#### Cases（個案管理）
+- `GET /api/v1/cases` - 列出個案（支援 client_id 過濾）
+- `POST /api/v1/cases` - 建立個案（自動生成編號 CASE0001）
+- `GET /api/v1/cases/{id}` - 查看個案
+- `PATCH /api/v1/cases/{id}` - 更新個案
+- `DELETE /api/v1/cases/{id}` - 刪除個案
+
+**詳細說明**: 參考 [Client & Case Management API 文件](docs/API_CLIENT_CASE_MANAGEMENT.md)
+
+### 📝 Sessions & Reports（會談與報告）
 
 #### Sessions（會談管理）
 - `POST /sessions/{id}/upload-audio` - 上傳音訊（Mode 1）
@@ -268,7 +305,7 @@ git add . && git commit -m "feat: add example endpoint"
 - `PATCH /reports/{id}/review` - 審核報告（approve/reject）
 - `GET /reports/{id}/download` - 下載報告
 
-### RAG API（`/api/rag`）
+### 🤖 RAG API（`/api/rag`）
 
 - `POST /api/rag/ingest` - 上傳知識文件
 - `POST /api/rag/search` - 向量搜尋
@@ -308,12 +345,14 @@ iOS App → 已處理逐字稿 → 脫敏 → 報告生成
 
 ## 📊 資料庫架構
 
-### 諮商系統（7 個表）
-- `users` - 用戶（諮商師等）
-- `visitors` - 來訪者
-- `cases` - 個案
+### 諮商系統（9 個表）
+- `counselors` - 諮商師（JWT 認證）
+- `clients` - 客戶（支援動態欄位）
+- `cases` - 個案（自動生成編號）
 - `sessions` - 會談
 - `reports` - 報告
+- `field_schemas` - 動態欄位配置（租戶級別）
+- `tenants` - 租戶（多租戶隔離）
 - `jobs` - 異步任務
 - `reminders` - 提醒事項
 
