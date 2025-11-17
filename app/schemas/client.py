@@ -16,13 +16,15 @@ class ClientBase(BaseModel):
     name: str = Field(..., description="Client real name")
     nickname: Optional[str] = Field(None, description="Nickname")
 
-    # Required fields
+    # Common required fields (all tenants)
     email: str = Field(..., description="Email address for consultation or records")
     gender: str = Field(..., description="Gender: 男／女／其他／不透露")
     birth_date: date = Field(..., description="Birth date (Western calendar, 1900-2025)")
-    identity_option: str = Field(..., description="Identity: 學生／社會新鮮人／轉職者／在職者／其他")
-    current_status: str = Field(..., description="Current situation for quick case classification")
     phone: str = Field(..., description="Mobile phone number")
+
+    # Tenant-specific required fields (optional for cross-tenant compatibility)
+    identity_option: Optional[str] = Field(None, description="Identity: 學生／社會新鮮人／轉職者／在職者／其他")
+    current_status: Optional[str] = Field(None, description="Current situation for quick case classification")
 
     # Optional fields
     education: Optional[str] = Field(None, description="Education: 高中／大學／研究所等")

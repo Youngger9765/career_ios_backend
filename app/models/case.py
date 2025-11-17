@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Column, ForeignKey, String, Text
+from sqlalchemy import Column, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -18,8 +18,11 @@ class CaseStatus(str, enum.Enum):
 
 class Case(Base, BaseModel):
     __tablename__ = "cases"
+    __table_args__ = (
+        UniqueConstraint('tenant_id', 'case_number', name='uix_tenant_case_number'),
+    )
 
-    case_number = Column(String, unique=True, index=True, nullable=False)
+    case_number = Column(String, index=True, nullable=False)
     counselor_id = Column(UUID(as_uuid=True), ForeignKey("counselors.id"), nullable=False)
     client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False)
     tenant_id = Column(String, nullable=False, index=True)

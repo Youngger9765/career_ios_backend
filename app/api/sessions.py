@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api/v1/sessions", tags=["Sessions"])
 # Schemas
 class SessionCreateRequest(BaseModel):
     """創建會談記錄請求"""
-    client_id: UUID
+    case_id: UUID
     session_date: str  # YYYY-MM-DD
     start_time: Optional[str] = None  # YYYY-MM-DD HH:MM
     end_time: Optional[str] = None  # YYYY-MM-DD HH:MM
@@ -32,6 +32,7 @@ class SessionCreateRequest(BaseModel):
     duration_minutes: Optional[int] = None  # 保留向下兼容
     notes: Optional[str] = None
     reflection: Optional[dict] = None  # 諮商師反思（JSON 格式，彈性支援不同租戶需求）
+    recordings: Optional[list] = None  # 錄音片段（支援會談中斷後繼續）
 
 
 class SessionUpdateRequest(BaseModel):
@@ -61,6 +62,7 @@ class SessionResponse(BaseModel):
     duration_minutes: Optional[int]
     notes: Optional[str]
     reflection: Optional[dict] = None  # 諮商師反思（人類撰寫）
+    recordings: Optional[list] = None  # 會談逐字稿片段（支援會談中斷後繼續）
     has_report: bool  # 是否已生成報告
     created_at: datetime
     updated_at: Optional[datetime]
@@ -97,48 +99,23 @@ def create_session(
     Raises:
         HTTPException: 404 if client not found, 500 if creation fails
     """
-    # 驗證個案存在且屬於當前諮商師
+    # 驗證 Case 存在且屬於當前租戶
     result = db.execute(
-        select(Client).where(
-            Client.id == request.client_id,
-            Client.counselor_id == current_user.id,
-            Client.tenant_id == tenant_id,
+        select(Case).where(
+            Case.id == request.case_id,
+            Case.tenant_id == tenant_id,
+            Case.deleted_at.is_(None),
         )
     )
-    client = result.scalar_one_or_none()
+    case = result.scalar_one_or_none()
 
-    if not client:
+    if not case:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Client not found or access denied",
+            detail="Case not found or access denied",
         )
 
     try:
-        # 查找或創建 Case
-        result = db.execute(
-            select(Case).where(
-                Case.client_id == client.id,
-                Case.tenant_id == tenant_id,
-            )
-        )
-        case = result.scalar_one_or_none()
-
-        if not case:
-            # Generate case_number
-            result = db.execute(
-                select(func.count(Case.id)).where(Case.tenant_id == tenant_id)
-            )
-            case_count = result.scalar() or 0
-            case_number = f"CASE-{tenant_id.upper()}-{case_count + 1:04d}"
-
-            case = Case(
-                client_id=client.id,
-                counselor_id=current_user.id,
-                tenant_id=tenant_id,
-                case_number=case_number,
-            )
-            db.add(case)
-            db.flush()
 
         # Parse start_time and end_time if provided
         start_time = None
@@ -212,6 +189,12 @@ def create_session(
             )
             db.flush()
 
+        # 從 case 獲取 client 信息
+        client_result = db.execute(
+            select(Client).where(Client.id == case.client_id)
+        )
+        client = client_result.scalar_one()
+
         # 創建 Session
         session = Session(
             case_id=case.id,
@@ -226,6 +209,7 @@ def create_session(
             duration_minutes=request.duration_minutes,
             notes=request.notes,
             reflection=request.reflection or {},
+            recordings=request.recordings or [],
         )
         db.add(session)
         db.commit()
@@ -291,7 +275,7 @@ def list_sessions(
     Returns:
         逐字稿列表
     """
-    # 基礎查詢: 只查詢當前諮商師的 sessions
+    # 基礎查詢: 只查詢當前諮商師的 non-deleted sessions
     query = (
         select(Session, Client, Case)
         .join(Case, Session.case_id == Case.id)
@@ -299,6 +283,9 @@ def list_sessions(
         .where(
             Client.counselor_id == current_user.id,
             Client.tenant_id == tenant_id,
+            Session.deleted_at.is_(None),
+            Case.deleted_at.is_(None),
+            Client.deleted_at.is_(None),
         )
     )
 
@@ -511,6 +498,9 @@ def get_session(
             Session.id == session_id,
             Client.counselor_id == current_user.id,
             Client.tenant_id == tenant_id,
+            Session.deleted_at.is_(None),
+            Case.deleted_at.is_(None),
+            Client.deleted_at.is_(None),
         )
     )
     row = result.first()
@@ -584,6 +574,9 @@ def update_session(
             Session.id == session_id,
             Client.counselor_id == current_user.id,
             Client.tenant_id == tenant_id,
+            Session.deleted_at.is_(None),
+            Case.deleted_at.is_(None),
+            Client.deleted_at.is_(None),
         )
     )
     row = result.first()
@@ -750,7 +743,7 @@ def delete_session(
     db: DBSession = Depends(get_db),
 ):
     """
-    刪除逐字稿 (如果有關聯報告會失敗)
+    軟刪除逐字稿 (設定 deleted_at 時間戳，如果有關聯報告會失敗)
 
     Args:
         session_id: Session UUID
@@ -761,6 +754,8 @@ def delete_session(
     Raises:
         HTTPException: 404 if not found, 400 if has reports, 500 if deletion fails
     """
+    from datetime import datetime, timezone
+
     result = db.execute(
         select(Session, Client, Case)
         .join(Case, Session.case_id == Case.id)
@@ -769,6 +764,7 @@ def delete_session(
             Session.id == session_id,
             Client.counselor_id == current_user.id,
             Client.tenant_id == tenant_id,
+            Session.deleted_at.is_(None),
         )
     )
     row = result.first()
@@ -796,21 +792,10 @@ def delete_session(
         )
 
     try:
-        deleted_session_number = session.session_number
-        case_id = session.case_id
-
-        db.delete(session)
-        db.flush()
-
-        # 重新編號：將所有 session_number > deleted_session_number 的 sessions 編號 -1
-        db.execute(
-            Session.__table__.update()
-            .where(Session.case_id == case_id)
-            .where(Session.session_number > deleted_session_number)
-            .values(session_number=Session.session_number - 1)
-        )
-
+        # Soft delete: set deleted_at timestamp
+        session.deleted_at = datetime.now(timezone.utc)
         db.commit()
+
     except Exception as e:
         db.rollback()
         raise HTTPException(

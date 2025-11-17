@@ -746,6 +746,7 @@
             token: localStorage.getItem('token') || '',
             currentUser: null,
             clients: [],
+            cases: [],
             sessions: [],
             reports: [],
             currentClient: null,
@@ -754,6 +755,15 @@
         };
 
         const BASE_URL = window.location.origin;
+
+        // Helper function to render tenant info banner
+        const renderTenantBanner = () => {
+            const tenantName = state.currentUser?.tenant_id || 'unknown';
+            return `<div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 6px; padding: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px;">🏢</span>
+                <span style="color: #0369a1; font-weight: 600;">當前租戶：${tenantName}</span>
+            </div>`;
+        };
 
         // Step configurations
         const steps = {
@@ -863,6 +873,7 @@
                 title: '取得 Client 欄位配置',
                 subtitle: 'GET /api/v1/field-schemas/client',
                 renderForm: () => `
+                    ${renderTenantBanner()}
                     <p>取得當前租戶的 Client 表單欄位配置，用於動態生成表單</p>
                     <button class="btn btn-primary" onclick="executeGetClientFieldSchema()" ${!state.token ? 'disabled' : ''}>取得配置</button>
                 `,
@@ -943,6 +954,7 @@
                 title: '取得 Case 欄位配置',
                 subtitle: 'GET /api/v1/field-schemas/case',
                 renderForm: () => `
+                    ${renderTenantBanner()}
                     <p>取得當前租戶的個案 (Case) 表單欄位配置，用於動態生成表單</p>
                     <button class="btn btn-primary" onclick="executeGetCaseFieldSchema()" ${!state.token ? 'disabled' : ''}>取得配置</button>
                 `,
@@ -1023,6 +1035,7 @@
                 title: '列出個案',
                 subtitle: 'GET /api/v1/clients',
                 renderForm: () => `
+                    ${renderTenantBanner()}
                     <div class="form-group">
                         <label>Search (optional)</label>
                         <input type="text" id="search" placeholder="搜尋姓名、代碼..." />
@@ -1091,7 +1104,7 @@
                         return `<p>載入欄位配置中...</p>`;
                     }
 
-                    let formHtml = '';
+                    let formHtml = renderTenantBanner();
 
                     // Render Client fields dynamically
                     const clientSchema = state.clientFieldSchema;
@@ -1314,6 +1327,7 @@
                     ).join('');
 
                     return `
+                        ${renderTenantBanner()}
                         <div class="form-group">
                             <label>選擇個案 *</label>
                             <select id="view-client-id">
@@ -1800,6 +1814,10 @@
                     }
                 },
                 renderForm: () => {
+                    if (!state.clientFieldSchema) {
+                        return `${renderTenantBanner()}<p>載入欄位配置中...</p>`;
+                    }
+
                     // Filter out currentClient from the list to avoid duplicates
                     const filteredClients = state.currentClient
                         ? state.clients.filter(c => c.id !== state.currentClient.id)
@@ -1809,7 +1827,8 @@
                         `<option value="${c.id}">${c.name} (${c.code})</option>`
                     ).join('');
 
-                    return `
+                    let formHtml = `
+                        ${renderTenantBanner()}
                         <div class="form-group">
                             <label>選擇個案 *</label>
                             <select id="update-client-id" onchange="loadClientDataForUpdate()">
@@ -1817,38 +1836,72 @@
                                 ${clientOptions}
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label>暱稱</label>
-                            <input type="text" id="update-client-nickname" placeholder="更新暱稱" />
-                        </div>
-                        <div class="form-group">
-                            <label>出生日期 (更新後將自動重新計算年齡)</label>
-                            <input type="date" id="update-client-birth-date" />
-                        </div>
-                        <div class="form-group">
-                            <label>職業</label>
-                            <input type="text" id="update-client-occupation" placeholder="更新職業" />
-                        </div>
-                        <div class="form-group">
-                            <label>標籤 (逗號分隔)</label>
-                            <input type="text" id="update-client-tags" placeholder="例: 職涯諮詢,轉職" />
-                        </div>
-                        <button class="btn btn-primary" onclick="executeUpdateClient()" ${!state.token || (!state.currentClient && state.clients.length === 0) ? 'disabled' : ''}>更新個案</button>
                     `;
+
+                    // Render dynamic fields from schema
+                    state.clientFieldSchema.sections.forEach(section => {
+                        formHtml += `<h4 style="margin: 20px 0 10px 0; color: #1e40af; border-bottom: 1px solid #dbeafe; padding-bottom: 6px;">${section.title}</h4>`;
+
+                        section.fields.forEach(field => {
+                            const inputId = `update-client-${field.key}`;
+                            formHtml += `<div class="form-group">`;
+                            formHtml += `<label>${field.label}</label>`;
+
+                            if (field.type === 'textarea') {
+                                formHtml += `<textarea id="${inputId}" placeholder="${field.placeholder || ''}"></textarea>`;
+                            } else if (field.type === 'single_select') {
+                                formHtml += `<select id="${inputId}">`;
+                                formHtml += `<option value="">請選擇</option>`;
+                                field.options.forEach(opt => {
+                                    formHtml += `<option value="${opt}">${opt}</option>`;
+                                });
+                                formHtml += `</select>`;
+                            } else if (field.type === 'date') {
+                                formHtml += `<input type="date" id="${inputId}" />`;
+                            } else if (field.type === 'email') {
+                                formHtml += `<input type="email" id="${inputId}" placeholder="${field.placeholder || ''}" />`;
+                            } else if (field.type === 'phone') {
+                                formHtml += `<input type="tel" id="${inputId}" placeholder="${field.placeholder || ''}" />`;
+                            } else {
+                                formHtml += `<input type="text" id="${inputId}" placeholder="${field.placeholder || ''}" />`;
+                            }
+
+                            if (field.help_text) {
+                                formHtml += `<small style="color: #6b7280; font-size: 12px;">${field.help_text}</small>`;
+                            }
+                            formHtml += `</div>`;
+                        });
+                    });
+
+                    formHtml += `<button class="btn btn-primary" onclick="executeUpdateClient()" ${!state.token || (!state.currentClient && state.clients.length === 0) ? 'disabled' : ''}>更新個案</button>`;
+
+                    return formHtml;
                 },
                 execute: async () => {
+                    if (!state.clientFieldSchema) {
+                        throw new Error('Client schema not loaded');
+                    }
+
                     const clientId = document.getElementById('update-client-id').value;
                     const updateData = {};
 
-                    const nickname = document.getElementById('update-client-nickname').value;
-                    const birthDate = document.getElementById('update-client-birth-date').value;
-                    const occupation = document.getElementById('update-client-occupation').value;
-                    const tags = document.getElementById('update-client-tags').value;
+                    // Collect data from dynamic fields
+                    state.clientFieldSchema.sections.forEach(section => {
+                        section.fields.forEach(field => {
+                            const inputId = `update-client-${field.key}`;
+                            const element = document.getElementById(inputId);
+                            if (element && element.value) {
+                                updateData[field.key] = element.value;
+                            }
+                        });
+                    });
 
-                    if (nickname) updateData.nickname = nickname;
-                    if (birthDate) updateData.birth_date = birthDate;
-                    if (occupation) updateData.occupation = occupation;
-                    if (tags) updateData.tags = tags.split(',').map(t => t.trim());
+                    // Remove empty values
+                    Object.keys(updateData).forEach(key => {
+                        if (updateData[key] === '' || updateData[key] === undefined) {
+                            delete updateData[key];
+                        }
+                    });
 
                     const response = await fetch(`${BASE_URL}/api/v1/clients/${clientId}`, {
                         method: 'PATCH',
@@ -1864,31 +1917,51 @@
                     }
                     return { response, data };
                 },
-                renderPreview: (data) => `
-                    <div class="info-card">
-                        <h3>✅ 個案更新成功</h3>
+                renderPreview: (data) => {
+                    if (!state.clientFieldSchema) {
+                        return `<div class="info-card"><h3>✅ 個案更新成功</h3></div>`;
+                    }
+
+                    let html = `<div class="info-card"><h3>✅ 個案更新成功</h3>`;
+
+                    // Display basic info
+                    html += `
                         <div class="info-row">
-                            <span class="info-label">姓名</span>
-                            <span class="info-value">${data.name}</span>
+                            <span class="info-label">ID</span>
+                            <span class="info-value" style="font-size: 11px;">${data.id}</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">暱稱</span>
-                            <span class="info-value">${data.nickname || 'N/A'}</span>
+                            <span class="info-label">代碼</span>
+                            <span class="info-value">${data.code}</span>
                         </div>
+                    `;
+
+                    // Dynamically display fields from schema
+                    state.clientFieldSchema.sections.forEach(section => {
+                        section.fields.forEach(field => {
+                            const value = data[field.key];
+                            if (value !== undefined && value !== null && value !== '') {
+                                const displayValue = Array.isArray(value) ? value.join(', ') : value;
+                                html += `
+                                    <div class="info-row">
+                                        <span class="info-label">${field.label}</span>
+                                        <span class="info-value">${displayValue}</span>
+                                    </div>
+                                `;
+                            }
+                        });
+                    });
+
+                    html += `
                         <div class="info-row">
-                            <span class="info-label">年齡</span>
-                            <span class="info-value">${data.age || 'N/A'}</span>
+                            <span class="info-label">更新時間</span>
+                            <span class="info-value">${new Date(data.updated_at).toLocaleString('zh-TW')}</span>
                         </div>
-                        <div class="info-row">
-                            <span class="info-label">職業</span>
-                            <span class="info-value">${data.occupation || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">標籤</span>
-                            <span class="info-value">${data.tags?.join(', ') || 'N/A'}</span>
-                        </div>
-                    </div>
-                `
+                    `;
+
+                    html += `</div>`;
+                    return html;
+                }
             },
             'delete-client': {
                 title: '刪除個案',
@@ -1917,6 +1990,7 @@
                     ).join('');
 
                     return `
+                        ${renderTenantBanner()}
                         <div class="form-group">
                             <label>選擇要刪除的個案 *</label>
                             <select id="delete-client-id">
@@ -1961,19 +2035,473 @@
                     </div>
                 `
             },
+            'list-cases': {
+                title: '列出個案',
+                subtitle: 'GET /api/v1/cases',
+                init: async () => {
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/cases`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.cases = data.items;
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch cases:', error);
+                        }
+                    }
+                },
+                renderForm: () => `
+                    ${renderTenantBanner()}
+                    <div class="form-group">
+                        <label>篩選個案 ID（選填）</label>
+                        <select id="list-cases-client-id">
+                            <option value="">全部個案</option>
+                            ${state.clients.map(c => `<option value="${c.id}">${c.name} (${c.code})</option>`).join('')}
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="executeStep('list-cases')" ${!state.token ? 'disabled' : ''}>查詢個案列表</button>
+                `,
+                execute: async () => {
+                    const clientId = document.getElementById('list-cases-client-id').value;
+                    const url = clientId
+                        ? `${BASE_URL}/api/v1/cases?client_id=${clientId}`
+                        : `${BASE_URL}/api/v1/cases`;
+
+                    const response = await fetch(url, {
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.cases = data.items;
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => {
+                    let html = `<div class="info-card"><h3>📋 共 ${data.total} 個個案</h3>`;
+                    data.items.forEach(caseItem => {
+                        html += `
+                            <div class="info-row">
+                                <span class="info-label">個案編號</span>
+                                <span class="info-value">${caseItem.case_number}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">狀態</span>
+                                <span class="info-value">${caseItem.status}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">摘要</span>
+                                <span class="info-value">${caseItem.summary || '無'}</span>
+                            </div>
+                            <hr style="margin: 12px 0; border: none; border-top: 1px solid #e5e7eb;">
+                        `;
+                    });
+                    html += `</div>`;
+                    return html;
+                }
+            },
+            'create-case': {
+                title: '建立個案',
+                subtitle: 'POST /api/v1/cases',
+                init: async () => {
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/clients`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.clients = data.items;
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch clients:', error);
+                        }
+                    }
+                },
+                renderForm: () => `
+                    ${renderTenantBanner()}
+                    <div class="form-group">
+                        <label>選擇客戶 *</label>
+                        <select id="create-case-client-id">
+                            ${state.clients.map(c => `<option value="${c.id}">${c.name} (${c.code})</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>狀態</label>
+                        <select id="create-case-status">
+                            <option value="active">Active</option>
+                            <option value="completed">Completed</option>
+                            <option value="suspended">Suspended</option>
+                            <option value="referred">Referred</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>摘要</label>
+                        <textarea id="create-case-summary" rows="3" placeholder="個案摘要"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>目標</label>
+                        <textarea id="create-case-goals" rows="3" placeholder="諮詢目標"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>問題描述</label>
+                        <textarea id="create-case-problem" rows="3" placeholder="諮詢目的或問題敘述"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 24px;">
+                        <button class="btn btn-primary" onclick="executeStep('create-case')" ${!state.token || state.clients.length === 0 ? 'disabled' : ''}>建立個案</button>
+                        <button class="btn btn-secondary" onclick="quickFillCase()" ${!state.token || state.clients.length === 0 ? 'disabled' : ''} style="background: #6366f1;">🎲 快速填入測試資料</button>
+                    </div>
+                `,
+                execute: async () => {
+                    const caseData = {
+                        client_id: document.getElementById('create-case-client-id').value,
+                        status: document.getElementById('create-case-status').value,
+                        summary: document.getElementById('create-case-summary').value || null,
+                        goals: document.getElementById('create-case-goals').value || null,
+                        problem_description: document.getElementById('create-case-problem').value || null
+                    };
+
+                    const response = await fetch(`${BASE_URL}/api/v1/cases`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(caseData)
+                    });
+                    const data = await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>✅ 個案建立成功</h3>
+                        <div class="info-row">
+                            <span class="info-label">個案編號</span>
+                            <span class="info-value">${data.case_number}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">ID</span>
+                            <span class="info-value" style="font-size: 11px;">${data.id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">狀態</span>
+                            <span class="info-value">${data.status}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">摘要</span>
+                            <span class="info-value">${data.summary || '無'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">目標</span>
+                            <span class="info-value">${data.goals || '無'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">問題描述</span>
+                            <span class="info-value">${data.problem_description || '無'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">建立時間</span>
+                            <span class="info-value">${new Date(data.created_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                    </div>
+                `
+            },
+            'view-case': {
+                title: '查看個案',
+                subtitle: 'GET /api/v1/cases/{id}',
+                init: async () => {
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/cases`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.cases = data.items;
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch cases:', error);
+                        }
+                    }
+                },
+                renderForm: () => `
+                    ${renderTenantBanner()}
+                    <div class="form-group">
+                        <label>選擇個案 *</label>
+                        <select id="view-case-id">
+                            ${state.cases.map(c => `<option value="${c.id}">${c.case_number} - ${c.status}</option>`).join('')}
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="executeStep('view-case')" ${!state.token || state.cases.length === 0 ? 'disabled' : ''}>查看個案</button>
+                `,
+                execute: async () => {
+                    const caseId = document.getElementById('view-case-id').value;
+                    const response = await fetch(`${BASE_URL}/api/v1/cases/${caseId}`, {
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    });
+                    const data = await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>📋 個案詳情</h3>
+                        <div class="info-row">
+                            <span class="info-label">個案編號</span>
+                            <span class="info-value">${data.case_number}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">ID</span>
+                            <span class="info-value" style="font-size: 11px;">${data.id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">狀態</span>
+                            <span class="info-value">${data.status}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">客戶 ID</span>
+                            <span class="info-value" style="font-size: 11px;">${data.client_id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">諮商師 ID</span>
+                            <span class="info-value" style="font-size: 11px;">${data.counselor_id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">摘要</span>
+                            <span class="info-value">${data.summary || '無'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">目標</span>
+                            <span class="info-value">${data.goals || '無'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">問題描述</span>
+                            <span class="info-value">${data.problem_description || '無'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">建立時間</span>
+                            <span class="info-value">${new Date(data.created_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">更新時間</span>
+                            <span class="info-value">${new Date(data.updated_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                    </div>
+                `
+            },
+            'update-case': {
+                title: '更新個案',
+                subtitle: 'PATCH /api/v1/cases/{id}',
+                init: async () => {
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/cases`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.cases = data.items;
+                                // Re-render form with updated list
+                                document.getElementById('action-form').innerHTML = steps['update-case'].renderForm();
+                                // Load data for first case
+                                setTimeout(() => loadCaseDataForUpdate(), 100);
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch cases:', error);
+                        }
+                    }
+                },
+                renderForm: () => `
+                    ${renderTenantBanner()}
+                    <div class="form-group">
+                        <label>選擇個案 *</label>
+                        <select id="update-case-id" onchange="loadCaseDataForUpdate()">
+                            ${state.cases.map(c => `<option value="${c.id}">${c.case_number} - ${c.status}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>狀態</label>
+                        <select id="update-case-status">
+                            <option value="">請選擇</option>
+                            <option value="active">Active</option>
+                            <option value="completed">Completed</option>
+                            <option value="suspended">Suspended</option>
+                            <option value="referred">Referred</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>摘要</label>
+                        <textarea id="update-case-summary" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>目標</label>
+                        <textarea id="update-case-goals" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>問題描述</label>
+                        <textarea id="update-case-problem" rows="3"></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="executeUpdateCase()" ${!state.token || state.cases.length === 0 ? 'disabled' : ''}>更新個案</button>
+                `,
+                execute: async () => {
+                    const caseId = document.getElementById('update-case-id').value;
+                    const updateData = {};
+
+                    const status = document.getElementById('update-case-status').value;
+                    const summary = document.getElementById('update-case-summary').value;
+                    const goals = document.getElementById('update-case-goals').value;
+                    const problem = document.getElementById('update-case-problem').value;
+
+                    if (status) updateData.status = status;
+                    if (summary) updateData.summary = summary;
+                    if (goals) updateData.goals = goals;
+                    if (problem) updateData.problem_description = problem;
+
+                    const response = await fetch(`${BASE_URL}/api/v1/cases/${caseId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(updateData)
+                    });
+                    const data = await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>✅ 個案更新成功</h3>
+                        <div class="info-row">
+                            <span class="info-label">個案編號</span>
+                            <span class="info-value">${data.case_number}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">狀態</span>
+                            <span class="info-value">${data.status}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">摘要</span>
+                            <span class="info-value">${data.summary || '無'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">目標</span>
+                            <span class="info-value">${data.goals || '無'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">問題描述</span>
+                            <span class="info-value">${data.problem_description || '無'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">更新時間</span>
+                            <span class="info-value">${new Date(data.updated_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                    </div>
+                `
+            },
+            'delete-case': {
+                title: '刪除個案',
+                subtitle: 'DELETE /api/v1/cases/{id}',
+                init: async () => {
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/cases`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.cases = data.items;
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch cases:', error);
+                        }
+                    }
+                },
+                renderForm: () => `
+                    ${renderTenantBanner()}
+                    <div class="form-group">
+                        <label>選擇要刪除的個案 *</label>
+                        <select id="delete-case-id">
+                            ${state.cases.map(c => `<option value="${c.id}">${c.case_number} - ${c.status}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="info-card" style="background: #fee2e2; border-color: #ef4444;">
+                        <p style="color: #991b1b; font-size: 13px;">⚠️ 警告：刪除個案為軟刪除（設置 deleted_at），不影響資料完整性</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="executeStep('delete-case')" ${!state.token || state.cases.length === 0 ? 'disabled' : ''} style="background: #ef4444;">刪除個案</button>
+                `,
+                execute: async () => {
+                    const caseId = document.getElementById('delete-case-id').value;
+                    const response = await fetch(`${BASE_URL}/api/v1/cases/${caseId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`
+                        }
+                    });
+
+                    const data = response.status === 204 ? { success: true, message: '個案已刪除' } : await response.json();
+
+                    if (response.status === 204) {
+                        state.cases = state.cases.filter(c => c.id !== caseId);
+                    }
+
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card" style="border-color: #10b981;">
+                        <h3 style="color: #10b981;">✅ 個案刪除成功</h3>
+                        <p style="color: #065f46; font-size: 14px; margin-top: 12px;">該個案已軟刪除（設置 deleted_at 時間戳）</p>
+                    </div>
+                `
+            },
             'create-session': {
                 title: '建立會談記錄',
                 subtitle: 'POST /api/v1/sessions',
+                init: async () => {
+                    if (state.token) {
+                        try {
+                            // Fetch both clients and cases
+                            const [clientsRes, casesRes] = await Promise.all([
+                                fetch(`${BASE_URL}/api/v1/clients`, {
+                                    headers: { 'Authorization': `Bearer ${state.token}` }
+                                }),
+                                fetch(`${BASE_URL}/api/v1/cases`, {
+                                    headers: { 'Authorization': `Bearer ${state.token}` }
+                                })
+                            ]);
+                            if (clientsRes.ok) {
+                                const clientsData = await clientsRes.json();
+                                state.clients = clientsData.items;
+                            }
+                            if (casesRes.ok) {
+                                const casesData = await casesRes.json();
+                                state.cases = casesData.items;
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch data:', error);
+                        }
+                    }
+                },
                 renderForm: () => {
-                    const clientOptions = state.clients.map(c =>
-                        `<option value="${c.id}">${c.name} (${c.code})</option>`
-                    ).join('');
+                    // Create a map of client info by ID for quick lookup
+                    const clientMap = {};
+                    state.clients.forEach(c => {
+                        clientMap[c.id] = c;
+                    });
+
+                    // Build case options with client name + case number
+                    const caseOptions = state.cases.map(caseItem => {
+                        const client = clientMap[caseItem.client_id];
+                        const clientName = client ? `${client.name} (${client.code})` : 'Unknown Client';
+                        return `<option value="${caseItem.id}">${clientName} + ${caseItem.case_number}</option>`;
+                    }).join('');
 
                     return `
+                        ${renderTenantBanner()}
                         <div class="form-group">
                             <label>選擇個案 *</label>
-                            <select id="session-client-id">
-                                ${clientOptions}
+                            <select id="session-case-id">
+                                ${caseOptions}
                             </select>
                         </div>
                         <div class="form-group">
@@ -1990,9 +2518,19 @@
                                 <input type="time" id="session-end-time" />
                             </div>
                         </div>
+
+                        <div class="info-card" style="background: #f0fdf4; border-color: #10b981; margin-top: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h4 style="color: #047857; margin: 0;">🎙️ 錄音片段 Recordings（支援會談中斷後繼續）</h4>
+                                <button type="button" class="btn btn-secondary" onclick="addRecordingSegment()" style="background: #10b981; padding: 6px 12px; font-size: 13px;">+ 新增片段</button>
+                            </div>
+                            <div id="recordings-container"></div>
+                        </div>
+
                         <div class="form-group">
-                            <label>逐字稿內容 *</label>
+                            <label>逐字稿內容（完整，自動從 recordings 匯聚）</label>
                             <textarea id="session-transcript" placeholder="輸入會談逐字稿..." rows="10"></textarea>
+                            <small style="color: #6b7280; font-size: 12px;">💡 若有使用 Recordings，此欄位會自動匯聚所有片段的逐字稿</small>
                         </div>
                         <div class="form-group">
                             <label>備註</label>
@@ -2018,7 +2556,7 @@
                             </div>
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <button class="btn btn-primary" onclick="executeCreateSession()" ${!state.token || state.clients.length === 0 ? 'disabled' : ''}>建立會談記錄</button>
+                            <button class="btn btn-primary" onclick="executeCreateSession()" ${!state.token || state.cases.length === 0 ? 'disabled' : ''}>建立會談記錄</button>
                             <button class="btn btn-secondary" onclick="quickFillSessionData()" ${!state.token ? 'disabled' : ''} style="background: #6366f1;">🎲 快速填入測試資料</button>
                         </div>
                     `;
@@ -2034,7 +2572,7 @@
                     }
 
                     const requestBody = {
-                        client_id: document.getElementById('session-client-id').value,
+                        case_id: document.getElementById('session-case-id').value,
                         session_date: sessionDate,  // Should be in YYYY-MM-DD format from input[type=date]
                         transcript: document.getElementById('session-transcript').value,
                         notes: document.getElementById('session-notes').value || null
@@ -2060,6 +2598,12 @@
                         if (reflectionSource) requestBody.reflection.feeling_source = reflectionSource;
                         if (reflectionChallenges) requestBody.reflection.current_challenges = reflectionChallenges;
                         if (reflectionSupervision) requestBody.reflection.supervision_topics = reflectionSupervision;
+                    }
+
+                    // Add recordings if any segments exist
+                    const recordings = collectRecordings();
+                    if (recordings.length > 0) {
+                        requestBody.recordings = recordings;
                     }
 
                     const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
@@ -2127,6 +2671,7 @@
                     ).join('');
 
                     return `
+                        ${renderTenantBanner()}
                         <div class="form-group">
                             <label>篩選個案 (可選)</label>
                             <select id="filter-session-client-id">
@@ -2488,6 +3033,7 @@
                     ).join('');
 
                     return `
+                        ${renderTenantBanner()}
                         <div class="form-group">
                             <label>選擇會談記錄 *</label>
                             <select id="delete-session-id">
@@ -2607,6 +3153,7 @@
 
                     if (sessionsWithoutReports.length === 0) {
                         return `
+                            ${renderTenantBanner()}
                             <div class="info-card" style="background: #fef3c7; border-color: #f59e0b;">
                                 <p style="color: #92400e;">⚠️ 沒有未生成報告的逐字稿。請先儲存逐字稿。</p>
                             </div>
@@ -2779,6 +3326,7 @@
                         `<option value="${c.id}">${c.name} (${c.code})</option>`
                     ).join('');
                     return `
+                        ${renderTenantBanner()}
                         ${!hasClients ? '<div class="alert alert-warning" style="background: #fff3cd; border: 1px solid #ffc107; padding: 12px; border-radius: 6px; margin-bottom: 16px; color: #856404;"><strong>⚠️ 提示：</strong> 請先執行「列出個案」步驟以載入個案清單，才能使用篩選功能</div>' : ''}
                         <div class="form-group">
                             <label>篩選個案 (選填)</label>
@@ -3263,7 +3811,7 @@
         // Load client data for update form
         window.loadClientDataForUpdate = async () => {
             const clientId = document.getElementById('update-client-id')?.value;
-            if (!clientId) return;
+            if (!clientId || !state.clientFieldSchema) return;
 
             try {
                 const response = await fetch(`${BASE_URL}/api/v1/clients/${clientId}`, {
@@ -3272,14 +3820,126 @@
 
                 if (response.ok) {
                     const client = await response.json();
-                    document.getElementById('update-client-nickname').value = client.nickname || '';
-                    document.getElementById('update-client-birth-date').value = client.birth_date || '';
-                    document.getElementById('update-client-occupation').value = client.occupation || '';
-                    document.getElementById('update-client-tags').value = client.tags?.join(', ') || '';
+
+                    // Dynamically populate fields based on schema
+                    state.clientFieldSchema.sections.forEach(section => {
+                        section.fields.forEach(field => {
+                            const inputId = `update-client-${field.key}`;
+                            const element = document.getElementById(inputId);
+                            if (element && client[field.key] !== undefined) {
+                                element.value = client[field.key] || '';
+                            }
+                        });
+                    });
                 }
             } catch (error) {
                 console.error('Failed to load client data:', error);
             }
+        };
+
+        // Load case data for update form
+        window.loadCaseDataForUpdate = async () => {
+            const caseId = document.getElementById('update-case-id')?.value;
+            if (!caseId) return;
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/cases/${caseId}`, {
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+
+                if (response.ok) {
+                    const caseData = await response.json();
+
+                    // Populate fields
+                    const statusEl = document.getElementById('update-case-status');
+                    const summaryEl = document.getElementById('update-case-summary');
+                    const goalsEl = document.getElementById('update-case-goals');
+                    const problemEl = document.getElementById('update-case-problem');
+
+                    if (statusEl) statusEl.value = caseData.status || '';
+                    if (summaryEl) summaryEl.value = caseData.summary || '';
+                    if (goalsEl) goalsEl.value = caseData.goals || '';
+                    if (problemEl) problemEl.value = caseData.problem_description || '';
+                }
+            } catch (error) {
+                console.error('Failed to load case data:', error);
+            }
+        };
+
+        // Recording segments management
+        let recordingSegmentCounter = 0;
+
+        window.addRecordingSegment = () => {
+            recordingSegmentCounter++;
+            const segmentNumber = recordingSegmentCounter;
+            const container = document.getElementById('recordings-container');
+
+            const segmentHtml = `
+                <div class="recording-segment" id="recording-segment-${segmentNumber}" style="background: white; border: 1px solid #d1d5db; border-radius: 6px; padding: 16px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h5 style="color: #047857; margin: 0;">📝 片段 ${segmentNumber}</h5>
+                        <button type="button" onclick="removeRecordingSegment(${segmentNumber})" style="background: #ef4444; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 刪除</button>
+                    </div>
+                    <input type="hidden" id="recording-${segmentNumber}-segment-number" value="${segmentNumber}" />
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                        <div class="form-group" style="margin: 0;">
+                            <label style="font-size: 13px;">開始時間</label>
+                            <input type="time" id="recording-${segmentNumber}-start" style="font-size: 13px; padding: 6px;" />
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label style="font-size: 13px;">結束時間</label>
+                            <input type="time" id="recording-${segmentNumber}-end" style="font-size: 13px; padding: 6px;" />
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label style="font-size: 13px;">時長（秒）</label>
+                            <input type="number" id="recording-${segmentNumber}-duration" placeholder="自動計算或手動填" style="font-size: 13px; padding: 6px;" />
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 13px;">逐字稿內容</label>
+                        <textarea id="recording-${segmentNumber}-transcript" rows="4" placeholder="此片段的逐字稿..." style="font-size: 13px;"></textarea>
+                    </div>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('beforeend', segmentHtml);
+        };
+
+        window.removeRecordingSegment = (segmentNumber) => {
+            const segment = document.getElementById(`recording-segment-${segmentNumber}`);
+            if (segment) {
+                segment.remove();
+            }
+        };
+
+        window.collectRecordings = () => {
+            const recordings = [];
+            const segments = document.querySelectorAll('.recording-segment');
+
+            segments.forEach((segment) => {
+                const segmentId = segment.id.replace('recording-segment-', '');
+                const segmentNumber = document.getElementById(`recording-${segmentId}-segment-number`)?.value;
+                const startTime = document.getElementById(`recording-${segmentId}-start`)?.value;
+                const endTime = document.getElementById(`recording-${segmentId}-end`)?.value;
+                const duration = document.getElementById(`recording-${segmentId}-duration`)?.value;
+                const transcript = document.getElementById(`recording-${segmentId}-transcript`)?.value;
+
+                if (transcript) {  // Only include if transcript is provided
+                    const sessionDate = document.getElementById('session-date')?.value;
+                    const recording = {
+                        segment_number: parseInt(segmentNumber),
+                        transcript_text: transcript
+                    };
+
+                    if (startTime) recording.start_time = `${sessionDate} ${startTime}`;
+                    if (endTime) recording.end_time = `${sessionDate} ${endTime}`;
+                    if (duration) recording.duration_seconds = parseInt(duration);
+
+                    recordings.push(recording);
+                }
+            });
+
+            return recordings;
         };
 
         // Quick fill session test data
@@ -3342,6 +4002,67 @@ Co: 聽起來這個策略很有效，繼續保持！`
             document.getElementById('reflection-source').value = randomReflection.source;
             document.getElementById('reflection-challenges').value = randomReflection.challenges;
             document.getElementById('reflection-supervision').value = randomReflection.supervision;
+
+            // Clear existing recordings and add 3 sample segments
+            document.getElementById('recordings-container').innerHTML = '';
+            recordingSegmentCounter = 0;
+
+            const sampleRecordingTranscripts = [
+                // 片段 1: 開場與建立關係
+                `Co: 你好，歡迎你來。今天想聊些什麼呢？
+Cl: 嗯...最近工作壓力很大，覺得快要撐不下去了。
+Co: 聽起來很辛苦。可以多說一些嗎？是什麼樣的壓力？
+Cl: 主管總是對我的工作不滿意，不管我怎麼做都覺得不夠好。
+Co: 聽起來你感到很挫折，可以分享一個具體的例子嗎？
+Cl: 上週我做了一份企劃案，花了很多心力，但主管只看了一眼就說這不是他要的。`,
+                // 片段 2: 深入探索
+                `Co: 剛才提到主管的反應，你當時的感受是什麼？
+Cl: 我覺得很困惑，也很受傷。我明明很努力了...
+Co: 這種困惑和受傷的感覺，能再具體描述嗎？
+Cl: 就像...不管我怎麼努力都得不到認可，開始懷疑自己是不是真的不適合這份工作。
+Co: 你開始懷疑自己的能力了？
+Cl: 對，我開始想，也許我真的做不好這個職位。`,
+                // 片段 3: 總結與下次方向
+                `Co: 那我們來總結一下今天談到的重點。
+Cl: 好的，我覺得今天收穫很多。
+Co: 你提到了工作上的挫折感，以及對自己能力的懷疑。下次我們可以更深入探討這些自我懷疑的來源。
+Cl: 好的，謝謝你。我會試著記錄這週的情緒變化。
+Co: 很好！那我們下次見。記得要好好照顧自己。
+Cl: 謝謝，我會的。`
+            ];
+
+            // Add exactly 3 recording segments
+            const numSegments = 3;
+
+            // Create all segments first, then fill them
+            for (let i = 0; i < numSegments; i++) {
+                addRecordingSegment();
+            }
+
+            // Wait a bit for DOM to be ready, then fill all segments
+            setTimeout(() => {
+                for (let i = 0; i < numSegments; i++) {
+                    const segmentId = i + 1; // segment IDs are 1, 2, 3
+                    const segmentStartMinute = i * 20; // Each segment is ~20 minutes apart
+                    const segmentDuration = 15 + Math.floor(Math.random() * 5); // 15-19 minutes duration
+                    const segmentEndMinute = segmentStartMinute + segmentDuration;
+                    const startHourSegment = startHour + Math.floor(segmentStartMinute / 60);
+                    const startMinuteSegment = segmentStartMinute % 60;
+                    const endHourSegment = startHour + Math.floor(segmentEndMinute / 60);
+                    const endMinuteSegment = segmentEndMinute % 60;
+                    const durationSeconds = segmentDuration * 60;
+
+                    const startEl = document.getElementById(`recording-${segmentId}-start`);
+                    const endEl = document.getElementById(`recording-${segmentId}-end`);
+                    const durationEl = document.getElementById(`recording-${segmentId}-duration`);
+                    const transcriptEl = document.getElementById(`recording-${segmentId}-transcript`);
+
+                    if (startEl) startEl.value = `${String(startHourSegment).padStart(2, '0')}:${String(startMinuteSegment).padStart(2, '0')}`;
+                    if (endEl) endEl.value = `${String(endHourSegment).padStart(2, '0')}:${String(endMinuteSegment).padStart(2, '0')}`;
+                    if (durationEl) durationEl.value = durationSeconds;
+                    if (transcriptEl) transcriptEl.value = sampleRecordingTranscripts[i];
+                }
+            }, 150); // Wait 150ms for all segments to be created
         };
 
         // Quick fill random client data
@@ -3416,8 +4137,8 @@ Co: 聽起來這個策略很有效，繼續保持！`
         };
 
         // Quick fill function for dynamic client form
-        window.quickFillDynamicClient = () => {
-            if (!state.clientFieldSchema || !state.caseFieldSchema) {
+        window.quickFillClient = () => {
+            if (!state.clientFieldSchema) {
                 alert('欄位配置未載入');
                 return;
             }
@@ -3500,6 +4221,39 @@ Co: 聽起來這個策略很有效，繼續保持！`
             });
         };
 
+        // Quick fill function for case creation
+        window.quickFillCase = () => {
+            const summaryEl = document.getElementById('create-case-summary');
+            const goalsEl = document.getElementById('create-case-goals');
+            const problemEl = document.getElementById('create-case-problem');
+            const statusEl = document.getElementById('create-case-status');
+
+            const sampleData = [
+                {
+                    summary: '個案對未來感到迷惘，希望透過諮詢找到方向',
+                    goals: '協助個案探索職涯方向、準備面試技巧',
+                    problem: '希望釐清職涯方向，探索適合的發展路徑'
+                },
+                {
+                    summary: '職場適應困難，與主管關係緊張',
+                    goals: '改善職場人際關係、提升溝通技巧',
+                    problem: '在工作中感到壓力大，與主管溝通不良'
+                },
+                {
+                    summary: '轉職準備階段，需要履歷與面試指導',
+                    goals: '優化履歷、提升面試表現、建立求職信心',
+                    problem: '想轉換職涯跑道，但不知如何準備'
+                }
+            ];
+
+            const randomData = sampleData[Math.floor(Math.random() * sampleData.length)];
+
+            if (summaryEl) summaryEl.value = randomData.summary;
+            if (goalsEl) goalsEl.value = randomData.goals;
+            if (problemEl) problemEl.value = randomData.problem;
+            if (statusEl) statusEl.value = 'active';
+        };
+
         // Step execution functions
         window.executeLogin = () => executeStep('login');
         window.executeMe = () => executeStep('me');
@@ -3511,6 +4265,11 @@ Co: 聽起來這個策略很有效，繼續保持！`
         window.executeClientTimeline = () => executeStep('client-timeline');
         window.executeUpdateClient = () => executeStep('update-client');
         window.executeDeleteClient = () => executeStep('delete-client');
+        window.executeListCases = () => executeStep('list-cases');
+        window.executeCreateCase = () => executeStep('create-case');
+        window.executeViewCase = () => executeStep('view-case');
+        window.executeUpdateCase = () => executeStep('update-case');
+        window.executeDeleteCase = () => executeStep('delete-case');
         window.executeCreateSession = () => executeStep('create-session');
         window.executeListSessions = () => executeStep('list-sessions');
         window.executeViewSession = () => executeStep('view-session');

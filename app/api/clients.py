@@ -89,10 +89,12 @@ def create_client(
         if not client_code:
             client_code = _generate_client_code(db, tenant_id)
 
-        # Check if code already exists
+        # Check if code already exists (exclude soft-deleted)
         result = db.execute(
             select(Client).where(
-                Client.code == client_code, Client.tenant_id == tenant_id
+                Client.code == client_code,
+                Client.tenant_id == tenant_id,
+                Client.deleted_at.is_(None),
             )
         )
         if result.scalar_one_or_none():
@@ -161,10 +163,11 @@ def list_clients(
     Returns:
         Paginated list of clients
     """
-    # Base query - only current counselor's clients
+    # Base query - only current counselor's non-deleted clients
     query = select(Client).where(
         Client.counselor_id == current_user.id,
         Client.tenant_id == tenant_id,
+        Client.deleted_at.is_(None),
     )
 
     # Add search filter
@@ -221,6 +224,7 @@ def get_client(
             Client.id == client_id,
             Client.counselor_id == current_user.id,
             Client.tenant_id == tenant_id,
+            Client.deleted_at.is_(None),
         )
     )
     client = result.scalar_one_or_none()
@@ -264,6 +268,7 @@ def update_client(
             Client.id == client_id,
             Client.counselor_id == current_user.id,
             Client.tenant_id == tenant_id,
+            Client.deleted_at.is_(None),
         )
     )
     client = result.scalar_one_or_none()
@@ -288,13 +293,14 @@ def update_client(
                 age -= 1
             update_data["age"] = age
 
-        # Check if code is being updated and if it conflicts with existing client
+        # Check if code is being updated and if it conflicts with existing client (exclude deleted)
         if "code" in update_data and update_data["code"] != client.code:
             existing = db.execute(
                 select(Client).where(
                     Client.code == update_data["code"],
                     Client.tenant_id == tenant_id,
                     Client.id != client_id,
+                    Client.deleted_at.is_(None),
                 )
             ).scalar_one_or_none()
 
@@ -332,7 +338,7 @@ def delete_client(
     db: Session = Depends(get_db),
 ):
     """
-    Delete a client
+    Soft delete a client (sets deleted_at timestamp)
 
     Args:
         client_id: Client UUID
@@ -343,11 +349,14 @@ def delete_client(
     Raises:
         HTTPException: 404 if client not found or not owned by counselor
     """
+    from datetime import datetime, timezone
+
     result = db.execute(
         select(Client).where(
             Client.id == client_id,
             Client.counselor_id == current_user.id,
             Client.tenant_id == tenant_id,
+            Client.deleted_at.is_(None),  # Only non-deleted clients
         )
     )
     client = result.scalar_one_or_none()
@@ -358,7 +367,8 @@ def delete_client(
             detail="Client not found",
         )
 
-    db.delete(client)
+    # Soft delete: set deleted_at timestamp
+    client.deleted_at = datetime.now(timezone.utc)
     db.commit()
 
 
@@ -432,12 +442,13 @@ def get_client_timeline(
           ]
         }
     """
-    # 驗證 client 存在且屬於當前諮商師
+    # 驗證 client 存在且屬於當前諮商師 (exclude deleted)
     client_result = db.execute(
         select(Client).where(
             Client.id == client_id,
             Client.counselor_id == current_user.id,
             Client.tenant_id == tenant_id,
+            Client.deleted_at.is_(None),
         )
     )
     client = client_result.scalar_one_or_none()

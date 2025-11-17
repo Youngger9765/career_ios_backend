@@ -41,7 +41,10 @@ def list_cases(
     Returns:
         Dictionary with items and total count
     """
-    query = select(Case).where(Case.tenant_id == tenant_id)
+    query = select(Case).where(
+        Case.tenant_id == tenant_id,
+        Case.deleted_at.is_(None),
+    )
 
     if client_id:
         query = query.where(Case.client_id == client_id)
@@ -77,11 +80,12 @@ def _generate_case_number(db: Session, tenant_id: str) -> str:
     Returns:
         Generated case number
     """
-    # Find the highest existing case number for this tenant
+    # Find the highest existing case number for this tenant (exclude deleted)
     result = db.execute(
         select(Case.case_number)
         .where(Case.tenant_id == tenant_id)
         .where(Case.case_number.like("CASE%"))
+        .where(Case.deleted_at.is_(None))
         .order_by(Case.case_number.desc())
     )
     numbers = result.scalars().all()
@@ -129,10 +133,12 @@ def create_case(
         if not case_number:
             case_number = _generate_case_number(db, tenant_id)
 
-        # Check if case number already exists
+        # Check if case number already exists (exclude deleted)
         result = db.execute(
             select(Case).where(
-                Case.case_number == case_number, Case.tenant_id == tenant_id
+                Case.case_number == case_number,
+                Case.tenant_id == tenant_id,
+                Case.deleted_at.is_(None),
             )
         )
         if result.scalar_one_or_none():
@@ -206,7 +212,11 @@ def get_case(
         HTTPException: 404 if case not found
     """
     result = db.execute(
-        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+        select(Case).where(
+            Case.id == case_id,
+            Case.tenant_id == tenant_id,
+            Case.deleted_at.is_(None),
+        )
     )
     case = result.scalar_one_or_none()
 
@@ -246,7 +256,11 @@ def update_case(
     """
     try:
         result = db.execute(
-            select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+            select(Case).where(
+                Case.id == case_id,
+                Case.tenant_id == tenant_id,
+                Case.deleted_at.is_(None),
+            )
         )
         case = result.scalar_one_or_none()
 
@@ -284,7 +298,7 @@ def delete_case(
     db: Session = Depends(get_db),
 ):
     """
-    Delete case
+    Soft delete case (sets deleted_at timestamp)
 
     Args:
         case_id: Case ID
@@ -296,9 +310,15 @@ def delete_case(
         HTTPException: 404 if case not found
         HTTPException: 500 if delete fails
     """
+    from datetime import datetime, timezone
+
     try:
         result = db.execute(
-            select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+            select(Case).where(
+                Case.id == case_id,
+                Case.tenant_id == tenant_id,
+                Case.deleted_at.is_(None),
+            )
         )
         case = result.scalar_one_or_none()
 
@@ -308,7 +328,8 @@ def delete_case(
                 detail=f"Case {case_id} not found",
             )
 
-        db.delete(case)
+        # Soft delete
+        case.deleted_at = datetime.now(timezone.utc)
         db.commit()
 
     except HTTPException:
