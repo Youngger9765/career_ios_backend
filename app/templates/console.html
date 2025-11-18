@@ -4007,7 +4007,8 @@ Co: 聽起來這個策略很有效，繼續保持！`
             document.getElementById('session-date').value = today.toISOString().split('T')[0];
             document.getElementById('session-start-time').value = `${startHour}:00`;
             document.getElementById('session-end-time').value = `${endHour}:00`;
-            document.getElementById('session-transcript').value = randomTranscript;
+            // transcript 將從 recordings 自動聚合，暫不填充
+            document.getElementById('session-transcript').value = '';
             document.getElementById('session-notes').value = '測試會談記錄';
 
             // Fill reflection fields
@@ -4075,6 +4076,10 @@ Cl: 謝謝，我會的。`
                     if (durationEl) durationEl.value = durationSeconds;
                     if (transcriptEl) transcriptEl.value = sampleRecordingTranscripts[i];
                 }
+
+                // 自動聚合所有 recordings 的 transcript_text 到完整逐字稿
+                const aggregatedTranscript = sampleRecordingTranscripts.join('\n\n');
+                document.getElementById('session-transcript').value = aggregatedTranscript;
             }, 150); // Wait 150ms for all segments to be created
         };
 
