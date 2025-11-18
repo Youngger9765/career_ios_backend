@@ -21,6 +21,37 @@ from app.models.session import Session
 router = APIRouter(prefix="/api/v1/sessions", tags=["Sessions"])
 
 
+# Helper functions
+def aggregate_transcript_from_recordings(recordings: list) -> str:
+    """
+    從 recordings 聚合完整逐字稿
+
+    Args:
+        recordings: 錄音片段列表，每個包含 transcript_text
+
+    Returns:
+        聚合後的完整逐字稿
+    """
+    if not recordings:
+        return ""
+
+    # 按 segment_number 排序（如果有的話）
+    sorted_recordings = sorted(
+        recordings,
+        key=lambda r: r.get("segment_number", 0)
+    )
+
+    # 聚合所有 transcript_text
+    transcripts = [
+        r.get("transcript_text", "")
+        for r in sorted_recordings
+        if r.get("transcript_text")
+    ]
+
+    # 用兩個換行符分隔不同段落
+    return "\n\n".join(transcripts)
+
+
 # Schemas
 class SessionCreateRequest(BaseModel):
     """創建會談記錄請求"""
@@ -44,6 +75,7 @@ class SessionUpdateRequest(BaseModel):
     notes: Optional[str] = None
     duration_minutes: Optional[int] = None  # 保留向下兼容
     reflection: Optional[dict] = None  # 諮商師反思
+    recordings: Optional[list] = None  # 錄音片段（更新時也支援從 recordings 聚合）
 
 
 class SessionResponse(BaseModel):
@@ -72,7 +104,7 @@ class SessionResponse(BaseModel):
 
 
 class SessionListResponse(BaseModel):
-    """逐字稿列表響應"""
+    """會談記錄列表響應"""
     total: int
     items: list[SessionResponse]
 
@@ -195,6 +227,15 @@ def create_session(
         )
         client = client_result.scalar_one()
 
+        # 處理逐字稿：優先從 recordings 聚合，若無則使用直接提供的 transcript
+        recordings_list = request.recordings or []
+        if recordings_list:
+            # 從 recordings 自動聚合逐字稿
+            full_transcript = aggregate_transcript_from_recordings(recordings_list)
+        else:
+            # 使用直接提供的 transcript（向下兼容）
+            full_transcript = request.transcript
+
         # 創建 Session
         session = Session(
             case_id=case.id,
@@ -203,13 +244,13 @@ def create_session(
             session_date=new_session_date,
             start_time=start_time,
             end_time=end_time,
-            transcript_text=request.transcript,
-            transcript_sanitized=request.transcript,  # TODO: 實作脫敏
+            transcript_text=full_transcript,
+            transcript_sanitized=full_transcript,  # TODO: 實作脫敏
             source_type="transcript",
             duration_minutes=request.duration_minutes,
             notes=request.notes,
             reflection=request.reflection or {},
-            recordings=request.recordings or [],
+            recordings=recordings_list,
         )
         db.add(session)
         db.commit()
@@ -237,6 +278,7 @@ def create_session(
             duration_minutes=session.duration_minutes,
             notes=session.notes,
             reflection=session.reflection,
+            recordings=session.recordings,  # 包含錄音片段
             has_report=False,  # 剛創建,還沒報告
             created_at=session.created_at,
             updated_at=session.updated_at,
@@ -261,7 +303,7 @@ def list_sessions(
     db: DBSession = Depends(get_db),
 ) -> SessionListResponse:
     """
-    列出逐字稿記錄
+    列出會談記錄
 
     Args:
         client_id: 篩選特定個案
@@ -273,7 +315,7 @@ def list_sessions(
         db: 數據庫 session
 
     Returns:
-        逐字稿列表
+        會談記錄列表
     """
     # 基礎查詢: 只查詢當前諮商師的 non-deleted sessions
     query = (
@@ -344,6 +386,7 @@ def list_sessions(
                 duration_minutes=session.duration_minutes,
                 notes=session.notes,
                 reflection=session.reflection,
+                recordings=session.recordings,  # 包含錄音片段
                 has_report=has_report,
                 created_at=session.created_at,
                 updated_at=session.updated_at,
@@ -536,6 +579,7 @@ def get_session(
         duration_minutes=session.duration_minutes,
         notes=session.notes,
         reflection=session.reflection,
+        recordings=session.recordings,  # 包含錄音片段
         has_report=has_report,
         created_at=session.created_at,
         updated_at=session.updated_at,
@@ -631,7 +675,17 @@ def update_session(
                 new_end_time = new_end_time.replace(tzinfo=timezone.utc)
             session.end_time = new_end_time
 
-        if request.transcript is not None:
+        # 處理 transcript 和 recordings
+        # 優先使用 recordings 聚合，若無則使用直接提供的 transcript
+        if request.recordings is not None:
+            # 更新 recordings 並重新聚合逐字稿
+            session.recordings = request.recordings
+            if request.recordings:
+                full_transcript = aggregate_transcript_from_recordings(request.recordings)
+                session.transcript_text = full_transcript
+                session.transcript_sanitized = full_transcript
+        elif request.transcript is not None:
+            # 直接更新 transcript（向下兼容）
             session.transcript_text = request.transcript
             session.transcript_sanitized = request.transcript
 
@@ -722,6 +776,7 @@ def update_session(
             duration_minutes=session.duration_minutes,
             notes=session.notes,
             reflection=session.reflection,
+            recordings=session.recordings,  # 包含錄音片段
             has_report=has_report,
             created_at=session.created_at,
             updated_at=session.updated_at,
