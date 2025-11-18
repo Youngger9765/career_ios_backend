@@ -803,6 +803,19 @@
                     if (response.ok) {
                         state.token = data.access_token;
                         localStorage.setItem('token', state.token);
+
+                        // 自動獲取當前用戶資訊
+                        try {
+                            const meResponse = await fetch(`${BASE_URL}/api/auth/me`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (meResponse.ok) {
+                                const userData = await meResponse.json();
+                                state.currentUser = userData;
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch user info:', error);
+                        }
                     }
                     return { response, data };
                 },
