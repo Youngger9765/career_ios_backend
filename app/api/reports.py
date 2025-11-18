@@ -456,27 +456,33 @@ async def generate_report(
         session, client, case = row
         transcript = session.transcript_text
 
-        # Check if there's already a report for this session (processing or draft)
+        # Check if there's already a report for this session
         existing_report_result = db.execute(
             select(Report)
             .where(Report.session_id == session.id)
-            .where(Report.status.in_([ReportStatus.PROCESSING, ReportStatus.DRAFT]))
             .order_by(Report.created_at.desc())
             .limit(1)
         )
         existing_report = existing_report_result.scalar_one_or_none()
 
         if existing_report:
-            # Return existing report instead of creating a new one
-            return GenerateReportResponse(
-                session_id=session.id,
-                report_id=existing_report.id,
-                report=ProcessingStatus(
-                    status=existing_report.status.value.lower(),
-                    message=f"報告已存在（狀態：{existing_report.status.value}），返回現有報告"
-                ),
-                quality_summary=None,
-            )
+            # If PROCESSING or DRAFT, return existing report (prevent duplicate generation)
+            if existing_report.status in [ReportStatus.PROCESSING, ReportStatus.DRAFT]:
+                return GenerateReportResponse(
+                    session_id=session.id,
+                    report_id=existing_report.id,
+                    report=ProcessingStatus(
+                        status=existing_report.status.value.lower(),
+                        message=f"報告已存在（狀態：{existing_report.status.value}），返回現有報告"
+                    ),
+                    quality_summary=None,
+                )
+
+            # If FAILED, delete old report and allow retry
+            elif existing_report.status == ReportStatus.FAILED:
+                db.delete(existing_report)
+                db.commit()
+                # Continue to create new report (auto-retry)
 
         # Step 3: Create report record with "processing" status
         report = Report(
