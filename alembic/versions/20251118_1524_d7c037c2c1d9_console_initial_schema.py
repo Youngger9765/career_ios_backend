@@ -241,6 +241,50 @@ def upgrade() -> None:
     op.create_index(op.f('ix_refresh_tokens_tenant_id'), 'refresh_tokens', ['tenant_id'], unique=False)
     op.create_index(op.f('ix_refresh_tokens_token'), 'refresh_tokens', ['token'], unique=True)
 
+    # ============================================================================
+    # Enable Row Level Security (RLS) on all Console tables
+    # ============================================================================
+
+    # Tables with tenant_id - strict tenant isolation
+    tenant_tables = [
+        'counselors',
+        'clients',
+        'cases',
+        'sessions',
+        'reports',
+        'refresh_tokens',
+    ]
+
+    for table in tenant_tables:
+        # Enable RLS
+        op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
+
+        # Create tenant isolation policy
+        op.execute(f"""
+            CREATE POLICY tenant_isolation_policy ON {table}
+            FOR ALL
+            USING (tenant_id = current_setting('app.current_tenant_id', true)::text)
+            WITH CHECK (tenant_id = current_setting('app.current_tenant_id', true)::text)
+        """)
+
+    # Tables without tenant_id - inherit access via FK relationships
+    non_tenant_tables = [
+        'jobs',
+        'reminders',
+    ]
+
+    for table in non_tenant_tables:
+        # Enable RLS
+        op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
+
+        # Create permissive policy (access controlled via parent FK)
+        op.execute(f"""
+            CREATE POLICY allow_authenticated_access ON {table}
+            FOR ALL
+            USING (true)
+            WITH CHECK (true)
+        """)
+
 
 def downgrade() -> None:
     # Drop all Console tables in reverse order

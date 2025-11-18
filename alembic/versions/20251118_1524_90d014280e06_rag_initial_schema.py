@@ -284,6 +284,42 @@ def upgrade() -> None:
     op.create_index(op.f('ix_pipeline_runs_status'), 'pipeline_runs', ['status'], unique=False)
     op.create_index(op.f('ix_pipeline_runs_target_id'), 'pipeline_runs', ['target_id'], unique=False)
 
+    # ============================================================================
+    # Enable Row Level Security (RLS) on all RAG tables
+    # ============================================================================
+
+    # RAG tables are shared resources or inherit access via FK relationships
+    # Enable RLS and create permissive policies for application-level access control
+
+    rag_tables = [
+        'datasources',
+        'documents',
+        'chunks',
+        'embeddings',
+        'collections',
+        'collection_items',
+        'agents',
+        'agent_versions',
+        'chat_logs',
+        'evaluation_experiments',
+        'evaluation_results',
+        'evaluation_testsets',
+        'document_quality_metrics',
+        'pipeline_runs',
+    ]
+
+    for table in rag_tables:
+        # Enable RLS
+        op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
+
+        # Create permissive policy (access controlled at application level)
+        op.execute(f"""
+            CREATE POLICY allow_authenticated_access ON {table}
+            FOR ALL
+            USING (true)
+            WITH CHECK (true)
+        """)
+
 
 def downgrade() -> None:
     # Drop all RAG tables in reverse order
