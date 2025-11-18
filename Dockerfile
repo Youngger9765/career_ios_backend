@@ -50,5 +50,5 @@ EXPOSE 8080
 # Set default port  
 ENV PORT=8080
 
-# Run application
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
+# Run application (with migrations)
+CMD ["./scripts/start.sh"]
