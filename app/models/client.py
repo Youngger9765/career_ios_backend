@@ -26,9 +26,9 @@ class Client(Base, BaseModel):
     birth_date = Column(Date, nullable=False)  # Birth date (Western calendar, 1900-2025)
     phone = Column(String, nullable=False)  # Mobile phone number
 
-    # Tenant-specific required fields (nullable for cross-tenant compatibility)
-    identity_option = Column(String)  # Identity: 學生／社會新鮮人／轉職者／在職者／其他
-    current_status = Column(String)  # Current situation for quick case classification
+    # Tenant-specific required fields
+    identity_option = Column(String, nullable=False)  # Identity: 學生／社會新鮮人／轉職者／在職者／其他
+    current_status = Column(String, nullable=False)  # Current situation for quick case classification
 
     # Optional fields
     age = Column(Integer)  # Auto-calculated from birth_date, updated on each save

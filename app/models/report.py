@@ -44,7 +44,7 @@ class Report(Base, BaseModel):
 
     # RAG Agent 引用
     citations_json = Column(JSON)  # RAG檢索的理論引用
-    agent_id = Column(Integer)  # 使用的Agent ID
+    agent_id = Column(Integer, ForeignKey("agents.id", ondelete='SET NULL'), nullable=True)  # 使用的Agent ID
 
     # Legacy fields (保留向下兼容)
     summary = Column(Text)

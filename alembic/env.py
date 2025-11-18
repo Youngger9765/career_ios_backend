@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.database import Base
 
 # Import all models so Alembic can detect them
+# Console models
 from app.models.counselor import Counselor
 from app.models.client import Client
 from app.models.case import Case
@@ -21,12 +22,19 @@ from app.models.report import Report
 from app.models.job import Job
 from app.models.reminder import Reminder
 from app.models.refresh_token import RefreshToken
-from app.models.agent import Agent, AgentVersion
-from app.models.document import Document, Chunk, Embedding, Datasource
+
+# RAG models
+from app.models.document import Datasource, Document, Chunk, Embedding
 from app.models.collection import Collection, CollectionItem
 from app.models.chat import ChatLog
+from app.models.evaluation import (
+    EvaluationExperiment,
+    EvaluationResult,
+    EvaluationTestSet,
+    DocumentQualityMetric,
+)
+from app.models.agent import Agent, AgentVersion
 from app.models.pipeline import PipelineRun
-from app.models.evaluation import EvaluationExperiment, EvaluationResult, EvaluationTestSet, DocumentQualityMetric
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
