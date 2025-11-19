@@ -563,7 +563,25 @@ Content-Type: application/json
   "session_date": "2024-01-15",             // 必填
   "start_time": "2024-01-15 14:00",        // optional，會談開始時間
   "end_time": "2024-01-15 15:00",          // optional，會談結束時間
-  "transcript": "逐字稿內容...",             // 必填
+  "transcript": "逐字稿內容...",             // optional（與 recordings 二選一）
+  "recordings": [                          // ⭐️ NEW optional，錄音片段數組
+    {
+      "segment_number": 1,
+      "start_time": "2024-01-15 14:00",
+      "end_time": "2024-01-15 14:20",
+      "duration_seconds": 1200,
+      "transcript_text": "第一段逐字稿內容...",
+      "transcript_sanitized": "第一段脫敏逐字稿..."
+    },
+    {
+      "segment_number": 2,
+      "start_time": "2024-01-15 14:25",
+      "end_time": "2024-01-15 14:45",
+      "duration_seconds": 1200,
+      "transcript_text": "第二段逐字稿內容...",
+      "transcript_sanitized": "第二段脫敏逐字稿..."
+    }
+  ],
   "duration_minutes": 50,                  // optional (保留向下兼容)
   "notes": "備註說明",                       // optional，諮商師人工撰寫的備註
   "reflection": {                          // ⭐️ NEW optional，諮商師反思（人類撰寫）
@@ -576,6 +594,13 @@ Content-Type: application/json
 ```
 
 **📝 欄位說明:**
+- `transcript` vs `recordings`: **二選一**
+  - `transcript`: 直接提供完整逐字稿（傳統方式）
+  - `recordings`: ⭐️ 提供分段錄音逐字稿（推薦），系統會**自動聚合**成完整逐字稿
+- `recordings` 自動聚合邏輯:
+  - 按 `segment_number` 排序
+  - 用 `\n\n` (兩個換行) 連接所有 `transcript_text`
+  - 自動填充到 `transcript_text` 和 `transcript_sanitized` 欄位
 - `notes`: 諮商師對本次會談的簡短備註
 - `reflection`: ⭐️ 諮商師對本次會談的深度反思，包含 4 個反思問題（選填）
   - `working_with_client`: 我和這個人工作的感受是？
@@ -594,7 +619,25 @@ Content-Type: application/json
   "session_date": "2024-01-15T00:00:00Z",
   "start_time": "2024-01-15T14:00:00Z",   // 會談開始時間
   "end_time": "2024-01-15T15:00:00Z",     // 會談結束時間
-  "transcript_text": "逐字稿內容...",
+  "transcript_text": "第一段逐字稿內容...\n\n第二段逐字稿內容...",  // ⭐️ 自動聚合
+  "recordings": [                          // ⭐️ NEW 錄音片段數組
+    {
+      "segment_number": 1,
+      "start_time": "2024-01-15 14:00",
+      "end_time": "2024-01-15 14:20",
+      "duration_seconds": 1200,
+      "transcript_text": "第一段逐字稿內容...",
+      "transcript_sanitized": "第一段脫敏逐字稿..."
+    },
+    {
+      "segment_number": 2,
+      "start_time": "2024-01-15 14:25",
+      "end_time": "2024-01-15 14:45",
+      "duration_seconds": 1200,
+      "transcript_text": "第二段逐字稿內容...",
+      "transcript_sanitized": "第二段脫敏逐字稿..."
+    }
+  ],
   "duration_minutes": 50,
   "notes": "備註說明",
   "has_report": false,
@@ -605,14 +648,48 @@ Content-Type: application/json
 
 **Swift Example:**
 ```swift
+struct RecordingSegment: Codable {
+    let segment_number: Int
+    let start_time: String
+    let end_time: String
+    let duration_seconds: Int
+    let transcript_text: String
+    let transcript_sanitized: String?
+}
+
 struct SessionCreateRequest: Codable {
     let client_id: UUID
     let session_date: String      // "YYYY-MM-DD"
     let start_time: String?       // "YYYY-MM-DD HH:MM"
     let end_time: String?         // "YYYY-MM-DD HH:MM"
-    let transcript: String
+    let transcript: String?       // ⭐️ Optional，與 recordings 二選一
+    let recordings: [RecordingSegment]?  // ⭐️ NEW Optional，錄音片段數組（推薦）
     let duration_minutes: Int?    // 保留向下兼容
     let notes: String?
+
+    // 使用 transcript 的傳統方式
+    init(clientId: UUID, sessionDate: String, transcript: String, notes: String? = nil) {
+        self.client_id = clientId
+        self.session_date = sessionDate
+        self.transcript = transcript
+        self.recordings = nil
+        self.notes = notes
+        self.start_time = nil
+        self.end_time = nil
+        self.duration_minutes = nil
+    }
+
+    // ⭐️ 使用 recordings 的新方式（推薦）
+    init(clientId: UUID, sessionDate: String, recordings: [RecordingSegment], notes: String? = nil) {
+        self.client_id = clientId
+        self.session_date = sessionDate
+        self.recordings = recordings
+        self.transcript = nil  // 系統會自動聚合
+        self.notes = notes
+        self.start_time = nil
+        self.end_time = nil
+        self.duration_minutes = nil
+    }
 }
 
 func createSession(token: String, request: SessionCreateRequest) async throws -> SessionDetail {
