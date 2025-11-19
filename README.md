@@ -62,7 +62,8 @@ MOCK_MODE=true poetry run uvicorn app.main:app --reload
 - **諮商前台**: http://localhost:8000/console
 
 詳細文件：
-- **[Client & Case Management API](docs/API_CLIENT_CASE_MANAGEMENT.md)** - 客戶與個案管理完整文件
+- **[Client & Case Management API](API_CLIENT_CASE_MANAGEMENT.md)** - 客戶與個案管理完整文件
+- **[iOS API Guide](IOS_API_GUIDE.md)** - iOS 開發完整指南
 - **[Report Edit API](docs/API_REPORT_EDIT.md)** - 報告編輯 API 說明
 - **[iOS API Simple](docs/iOS_API_SIMPLE.md)** - iOS 開發快速上手
 
@@ -291,7 +292,7 @@ Authorization: Bearer <token>
 - `PATCH /api/v1/cases/{id}` - 更新個案
 - `DELETE /api/v1/cases/{id}` - 刪除個案
 
-**詳細說明**: 參考 [Client & Case Management API 文件](docs/API_CLIENT_CASE_MANAGEMENT.md)
+**詳細說明**: 參考 [Client & Case Management API 文件](API_CLIENT_CASE_MANAGEMENT.md)
 
 ### 📝 Sessions & Reports（會談與報告）
 
