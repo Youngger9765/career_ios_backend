@@ -1,6 +1,6 @@
 # 職涯諮詢平台 - 交付說明
 
-## 📦 給案主（產品負責人）
+## 📦 給案主及設計（產品面）
 
 ### 🌐 Staging 環境
 
@@ -30,7 +30,97 @@
 
 ---
 
-## 👨‍💻 給 iOS 開發者
+## 👨‍💻 給 iOS 開發者（技術面）
+
+### 🏢 重要概念：多租戶架構 (Multi-Tenancy)
+
+#### 什麼是 Tenant ID？
+
+本系統採用 **多租戶架構**，支援多個獨立組織同時使用同一套 API：
+
+```
+組織 A (tenant_id: "career")
+  ├── 諮商師 Alice, Bob, Carol
+  └── 客戶 100 人
+
+組織 B (tenant_id: "island")
+  ├── 諮商師 David, Eve
+  └── 客戶 50 人
+```
+
+**租戶隔離保證**：
+- ✅ 組織 A 的諮商師只能看到組織 A 的客戶
+- ✅ 組織 B 的諮商師只能看到組織 B 的客戶
+- ✅ 資料完全隔離，無法跨組織存取
+
+#### iOS App 如何處理 Tenant ID？
+
+**重要：前端不需要手動傳遞 `tenant_id`！**
+
+1. **登入時取得 JWT Token**：
+```swift
+// 登入 API 回傳的 JWT Token 已包含 tenant_id
+let response = try await api.login(email: "user@career.com", password: "***")
+let jwtToken = response.access_token
+
+// JWT Payload 內容（自動包含）：
+// {
+//   "sub": "user@career.com",
+//   "tenant_id": "career",    // ⭐️ 後端自動加入
+//   "role": "counselor",
+//   "exp": 1234567890
+// }
+```
+
+2. **每個 API 請求只需附加 JWT Token**：
+```swift
+var request = URLRequest(url: url)
+request.addValue("Bearer \(jwtToken)", forHTTPHeaderField: "Authorization")
+
+// ✅ 正確：只傳 JWT Token
+// ❌ 不需要：額外傳遞 X-Tenant-ID header
+```
+
+3. **後端自動從 JWT 提取 `tenant_id`**：
+```python
+# 後端自動處理（iOS 開發者無需關心）
+def get_tenant_id(current_user: Counselor = Depends(get_current_user)) -> str:
+    return current_user.tenant_id  # 從 JWT 解析出來
+```
+
+#### 動態欄位配置（Field Schemas）
+
+不同租戶可以有不同的表單欄位：
+
+| 租戶 | 客戶欄位範例 |
+|------|-------------|
+| **職涯諮詢 (career)** | 學歷、職業、年資、職涯目標 |
+| **大學輔導 (island)** | 學號、科系、年級、社團 |
+
+**前端動態渲染表單**：
+```swift
+// 1. App 啟動時取得該租戶的欄位配置
+let schema = try await api.getFieldSchema(type: "client")
+
+// schema.tenant_id = "career"（自動對應當前登入使用者的組織）
+// schema.sections = [各種欄位定義...]
+
+// 2. 根據 schema 動態生成表單
+for section in schema.sections {
+    for field in section.fields {
+        // 根據 field.type 生成對應 UI 元件
+        switch field.type {
+        case "text": createTextField(field)
+        case "single_select": createPicker(field)
+        // ...
+        }
+    }
+}
+```
+
+**詳細說明**：參考 [`FIELD_SCHEMAS_README.md`](https://github.com/Youngger9765/career_ios_backend/blob/staging/FIELD_SCHEMAS_README.md)
+
+---
 
 ### 📚 開發文檔
 
@@ -53,8 +143,16 @@
      - Clients CRUD API
      - Cases CRUD API
      - 動態欄位系統（Field Schemas）
+     - **多租戶架構詳細說明** ⭐️
 
-3. **專案 README**
+3. **動態欄位配置指南**
+   - 檔案: [`FIELD_SCHEMAS_README.md`](https://github.com/Youngger9765/career_ios_backend/blob/staging/FIELD_SCHEMAS_README.md)
+   - 內容:
+     - Field Schemas API 使用方式
+     - Tenant ID 運作原理
+     - Swift 動態表單實作範例
+
+4. **專案 README**
    - 檔案: [`README.md`](https://github.com/Youngger9765/career_ios_backend/blob/staging/README.md)
    - 內容: 專案架構、快速開始、資料庫設計
 
@@ -186,12 +284,26 @@ struct ReportUpdateRequest: Codable {
 
 ## ✅ 檢查清單（iOS 開發開始前）
 
+### 核心概念理解
+- [ ] 已理解多租戶架構（Multi-Tenancy）
+- [ ] 已理解 JWT Token 包含 `tenant_id`
+- [ ] 已理解前端不需手動傳遞 `tenant_id`
+- [ ] 已理解動態欄位配置（Field Schemas）
+
+### 文檔閱讀
+- [ ] 已閱讀 `HANDOFF_GUIDE.md` 多租戶架構說明
 - [ ] 已閱讀 `IOS_API_GUIDE.md`
+- [ ] 已閱讀 `API_CLIENT_CASE_MANAGEMENT.md`
+- [ ] 已閱讀 `FIELD_SCHEMAS_README.md`
+
+### 開發準備
 - [ ] 已測試 Swagger UI 各 API
 - [ ] 已取得測試用 JWT Token
-- [ ] 已實作 Swift Models（RecordingSegment, SessionRequest 等）
+- [ ] 已實作 Swift Models（RecordingSegment, SessionRequest, FieldSchema 等）
+- [ ] 已實作動態表單渲染邏輯
 - [ ] 已測試認證流程
 - [ ] 已測試 Recordings 上傳功能
+- [ ] 已測試 Field Schemas API
 
 ---
 
