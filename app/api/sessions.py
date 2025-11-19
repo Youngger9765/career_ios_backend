@@ -53,21 +53,41 @@ def aggregate_transcript_from_recordings(recordings: list) -> str:
 
 
 # Schemas
+class RecordingSegment(BaseModel):
+    """錄音片段"""
+    segment_number: int
+    start_time: str
+    end_time: str
+    duration_seconds: int
+    transcript_text: str
+    transcript_sanitized: Optional[str] = None
+
+
 class SessionCreateRequest(BaseModel):
-    """創建會談記錄請求"""
+    """
+    創建會談記錄請求
+
+    - transcript 與 recordings 二選一：
+      - transcript: 直接提供完整逐字稿（傳統方式）
+      - recordings: 提供分段錄音逐字稿（推薦），系統會自動聚合成 transcript_text
+    """
     case_id: UUID
     session_date: str  # YYYY-MM-DD
     start_time: Optional[str] = None  # YYYY-MM-DD HH:MM
     end_time: Optional[str] = None  # YYYY-MM-DD HH:MM
-    transcript: str
+    transcript: Optional[str] = None  # 與 recordings 二選一
     duration_minutes: Optional[int] = None  # 保留向下兼容
     notes: Optional[str] = None
     reflection: Optional[dict] = None  # 諮商師反思（JSON 格式，彈性支援不同租戶需求）
-    recordings: Optional[list] = None  # 錄音片段（支援會談中斷後繼續）
+    recordings: Optional[list[RecordingSegment]] = None  # 錄音片段（推薦），系統會自動聚合成 transcript_text
 
 
 class SessionUpdateRequest(BaseModel):
-    """更新會談記錄請求"""
+    """
+    更新會談記錄請求
+
+    - 更新時 transcript 與 recordings 二選一（與創建邏輯相同）
+    """
     session_date: Optional[str] = None  # YYYY-MM-DD
     start_time: Optional[str] = None  # YYYY-MM-DD HH:MM
     end_time: Optional[str] = None  # YYYY-MM-DD HH:MM
@@ -75,11 +95,16 @@ class SessionUpdateRequest(BaseModel):
     notes: Optional[str] = None
     duration_minutes: Optional[int] = None  # 保留向下兼容
     reflection: Optional[dict] = None  # 諮商師反思
-    recordings: Optional[list] = None  # 錄音片段（更新時也支援從 recordings 聚合）
+    recordings: Optional[list[RecordingSegment]] = None  # 錄音片段（更新時也支援從 recordings 聚合）
 
 
 class SessionResponse(BaseModel):
-    """會談記錄響應"""
+    """
+    會談記錄響應
+
+    - transcript_text: 完整逐字稿（若提供 recordings 則自動聚合）
+    - recordings: 原始錄音片段數組
+    """
     id: UUID
     client_id: UUID
     client_name: Optional[str] = None  # 個案姓名
@@ -89,12 +114,12 @@ class SessionResponse(BaseModel):
     session_date: datetime
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
-    transcript_text: str
+    transcript_text: str  # 完整逐字稿（自動從 recordings 聚合）
     summary: Optional[str] = None  # 會談摘要（AI 生成）
     duration_minutes: Optional[int]
     notes: Optional[str]
     reflection: Optional[dict] = None  # 諮商師反思（人類撰寫）
-    recordings: Optional[list] = None  # 會談逐字稿片段（支援會談中斷後繼續）
+    recordings: Optional[list[RecordingSegment]] = None  # 錄音片段數組
     has_report: bool  # 是否已生成報告
     created_at: datetime
     updated_at: Optional[datetime]
