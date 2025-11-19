@@ -1332,11 +1332,108 @@ Authorization: Bearer {access_token}
 
 **Endpoint:** `PATCH /api/v1/reports/{report_id}`
 
+**描述:** 諮商師編輯 AI 生成的報告內容
+
 **Headers:**
 ```
 Authorization: Bearer {access_token}
 Content-Type: application/json
 ```
+
+---
+
+#### 🎯 重要：前端應該直接傳 Markdown 字串
+
+**前端編輯流程**：
+1. 使用者在 iOS App 上編輯 Markdown 內容
+2. 前端直接將編輯後的 Markdown 字串傳給後端
+3. **不需要**前端自己生成 JSON 或從 Markdown 轉換
+
+---
+
+#### ✅ **推薦方式 1：只傳 Markdown（前端編輯）**
+
+前端使用者編輯 Markdown 內容後，直接傳給後端：
+
+**Request:**
+```json
+{
+  "edited_content_markdown": "# 個案報告\n\n## 個案概念化\n\n個案呈現焦慮症狀..."
+}
+```
+
+**Swift 範例:**
+```swift
+struct ReportUpdateRequest: Codable {
+    let edited_content_markdown: String?
+    let edited_content_json: [String: Any]?
+}
+
+func updateReportMarkdown(reportId: UUID, markdown: String, token: String) async throws {
+    let url = URL(string: "\(baseURL)/api/v1/reports/\(reportId)")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "PATCH"
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body: [String: Any] = ["edited_content_markdown": markdown]
+    request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+    let (_, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.updateFailed
+    }
+}
+```
+
+**使用範例:**
+```swift
+// User edits markdown in the app
+let editedMarkdown = """
+# 個案報告
+
+## 個案概念化
+個案呈現焦慮症狀，主要表現為...
+
+## 治療計畫
+1. 使用認知行為治療 (CBT)
+2. 每週一次，共 8 週
+3. 搭配放鬆訓練
+
+_編輯時間：2024-01-01_
+"""
+
+// Send to backend
+try await updateReportMarkdown(reportId: reportId, markdown: editedMarkdown, token: token)
+```
+
+---
+
+#### ✅ **方式 2：同時傳 JSON 和 Markdown**
+
+如果前端同時維護 JSON 結構和 Markdown 顯示：
+
+**Request:**
+```json
+{
+  "edited_content_json": {
+    "client_name": "個案 A",
+    "conceptualization": "焦慮症狀",
+    "treatment_plan": "CBT 介入"
+  },
+  "edited_content_markdown": "# 個案報告\n\n## 個案概念化\n\n焦慮症狀..."
+}
+```
+
+**注意**：Markdown 不會從 JSON 自動生成，會使用前端傳的 `edited_content_markdown`
+
+---
+
+#### ⚠️ **方式 3：只傳 JSON（向後相容）**
+
+如果前端只傳 JSON，後端會自動生成 Markdown（為了向後相容）：
 
 **Request:**
 ```json
@@ -1358,51 +1455,41 @@ Content-Type: application/json
 }
 ```
 
-**Response (200):**
+**不推薦**：這種方式生成的 Markdown 是固定格式，無法自訂排版
+
+---
+
+#### Response (200)
+
 ```json
 {
   "id": "uuid",
-  "edited_content_json": {...},
-  "edited_content_markdown": "# 個案報告\n\n## 案主基本資料\n...",  // ⭐️ UPDATED: 儲存的 Markdown (不再是動態生成)
-  "edited_at": "2025-10-29T10:30:00Z",
+  "edited_content_json": {
+    "client_name": "個案 A",
+    "conceptualization": "焦慮症狀"
+  },
+  "edited_content_markdown": "# 個案報告\n\n## 個案概念化\n\n焦慮症狀...",
+  "edited_at": "2024-01-01T12:00:00+00:00",
   "edit_count": 1
 }
 ```
 
-**Swift 範例:**
-```swift
-struct UpdateReportRequest: Codable {
-    let edited_content_json: [String: Any]
-}
+---
 
-struct UpdateReportResponse: Codable {
-    let id: UUID
-    let edited_content_json: [String: Any]
-    let edited_content_markdown: String  // ⭐️ UPDATED: 儲存的 Markdown
-    let edited_at: String
-    let edit_count: Int
-}
+#### 關鍵特性
 
-func updateReport(token: String, reportId: UUID, editedContent: [String: Any]) async throws -> UpdateReportResponse {
-    let url = URL(string: "\(baseURL)/api/v1/reports/\(reportId)")!
-    var request = URLRequest(url: url)
-    request.httpMethod = "PATCH"
-    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+✅ **前端完全控制 Markdown 格式**
+✅ **支援 Emoji、特殊字符、Code blocks**
+✅ **持久化到 Supabase（使用 `flag_modified()`）**
+✅ **向後相容（只傳 JSON 會自動生成 Markdown）**
 
-    let body = ["edited_content_json": editedContent]
-    request.httpBody = try JSONSerialization.data(withJSONObject: body)
+---
 
-    let (data, _) = try await URLSession.shared.data(for: request)
-    return try JSONDecoder().decode(UpdateReportResponse.self, from: data)
-}
-```
+#### 重要說明
 
-**重要說明:**
 - AI 原始生成的報告保存在 `content_json` 和 `content_markdown` (不可變)
 - 諮商師編輯的版本保存在 `edited_content_json` 和 `edited_content_markdown`
 - **推薦使用 Markdown 欄位直接渲染**，無需解析 JSON
-- 可用於實現報告編輯器功能
 
 **⭐️ Markdown 欄位使用建議:**
 ```swift
