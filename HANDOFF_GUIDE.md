@@ -143,7 +143,7 @@ for section in schema.sections {
      - Clients CRUD API
      - Cases CRUD API
      - 動態欄位系統（Field Schemas）
-     - **多租戶架構詳細說明** ⭐️
+     - **多租戶（tenant_id）架構詳細說明** ⭐️
 
 3. **動態欄位配置指南**
    - 檔案: [`FIELD_SCHEMAS_README.md`](https://github.com/Youngger9765/career_ios_backend/blob/staging/FIELD_SCHEMAS_README.md)
