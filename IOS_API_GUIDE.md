@@ -57,10 +57,13 @@
 
 **Endpoint:** `POST /api/auth/login`
 
+**⚠️ 重要：必須提供 `tenant_id`**
+
 **Request:**
 ```json
 {
-  "email": "test@career.com",
+  "tenant_id": "career",
+  "email": "admin@career.com",
   "password": "password123"
 }
 ```
@@ -77,6 +80,7 @@
 **Swift 範例:**
 ```swift
 struct LoginRequest: Codable {
+    let tenant_id: String
     let email: String
     let password: String
 }
@@ -87,13 +91,13 @@ struct LoginResponse: Codable {
     let expires_in: Int
 }
 
-func login(email: String, password: String) async throws -> String {
+func login(tenantId: String, email: String, password: String) async throws -> String {
     let url = URL(string: "\(baseURL)/api/auth/login")!
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-    let body = LoginRequest(email: email, password: password)
+    let body = LoginRequest(tenant_id: tenantId, email: email, password: password)
     request.httpBody = try JSONEncoder().encode(body)
 
     let (data, _) = try await URLSession.shared.data(for: request)
@@ -1560,7 +1564,7 @@ func getFormattedReport(
 
 ```swift
 // Step 1: 登入
-let token = try await login(email: "test@career.com", password: "password123")
+let token = try await login(tenantId: "career", email: "admin@career.com", password: "password123")
 
 // Step 2: 取得當前用戶
 let currentUser = try await getCurrentUser(token: token)
@@ -1690,10 +1694,52 @@ func handleAPIError(statusCode: Int, data: Data?) -> APIError {
 
 ## 📝 測試帳號
 
-**Email:** `test@career.com`
-**Password:** `password123`
-**Role:** `counselor`
-**Tenant:** `career`
+### Staging 環境
+**Base URL:** `https://career-app-api-staging-kxaznpplqq-uc.a.run.app`
+
+| Tenant | Email | Password | 用途 |
+|--------|-------|----------|------|
+| `career` | `admin@career.com` | `password123` | 職涯諮詢租戶 |
+| `island` | `admin@island.com` | `password123` | 升學浮島租戶 |
+
+### 登入 API 範例
+
+**重要：登入時必須提供 `tenant_id`**
+
+```bash
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "tenant_id": "career",
+  "email": "admin@career.com",
+  "password": "password123"
+}
+```
+
+**Swift 範例:**
+```swift
+struct LoginRequest: Codable {
+    let tenant_id: String
+    let email: String
+    let password: String
+}
+
+func login(tenantId: String, email: String, password: String) async throws -> String {
+    let url = URL(string: "\(baseURL)/api/auth/login")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = LoginRequest(tenant_id: tenantId, email: email, password: password)
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    let response = try JSONDecoder().decode(LoginResponse.self, from: data)
+
+    return response.access_token
+}
+```
 
 ---
 

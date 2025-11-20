@@ -66,6 +66,36 @@ MOCK_MODE=true poetry run uvicorn app.main:app --reload
 - **[Client & Case Management API](API_CLIENT_CASE_MANAGEMENT.md)** - 客戶與個案管理完整文件
 - **[iOS API Guide](IOS_API_GUIDE.md)** - iOS 開發完整指南
 
+### 🔑 測試帳號
+
+**Staging 環境**: https://career-app-api-staging-kxaznpplqq-uc.a.run.app
+
+| Tenant | Email | Password | 用途 |
+|--------|-------|----------|------|
+| `career` | `admin@career.com` | `password123` | 職涯諮詢租戶 |
+| `island` | `admin@island.com` | `password123` | 升學浮島租戶 |
+
+**登入 API**:
+```bash
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "tenant_id": "career",
+  "email": "admin@career.com",
+  "password": "password123"
+}
+```
+
+**回應**:
+```json
+{
+  "access_token": "eyJhbGci...",
+  "token_type": "bearer",
+  "expires_in": 86400
+}
+```
+
 ## 🗄️ Database Migration
 
 ### 自動化管理（推薦）
