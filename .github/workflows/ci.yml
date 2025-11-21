@@ -155,12 +155,12 @@ jobs:
           --region=us-central1 \
           --project=groovy-iris-473015-h3 \
           --service-account=career-app-sa@groovy-iris-473015-h3.iam.gserviceaccount.com \
-          --memory=1Gi \
+          --memory=512Mi \
           --cpu=1 \
           --timeout=300 \
-          --min-instances=1 \
-          --max-instances=10 \
-          --concurrency=1000 \
+          --min-instances=0 \
+          --max-instances=5 \
+          --concurrency=40 \
           --cpu-throttling \
           --port=8080 \
           --allow-unauthenticated \
