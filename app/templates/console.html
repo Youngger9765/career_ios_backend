@@ -4765,6 +4765,41 @@
             }
         };
 
+        // Load client-case data for update form (UI-5)
+        window.loadClientCaseForUpdate = function(caseId) {
+            if (!caseId || !state.clientCases) {
+                // Clear all fields
+                document.getElementById('cc-update-name').value = '';
+                document.getElementById('cc-update-phone').value = '';
+                document.getElementById('cc-update-status').value = '';
+                document.getElementById('cc-update-case-status').value = '';
+                document.getElementById('cc-update-summary').value = '';
+                return;
+            }
+
+            // Find the selected case from state.clientCases
+            const selectedCase = state.clientCases.find(c => c.case_id === caseId);
+            if (!selectedCase) {
+                console.error('Case not found in state.clientCases:', caseId);
+                return;
+            }
+
+            // Populate Client fields with current values
+            const nameEl = document.getElementById('cc-update-name');
+            const phoneEl = document.getElementById('cc-update-phone');
+            const statusEl = document.getElementById('cc-update-status');
+            const caseStatusEl = document.getElementById('cc-update-case-status');
+            const summaryEl = document.getElementById('cc-update-summary');
+
+            if (nameEl) nameEl.value = selectedCase.client_name || '';
+            if (phoneEl) phoneEl.value = ''; // Phone not in list response, leave empty
+            if (statusEl) statusEl.value = selectedCase.current_status || '';
+            if (caseStatusEl) caseStatusEl.value = selectedCase.case_status || '';
+            if (summaryEl) summaryEl.value = ''; // Summary not in list response, leave empty
+
+            console.log('Loaded client-case data:', selectedCase);
+        };
+
         // Recording segments management
         let recordingSegmentCounter = 0;
 
