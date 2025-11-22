@@ -38,11 +38,11 @@ gcloud run deploy ${SERVICE_NAME} \
   --image=${FULL_IMAGE} \
   --region=${REGION} \
   --project=${PROJECT_ID} \
-  --memory=512Mi \
+  --memory=1Gi \
   --cpu=1 \
   --min-instances=0 \
   --max-instances=5 \
-  --concurrency=40 \
+  --concurrency=80 \
   --cpu-throttling \
   --port=8080 \
   --no-allow-unauthenticated \
