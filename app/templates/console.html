@@ -713,6 +713,14 @@
             <div class="flow-group-title" data-group="ui">📱 UI Pages & 客戶個案管理</div>
             <div class="flow-group-content" data-group-content="ui">
 
+            <div class="flow-step" data-step="ui-mobile-login">
+                <div>
+                    <span class="step-number">UI-0</span>
+                    <span class="step-title">登入頁面 (手機模擬)</span>
+                </div>
+                <div class="step-subtitle">POST /api/auth/login</div>
+            </div>
+
             <div class="flow-step" data-step="ui-client-case-list">
                 <div>
                     <span class="step-number">UI-1</span>
@@ -3816,6 +3824,133 @@
                     </div>
                 `
             },
+
+            // ================== UI-0: Mobile Login ==================
+            'ui-mobile-login': {
+                title: '📱 登入頁面 (手機模擬)',
+                subtitle: 'POST /api/auth/login',
+                renderForm: () => {
+                    return `
+                        <div class="info-card">
+                            <p>📱 手機風格的登入頁面</p>
+                            <p style="color: #86868b; font-size: 14px; margin-top: 8px;">• 使用既有的 /api/auth/login API</p>
+                            <p style="color: #86868b; font-size: 14px;">• 點擊右側預覽查看</p>
+                        </div>
+                        <div class="form-group">
+                            <label>測試帳號 Email</label>
+                            <input type="email" id="ui-login-email" value="counselor1@example.com" />
+                        </div>
+                        <div class="form-group">
+                            <label>測試帳號密碼</label>
+                            <input type="password" id="ui-login-password" value="password123" />
+                        </div>
+                        <div class="form-group">
+                            <label>Tenant ID</label>
+                            <input type="text" id="ui-login-tenant" value="career" />
+                        </div>
+                        <button class="btn btn-primary" onclick="executeStep('ui-mobile-login')">載入預覽 + 測試登入</button>
+                    `;
+                },
+                execute: async () => {
+                    const email = document.getElementById('ui-login-email').value;
+                    const password = document.getElementById('ui-login-password').value;
+                    const tenant_id = document.getElementById('ui-login-tenant').value;
+
+                    const response = await fetch(`${BASE_URL}/api/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password, tenant_id })
+                    });
+                    const data = await response.json();
+
+                    // Store token if login successful
+                    if (response.ok && data.access_token) {
+                        state.token = data.access_token;
+                    }
+
+                    return { response, data };
+                },
+                renderPreview: (data) => {
+                    if (data.access_token) {
+                        // Show success message
+                        return `
+                            <div class="iphone-preview" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+                                <div style="text-align: center; color: white;">
+                                    <div style="font-size: 72px; margin-bottom: 20px;">✅</div>
+                                    <h2 style="margin: 0; font-size: 32px; font-weight: 600;">登入成功！</h2>
+                                    <p style="margin-top: 12px; font-size: 18px; opacity: 0.9;">Token 已儲存</p>
+                                    <div style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.2); border-radius: 16px; font-size: 12px; font-family: monospace; word-break: break-all;">
+                                        ${data.access_token.substring(0, 50)}...
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Show login form preview
+                    return `
+                        <div class="iphone-preview">
+                            <!-- Status Bar -->
+                            <div style="padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 500;">
+                                <span>9:41</span>
+                                <div style="display: flex; gap: 6px; align-items: center;">
+                                    <span>📶</span>
+                                    <span>📡</span>
+                                    <span>🔋</span>
+                                </div>
+                            </div>
+
+                            <!-- Login Form -->
+                            <div style="flex: 1; display: flex; flex-direction: column; padding: 40px 32px; background: #f5f5f7;">
+                                <div style="flex: 1;">
+                                    <h1 style="font-size: 48px; font-weight: 700; margin: 0; color: #1d1d1f;">Welcome</h1>
+
+                                    <div style="margin-top: 60px;">
+                                        <!-- Email Input -->
+                                        <div style="background: #e8e8ed; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;">
+                                            <input type="email"
+                                                   placeholder="電子信箱"
+                                                   value="counselor1@example.com"
+                                                   readonly
+                                                   style="width: 100%; border: none; background: transparent; font-size: 16px; color: #1d1d1f; outline: none;" />
+                                        </div>
+
+                                        <!-- Password Input -->
+                                        <div style="background: #e8e8ed; border-radius: 12px; padding: 16px 20px;">
+                                            <input type="password"
+                                                   placeholder="密碼"
+                                                   value="password123"
+                                                   readonly
+                                                   style="width: 100%; border: none; background: transparent; font-size: 16px; color: #1d1d1f; outline: none;" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Login Button -->
+                                <div>
+                                    <button style="
+                                        width: 100%;
+                                        background: #8e8e93;
+                                        color: white;
+                                        border: none;
+                                        border-radius: 12px;
+                                        padding: 18px;
+                                        font-size: 18px;
+                                        font-weight: 600;
+                                        margin-bottom: 20px;
+                                        cursor: not-allowed;
+                                    ">Login</button>
+
+                                    <div style="text-align: center;">
+                                        <a href="#" style="color: #8e8e93; font-size: 14px; text-decoration: none;">忘記密碼</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+
             'ui-client-case-list': {
                 title: '📱 客戶個案列表 (手機模擬)',
                 subtitle: 'GET /api/v1/ui/client-case-list (嵌入式)',
