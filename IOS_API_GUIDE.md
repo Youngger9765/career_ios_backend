@@ -22,6 +22,28 @@
 
 ## 🎉 最新更新 (2025-11-23)
 
+### 0. 🎨 動態表單 Schema API 優化 ⭐️ NEW
+
+**問題:** iOS 需要兩次 API 調用才能獲取 Client 和 Case 的表單 Schema
+
+**解決:** 新增組合端點，一次返回兩個 Schema
+
+**新增 API:**
+- `GET /api/v1/ui/field-schemas/client-case` - 一次獲取 Client + Case schemas（推薦）
+- `GET /api/v1/ui/field-schemas/client` - 單獨獲取 Client schema
+- `GET /api/v1/ui/field-schemas/case` - 單獨獲取 Case schema
+- `GET /api/v1/ui/client-case/{id}` - 獲取單一個案完整資訊（用於更新表單）
+
+**路徑變更:**
+- ~~`/api/v1/field-schemas/*`~~ → `/api/v1/ui/field-schemas/*` (統一UI API前綴)
+
+**Case Status 變更:**
+- ~~字串enum~~ → **整數** (0=未進行, 1=進行中, 2=已完成)
+
+**詳細文件:** 請參閱本文件「動態表單 Schema APIs」章節
+
+---
+
 ### 1. ✅ Bruno HTTP Client OpenAPI 範例修正
 
 **問題:** 之前在 Bruno 中查看 OpenAPI 文件時，`recordings` 欄位的範例顯示為空字串。
@@ -228,6 +250,100 @@ Content-Type: application/json
 
 ---
 
+#### 🔍 獲取客戶個案詳情 (Read Detail) ⭐️ NEW
+```
+GET https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app/api/v1/ui/client-case/{case_id}
+Authorization: Bearer {token}
+```
+- 獲取單一個案的完整資訊（Client + Case）
+- 用於 iOS 更新表單載入現有資料
+- 返回所有 Client 和 Case 欄位
+
+**回應:**
+```json
+{
+  "client_id": "uuid",
+  "client_name": "張小明",
+  "client_code": "C0002",
+  "client_email": "test@example.com",
+  "gender": "男",
+  "birth_date": "1995-01-01",
+  "phone": "0912345678",
+  "identity_option": "轉職者",
+  "current_status": "正在考慮轉職",
+  "nickname": "小明",
+  "education": "大學",
+  "occupation": "工程師",
+  "location": "台北市",
+  "notes": "初次諮詢",
+  "case_id": "uuid",
+  "case_number": "CASE0002",
+  "case_status": 1,
+  "case_status_label": "進行中",
+  "case_summary": "職涯轉換諮詢",
+  "case_goals": "協助釐清方向",
+  "problem_description": "對未來感到迷惘",
+  "counselor_id": "uuid",
+  "created_at": "2025-11-23T10:00:00Z",
+  "updated_at": "2025-11-23T11:00:00Z"
+}
+```
+
+**Swift 範例:**
+```swift
+struct ClientCaseDetailResponse: Codable {
+    // Client 資訊
+    let client_id: UUID
+    let client_name: String
+    let client_code: String
+    let client_email: String
+    let gender: String
+    let birth_date: String
+    let phone: String
+    let identity_option: String
+    let current_status: String
+    let nickname: String?
+    let notes: String?
+    let education: String?
+    let occupation: String?
+    let location: String?
+
+    // Case 資訊
+    let case_id: UUID
+    let case_number: String
+    let case_status: Int  // 0=未進行, 1=進行中, 2=已完成
+    let case_status_label: String
+    let case_summary: String?
+    let case_goals: String?
+    let problem_description: String?
+
+    // Metadata
+    let counselor_id: UUID
+    let created_at: Date
+    let updated_at: Date?
+}
+
+func getClientCaseDetail(token: String, caseId: UUID) async throws -> ClientCaseDetailResponse {
+    let url = URL(string: "\(baseURL)/api/v1/ui/client-case/\(caseId)")!
+    var request = URLRequest(url: url)
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    return try decoder.decode(ClientCaseDetailResponse.self, from: data)
+}
+```
+
+**💡 使用場景:**
+1. iOS 點擊個案列表中的某個個案
+2. 進入更新表單頁面
+3. 調用此 API 獲取完整資料
+4. 預填充表單欄位
+5. 用戶修改後 PATCH 更新
+
+---
+
 #### 🗑️ 刪除客戶個案 (Delete)
 ```
 DELETE https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app/api/v1/ui/client-case/{case_id}
@@ -303,10 +419,15 @@ func deleteClientCase(token: String, caseId: UUID) async throws -> DeleteRespons
 
 ## API 列表
 
+### 🎨 動態表單 Schema APIs ⭐️ NEW
+1. GET /api/v1/ui/field-schemas/client-case - 一次獲取 Client + Case schemas (推薦)
+2. GET /api/v1/ui/field-schemas/client - 獲取 Client schema
+3. GET /api/v1/ui/field-schemas/case - 獲取 Case schema
+
 ### 👤 認證 APIs
-1. POST /api/auth/login - 登入
-2. GET /api/auth/me - 取得諮商師資訊
-3. PATCH /api/auth/me - 更新諮商師資訊
+4. POST /api/auth/login - 登入
+5. GET /api/auth/me - 取得諮商師資訊
+6. PATCH /api/auth/me - 更新諮商師資訊
 
 ### 👥 個案管理 APIs
 4. POST /api/v1/clients - 建立個案
@@ -337,9 +458,201 @@ func deleteClientCase(token: String, caseId: UUID) async throws -> DeleteRespons
 
 ---
 
+## 🎨 動態表單 Schema APIs
+
+### 背景說明
+
+本系統採用**動態表單配置**，不同租戶可以有不同的 Client 和 Case 欄位。iOS App 需要先獲取租戶的 Schema 配置，然後根據 Schema 動態生成表單。
+
+**使用場景:**
+- 建立新個案前：獲取表單 Schema
+- 更新個案前：獲取表單 Schema + 獲取現有資料
+
+**推薦流程:**
+1. 登入後調用 `GET /api/v1/ui/field-schemas/client-case` 一次獲取兩個 Schema
+2. 根據 Schema 動態生成表單 UI
+3. 用戶填寫表單後 POST 建立或 PATCH 更新
+
+---
+
+### 1. 獲取 Client + Case Schemas (一次調用) ⭐️ 推薦
+
+**Endpoint:** `GET /api/v1/ui/field-schemas/client-case`
+
+**描述:** 一次性返回 Client 和 Case 的表單配置，減少網絡請求。
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200):**
+```json
+{
+  "client": {
+    "form_type": "client",
+    "tenant_id": "career",
+    "sections": [
+      {
+        "title": "基本資料",
+        "description": "個案基本資訊",
+        "order": 1,
+        "fields": [
+          {
+            "key": "name",
+            "label": "姓名",
+            "type": "text",
+            "required": true,
+            "placeholder": "請輸入真實姓名",
+            "help_text": "使用者的真實姓名",
+            "order": 1
+          },
+          {
+            "key": "email",
+            "label": "電子郵件地址",
+            "type": "email",
+            "required": true,
+            "placeholder": "example@email.com",
+            "order": 2
+          }
+        ]
+      }
+    ]
+  },
+  "case": {
+    "form_type": "case",
+    "tenant_id": "career",
+    "sections": [
+      {
+        "title": "個案資訊",
+        "description": "個案編號、狀態與諮詢內容",
+        "order": 1,
+        "fields": [
+          {
+            "key": "case_number",
+            "label": "個案編號",
+            "type": "text",
+            "required": true,
+            "placeholder": "自動生成",
+            "help_text": "系統自動生成，格式：CASE0001",
+            "order": 1
+          },
+          {
+            "key": "status",
+            "label": "個案狀態",
+            "type": "single_select",
+            "required": true,
+            "options": ["0", "1", "2"],
+            "default_value": "0",
+            "help_text": "0=未進行(NOT_STARTED), 1=進行中(IN_PROGRESS), 2=已完成(COMPLETED)",
+            "order": 2
+          }
+        ]
+      }
+    ]
+  },
+  "tenant_id": "career"
+}
+```
+
+**Swift 範例:**
+```swift
+struct ClientCaseSchemaResponse: Codable {
+    let client: FormSchema
+    let case: FormSchema
+    let tenant_id: String
+}
+
+struct FormSchema: Codable {
+    let form_type: String
+    let tenant_id: String
+    let sections: [FieldSection]
+}
+
+struct FieldSection: Codable {
+    let title: String
+    let description: String?
+    let order: Int
+    let fields: [FieldSchema]
+}
+
+struct FieldSchema: Codable {
+    let key: String
+    let label: String
+    let type: String  // "text", "email", "phone", "textarea", "single_select", "date"
+    let required: Bool
+    let placeholder: String?
+    let help_text: String?
+    let options: [String]?
+    let default_value: String?
+    let validation_rules: [String: Int]?
+    let order: Int
+}
+
+func getClientCaseSchemas(token: String) async throws -> ClientCaseSchemaResponse {
+    let url = URL(string: "\(baseURL)/api/v1/ui/field-schemas/client-case")!
+    var request = URLRequest(url: url)
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    return try JSONDecoder().decode(ClientCaseSchemaResponse.self, from: data)
+}
+```
+
+---
+
+### 2. 獲取 Client Schema
+
+**Endpoint:** `GET /api/v1/ui/field-schemas/client`
+
+**描述:** 單獨獲取 Client 表單配置。
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200):**
+```json
+{
+  "form_type": "client",
+  "tenant_id": "career",
+  "sections": [...]
+}
+```
+
+---
+
+### 3. 獲取 Case Schema
+
+**Endpoint:** `GET /api/v1/ui/field-schemas/case`
+
+**描述:** 單獨獲取 Case 表單配置。
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200):**
+```json
+{
+  "form_type": "case",
+  "tenant_id": "career",
+  "sections": [...]
+}
+```
+
+**⚠️ Case Status 重要變更:**
+- `status` 欄位從字串 enum 改為**整數**
+- 值: `"0"` (未進行), `"1"` (進行中), `"2"` (已完成)
+- 前端需要顯示對應的 label
+
+---
+
 ## 🔐 認證 APIs
 
-### 1. 登入
+### 4. 登入
 
 **Endpoint:** `POST /api/auth/login`
 

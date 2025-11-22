@@ -61,18 +61,60 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - 📋 欄位分組（sections）
 - ✅ 欄位驗證（required, placeholder, help_text）
 
+**⭐️ 最新更新 (2025-11-23):**
+- API 路徑變更：`/api/v1/field-schemas/*` → `/api/v1/ui/field-schemas/*`
+- 新增組合端點：`/api/v1/ui/field-schemas/client-case` (一次獲取兩個 Schema)
+- Case status 改為整數：0=未進行, 1=進行中, 2=已完成
+
 ---
 
-### 1. 取得 Client 欄位配置
+### 1. 取得 Client + Case 欄位配置 (組合端點) ⭐️ 推薦
 
-**GET** `/api/v1/field-schemas/client`
+**GET** `/api/v1/ui/field-schemas/client-case`
+
+一次性取得當前租戶的 Client 和 Case 欄位配置，減少網絡請求。
+
+#### Request
+
+```http
+GET /api/v1/ui/field-schemas/client-case
+Authorization: Bearer <token>
+```
+
+#### Response 200 OK
+
+```json
+{
+  "client": {
+    "form_type": "client",
+    "tenant_id": "career",
+    "sections": [...]
+  },
+  "case": {
+    "form_type": "case",
+    "tenant_id": "career",
+    "sections": [...]
+  },
+  "tenant_id": "career"
+}
+```
+
+**使用場景:**
+- iOS App 進入建立/更新個案頁面時，一次獲取兩個表單的 Schema
+- 減少 API 調用次數，提升用戶體驗
+
+---
+
+### 2. 取得 Client 欄位配置
+
+**GET** `/api/v1/ui/field-schemas/client`
 
 取得當前租戶的 Client 欄位配置。
 
 #### Request
 
 ```http
-GET /api/v1/field-schemas/client
+GET /api/v1/ui/field-schemas/client
 Authorization: Bearer <token>
 ```
 
@@ -160,16 +202,16 @@ Authorization: Bearer <token>
 
 ---
 
-### 2. 取得 Case 欄位配置
+### 3. 取得 Case 欄位配置
 
-**GET** `/api/v1/field-schemas/case`
+**GET** `/api/v1/ui/field-schemas/case`
 
 取得當前租戶的 Case 欄位配置。
 
 #### Request
 
 ```http
-GET /api/v1/field-schemas/case
+GET /api/v1/ui/field-schemas/case
 Authorization: Bearer <token>
 ```
 
@@ -188,8 +230,9 @@ Authorization: Bearer <token>
           "label": "個案狀態",
           "type": "single_select",
           "required": true,
-          "options": ["active", "closed", "pending"],
-          "default": "active"
+          "options": ["0", "1", "2"],
+          "default_value": "0",
+          "help_text": "0=未進行(NOT_STARTED), 1=進行中(IN_PROGRESS), 2=已完成(COMPLETED)"
         },
         {
           "key": "summary",
@@ -528,7 +571,7 @@ Content-Type: application/json
 |------|------|------|------|
 | `client_id` | UUID | ✅ | 客戶 ID |
 | `case_number` | string | ❌ | 個案編號（不填則自動生成 CASE0001, CASE0002...） |
-| `status` | string | ❌ | 個案狀態（active/closed/pending，預設 active） |
+| `status` | integer | ❌ | 個案狀態（0=未進行, 1=進行中, 2=已完成，預設 0） |
 | `summary` | string | ❌ | 個案摘要 |
 | `goals` | string | ❌ | 諮商目標 |
 | `problem_description` | string | ❌ | 問題描述 |
@@ -670,17 +713,23 @@ Authorization: Bearer <token>
 ```
 1. 登入取得 JWT Token
    ↓
-2. GET /api/v1/field-schemas/client
-   取得客戶欄位配置
+2. GET /api/v1/ui/field-schemas/client-case
+   一次取得 Client + Case 欄位配置（推薦）
    ↓
 3. POST /api/v1/clients
    建立客戶（系統自動生成 code: C0001）
    ↓
-4. GET /api/v1/field-schemas/case
-   取得個案欄位配置
-   ↓
-5. POST /api/v1/cases
+4. POST /api/v1/cases
    為客戶建立個案（系統自動生成 case_number: CASE0001）
+```
+
+**舊方式（分別調用）:**
+```
+2a. GET /api/v1/ui/field-schemas/client
+    取得客戶欄位配置
+    ↓
+2b. GET /api/v1/ui/field-schemas/case
+    取得個案欄位配置
 ```
 
 ### 流程 2: 查詢客戶及其所有個案
