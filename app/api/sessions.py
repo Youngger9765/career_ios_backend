@@ -62,6 +62,21 @@ class RecordingSegment(BaseModel):
     transcript_text: str
     transcript_sanitized: Optional[str] = None
 
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "segment_number": 1,
+                    "start_time": "2025-01-15 10:00",
+                    "end_time": "2025-01-15 10:30",
+                    "duration_seconds": 1800,
+                    "transcript_text": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
+                    "transcript_sanitized": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘..."
+                }
+            ]
+        }
+    }
+
 
 class AppendRecordingRequest(BaseModel):
     """
@@ -74,6 +89,20 @@ class AppendRecordingRequest(BaseModel):
     duration_seconds: int
     transcript_text: str
     transcript_sanitized: Optional[str] = None
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "start_time": "2025-01-15 10:00",
+                    "end_time": "2025-01-15 10:30",
+                    "duration_seconds": 1800,
+                    "transcript_text": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘，不知道該選擇什麼工作...",
+                    "transcript_sanitized": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘，不知道該選擇什麼工作..."
+                }
+            ]
+        }
+    }
 
 
 class SessionCreateRequest(BaseModel):
@@ -93,6 +122,38 @@ class SessionCreateRequest(BaseModel):
     notes: Optional[str] = None
     reflection: Optional[dict] = None  # 諮商師反思（JSON 格式，彈性支援不同租戶需求）
     recordings: Optional[list[RecordingSegment]] = None  # 錄音片段（推薦），系統會自動聚合成 transcript_text
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "case_id": "123e4567-e89b-12d3-a456-426614174000",
+                    "session_date": "2025-01-15",
+                    "start_time": "2025-01-15 10:00",
+                    "end_time": "2025-01-15 11:30",
+                    "notes": "個案對職涯選擇表現出積極態度",
+                    "recordings": [
+                        {
+                            "segment_number": 1,
+                            "start_time": "2025-01-15 10:00",
+                            "end_time": "2025-01-15 10:30",
+                            "duration_seconds": 1800,
+                            "transcript_text": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
+                            "transcript_sanitized": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘..."
+                        },
+                        {
+                            "segment_number": 2,
+                            "start_time": "2025-01-15 10:30",
+                            "end_time": "2025-01-15 11:00",
+                            "duration_seconds": 1800,
+                            "transcript_text": "諮商師：那我們來探索一下你的興趣...\n個案：我對科技和教育都有興趣...",
+                            "transcript_sanitized": "諮商師：那我們來探索一下你的興趣...\n個案：我對科技和教育都有興趣..."
+                        }
+                    ]
+                }
+            ]
+        }
+    }
 
 
 class SessionUpdateRequest(BaseModel):
