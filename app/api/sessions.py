@@ -127,7 +127,7 @@ class SessionResponse(BaseModel):
     session_date: datetime
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
-    transcript_text: str  # 完整逐字稿（自動從 recordings 聚合）
+    transcript_text: Optional[str] = None  # 完整逐字稿（自動從 recordings 聚合）
     summary: Optional[str] = None  # 會談摘要（AI 生成）
     duration_minutes: Optional[int]
     notes: Optional[str]
@@ -399,12 +399,9 @@ def list_sessions(
     for session, client, case in results:
         # 檢查是否有報告
         has_report_result = db.execute(
-            select(func.count()).select_from(
-                select(1)
-                .where(Session.id == session.id)
-                .where(Session.reports.any())
-                .subquery()
-            )
+            select(func.count())
+            .select_from(Report)
+            .where(Report.session_id == session.id)
         )
         has_report = has_report_result.scalar() > 0
 

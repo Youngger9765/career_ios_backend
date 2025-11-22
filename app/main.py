@@ -24,6 +24,7 @@ from app.api import (
     rag_stats,
     reports,
     sessions,
+    ui_client_case_list,
 )
 from app.core.config import settings
 
@@ -65,6 +66,9 @@ app.include_router(reports.router)
 
 # Include sessions routes
 app.include_router(sessions.router)
+
+# Include UI API routes
+app.include_router(ui_client_case_list.router)
 
 # Include RAG API routes
 app.include_router(rag_ingest.router)
@@ -146,6 +150,18 @@ async def rag_report_page(request: Request):
 async def console_page(request: Request):
     """Counseling System Debug Console"""
     return templates.TemplateResponse("console.html", {"request": request})
+
+
+@app.get("/client-case-list", response_class=HTMLResponse)
+async def client_case_list_page(request: Request):
+    """Client-Case List (Mobile App Style)"""
+    return templates.TemplateResponse("client_case_list.html", {"request": request})
+
+
+@app.get("/create-client-case", response_class=HTMLResponse)
+async def create_client_case_page(request: Request):
+    """Create Client-Case Form (Mobile App Style)"""
+    return templates.TemplateResponse("create_client_case.html", {"request": request})
 
 
 @app.get("/health")

@@ -709,6 +709,27 @@
             </div>
             </div>
 
+            <!-- UI Pages (手機模擬) -->
+            <div class="flow-group-title" data-group="ui">📱 UI Pages (手機模擬)</div>
+            <div class="flow-group-content" data-group-content="ui">
+
+            <div class="flow-step" data-step="ui-client-case-list">
+                <div>
+                    <span class="step-number">UI-1</span>
+                    <span class="step-title">客戶個案列表</span>
+                </div>
+                <div class="step-subtitle">GET /client-case-list</div>
+            </div>
+
+            <div class="flow-step" data-step="ui-create-client-case">
+                <div>
+                    <span class="step-number">UI-2</span>
+                    <span class="step-title">建立新個案</span>
+                </div>
+                <div class="step-subtitle">GET /create-client-case</div>
+            </div>
+            </div>
+
         </div>
 
         <!-- Center Panel: Preview -->
@@ -3759,6 +3780,54 @@
                     <div class="report-section">
                         <h3>📝 格式化 Markdown</h3>
                         <div class="response-content" style="max-height: 400px; white-space: pre-wrap;">${data.formatted_markdown}</div>
+                    </div>
+                `
+            },
+            'ui-client-case-list': {
+                title: '📱 客戶個案列表 (手機模擬)',
+                subtitle: 'GET /client-case-list',
+                renderForm: () => {
+                    return `
+                        <div class="info-card">
+                            <p>這是手機風格的客戶個案列表頁面</p>
+                            <p style="color: #86868b; font-size: 14px; margin-top: 8px;">• 顯示 Client + Case + Session 資訊</p>
+                            <p style="color: #86868b; font-size: 14px;">• iPhone 風格界面</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="window.open('/client-case-list', '_blank')">打開頁面</button>
+                    `;
+                },
+                execute: async () => {
+                    window.open('/client-case-list', '_blank');
+                    return { response: { ok: true }, data: { message: '頁面已打開' } };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>✅ 頁面已打開</h3>
+                        <p>請查看新開啟的視窗</p>
+                    </div>
+                `
+            },
+            'ui-create-client-case': {
+                title: '📝 建立新個案 (手機模擬)',
+                subtitle: 'GET /create-client-case',
+                renderForm: () => {
+                    return `
+                        <div class="info-card">
+                            <p>這是手機風格的建立新個案表單頁面</p>
+                            <p style="color: #86868b; font-size: 14px; margin-top: 8px;">• 同時建立 Client + Case</p>
+                            <p style="color: #86868b; font-size: 14px;">• 🎲 Quick Fill 測試資料</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="window.open('/create-client-case', '_blank')">打開頁面</button>
+                    `;
+                },
+                execute: async () => {
+                    window.open('/create-client-case', '_blank');
+                    return { response: { ok: true }, data: { message: '頁面已打開' } };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>✅ 頁面已打開</h3>
+                        <p>請查看新開啟的視窗</p>
                     </div>
                 `
             }

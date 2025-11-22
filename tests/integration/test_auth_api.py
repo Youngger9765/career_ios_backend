@@ -35,7 +35,7 @@ class TestAuthAPI:
             # Attempt login
             response = client.post(
                 "/api/auth/login",
-                json={"email": "test@example.com", "password": "password123"},
+                json={"email": "test@example.com", "password": "password123", "tenant_id": "career"},
             )
 
             assert response.status_code == 200
@@ -77,7 +77,7 @@ class TestAuthAPI:
         with TestClient(app) as client:
             response = client.post(
                 "/api/auth/login",
-                json={"email": "nonexistent@example.com", "password": "password123"},
+                json={"email": "nonexistent@example.com", "password": "password123", "tenant_id": "career"},
             )
 
             assert response.status_code == 401
@@ -102,7 +102,7 @@ class TestAuthAPI:
 
             response = client.post(
                 "/api/auth/login",
-                json={"email": "inactive@example.com", "password": "password123"},
+                json={"email": "inactive@example.com", "password": "password123", "tenant_id": "career"},
             )
 
             assert response.status_code == 403
@@ -128,7 +128,7 @@ class TestAuthAPI:
             # Login to get token
             login_response = client.post(
                 "/api/auth/login",
-                json={"email": "me@example.com", "password": "password123"},
+                json={"email": "me@example.com", "password": "password123", "tenant_id": "career"},
             )
             token = login_response.json()["access_token"]
 
@@ -160,6 +160,67 @@ class TestAuthAPI:
             response = client.get(
                 "/api/auth/me",
                 headers={"Authorization": "Bearer invalid_token_here"},
+            )
+
+            assert response.status_code == 401
+
+    def test_update_me_success(self, db_session: Session):
+        """Test PATCH /api/auth/me - Update counselor profile"""
+        with TestClient(app) as client:
+            # Create test counselor
+            counselor = Counselor(
+                id=uuid4(),
+                email="update@example.com",
+                username="updateuser",
+                full_name="Update User",
+                hashed_password=hash_password("password123"),
+                tenant_id="career",
+                role="counselor",
+                is_active=True,
+            )
+            db_session.add(counselor)
+            db_session.commit()
+
+            # Login to get token
+            login_response = client.post(
+                "/api/auth/login",
+                json={"email": "update@example.com", "password": "password123", "tenant_id": "career"},
+            )
+            token = login_response.json()["access_token"]
+
+            # Update profile
+            response = client.patch(
+                "/api/auth/me",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "full_name": "Updated Full Name",
+                    "username": "updateduser",
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["full_name"] == "Updated Full Name"
+            assert data["username"] == "updateduser"
+            assert data["email"] == "update@example.com"  # Email should not change
+
+    def test_update_me_no_token(self):
+        """Test PATCH /me without token returns 403"""
+        with TestClient(app) as client:
+            response = client.patch(
+                "/api/auth/me",
+                json={"full_name": "New Name"},
+            )
+
+            assert response.status_code == 403
+
+    def test_update_me_invalid_token(self):
+        """Test PATCH /me with invalid token returns 401"""
+        with TestClient(app) as client:
+            response = client.patch(
+                "/api/auth/me",
+                headers={"Authorization": "Bearer invalid_token_here"},
+                json={"full_name": "New Name"},
             )
 
             assert response.status_code == 401
