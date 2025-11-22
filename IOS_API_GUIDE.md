@@ -1,6 +1,8 @@
 # iOS App API 完整指南
 
-**Base URL:** `http://localhost:8080` (開發環境)
+**Base URL (Staging):** `https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app`
+
+**Base URL (Local):** `http://localhost:8080`
 
 **認證方式:** Bearer Token (JWT)
 
@@ -15,6 +17,289 @@
 5. [報告 APIs](#報告-apis) (20-24)
 6. [完整使用流程](#完整使用流程)
 7. [錯誤處理](#錯誤處理)
+
+---
+
+## 🎉 最新更新 (2025-11-23)
+
+### 1. ✅ Bruno HTTP Client OpenAPI 範例修正
+
+**問題:** 之前在 Bruno 中查看 OpenAPI 文件時，`recordings` 欄位的範例顯示為空字串。
+
+**解決:** 已在 Pydantic schema 中添加 `model_config` 和 `json_schema_extra.examples`，現在 OpenAPI 文件會正確顯示範例：
+
+```json
+{
+  "recordings": [
+    {
+      "segment_number": 1,
+      "start_time": "2025-01-15 10:00",
+      "end_time": "2025-01-15 10:30",
+      "duration_seconds": 1800,
+      "transcript_text": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
+      "transcript_sanitized": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘..."
+    }
+  ]
+}
+```
+
+**影響範圍:**
+- `POST /api/v1/sessions` - 建立會談記錄
+- `POST /api/v1/sessions/{id}/recordings/append` - 添加錄音片段
+
+**Bruno 使用:** 重新 import OpenAPI spec 即可看到完整範例。
+
+---
+
+### 2. 🎙️ iOS 友善的錄音片段 Append API
+
+**新增 API:** `POST /api/v1/sessions/{session_id}/recordings/append`
+
+**為什麼需要這個 API?**
+- ✅ 自動計算 `segment_number`，iOS 無需追蹤
+- ✅ 自動聚合所有片段的逐字稿
+- ✅ 支援會談中斷後繼續錄音
+- ✅ 樂觀鎖保護，避免並發衝突
+
+**使用範例:**
+```bash
+POST https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app/api/v1/sessions/{session_id}/recordings/append
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "start_time": "2025-01-15 10:00",
+  "end_time": "2025-01-15 10:30",
+  "duration_seconds": 1800,
+  "transcript_text": "此片段的逐字稿內容...",
+  "transcript_sanitized": "脫敏後的內容（選填）"
+}
+```
+
+**詳細文件:** 請參閱本文件第 15 節「🎙️ Append 錄音片段」
+
+---
+
+### 3. 🆕 個案管理 UI 介面 API
+
+**新增兩個 HTML UI 頁面:**
+
+#### 📋 個案列表頁面
+```
+GET https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app/client-case-list
+```
+- 查看所有個案及其關聯的 Cases
+- 搜尋、篩選、分頁功能
+- 快速查看個案基本資訊和會談次數
+
+#### ➕ 建立個案與 Case 頁面
+```
+GET https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app/create-client-case
+```
+- 一次建立個案（Client）和 Case
+- 自動生成個案代碼（C0001, C0002...）
+- 自動生成 Case 編號（CASE-20251123-001...）
+
+**用途:**
+- Web 端快速建立和管理個案
+- 測試 API 時可用此介面快速新增測試資料
+- iOS 開發時可參考此介面的 API 調用方式
+
+**注意:** 這些是 Web UI 介面，iOS App 應使用對應的 REST API：
+- `POST /api/v1/clients` - 建立個案
+- `POST /api/v1/cases` - 建立 Case
+- `GET /api/v1/clients` - 列出個案
+- `GET /api/v1/cases` - 列出 Cases
+
+---
+
+### 4. 🏥 客戶個案管理 CRUD API
+
+**完整的 CRUD 四個操作:**
+
+#### 📊 列出客戶個案 (Read)
+```
+GET https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app/api/v1/ui/client-case-list?skip=0&limit=20
+```
+- 一次取得 Client + Case + Session 資訊
+- 顯示每個客戶的第一個 Case
+- 包含最後諮詢日期和總會談次數
+- 支援分頁 (skip, limit)
+
+**回應範例:**
+```json
+{
+  "total": 10,
+  "items": [
+    {
+      "client_id": "uuid",
+      "case_id": "uuid",
+      "client_name": "張小明",
+      "client_code": "C0001",
+      "client_email": "test@example.com",
+      "identity_option": "轉職者",
+      "current_status": "正在考慮轉職",
+      "case_number": "CASE0001",
+      "case_status": "active",
+      "case_status_label": "進行中",
+      "last_session_date_display": "2025/01/22 19:30",
+      "total_sessions": 5
+    }
+  ]
+}
+```
+
+---
+
+#### ➕ 建立客戶個案 (Create)
+```
+POST https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app/api/v1/ui/client-case
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "name": "張小明",
+  "email": "test@example.com",
+  "gender": "男",
+  "birth_date": "1995-01-01",
+  "phone": "0912345678",
+  "identity_option": "轉職者",
+  "current_status": "正在考慮轉職",
+  "nickname": "小明",
+  "education": "大學",
+  "occupation": "工程師",
+  "location": "台北市",
+  "case_summary": "職涯轉換諮詢"
+}
+```
+- 同時建立 Client 和 Case
+- Client Code 和 Case Number 自動生成
+- 必填欄位：name, email, gender, birth_date, phone, identity_option, current_status
+
+**回應:**
+```json
+{
+  "client_id": "uuid",
+  "client_code": "C0002",
+  "client_name": "張小明",
+  "client_email": "test@example.com",
+  "case_id": "uuid",
+  "case_number": "CASE0002",
+  "case_status": "active",
+  "created_at": "2025-11-23T10:00:00Z",
+  "message": "客戶與個案建立成功"
+}
+```
+
+---
+
+#### ✏️ 更新客戶個案 (Update)
+```
+PATCH https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app/api/v1/ui/client-case/{case_id}
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "name": "張大明",
+  "phone": "0987654321",
+  "current_status": "已順利轉職",
+  "case_status": "completed",
+  "case_summary": "成功協助轉職至新公司"
+}
+```
+- 同時更新 Client 和 Case
+- 所有欄位都是選填，只更新提供的欄位
+- Case 狀態可更新為：active, completed, suspended, referred
+
+**回應:**
+```json
+{
+  "client_id": "uuid",
+  "client_code": "C0002",
+  "client_name": "張大明",
+  "client_email": "test@example.com",
+  "case_id": "uuid",
+  "case_number": "CASE0002",
+  "case_status": "completed",
+  "created_at": "2025-11-23T10:00:00Z",
+  "message": "客戶與個案更新成功"
+}
+```
+
+---
+
+#### 🗑️ 刪除客戶個案 (Delete)
+```
+DELETE https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app/api/v1/ui/client-case/{case_id}
+Authorization: Bearer {token}
+```
+- 軟刪除 Case (設定 deleted_at)
+- 不刪除 Client (一個 Client 可能有多個 Cases)
+- 只有 counselor 本人可以刪除自己的個案
+
+**回應:**
+```json
+{
+  "message": "Case deleted successfully",
+  "case_id": "uuid",
+  "case_number": "CASE0002",
+  "deleted_at": "2025-11-23T11:00:00Z"
+}
+```
+
+---
+
+**Swift 範例 (完整 CRUD):**
+```swift
+// 1. 列出客戶個案
+func listClientCases(token: String, skip: Int = 0, limit: Int = 20) async throws -> ClientCaseListResponse {
+    let url = URL(string: "\(baseURL)/api/v1/ui/client-case-list?skip=\(skip)&limit=\(limit)")!
+    var request = URLRequest(url: url)
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    return try JSONDecoder().decode(ClientCaseListResponse.self, from: data)
+}
+
+// 2. 建立客戶個案
+func createClientCase(token: String, request: CreateClientCaseRequest) async throws -> CreateClientCaseResponse {
+    let url = URL(string: "\(baseURL)/api/v1/ui/client-case")!
+    var urlRequest = URLRequest(url: url)
+    urlRequest.httpMethod = "POST"
+    urlRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    urlRequest.httpBody = try JSONEncoder().encode(request)
+
+    let (data, _) = try await URLSession.shared.data(for: urlRequest)
+    return try JSONDecoder().decode(CreateClientCaseResponse.self, from: data)
+}
+
+// 3. 更新客戶個案
+func updateClientCase(token: String, caseId: UUID, updates: UpdateClientCaseRequest) async throws -> CreateClientCaseResponse {
+    let url = URL(string: "\(baseURL)/api/v1/ui/client-case/\(caseId)")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "PATCH"
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.httpBody = try JSONEncoder().encode(updates)
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    return try JSONDecoder().decode(CreateClientCaseResponse.self, from: data)
+}
+
+// 4. 刪除客戶個案
+func deleteClientCase(token: String, caseId: UUID) async throws -> DeleteResponse {
+    let url = URL(string: "\(baseURL)/api/v1/ui/client-case/\(caseId)")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "DELETE"
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    return try JSONDecoder().decode(DeleteResponse.self, from: data)
+}
+```
+
+---
 
 ## API 列表
 

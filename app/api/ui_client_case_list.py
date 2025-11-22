@@ -73,6 +73,30 @@ class CreateClientCaseResponse(BaseModel):
         from_attributes = True
 
 
+class UpdateClientCaseRequest(BaseModel):
+    """更新客戶+個案請求"""
+
+    # Client 欄位 (all optional)
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    email: Optional[EmailStr] = None
+    gender: Optional[str] = None
+    birth_date: Optional[date] = None
+    phone: Optional[str] = None
+    identity_option: Optional[str] = None
+    current_status: Optional[str] = None
+    nickname: Optional[str] = None
+    notes: Optional[str] = None
+    education: Optional[str] = None
+    occupation: Optional[str] = None
+    location: Optional[str] = None
+
+    # Case 欄位 (all optional)
+    case_status: Optional[str] = Field(None, description="個案狀態: active/completed/suspended/referred")
+    case_summary: Optional[str] = None
+    case_goals: Optional[str] = None
+    problem_description: Optional[str] = None
+
+
 class ClientCaseListItem(BaseModel):
     """客戶個案列表項目（UI 最佳化）"""
 
@@ -102,7 +126,7 @@ class ClientCaseListItem(BaseModel):
 
     # 時間戳記
     case_created_at: datetime = Field(..., description="個案建立時間")
-    case_updated_at: datetime = Field(..., description="個案更新時間")
+    case_updated_at: Optional[datetime] = Field(None, description="個案更新時間")
 
     class Config:
         from_attributes = True
@@ -449,3 +473,233 @@ def get_client_case_list(
         skip=skip,
         limit=limit,
     )
+
+
+@router.patch("/client-case/{case_id}", response_model=CreateClientCaseResponse)
+def update_client_and_case(
+    case_id: UUID,
+    request: UpdateClientCaseRequest,
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+    db: Session = Depends(get_db),
+) -> CreateClientCaseResponse:
+    """
+    更新客戶與個案資料
+
+    **功能說明：**
+    - 同時更新 Client 和 Case
+    - 所有欄位都是選填，只更新提供的欄位
+    - Case 狀態可更新為 active/completed/suspended/referred
+
+    **使用場景：**
+    - 編輯個案資料
+    - 更新個案狀態
+    - 修改客戶基本資料
+    """
+    try:
+        # Step 1: Find case by ID
+        case = db.execute(
+            select(Case)
+            .where(
+                Case.id == case_id,
+                Case.tenant_id == tenant_id,
+                Case.deleted_at.is_(None),
+            )
+        ).scalar_one_or_none()
+
+        if not case:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Case {case_id} not found"
+            )
+
+        # Step 2: Find associated client
+        client = db.execute(
+            select(Client)
+            .where(
+                Client.id == case.client_id,
+                Client.tenant_id == tenant_id,
+                Client.deleted_at.is_(None),
+            )
+        ).scalar_one_or_none()
+
+        if not client:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Client {case.client_id} not found"
+            )
+
+        # Step 3: Update Client fields (only if provided)
+        client_updated = False
+        if request.name is not None:
+            client.name = request.name
+            client_updated = True
+        if request.email is not None:
+            # Check if email already exists (for another client)
+            existing_client = db.execute(
+                select(Client).where(
+                    Client.email == request.email,
+                    Client.tenant_id == tenant_id,
+                    Client.id != client.id,
+                    Client.deleted_at.is_(None),
+                )
+            ).scalar_one_or_none()
+            if existing_client:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Email {request.email} already exists for another client"
+                )
+            client.email = request.email
+            client_updated = True
+        if request.gender is not None:
+            client.gender = request.gender
+            client_updated = True
+        if request.birth_date is not None:
+            client.birth_date = request.birth_date
+            client_updated = True
+        if request.phone is not None:
+            client.phone = request.phone
+            client_updated = True
+        if request.identity_option is not None:
+            client.identity_option = request.identity_option
+            client_updated = True
+        if request.current_status is not None:
+            client.current_status = request.current_status
+            client_updated = True
+        if request.nickname is not None:
+            client.nickname = request.nickname
+            client_updated = True
+        if request.notes is not None:
+            client.notes = request.notes
+            client_updated = True
+        if request.education is not None:
+            client.education = request.education
+            client_updated = True
+        if request.occupation is not None:
+            client.occupation = request.occupation
+            client_updated = True
+        if request.location is not None:
+            client.location = request.location
+            client_updated = True
+
+        # Step 4: Update Case fields (only if provided)
+        case_updated = False
+        if request.case_status is not None:
+            try:
+                case.status = CaseStatus(request.case_status)
+                case_updated = True
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid case_status: {request.case_status}. Must be one of: active, completed, suspended, referred"
+                )
+        if request.case_summary is not None:
+            case.summary = request.case_summary
+            case_updated = True
+        if request.case_goals is not None:
+            case.goals = request.case_goals
+            case_updated = True
+        if request.problem_description is not None:
+            case.problem_description = request.problem_description
+            case_updated = True
+
+        # Step 5: Commit if any changes were made
+        if client_updated or case_updated:
+            db.commit()
+            db.refresh(client)
+            db.refresh(case)
+
+        # Step 6: Return response
+        return CreateClientCaseResponse(
+            client_id=client.id,
+            client_code=client.code,
+            client_name=client.name,
+            client_email=client.email,
+            case_id=case.id,
+            case_number=case.case_number,
+            case_status=case.status.value,
+            created_at=client.created_at,
+            message="客戶與個案更新成功",
+        )
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update client and case: {str(e)}"
+        )
+
+
+@router.delete("/client-case/{case_id}", status_code=status.HTTP_200_OK)
+def delete_client_case(
+    case_id: UUID,
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    刪除個案（軟刪除）
+
+    **功能說明：**
+    - 軟刪除 Case（設定 deleted_at）
+    - 不刪除 Client（一個 Client 可能有多個 Cases）
+    - 只有 counselor 本人可以刪除自己的個案
+
+    **使用場景：**
+    - 結束個案並歸檔
+    - 錯誤建立的個案需要刪除
+
+    **注意事項：**
+    - 這是軟刪除，資料不會真正消失
+    - Client 不會被刪除，只刪除 Case
+    """
+    try:
+        # Step 1: Find case by ID
+        case = db.execute(
+            select(Case)
+            .where(
+                Case.id == case_id,
+                Case.tenant_id == tenant_id,
+                Case.deleted_at.is_(None),
+            )
+        ).scalar_one_or_none()
+
+        if not case:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Case {case_id} not found"
+            )
+
+        # Step 2: Check ownership (only allow counselor to delete their own cases)
+        if case.counselor_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only delete your own cases"
+            )
+
+        # Step 3: Soft delete (set deleted_at timestamp)
+        from datetime import datetime, timezone
+        case.deleted_at = datetime.now(timezone.utc)
+
+        # Step 4: Commit
+        db.commit()
+
+        return {
+            "message": "Case deleted successfully",
+            "case_id": str(case_id),
+            "case_number": case.case_number,
+            "deleted_at": case.deleted_at.isoformat(),
+        }
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete case: {str(e)}"
+        )

@@ -1,0 +1,519 @@
+"""
+Integration tests for UI Client-Case CRUD APIs
+TDD - Write tests first, then implement
+"""
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+from uuid import uuid4
+from datetime import date
+
+from app.core.security import hash_password
+from app.main import app
+from app.models.counselor import Counselor
+from app.models.client import Client
+from app.models.case import Case, CaseStatus
+
+
+class TestUIClientCaseAPI:
+    """Test UI Client-Case CRUD endpoints"""
+
+    @pytest.fixture
+    def test_client(self, db_session: Session):
+        """Create TestClient that uses the test database session"""
+        # The db_session fixture already overrides get_db dependency
+        # So any TestClient created here will use the test database
+        return TestClient(app)
+
+    @pytest.fixture
+    def counselor(self, db_session: Session):
+        """Create and return authenticated counselor"""
+        counselor = Counselor(
+            id=uuid4(),
+            email="counselor-ui@test.com",
+            username="uicounselor",
+            full_name="UI Test Counselor",
+            hashed_password=hash_password("password123"),
+            tenant_id="career",
+            role="counselor",
+            is_active=True,
+        )
+        db_session.add(counselor)
+        db_session.commit()
+        db_session.refresh(counselor)
+        return counselor
+
+    @pytest.fixture
+    def auth_headers(self, test_client: TestClient, counselor: Counselor):
+        """Return auth headers with JWT token"""
+        login_response = test_client.post(
+            "/api/auth/login",
+            json={"email": counselor.email, "password": "password123", "tenant_id": counselor.tenant_id},
+        )
+        print(f"\n[DEBUG] Login status: {login_response.status_code}")
+        print(f"[DEBUG] Login response: {login_response.text}")
+        assert login_response.status_code == 200, f"Login failed: {login_response.text}"
+        token = login_response.json()["access_token"]
+        return {"Authorization": f"Bearer {token}"}
+
+    # ==================== UI-3: List Client-Cases ====================
+    def test_list_client_cases_success(self, test_client: TestClient, db_session: Session, counselor: Counselor, auth_headers):
+        """Test GET /api/v1/ui/client-case-list - List all client-cases"""
+        # Create test client and case
+        client = Client(
+            id=uuid4(),
+            counselor_id=counselor.id,
+            tenant_id="career",
+            name="UI測試客戶",
+            code="UIC001",
+            email="ui-test@example.com",
+            gender="男",
+            birth_date=date(1990, 1, 1),
+            phone="0912345678",
+            identity_option="轉職者",
+            current_status="求職中",
+        )
+        db_session.add(client)
+        db_session.commit()
+
+        case = Case(
+            id=uuid4(),
+            case_number="UICASE001",
+            counselor_id=counselor.id,
+            client_id=client.id,
+            tenant_id="career",
+            status=CaseStatus.ACTIVE,
+        )
+        db_session.add(case)
+        db_session.commit()
+
+        response = test_client.get(
+            "/api/v1/ui/client-case-list?skip=0&limit=20",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "total" in data
+        assert "items" in data
+        assert data["total"] >= 1
+        assert len(data["items"]) >= 1
+
+        # Verify item structure
+        item = data["items"][0]
+        assert "client_id" in item
+        assert "case_id" in item
+        assert "client_name" in item
+        assert "client_code" in item
+        assert "client_email" in item
+        assert "case_number" in item
+        assert "case_status" in item
+        assert "case_status_label" in item
+        assert "total_sessions" in item
+
+    def test_list_client_cases_unauthorized(self, test_client: TestClient):
+        """Test listing client-cases without auth returns 403"""
+        response = test_client.get("/api/v1/ui/client-case-list")
+        assert response.status_code == 403
+
+    def test_list_client_cases_pagination(self, test_client: TestClient, db_session: Session, counselor: Counselor, auth_headers):
+        """Test pagination parameters"""
+
+        # Create multiple client-cases
+        for i in range(5):
+            client = Client(
+                id=uuid4(),
+                counselor_id=counselor.id,
+                tenant_id="career",
+                name=f"客戶{i}",
+                code=f"UIC{i:03d}",
+                email=f"client{i}@example.com",
+                gender="男",
+                birth_date=date(1990, 1, 1),
+                phone=f"091234567{i}",
+                identity_option="在職者",
+                current_status="穩定就業",
+            )
+            db_session.add(client)
+            db_session.flush()
+
+            case = Case(
+                id=uuid4(),
+                case_number=f"UICASE{i:03d}",
+                counselor_id=counselor.id,
+                client_id=client.id,
+                tenant_id="career",
+                status=CaseStatus.ACTIVE,
+            )
+            db_session.add(case)
+
+        db_session.commit()
+
+        # Test limit
+        response = test_client.get(
+            "/api/v1/ui/client-case-list?skip=0&limit=3",
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) <= 3
+
+    # ==================== UI-4: Create Client-Case ====================
+    def test_create_client_case_success(self, test_client: TestClient, counselor: Counselor, auth_headers):
+        """Test POST /api/v1/ui/client-case - Create client and case together"""
+        response = test_client.post(
+            "/api/v1/ui/client-case",
+            headers=auth_headers,
+            json={
+                "name": "新客戶",
+                "email": "new-client@example.com",
+                "gender": "女",
+                "birth_date": "1995-05-15",
+                "phone": "0987654321",
+                "identity_option": "學生",
+                "current_status": "在學中",
+                "nickname": "小新",
+                "education": "研究所",
+                "occupation": "學生",
+                "location": "台北市",
+                "case_summary": "生涯探索諮詢",
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["client_name"] == "新客戶"
+        assert data["client_email"] == "new-client@example.com"
+        assert "client_id" in data
+        assert "client_code" in data  # Auto-generated
+        assert "case_id" in data
+        assert "case_number" in data  # Auto-generated
+        assert data["case_status"] == "active"
+        assert data["message"] == "客戶與個案建立成功"
+
+    def test_create_client_case_minimal_fields(self, test_client: TestClient, counselor: Counselor, auth_headers):
+        """Test creating client-case with only required fields"""
+        response = test_client.post(
+            "/api/v1/ui/client-case",
+            headers=auth_headers,
+            json={
+                "name": "最小欄位客戶",
+                "email": "minimal@example.com",
+                "gender": "男",
+                "birth_date": "1992-01-01",
+                "phone": "0911111111",
+                "identity_option": "其他",
+                "current_status": "待業中",
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["client_name"] == "最小欄位客戶"
+
+    def test_create_client_case_duplicate_email(self, test_client: TestClient, db_session: Session, counselor: Counselor, auth_headers):
+        """Test creating client-case with duplicate email returns 400"""
+
+        # Create existing client
+        existing_client = Client(
+            id=uuid4(),
+            counselor_id=counselor.id,
+            tenant_id="career",
+            name="既有客戶",
+            code="EXIST001",
+            email="duplicate@example.com",
+            gender="男",
+            birth_date=date(1990, 1, 1),
+            phone="0900000000",
+            identity_option="在職者",
+            current_status="工作中",
+        )
+        db_session.add(existing_client)
+        db_session.commit()
+
+        response = test_client.post(
+            "/api/v1/ui/client-case",
+            headers=auth_headers,
+            json={
+                "name": "重複客戶",
+                "email": "duplicate@example.com",  # Duplicate
+                "gender": "女",
+                "birth_date": "1995-01-01",
+                "phone": "0911111111",
+                "identity_option": "轉職者",
+                "current_status": "求職中",
+            },
+        )
+
+        assert response.status_code == 400
+        assert "already exists" in response.json()["detail"]
+
+    def test_create_client_case_unauthorized(self, test_client: TestClient):
+        """Test creating client-case without auth returns 403"""
+        response = test_client.post(
+            "/api/v1/ui/client-case",
+            json={"name": "Unauthorized Client"},
+        )
+        assert response.status_code == 403
+
+    # ==================== UI-5: Update Client-Case ====================
+    def test_update_client_case_success(self, test_client: TestClient, db_session: Session, counselor: Counselor, auth_headers):
+        """Test PATCH /api/v1/ui/client-case/{id} - Update client and case"""
+
+        # Create test client and case
+        client = Client(
+            id=uuid4(),
+            counselor_id=counselor.id,
+            tenant_id="career",
+            name="原始姓名",
+            code="UPD001",
+            email="update-test@example.com",
+            gender="男",
+            birth_date=date(1990, 1, 1),
+            phone="0900000000",
+            identity_option="在職者",
+            current_status="穩定就業",
+        )
+        db_session.add(client)
+        db_session.flush()
+
+        case = Case(
+            id=uuid4(),
+            case_number="UPDCASE001",
+            counselor_id=counselor.id,
+            client_id=client.id,
+            tenant_id="career",
+            status=CaseStatus.ACTIVE,
+            summary="原始摘要",
+        )
+        db_session.add(case)
+        db_session.commit()
+
+        with TestClient(app) as test_client:
+            response = test_client.patch(
+                f"/api/v1/ui/client-case/{case.id}",
+                headers=auth_headers,
+                json={
+                    "name": "更新後姓名",
+                    "phone": "0987654321",
+                    "current_status": "已轉職",
+                    "case_status": "completed",
+                "case_summary": "成功協助轉職",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["client_name"] == "更新後姓名"
+        assert data["case_status"] == "completed"
+        assert data["message"] == "客戶與個案更新成功"
+
+    def test_update_client_case_partial_fields(self, test_client: TestClient, db_session: Session, counselor: Counselor, auth_headers):
+        """Test updating only some fields"""
+
+        client = Client(
+            id=uuid4(),
+            counselor_id=counselor.id,
+            tenant_id="career",
+            name="部分更新客戶",
+            code="PART001",
+            email="partial@example.com",
+            gender="女",
+            birth_date=date(1995, 1, 1),
+            phone="0911111111",
+            identity_option="學生",
+            current_status="在學中",
+        )
+        db_session.add(client)
+        db_session.flush()
+
+        case = Case(
+            id=uuid4(),
+            case_number="PARTCASE001",
+            counselor_id=counselor.id,
+            client_id=client.id,
+            tenant_id="career",
+            status=CaseStatus.ACTIVE,
+        )
+        db_session.add(case)
+        db_session.commit()
+
+        # Only update case_status
+        response = test_client.patch(
+            f"/api/v1/ui/client-case/{case.id}",
+            headers=auth_headers,
+            json={"case_status": "suspended"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["case_status"] == "suspended"
+        assert data["client_name"] == "部分更新客戶"  # Unchanged
+
+    def test_update_client_case_not_found(self, test_client: TestClient, counselor: Counselor, auth_headers):
+        """Test updating non-existent case returns 404"""
+        fake_id = uuid4()
+
+        response = test_client.patch(
+            f"/api/v1/ui/client-case/{fake_id}",
+            headers=auth_headers,
+            json={"name": "Should Fail"},
+        )
+
+        assert response.status_code == 404
+
+    def test_update_client_case_invalid_status(self, test_client: TestClient, db_session: Session, counselor: Counselor, auth_headers):
+        """Test updating with invalid case_status returns 400"""
+
+        client = Client(
+            id=uuid4(),
+            counselor_id=counselor.id,
+            tenant_id="career",
+            name="Invalid Status Test",
+            code="INV001",
+            email="invalid@example.com",
+            gender="男",
+            birth_date=date(1990, 1, 1),
+            phone="0900000000",
+            identity_option="在職者",
+            current_status="工作中",
+        )
+        db_session.add(client)
+        db_session.flush()
+
+        case = Case(
+            id=uuid4(),
+            case_number="INVCASE001",
+            counselor_id=counselor.id,
+            client_id=client.id,
+            tenant_id="career",
+            status=CaseStatus.ACTIVE,
+        )
+        db_session.add(case)
+        db_session.commit()
+
+        response = test_client.patch(
+            f"/api/v1/ui/client-case/{case.id}",
+            headers=auth_headers,
+            json={"case_status": "invalid_status"},
+        )
+
+        assert response.status_code == 400
+        assert "Invalid case_status" in response.json()["detail"]
+
+    # ==================== UI-6: Delete Client-Case ====================
+    def test_delete_client_case_success(self, test_client: TestClient, db_session: Session, counselor: Counselor, auth_headers):
+        """Test DELETE /api/v1/ui/client-case/{id} - Soft delete case"""
+
+        client = Client(
+            id=uuid4(),
+            counselor_id=counselor.id,
+            tenant_id="career",
+            name="待刪除客戶",
+            code="DEL001",
+            email="delete@example.com",
+            gender="男",
+            birth_date=date(1990, 1, 1),
+            phone="0900000000",
+            identity_option="在職者",
+            current_status="工作中",
+        )
+        db_session.add(client)
+        db_session.flush()
+
+        case = Case(
+            id=uuid4(),
+            case_number="DELCASE001",
+            counselor_id=counselor.id,
+            client_id=client.id,
+            tenant_id="career",
+            status=CaseStatus.ACTIVE,
+        )
+        db_session.add(case)
+        db_session.commit()
+
+        case_id = case.id
+
+        response = test_client.delete(
+            f"/api/v1/ui/client-case/{case_id}",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["message"] == "Case deleted successfully"
+        assert data["case_number"] == "DELCASE001"
+        assert "deleted_at" in data
+
+        # Verify case is soft-deleted (has deleted_at timestamp)
+        deleted_case = db_session.query(Case).filter_by(id=case_id).first()
+        assert deleted_case.deleted_at is not None
+
+        # Verify client is NOT deleted
+        client_still_exists = db_session.query(Client).filter_by(id=client.id).first()
+        assert client_still_exists is not None
+        assert client_still_exists.deleted_at is None
+
+    def test_delete_client_case_not_found(self, test_client: TestClient, counselor: Counselor, auth_headers):
+        """Test deleting non-existent case returns 404"""
+        fake_id = uuid4()
+
+        response = test_client.delete(
+            f"/api/v1/ui/client-case/{fake_id}",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 404
+
+    def test_delete_client_case_unauthorized(self, test_client: TestClient, db_session: Session, counselor: Counselor, auth_headers):
+        """Test deleting another counselor's case returns 403"""
+        # Create another counselor
+        other_counselor = Counselor(
+            id=uuid4(),
+            email="other-counselor@test.com",
+            username="othercounselor",
+            full_name="Other Counselor",
+            hashed_password=hash_password("password123"),
+            tenant_id="career",
+            role="counselor",
+            is_active=True,
+        )
+        db_session.add(other_counselor)
+        db_session.commit()
+
+        # Create client and case owned by other counselor
+        client = Client(
+            id=uuid4(),
+            counselor_id=other_counselor.id,
+            tenant_id="career",
+            name="Other's Client",
+            code="OTHER001",
+            email="other@example.com",
+            gender="男",
+            birth_date=date(1990, 1, 1),
+            phone="0900000000",
+            identity_option="在職者",
+            current_status="工作中",
+        )
+        db_session.add(client)
+        db_session.flush()
+
+        case = Case(
+            id=uuid4(),
+            case_number="OTHERCASE001",
+            counselor_id=other_counselor.id,
+            client_id=client.id,
+            tenant_id="career",
+            status=CaseStatus.ACTIVE,
+        )
+        db_session.add(case)
+        db_session.commit()
+
+        # Try to delete with original auth headers (different counselor)
+        response = test_client.delete(
+            f"/api/v1/ui/client-case/{case.id}",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 403
+        assert "only delete your own cases" in response.json()["detail"]
