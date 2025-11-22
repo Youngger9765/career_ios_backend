@@ -662,6 +662,14 @@
                 </div>
                 <div class="step-subtitle">PUT /api/v1/sessions/{id}/reflection</div>
             </div>
+
+            <div class="flow-step" data-step="append-recording">
+                <div>
+                    <span class="step-number">17</span>
+                    <span class="step-title">🎙️ Append 錄音片段 (iOS)</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/sessions/{id}/recordings/append</div>
+            </div>
             </div>
 
             <!-- 報告管理 -->
@@ -1785,6 +1793,139 @@
                         <div class="info-row">
                             <span class="info-label">更新時間</span>
                             <span class="info-value">${new Date(data.updated_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                    </div>
+                `
+            },
+            'append-recording': {
+                title: '🎙️ Append 錄音片段 (iOS)',
+                subtitle: 'POST /api/v1/sessions/{id}/recordings/append',
+                init: async () => {
+                    if (state.token) {
+                        try {
+                            const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.sessions = data.items;
+                                document.getElementById('action-form').innerHTML = steps['append-recording'].renderForm();
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh session list:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    const sessionOptions = (state.sessions || []).map(s =>
+                        `<option value="${s.id}">${s.client_name || '未知'} - 第 ${s.session_number} 次 (${new Date(s.session_date).toLocaleDateString('zh-TW')})</option>`
+                    ).join('');
+
+                    return `
+                        <div class="info-card" style="background: #fef3c7; border-color: #f59e0b;">
+                            <h4 style="color: #92400e; margin: 0 0 8px 0;">📱 iOS 友善 API</h4>
+                            <p style="font-size: 13px; color: #92400e; line-height: 1.5;">
+                                此 API 為 iOS 設計，簡化錄音片段添加流程：<br>
+                                • 自動計算 segment_number<br>
+                                • 自動聚合所有片段的 transcript_text<br>
+                                • 支持會談中斷後繼續錄音
+                            </p>
+                        </div>
+                        <div class="form-group">
+                            <label>選擇會談記錄 *</label>
+                            <select id="append-session-id">
+                                ${sessionOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>開始時間 *</label>
+                            <input type="text" id="append-start-time" placeholder="2025-01-15 10:00 或 2025-01-15T10:00:00" />
+                            <small style="color: #6b7280; font-size: 12px;">格式：YYYY-MM-DD HH:MM 或 ISO format</small>
+                        </div>
+                        <div class="form-group">
+                            <label>結束時間 *</label>
+                            <input type="text" id="append-end-time" placeholder="2025-01-15 10:30 或 2025-01-15T10:30:00" />
+                            <small style="color: #6b7280; font-size: 12px;">格式：YYYY-MM-DD HH:MM 或 ISO format</small>
+                        </div>
+                        <div class="form-group">
+                            <label>錄音時長（秒） *</label>
+                            <input type="number" id="append-duration" placeholder="1800" />
+                            <small style="color: #6b7280; font-size: 12px;">例如：30分鐘 = 1800秒</small>
+                        </div>
+                        <div class="form-group">
+                            <label>逐字稿內容 *</label>
+                            <textarea id="append-transcript" placeholder="此片段的逐字稿內容..." rows="8"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>脫敏逐字稿（選填）</label>
+                            <textarea id="append-transcript-sanitized" placeholder="如不填，系統將使用原始逐字稿..." rows="5"></textarea>
+                            <small style="color: #6b7280; font-size: 12px;">💡 若需隱藏個人資訊，請提供脫敏版本</small>
+                        </div>
+                        <button class="btn btn-primary" onclick="executeAppendRecording()" ${!state.token || !state.sessions?.length ? 'disabled' : ''}>
+                            🎙️ Append 錄音片段
+                        </button>
+                    `;
+                },
+                execute: async () => {
+                    const sessionId = document.getElementById('append-session-id').value;
+                    const requestBody = {
+                        start_time: document.getElementById('append-start-time').value,
+                        end_time: document.getElementById('append-end-time').value,
+                        duration_seconds: parseInt(document.getElementById('append-duration').value),
+                        transcript_text: document.getElementById('append-transcript').value
+                    };
+
+                    const sanitized = document.getElementById('append-transcript-sanitized').value;
+                    if (sanitized) {
+                        requestBody.transcript_sanitized = sanitized;
+                    }
+
+                    const response = await fetch(`${BASE_URL}/api/v1/sessions/${sessionId}/recordings/append`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+                    const data = await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card" style="border-color: #10b981;">
+                        <h3 style="color: #10b981;">✅ 錄音片段已成功 Append</h3>
+                        <div class="info-row">
+                            <span class="info-label">Session ID</span>
+                            <span class="info-value" style="font-size: 11px;">${data.session_id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Segment Number</span>
+                            <span class="info-value" style="color: #10b981; font-weight: 600;">#${data.recording_added.segment_number}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">總片段數</span>
+                            <span class="info-value">${data.total_recordings} 個</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">錄音時長</span>
+                            <span class="info-value">${data.recording_added.duration_seconds} 秒 (${Math.round(data.recording_added.duration_seconds / 60)} 分鐘)</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">更新時間</span>
+                            <span class="info-value">${new Date(data.updated_at).toLocaleString('zh-TW')}</span>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <h4>📝 新增片段內容</h4>
+                        <div style="background: #f3f4f6; padding: 12px; border-radius: 6px; margin-top: 8px;">
+                            <p style="font-size: 13px; line-height: 1.6; white-space: pre-wrap;">${data.recording_added.transcript_text}</p>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <h4>📄 完整逐字稿（已自動聚合）</h4>
+                        <small style="color: #6b7280; font-size: 12px;">包含所有 ${data.total_recordings} 個片段</small>
+                        <div style="background: #f3f4f6; padding: 12px; border-radius: 6px; margin-top: 8px; max-height: 300px; overflow-y: auto;">
+                            <p style="font-size: 13px; line-height: 1.6; white-space: pre-wrap;">${data.transcript_text}</p>
                         </div>
                     </div>
                 `
@@ -4295,6 +4436,7 @@ Cl: 謝謝，我會的。`
         window.executeDeleteSession = () => executeStep('delete-session');
         window.executeGetReflection = () => executeStep('get-reflection');
         window.executeUpdateReflection = () => executeStep('update-reflection');
+        window.executeAppendRecording = () => executeStep('append-recording');
         window.executeUpdateCounselor = () => executeStep('update-counselor');
         window.executeGenerateReport = () => executeStep('generate-report');
         window.executeListReports = () => executeStep('list-reports');
