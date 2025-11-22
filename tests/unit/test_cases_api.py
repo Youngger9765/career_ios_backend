@@ -118,7 +118,7 @@ class TestListCases:
         mock_get_current_user.return_value = mock_counselor
 
         # Mock cases
-        case1 = create_mock_case(case_number="CASE0001", status=CaseStatus.ACTIVE)
+        case1 = create_mock_case(case_number="CASE0001", status=CaseStatus.NOT_STARTED)
         case2 = create_mock_case(case_number="CASE0002", status=CaseStatus.COMPLETED)
 
         # Mock count query
@@ -204,7 +204,7 @@ class TestCreateCase:
 
         case_data = CaseCreate(
             client_id=client_id,
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
             problem_description="職涯探索",
             goals="找到方向",
         )
@@ -234,7 +234,7 @@ class TestCreateCase:
         case_data = CaseCreate(
             client_id=uuid4(),
             case_number="CASE0001",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
 
         with pytest.raises(HTTPException) as exc_info:
@@ -265,7 +265,7 @@ class TestCreateCase:
 
         case_data = CaseCreate(
             client_id=client_id,
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
 
         with pytest.raises(HTTPException) as exc_info:

@@ -1,7 +1,6 @@
 import enum
 
-from sqlalchemy import Column, ForeignKey, String, Text, UniqueConstraint
-from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Column, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -9,11 +8,16 @@ from app.core.database import Base
 from app.models.base import BaseModel
 
 
-class CaseStatus(str, enum.Enum):
-    ACTIVE = "active"
-    COMPLETED = "completed"
-    SUSPENDED = "suspended"
-    REFERRED = "referred"
+class CaseStatus(enum.IntEnum):
+    """
+    Case status using integer values
+    0 = 未進行 (Not Started)
+    1 = 進行中 (In Progress)
+    2 = 已完成 (Completed)
+    """
+    NOT_STARTED = 0
+    IN_PROGRESS = 1
+    COMPLETED = 2
 
 
 class Case(Base, BaseModel):
@@ -26,7 +30,7 @@ class Case(Base, BaseModel):
     counselor_id = Column(UUID(as_uuid=True), ForeignKey("counselors.id"), nullable=False)
     client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False)
     tenant_id = Column(String, nullable=False, index=True)
-    status = Column(SQLEnum(CaseStatus), default=CaseStatus.ACTIVE, nullable=False)
+    status = Column(Integer, default=CaseStatus.NOT_STARTED.value, nullable=False)
     summary = Column(Text)
     goals = Column(Text)
     problem_description = Column(Text)  # 問題敘述（諮詢目的）

@@ -63,7 +63,7 @@ class CreateClientCaseResponse(BaseModel):
     # Case 資訊
     case_id: UUID
     case_number: str
-    case_status: str
+    case_status: int
 
     # Metadata
     created_at: datetime
@@ -91,7 +91,7 @@ class UpdateClientCaseRequest(BaseModel):
     location: Optional[str] = None
 
     # Case 欄位 (all optional)
-    case_status: Optional[str] = Field(None, description="個案狀態: active/completed/suspended/referred")
+    case_status: Optional[str] = Field(None, description="個案狀態: 0=未進行, 1=進行中, 2=已完成")
     case_summary: Optional[str] = None
     case_goals: Optional[str] = None
     problem_description: Optional[str] = None
@@ -116,7 +116,7 @@ class ClientCaseListItem(BaseModel):
 
     # Case 資訊
     case_number: str = Field(..., description="個案編號")
-    case_status: str = Field(..., description="個案狀態（英文）")
+    case_status: int = Field(..., description="個案狀態（整數：0=未進行, 1=進行中, 2=已完成）")
     case_status_label: str = Field(..., description="個案狀態（中文）")
 
     # Session 資訊
@@ -216,10 +216,9 @@ def _generate_case_number(db: Session, tenant_id: str) -> str:
 def _map_case_status_to_label(status: CaseStatus) -> str:
     """將 Case Status 映射為中文標籤"""
     status_map = {
-        CaseStatus.ACTIVE: "進行中",
+        CaseStatus.NOT_STARTED: "未進行",
+        CaseStatus.IN_PROGRESS: "進行中",
         CaseStatus.COMPLETED: "已完成",
-        CaseStatus.SUSPENDED: "暫停中",
-        CaseStatus.REFERRED: "已轉介",
     }
     return status_map.get(status, "未知")
 
@@ -308,7 +307,7 @@ def create_client_and_case(
             client_id=new_client.id,
             counselor_id=current_user.id,
             tenant_id=tenant_id,
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
             summary=request.case_summary,
             goals=request.case_goals,
             problem_description=request.problem_description,
@@ -440,6 +439,26 @@ def get_client_case_list(
         total_sessions = session_stats.total_sessions if session_stats else 0
         last_session_date = session_stats.last_session_date if session_stats else None
 
+        # Handle status (compatible with old string data and new IntEnum)
+        if isinstance(case.status, int):
+            status_value = case.status
+            status_enum = CaseStatus(case.status)
+        elif isinstance(case.status, CaseStatus):
+            status_value = case.status.value
+            status_enum = case.status
+        else:
+            # Legacy string data - convert to integer
+            status_map = {
+                'ACTIVE': CaseStatus.NOT_STARTED,
+                'IN_PROGRESS': CaseStatus.IN_PROGRESS,
+                'COMPLETED': CaseStatus.COMPLETED,
+                'SUSPENDED': CaseStatus.IN_PROGRESS,
+                'REFERRED': CaseStatus.COMPLETED,
+                'NOT_STARTED': CaseStatus.NOT_STARTED,
+            }
+            status_enum = status_map.get(str(case.status).upper(), CaseStatus.NOT_STARTED)
+            status_value = status_enum.value
+
         # Build item
         item = ClientCaseListItem(
             client_id=client.id,
@@ -451,8 +470,8 @@ def get_client_case_list(
             identity_option=client.identity_option,
             current_status=client.current_status,
             case_number=case.case_number,
-            case_status=case.status.value,
-            case_status_label=_map_case_status_to_label(case.status),
+            case_status=status_value,
+            case_status_label=_map_case_status_to_label(status_enum),
             last_session_date=last_session_date,
             last_session_date_display=_format_session_date(last_session_date),
             total_sessions=total_sessions,
@@ -589,12 +608,17 @@ def update_client_and_case(
         case_updated = False
         if request.case_status is not None:
             try:
-                case.status = CaseStatus(request.case_status)
+                # Accept both integer and string (for backward compatibility)
+                if isinstance(request.case_status, int):
+                    case.status = CaseStatus(request.case_status)
+                else:
+                    # Try to parse as integer if it's a string
+                    case.status = CaseStatus(int(request.case_status))
                 case_updated = True
-            except ValueError:
+            except (ValueError, TypeError):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid case_status: {request.case_status}. Must be one of: active, completed, suspended, referred"
+                    detail=f"Invalid case_status: {request.case_status}. Must be 0 (未進行), 1 (進行中), or 2 (已完成)"
                 )
         if request.case_summary is not None:
             case.summary = request.case_summary

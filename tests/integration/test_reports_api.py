@@ -66,7 +66,7 @@ class TestReportsAPI:
             counselor_id=counselor.id,
             client_id=client.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         db_session.add(case)
         db_session.commit()

@@ -3836,25 +3836,65 @@
                 title: '📱 登入頁面 (手機模擬)',
                 subtitle: 'POST /api/auth/login',
                 renderForm: () => {
+                    // Immediately show initial preview (don't wait for API call)
+                    setTimeout(() => {
+                        const previewEl = document.getElementById('preview-content');
+                        if (previewEl) {
+                            previewEl.innerHTML = steps['ui-mobile-login'].renderPreview({
+                                preview: true,
+                                email: 'counselor@career.com',
+                                password: 'password123',
+                                tenant_id: 'career'
+                            });
+                        }
+
+                        // Add input listeners for live preview sync
+                        const syncPreview = () => {
+                            const previewEl = document.getElementById('preview-content');
+                            if (!previewEl) return;
+
+                            const email = document.getElementById('ui-login-email')?.value || '';
+                            const password = document.getElementById('ui-login-password')?.value || '';
+                            const tenant = document.getElementById('ui-login-tenant')?.value || '';
+
+                            // Update preview with current form values
+                            const previewHtml = steps['ui-mobile-login'].renderPreview({
+                                preview: true,
+                                email: email,
+                                password: password,
+                                tenant_id: tenant
+                            });
+                            previewEl.innerHTML = previewHtml;
+                        };
+
+                        const emailInput = document.getElementById('ui-login-email');
+                        const passwordInput = document.getElementById('ui-login-password');
+                        const tenantInput = document.getElementById('ui-login-tenant');
+
+                        emailInput?.addEventListener('input', syncPreview);
+                        passwordInput?.addEventListener('input', syncPreview);
+                        tenantInput?.addEventListener('input', syncPreview);
+                    }, 100);
+
                     return `
                         <div class="info-card">
                             <p>📱 手機風格的登入頁面</p>
-                            <p style="color: #86868b; font-size: 14px; margin-top: 8px;">• 使用既有的 /api/auth/login API</p>
-                            <p style="color: #86868b; font-size: 14px;">• 點擊右側預覽查看</p>
+                            <p style="color: #86868b; font-size: 14px; margin-top: 8px;">• 左右欄位即時同步</p>
+                            <p style="color: #86868b; font-size: 14px;">• 修改左邊表單，右邊預覽即時更新</p>
                         </div>
                         <div class="form-group">
-                            <label>測試帳號 Email</label>
-                            <input type="email" id="ui-login-email" value="counselor1@example.com" />
+                            <label>Email</label>
+                            <input type="email" id="ui-login-email" value="counselor@career.com" />
                         </div>
                         <div class="form-group">
-                            <label>測試帳號密碼</label>
+                            <label>密碼</label>
                             <input type="password" id="ui-login-password" value="password123" />
                         </div>
                         <div class="form-group">
                             <label>Tenant ID</label>
                             <input type="text" id="ui-login-tenant" value="career" />
                         </div>
-                        <button class="btn btn-primary" onclick="executeStep('ui-mobile-login')">載入預覽 + 測試登入</button>
+                        <button class="btn btn-primary" onclick="executeStep('ui-mobile-login')">測試登入</button>
                     `;
                 },
                 execute: async () => {
@@ -3877,21 +3917,13 @@
                     return { response, data };
                 },
                 renderPreview: (data) => {
-                    if (data.access_token) {
-                        // Show success message
-                        return `
-                            <div class="iphone-preview" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
-                                <div style="text-align: center; color: white;">
-                                    <div style="font-size: 72px; margin-bottom: 20px;">✅</div>
-                                    <h2 style="margin: 0; font-size: 32px; font-weight: 600;">登入成功！</h2>
-                                    <p style="margin-top: 12px; font-size: 18px; opacity: 0.9;">Token 已儲存</p>
-                                    <div style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.2); border-radius: 16px; font-size: 12px; font-family: monospace; word-break: break-all;">
-                                        ${data.access_token.substring(0, 50)}...
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }
+                    // Always show login form preview (never replace with success screen)
+                    // Success message will be shown in Response section below
+
+                    // Get current form values (for live sync)
+                    const email = data.email || 'counselor@career.com';
+                    const password = data.password || 'password123';
+                    const tenant = data.tenant_id || 'career';
 
                     // Show login form preview
                     return `
@@ -3909,25 +3941,28 @@
                             <!-- Login Form -->
                             <div style="flex: 1; display: flex; flex-direction: column; padding: 40px 32px; background: #f5f5f7;">
                                 <div style="flex: 1;">
-                                    <h1 style="font-size: 48px; font-weight: 700; margin: 0; color: #1d1d1f;">Welcome</h1>
+                                    <h1 style="font-size: 48px; font-weight: 700; margin: 0; color: #1d1d1f;">登入</h1>
 
                                     <div style="margin-top: 60px;">
                                         <!-- Email Input -->
                                         <div style="background: #e8e8ed; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;">
                                             <input type="email"
-                                                   placeholder="電子信箱"
-                                                   value="counselor1@example.com"
+                                                   value="${email}"
                                                    readonly
                                                    style="width: 100%; border: none; background: transparent; font-size: 16px; color: #1d1d1f; outline: none;" />
                                         </div>
 
                                         <!-- Password Input -->
-                                        <div style="background: #e8e8ed; border-radius: 12px; padding: 16px 20px;">
+                                        <div style="background: #e8e8ed; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;">
                                             <input type="password"
-                                                   placeholder="密碼"
-                                                   value="password123"
+                                                   value="${password}"
                                                    readonly
                                                    style="width: 100%; border: none; background: transparent; font-size: 16px; color: #1d1d1f; outline: none;" />
+                                        </div>
+
+                                        <!-- Tenant ID (hidden field, shown as label) -->
+                                        <div style="font-size: 12px; color: #86868b; margin-top: 8px;">
+                                            Tenant: ${tenant}
                                         </div>
                                     </div>
                                 </div>
@@ -3936,7 +3971,7 @@
                                 <div>
                                     <button style="
                                         width: 100%;
-                                        background: #8e8e93;
+                                        background: ${email && password ? '#007aff' : '#8e8e93'};
                                         color: white;
                                         border: none;
                                         border-radius: 12px;
@@ -3944,8 +3979,8 @@
                                         font-size: 18px;
                                         font-weight: 600;
                                         margin-bottom: 20px;
-                                        cursor: not-allowed;
-                                    ">Login</button>
+                                        cursor: ${email && password ? 'pointer' : 'not-allowed'};
+                                    ">登入</button>
 
                                     <div style="text-align: center;">
                                         <a href="#" style="color: #8e8e93; font-size: 14px; text-decoration: none;">忘記密碼</a>
@@ -3990,8 +4025,9 @@
                             <div style="font-size: 12px; margin-top: 8px;">點擊右上角 + 新增個案</div>
                         </div>
                     ` : items.map(item => {
-                        const statusClass = item.case_status === 'completed' ? 'completed' :
-                                          item.case_status === 'active' ? 'in-progress' : 'not-started';
+                        // Map integer status to CSS class (0=NOT_STARTED, 1=IN_PROGRESS, 2=COMPLETED)
+                        const statusClass = item.case_status === 2 ? 'completed' :
+                                          item.case_status === 1 ? 'in-progress' : 'not-started';
                         return `
                             <div class="case-card" style="background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
@@ -4293,11 +4329,13 @@
                                     <p style="margin: 4px 0; font-size: 12px; color: #6e6e73;">${item.client_email}</p>
                                 </div>
                                 <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; background: ${
-                                    item.case_status === 'active' ? '#fff4e6' :
-                                    item.case_status === 'completed' ? '#d1f4e0' : '#e0f0ff'
+                                    item.case_status === 1 ? '#fff4e6' :    // IN_PROGRESS: orange
+                                    item.case_status === 2 ? '#d1f4e0' :    // COMPLETED: green
+                                    '#e0f0ff'                                // NOT_STARTED: blue
                                 }; color: ${
-                                    item.case_status === 'active' ? '#f5a623' :
-                                    item.case_status === 'completed' ? '#0d894f' : '#0071e3'
+                                    item.case_status === 1 ? '#f5a623' :    // IN_PROGRESS: orange
+                                    item.case_status === 2 ? '#0d894f' :    // COMPLETED: green
+                                    '#0071e3'                                // NOT_STARTED: blue
                                 };">${item.case_status_label}</span>
                             </div>
                             <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e5e7;">

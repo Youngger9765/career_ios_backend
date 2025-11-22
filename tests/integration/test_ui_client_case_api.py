@@ -82,7 +82,7 @@ class TestUIClientCaseAPI:
             counselor_id=counselor.id,
             client_id=client.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         db_session.add(case)
         db_session.commit()
@@ -143,7 +143,7 @@ class TestUIClientCaseAPI:
                 counselor_id=counselor.id,
                 client_id=client.id,
                 tenant_id="career",
-                status=CaseStatus.ACTIVE,
+                status=CaseStatus.NOT_STARTED,
             )
             db_session.add(case)
 
@@ -188,7 +188,7 @@ class TestUIClientCaseAPI:
         assert "client_code" in data  # Auto-generated
         assert "case_id" in data
         assert "case_number" in data  # Auto-generated
-        assert data["case_status"] == "active"
+        assert data["case_status"] == 0  # NOT_STARTED
         assert data["message"] == "客戶與個案建立成功"
 
     def test_create_client_case_minimal_fields(self, test_client: TestClient, counselor: Counselor, auth_headers):
@@ -283,7 +283,7 @@ class TestUIClientCaseAPI:
             counselor_id=counselor.id,
             client_id=client.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
             summary="原始摘要",
         )
         db_session.add(case)
@@ -297,7 +297,7 @@ class TestUIClientCaseAPI:
                     "name": "更新後姓名",
                     "phone": "0987654321",
                     "current_status": "已轉職",
-                    "case_status": "completed",
+                    "case_status": "2",  # COMPLETED (sent as string but will be parsed)
                 "case_summary": "成功協助轉職",
             },
         )
@@ -305,7 +305,7 @@ class TestUIClientCaseAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["client_name"] == "更新後姓名"
-        assert data["case_status"] == "completed"
+        assert data["case_status"] == 2  # COMPLETED
         assert data["message"] == "客戶與個案更新成功"
 
     def test_update_client_case_partial_fields(self, test_client: TestClient, db_session: Session, counselor: Counselor, auth_headers):
@@ -333,7 +333,7 @@ class TestUIClientCaseAPI:
             counselor_id=counselor.id,
             client_id=client.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         db_session.add(case)
         db_session.commit()
@@ -342,12 +342,12 @@ class TestUIClientCaseAPI:
         response = test_client.patch(
             f"/api/v1/ui/client-case/{case.id}",
             headers=auth_headers,
-            json={"case_status": "suspended"},
+            json={"case_status": "1"},  # IN_PROGRESS (sent as string but will be parsed)
         )
 
         assert response.status_code == 200
         data = response.json()
-        assert data["case_status"] == "suspended"
+        assert data["case_status"] == 1  # IN_PROGRESS
         assert data["client_name"] == "部分更新客戶"  # Unchanged
 
     def test_update_client_case_not_found(self, test_client: TestClient, counselor: Counselor, auth_headers):
@@ -387,7 +387,7 @@ class TestUIClientCaseAPI:
             counselor_id=counselor.id,
             client_id=client.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         db_session.add(case)
         db_session.commit()
@@ -427,7 +427,7 @@ class TestUIClientCaseAPI:
             counselor_id=counselor.id,
             client_id=client.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         db_session.add(case)
         db_session.commit()
@@ -504,7 +504,7 @@ class TestUIClientCaseAPI:
             counselor_id=other_counselor.id,
             client_id=client.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         db_session.add(case)
         db_session.commit()

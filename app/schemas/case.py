@@ -7,7 +7,7 @@ from app.schemas.base import BaseResponse, BaseSchema
 
 class CaseBase(BaseSchema):
     case_number: Optional[str] = None
-    status: CaseStatus = CaseStatus.ACTIVE
+    status: CaseStatus = CaseStatus.NOT_STARTED
     summary: Optional[str] = None
     goals: Optional[str] = None
     problem_description: Optional[str] = None

@@ -76,7 +76,7 @@ class TestCasesAPI:
             data = response.json()
             assert data["client_id"] == str(test_client_obj.id)
             assert data["summary"] == "職涯諮商個案"
-            assert data["status"] == "active"
+            assert data["status"] == 0  # NOT_STARTED
             assert "case_number" in data
             assert "id" in data
 
@@ -94,7 +94,7 @@ class TestCasesAPI:
             assert response.status_code == 200
             data = response.json()
             assert data["client_id"] == str(test_client_obj.id)
-            assert data["status"] == "active"
+            assert data["status"] == 0  # NOT_STARTED
 
     def test_create_case_unauthorized(self, test_client_obj):
         """Test creating case without auth returns 403"""
@@ -129,7 +129,7 @@ class TestCasesAPI:
             counselor_id=counselor.id,
             client_id=test_client_obj.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         case2 = Case(
             id=uuid4(),
@@ -137,7 +137,7 @@ class TestCasesAPI:
             counselor_id=counselor.id,
             client_id=test_client_obj.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         db_session.add_all([case1, case2])
         db_session.commit()
@@ -176,7 +176,7 @@ class TestCasesAPI:
             counselor_id=counselor.id,
             client_id=test_client_obj.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         case2 = Case(
             id=uuid4(),
@@ -184,7 +184,7 @@ class TestCasesAPI:
             counselor_id=counselor.id,
             client_id=other_client.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         db_session.add_all([case1, case2])
         db_session.commit()
@@ -211,7 +211,7 @@ class TestCasesAPI:
             counselor_id=counselor.id,
             client_id=test_client_obj.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
             summary="測試個案摘要",
         )
         db_session.add(test_case)
@@ -251,7 +251,7 @@ class TestCasesAPI:
             counselor_id=counselor.id,
             client_id=test_client_obj.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         db_session.add(test_case)
         db_session.commit()
@@ -281,7 +281,7 @@ class TestCasesAPI:
             counselor_id=counselor.id,
             client_id=test_client_obj.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         db_session.add(test_case)
         db_session.commit()
@@ -290,12 +290,12 @@ class TestCasesAPI:
             response = client.patch(
                 f"/api/v1/cases/{test_case.id}",
                 headers=auth_headers,
-                json={"status": "completed"},
+                json={"status": 2},  # COMPLETED
             )
 
             assert response.status_code == 200
             data = response.json()
-            assert data["status"] == "completed"
+            assert data["status"] == 2  # COMPLETED
 
     def test_delete_case_success(self, db_session: Session, auth_headers, test_client_obj):
         """Test DELETE /api/v1/cases/{id} - Soft delete case"""
@@ -307,7 +307,7 @@ class TestCasesAPI:
             counselor_id=counselor.id,
             client_id=test_client_obj.id,
             tenant_id="career",
-            status=CaseStatus.ACTIVE,
+            status=CaseStatus.NOT_STARTED,
         )
         db_session.add(test_case)
         db_session.commit()
@@ -356,7 +356,7 @@ class TestCasesAPI:
                 counselor_id=counselor.id,
                 client_id=test_client_obj.id,
                 tenant_id="career",
-                status=CaseStatus.ACTIVE,
+                status=CaseStatus.NOT_STARTED,
             )
             db_session.add(case_obj)
         db_session.commit()
