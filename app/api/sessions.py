@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session as DBSession
 
 from app.core.database import get_db
@@ -58,6 +58,19 @@ class RecordingSegment(BaseModel):
     segment_number: int
     start_time: str
     end_time: str
+    duration_seconds: int
+    transcript_text: str
+    transcript_sanitized: Optional[str] = None
+
+
+class AppendRecordingRequest(BaseModel):
+    """
+    Append 錄音片段請求（iOS 友善版本）
+
+    不需要提供 segment_number，系統會自動計算
+    """
+    start_time: str  # ISO format: YYYY-MM-DD HH:MM or YYYY-MM-DDTHH:MM:SS
+    end_time: str    # ISO format: YYYY-MM-DD HH:MM or YYYY-MM-DDTHH:MM:SS
     duration_seconds: int
     transcript_text: str
     transcript_sanitized: Optional[str] = None
@@ -1020,6 +1033,132 @@ def update_reflection(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update reflection: {str(e)}",
+        )
+
+
+# Recording Append Endpoint
+class AppendRecordingResponse(BaseModel):
+    """Append 錄音片段響應"""
+    session_id: UUID
+    recording_added: RecordingSegment
+    total_recordings: int
+    transcript_text: str  # 更新後的完整逐字稿
+    updated_at: datetime
+
+
+@router.post("/{session_id}/recordings/append", response_model=AppendRecordingResponse)
+def append_recording(
+    session_id: UUID,
+    request: AppendRecordingRequest,
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+    db: DBSession = Depends(get_db),
+) -> AppendRecordingResponse:
+    """
+    在 session 中 append 新的 recording segment（iOS 友善版本）
+
+    自動計算 segment_number，不需要 iOS 提供
+    自動重新聚合 transcript_text
+
+    Args:
+        session_id: Session UUID
+        request: 錄音片段資料（不含 segment_number）
+        current_user: 當前諮商師
+        tenant_id: 租戶 ID
+        db: 數據庫 session
+
+    Returns:
+        更新後的 session 資訊
+
+    Raises:
+        HTTPException: 404 if session not found, 500 if append fails
+
+    Example:
+        POST /api/v1/sessions/{session_id}/recordings/append
+        {
+            "start_time": "2025-01-15 10:00",
+            "end_time": "2025-01-15 10:30",
+            "duration_seconds": 1800,
+            "transcript_text": "今天我們聊到...",
+            "transcript_sanitized": "今天我們聊到..."
+        }
+    """
+    # 驗證 session 存在且屬於當前租戶
+    result = db.execute(
+        select(Session, Client, Case)
+        .join(Case, Session.case_id == Case.id)
+        .join(Client, Case.client_id == Client.id)
+        .where(
+            Session.id == session_id,
+            Client.counselor_id == current_user.id,
+            Client.tenant_id == tenant_id,
+            Session.deleted_at.is_(None),
+            Case.deleted_at.is_(None),
+            Client.deleted_at.is_(None),
+        )
+    )
+    row = result.first()
+
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found or access denied",
+        )
+
+    session, _, _ = row
+
+    try:
+        # 重新從 DB 讀取確保取得最新 recordings（避免並發問題）
+        db.refresh(session)
+
+        # 取得現有 recordings（確保是 list，並創建新的 list 副本）
+        existing_recordings = list(session.recordings) if session.recordings else []
+
+        # 計算新的 segment_number（現有最大值 + 1）
+        if existing_recordings:
+            max_segment = max(r.get("segment_number", 0) for r in existing_recordings)
+            new_segment_number = max_segment + 1
+        else:
+            new_segment_number = 1
+
+        # 建立新的 recording segment
+        new_recording = {
+            "segment_number": new_segment_number,
+            "start_time": request.start_time,
+            "end_time": request.end_time,
+            "duration_seconds": request.duration_seconds,
+            "transcript_text": request.transcript_text,
+            "transcript_sanitized": request.transcript_sanitized or request.transcript_text,
+        }
+
+        # Append 到 recordings 陣列
+        existing_recordings.append(new_recording)
+
+        # 必須重新賦值整個陣列才能觸發 SQLAlchemy 更新追蹤
+        session.recordings = existing_recordings
+
+        # 重新聚合 transcript_text
+        full_transcript = aggregate_transcript_from_recordings(existing_recordings)
+        session.transcript_text = full_transcript
+        session.transcript_sanitized = full_transcript
+
+        # 保存變更
+        db.commit()
+        db.refresh(session)
+
+        return AppendRecordingResponse(
+            session_id=session.id,
+            recording_added=RecordingSegment(**new_recording),
+            total_recordings=len(existing_recordings),
+            transcript_text=session.transcript_text,
+            updated_at=session.updated_at or session.created_at,
+        )
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to append recording: {str(e)}",
         )
 
 
