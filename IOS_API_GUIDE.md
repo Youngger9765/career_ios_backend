@@ -37,17 +37,18 @@
 12. GET /api/v1/sessions/{id} - 查看會談記錄
 13. PATCH /api/v1/sessions/{id} - 更新會談記錄
 14. DELETE /api/v1/sessions/{id} - 刪除會談記錄
+15. POST /api/v1/sessions/{id}/recordings/append - 🎙️ Append 錄音片段 (iOS 友善) ⭐️ NEW
 
-### 🧠 諮商師反思 APIs ⭐️ NEW
-15. GET /api/v1/sessions/{id}/reflection - 取得反思內容
-16. PUT /api/v1/sessions/{id}/reflection - 更新反思內容
+### 🧠 諮商師反思 APIs
+16. GET /api/v1/sessions/{id}/reflection - 取得反思內容
+17. PUT /api/v1/sessions/{id}/reflection - 更新反思內容
 
 ### 📄 報告 APIs
-17. POST /api/v1/reports/generate - 生成報告 (從已儲存的會談記錄生成，需提供 session_id)
-18. GET /api/v1/reports - 列出報告
-19. GET /api/v1/reports/{id} - 取得單一報告
-20. PATCH /api/v1/reports/{id} - 更新報告 (編輯)
-21. GET /api/v1/reports/{id}/formatted - 取得格式化報告 (Markdown/HTML)
+18. POST /api/v1/reports/generate - 生成報告 (從已儲存的會談記錄生成，需提供 session_id)
+19. GET /api/v1/reports - 列出報告
+20. GET /api/v1/reports/{id} - 取得單一報告
+21. PATCH /api/v1/reports/{id} - 更新報告 (編輯)
+22. GET /api/v1/reports/{id}/formatted - 取得格式化報告 (Markdown/HTML)
 
 ---
 
@@ -848,9 +849,133 @@ Authorization: Bearer {access_token}
 
 ---
 
+### 15. 🎙️ Append 錄音片段 (iOS 友善) ⭐️ NEW
+
+**Endpoint:** `POST /api/v1/sessions/{session_id}/recordings/append`
+
+**描述:** iOS 專屬簡化 API，用於添加錄音片段到現有會談記錄。系統自動處理：
+- ✅ 自動計算 `segment_number`（無需 iOS 追蹤）
+- ✅ 自動聚合所有片段的 `transcript_text`
+- ✅ 支援會談中斷後繼續錄音
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "start_time": "2025-01-15 10:00",
+  "end_time": "2025-01-15 10:30",
+  "duration_seconds": 1800,
+  "transcript_text": "此片段的逐字稿內容...",
+  "transcript_sanitized": "脫敏後的內容（選填）"
+}
+```
+
+**欄位說明:**
+- `start_time` (required): 開始時間，格式 `YYYY-MM-DD HH:MM` 或 ISO 8601
+- `end_time` (required): 結束時間，格式 `YYYY-MM-DD HH:MM` 或 ISO 8601
+- `duration_seconds` (required): 錄音時長（秒）
+- `transcript_text` (required): 此片段的逐字稿
+- `transcript_sanitized` (optional): 脫敏後的逐字稿，不提供則使用原始內容
+
+**Response (200):**
+```json
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "recording_added": {
+    "segment_number": 2,
+    "start_time": "2025-01-15 10:00",
+    "end_time": "2025-01-15 10:30",
+    "duration_seconds": 1800,
+    "transcript_text": "此片段的逐字稿內容...",
+    "transcript_sanitized": "脫敏後的內容"
+  },
+  "total_recordings": 2,
+  "transcript_text": "第一段內容...\n\n第二段內容...",
+  "updated_at": "2025-01-15T10:35:00Z"
+}
+```
+
+**Swift 範例:**
+```swift
+struct AppendRecordingRequest: Codable {
+    let start_time: String
+    let end_time: String
+    let duration_seconds: Int
+    let transcript_text: String
+    let transcript_sanitized: String?
+}
+
+struct AppendRecordingResponse: Codable {
+    let session_id: UUID
+    let recording_added: RecordingSegment
+    let total_recordings: Int
+    let transcript_text: String
+    let updated_at: String
+}
+
+struct RecordingSegment: Codable {
+    let segment_number: Int
+    let start_time: String
+    let end_time: String
+    let duration_seconds: Int
+    let transcript_text: String
+    let transcript_sanitized: String?
+}
+
+func appendRecording(
+    token: String,
+    sessionId: UUID,
+    startTime: String,
+    endTime: String,
+    durationSeconds: Int,
+    transcript: String,
+    transcriptSanitized: String? = nil
+) async throws -> AppendRecordingResponse {
+    let url = URL(string: "\(baseURL)/api/v1/sessions/\(sessionId.uuidString)/recordings/append")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = AppendRecordingRequest(
+        start_time: startTime,
+        end_time: endTime,
+        duration_seconds: durationSeconds,
+        transcript_text: transcript,
+        transcript_sanitized: transcriptSanitized
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    return try JSONDecoder().decode(AppendRecordingResponse.self, from: data)
+}
+```
+
+**💡 使用場景:**
+1. **實時錄音上傳**: 會談過程中每 10-15 分鐘上傳一次片段
+2. **中斷後繼續**: 會談中斷（電話、休息）後，新開錄音自動為新片段
+3. **離線錄音同步**: 離線錄製多個片段，恢復網路後逐一上傳
+4. **分段轉寫**: 長時間會談分批進行語音轉文字，轉好一段上傳一段
+
+**vs 傳統 PATCH 方式的差異:**
+
+| 功能 | Append API (NEW) | PATCH API (舊) |
+|------|-----------------|---------------|
+| **segment_number** | ✅ 自動計算 | ❌ 需手動管理 |
+| **transcript 聚合** | ✅ 自動聚合 | ❌ 需手動拼接 |
+| **並發安全** | ✅ 樂觀鎖保護 | ⚠️ 可能衝突 |
+| **iOS 友善度** | ⭐⭐⭐⭐⭐ | ⭐⭐ |
+
+---
+
 ## 🧠 諮商師反思 APIs
 
-### 15. 取得反思內容 ⭐️ NEW
+### 16. 取得反思內容
 
 **Endpoint:** `GET /api/v1/sessions/{session_id}/reflection`
 

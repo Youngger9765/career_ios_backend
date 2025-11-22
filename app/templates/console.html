@@ -1864,6 +1864,9 @@
                         <button class="btn btn-primary" onclick="executeAppendRecording()" ${!state.token || !state.sessions?.length ? 'disabled' : ''}>
                             🎙️ Append 錄音片段
                         </button>
+                        <button class="btn btn-secondary" onclick="quickFillAppendRecording()" ${!state.token || !state.sessions?.length ? 'disabled' : ''} style="background: #6366f1; margin-top: 8px;">
+                            🎲 快速填入測試資料
+                        </button>
                     `;
                 },
                 execute: async () => {
@@ -4378,6 +4381,47 @@ Cl: 謝謝，我會的。`
                     }
                 });
             });
+        };
+
+        // Quick fill function for append recording
+        window.quickFillAppendRecording = () => {
+            const now = new Date();
+            const startTime = new Date(now.getTime() - 30 * 60000); // 30 minutes ago
+            const endTime = new Date(now.getTime() - 10 * 60000); // 10 minutes ago
+
+            const sampleTranscripts = [
+                `Co: 今天想聊些什麼呢？
+Cl: 最近工作壓力很大，覺得快要撐不下去了。
+Co: 可以多說一些嗎？是什麼樣的壓力？
+Cl: 主管總是對我的工作不滿意，不管我怎麼做都覺得不夠好。`,
+                `Co: 上次提到的職涯方向，有新的想法嗎？
+Cl: 我一直在思考，但還是很迷茫。
+Co: 迷茫的感覺是什麼？
+Cl: 不知道自己適合做什麼，也不確定現在的工作是不是對的選擇。`,
+                `Co: 今天看起來心情不錯？
+Cl: 對啊，這週工作順利很多，主管也稱讚了我。
+Co: 很高興聽到這個消息！是什麼改變了？
+Cl: 我開始用你上次建議的方法，先確認主管的需求再開始做。`
+            ];
+
+            const randomTranscript = sampleTranscripts[Math.floor(Math.random() * sampleTranscripts.length)];
+            const durationSeconds = 1200; // 20 minutes
+
+            // Format times as "YYYY-MM-DD HH:MM"
+            const formatTime = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day} ${hours}:${minutes}`;
+            };
+
+            document.getElementById('append-start-time').value = formatTime(startTime);
+            document.getElementById('append-end-time').value = formatTime(endTime);
+            document.getElementById('append-duration').value = durationSeconds;
+            document.getElementById('append-transcript').value = randomTranscript;
+            document.getElementById('append-transcript-sanitized').value = ''; // Leave empty for auto-fill
         };
 
         // Quick fill function for case creation
