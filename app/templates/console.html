@@ -498,7 +498,7 @@
                     <span class="step-number">4</span>
                     <span class="step-title">取得 Client 欄位配置</span>
                 </div>
-                <div class="step-subtitle">GET /api/v1/field-schemas/client</div>
+                <div class="step-subtitle">GET /api/v1/ui/field-schemas/client</div>
             </div>
 
             <div class="flow-step" data-step="list-clients">
@@ -551,7 +551,7 @@
                     <span class="step-number">10</span>
                     <span class="step-title">取得 Case 欄位配置</span>
                 </div>
-                <div class="step-subtitle">GET /api/v1/field-schemas/case</div>
+                <div class="step-subtitle">GET /api/v1/ui/field-schemas/case</div>
             </div>
 
             <div class="flow-step" data-step="list-cases">
@@ -723,46 +723,46 @@
 
             </div>
 
-            <!-- 2. 個案列表 & CRUD 個案 -->
-            <div class="flow-group-title" data-group="case-ui">📱 2. 個案列表 & CRUD 個案</div>
+            <!-- 2. Client-Case CRUD (iOS UI APIs) -->
+            <div class="flow-group-title" data-group="case-ui">📱 2. Client-Case CRUD (iOS UI APIs)</div>
             <div class="flow-group-content" data-group-content="case-ui">
-
-            <div class="flow-step" data-step="ui-client-case-list">
-                <div>
-                    <span class="step-number">UI-1</span>
-                    <span class="step-title">客戶個案列表 (手機模擬)</span>
-                </div>
-                <div class="step-subtitle">GET /client-case-list</div>
-            </div>
 
             <div class="flow-step" data-step="ui-create-client-case">
                 <div>
-                    <span class="step-number">UI-2</span>
-                    <span class="step-title">建立新個案 (手機模擬)</span>
+                    <span class="step-number">UI-1</span>
+                    <span class="step-title">📝 獲取表單 Schema</span>
                 </div>
-                <div class="step-subtitle">GET /create-client-case</div>
+                <div class="step-subtitle">GET /api/v1/ui/field-schemas/client-case</div>
             </div>
 
             <div class="flow-step" data-step="list-client-cases">
                 <div>
-                    <span class="step-number">UI-3</span>
-                    <span class="step-title">列出客戶個案 API</span>
+                    <span class="step-number">UI-2</span>
+                    <span class="step-title">📋 列出客戶個案</span>
                 </div>
                 <div class="step-subtitle">GET /api/v1/ui/client-case-list</div>
             </div>
 
             <div class="flow-step" data-step="create-client-case">
                 <div>
-                    <span class="step-number">UI-4</span>
-                    <span class="step-title">建立客戶個案 API</span>
+                    <span class="step-number">UI-3</span>
+                    <span class="step-title">➕ 建立客戶個案</span>
                 </div>
                 <div class="step-subtitle">POST /api/v1/ui/client-case</div>
+            </div>
+
+            <div class="flow-step" data-step="get-client-case-detail">
+                <div>
+                    <span class="step-number">UI-4</span>
+                    <span class="step-title">🔍 獲取個案詳情</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/ui/client-case/{id}</div>
             </div>
 
             <div class="flow-step" data-step="update-client-case">
                 <div>
                     <span class="step-number">UI-5</span>
-                    <span class="step-title">更新客戶個案 API</span>
+                    <span class="step-title">✏️ 更新客戶個案</span>
                 </div>
                 <div class="step-subtitle">PATCH /api/v1/ui/client-case/{id}</div>
             </div>
@@ -770,7 +770,7 @@
             <div class="flow-step" data-step="delete-client-case">
                 <div>
                     <span class="step-number">UI-6</span>
-                    <span class="step-title">刪除客戶個案 API</span>
+                    <span class="step-title">🗑️ 刪除客戶個案</span>
                 </div>
                 <div class="step-subtitle">DELETE /api/v1/ui/client-case/{id}</div>
             </div>
@@ -827,18 +827,166 @@
             clientCases: [],  // For UI client-case CRUD
             currentClient: null,
             currentSession: null,
-            currentReport: null
+            currentReport: null,
+            clientSchema: null,  // Dynamic client field schema
+            caseSchema: null     // Dynamic case field schema
         };
 
         const BASE_URL = window.location.origin;
 
         // Helper function to render tenant info banner
         const renderTenantBanner = () => {
-            const tenantName = state.currentUser?.tenant_id || 'unknown';
+            // Get tenant from currentUser, or from schema (as fallback), or from token
+            let tenantName = state.currentUser?.tenant_id;
+
+            if (!tenantName && state.clientSchema) {
+                tenantName = state.clientSchema.tenant_id;
+            }
+
+            if (!tenantName && state.token) {
+                // Parse tenant from JWT token (it's in the payload)
+                try {
+                    const payload = JSON.parse(atob(state.token.split('.')[1]));
+                    tenantName = payload.tenant_id;
+                } catch (e) {
+                    console.error('Failed to parse token:', e);
+                }
+            }
+
+            tenantName = tenantName || 'unknown';
+
             return `<div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 6px; padding: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 18px;">🏢</span>
                 <span style="color: #0369a1; font-weight: 600;">當前租戶：${tenantName}</span>
             </div>`;
+        };
+
+        // Load field schemas from API (using /all endpoint for efficiency)
+        const loadFieldSchemas = async () => {
+            if (!state.token) {
+                console.warn('⚠️ Cannot load schemas without token');
+                return;
+            }
+
+            try {
+                // Load both schemas in one call
+                const response = await fetch(`${BASE_URL}/api/v1/ui/field-schemas/client-case`, {
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    state.clientSchema = data.client;
+                    state.caseSchema = data.case;
+                    console.log('✅ Schemas loaded for tenant:', data.tenant_id);
+                    console.log('  - Client schema:', state.clientSchema);
+                    console.log('  - Case schema:', state.caseSchema);
+                } else {
+                    console.error('❌ Failed to load schemas:', response.status);
+                }
+            } catch (error) {
+                console.error('❌ Failed to load field schemas:', error);
+            }
+        };
+
+        // Generate form HTML from field schema
+        const generateFieldHTML = (field, formPrefix = '') => {
+            const fieldId = `${formPrefix}${field.key}`;
+            const isRequired = field.required ? ' *' : '';
+            const placeholder = field.placeholder || '不更新則留空';
+
+            let inputHTML = '';
+
+            switch (field.type) {
+                case 'text':
+                case 'email':
+                case 'phone':
+                    inputHTML = `<input type="${field.type}" id="${fieldId}" placeholder="${placeholder}" />`;
+                    break;
+
+                case 'date':
+                    inputHTML = `<input type="date" id="${fieldId}" />`;
+                    break;
+
+                case 'textarea':
+                    inputHTML = `<textarea id="${fieldId}" rows="3" placeholder="${placeholder}"></textarea>`;
+                    break;
+
+                case 'single_select':
+                    const options = field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+                    inputHTML = `<select id="${fieldId}">
+                        <option value="">不更新</option>
+                        ${options}
+                    </select>`;
+                    break;
+
+                case 'number':
+                    inputHTML = `<input type="number" id="${fieldId}" placeholder="${placeholder}" />`;
+                    break;
+
+                case 'boolean':
+                    inputHTML = `<select id="${fieldId}">
+                        <option value="">不更新</option>
+                        <option value="true">是</option>
+                        <option value="false">否</option>
+                    </select>`;
+                    break;
+
+                default:
+                    inputHTML = `<input type="text" id="${fieldId}" placeholder="${placeholder}" />`;
+            }
+
+            return `
+                <div class="form-group">
+                    <label>${field.label}${isRequired}</label>
+                    ${inputHTML}
+                    ${field.help_text ? `<p style="color: #86868b; font-size: 12px; margin-top: 4px;">${field.help_text}</p>` : ''}
+                </div>
+            `;
+        };
+
+        // Generate complete form HTML from schema sections
+        const generateFormFromSchema = (schema, formPrefix = '') => {
+            if (!schema || !schema.sections) {
+                return '<p style="color: #f59e0b;">⚠️ Schema not loaded. Please login first.</p>';
+            }
+
+            return schema.sections.map(section => {
+                const fieldsHTML = section.fields
+                    .sort((a, b) => a.order - b.order)
+                    .map(field => generateFieldHTML(field, formPrefix))
+                    .join('');
+
+                return `
+                    <h4 style="margin: 20px 0 12px;">${section.title}</h4>
+                    ${section.description ? `<p style="color: #86868b; font-size: 13px; margin-bottom: 12px;">${section.description}</p>` : ''}
+                    ${fieldsHTML}
+                `;
+            }).join('');
+        };
+
+        // Collect form values from schema
+        const collectFormValues = (schema, formPrefix = '') => {
+            if (!schema || !schema.sections) return {};
+
+            const values = {};
+            schema.sections.forEach(section => {
+                section.fields.forEach(field => {
+                    const fieldId = `${formPrefix}${field.key}`;
+                    const element = document.getElementById(fieldId);
+                    if (element && element.value) {
+                        // Convert boolean strings to actual booleans
+                        if (field.type === 'boolean') {
+                            values[field.key] = element.value === 'true';
+                        } else if (field.type === 'number') {
+                            values[field.key] = parseFloat(element.value);
+                        } else {
+                            values[field.key] = element.value;
+                        }
+                    }
+                });
+            });
+            return values;
         };
 
         // Step configurations
@@ -892,6 +1040,9 @@
                         } catch (error) {
                             console.error('Failed to fetch user info:', error);
                         }
+
+                        // 自動載入 field schemas
+                        await loadFieldSchemas();
                     }
                     return { response, data };
                 },
@@ -960,14 +1111,14 @@
             },
             'get-client-field-schema': {
                 title: '取得 Client 欄位配置',
-                subtitle: 'GET /api/v1/field-schemas/client',
+                subtitle: 'GET /api/v1/ui/field-schemas/client',
                 renderForm: () => `
                     ${renderTenantBanner()}
                     <p>取得當前租戶的 Client 表單欄位配置，用於動態生成表單</p>
                     <button class="btn btn-primary" onclick="executeGetClientFieldSchema()" ${!state.token ? 'disabled' : ''}>取得配置</button>
                 `,
                 execute: async () => {
-                    const response = await fetch(`${BASE_URL}/api/v1/field-schemas/client`, {
+                    const response = await fetch(`${BASE_URL}/api/v1/ui/field-schemas/client`, {
                         headers: {
                             'Authorization': `Bearer ${state.token}`
                         }
@@ -1041,14 +1192,14 @@
             },
             'get-case-field-schema': {
                 title: '取得 Case 欄位配置',
-                subtitle: 'GET /api/v1/field-schemas/case',
+                subtitle: 'GET /api/v1/ui/field-schemas/case',
                 renderForm: () => `
                     ${renderTenantBanner()}
                     <p>取得當前租戶的個案 (Case) 表單欄位配置，用於動態生成表單</p>
                     <button class="btn btn-primary" onclick="executeGetCaseFieldSchema()" ${!state.token ? 'disabled' : ''}>取得配置</button>
                 `,
                 execute: async () => {
-                    const response = await fetch(`${BASE_URL}/api/v1/field-schemas/case`, {
+                    const response = await fetch(`${BASE_URL}/api/v1/ui/field-schemas/case`, {
                         headers: {
                             'Authorization': `Bearer ${state.token}`
                         }
@@ -1176,7 +1327,7 @@
                     // Fetch client field schema
                     if (!state.clientFieldSchema) {
                         try {
-                            const clientRes = await fetch(`${BASE_URL}/api/v1/field-schemas/client`, {
+                            const clientRes = await fetch(`${BASE_URL}/api/v1/ui/field-schemas/client`, {
                                 headers: { 'Authorization': `Bearer ${state.token}` }
                             });
 
@@ -1382,10 +1533,10 @@
                     // Load field schemas if not already loaded
                     if (!state.clientFieldSchema || !state.caseFieldSchema) {
                         const [clientRes, caseRes] = await Promise.all([
-                            fetch(`${BASE_URL}/api/v1/field-schemas/client`, {
+                            fetch(`${BASE_URL}/api/v1/ui/field-schemas/client`, {
                                 headers: { 'Authorization': `Bearer ${state.token}` }
                             }),
-                            fetch(`${BASE_URL}/api/v1/field-schemas/case`, {
+                            fetch(`${BASE_URL}/api/v1/ui/field-schemas/case`, {
                                 headers: { 'Authorization': `Bearer ${state.token}` }
                             })
                         ]);
@@ -2008,10 +2159,10 @@
                     // Load field schemas if not already loaded
                     if (!state.clientFieldSchema || !state.caseFieldSchema) {
                         const [clientRes, caseRes] = await Promise.all([
-                            fetch(`${BASE_URL}/api/v1/field-schemas/client`, {
+                            fetch(`${BASE_URL}/api/v1/ui/field-schemas/client`, {
                                 headers: { 'Authorization': `Bearer ${state.token}` }
                             }),
-                            fetch(`${BASE_URL}/api/v1/field-schemas/case`, {
+                            fetch(`${BASE_URL}/api/v1/ui/field-schemas/case`, {
                                 headers: { 'Authorization': `Bearer ${state.token}` }
                             })
                         ]);
@@ -4154,127 +4305,90 @@
                 }
             },
             'ui-create-client-case': {
-                title: '📝 建立新個案 (手機模擬)',
-                subtitle: 'POST /api/v1/ui/client-case (嵌入式表單)',
+                title: '📝 獲取表單 Schema',
+                subtitle: 'GET /api/v1/ui/field-schemas/client-case',
                 renderForm: () => {
                     return `
+                        ${renderTenantBanner()}
                         <div class="info-card">
-                            <p>📱 手機風格的建立新個案表單頁面</p>
-                            <p style="color: #86868b; font-size: 14px; margin-top: 8px;">• 同時建立 Client + Case</p>
-                            <p style="color: #86868b; font-size: 14px;">• 點擊右側預覽查看表單</p>
+                            <p>📱 iOS 建立個案流程 - Step 1: 獲取表單配置</p>
+                            <p style="color: #86868b; font-size: 14px; margin-top: 8px;">
+                                • 一次性獲取 Client 和 Case 兩個表單的 Schema<br>
+                                • 減少網絡請求次數<br>
+                                • 根據 tenant_id 動態決定欄位
+                            </p>
                         </div>
-                        <button class="btn btn-primary" onclick="executeStep('ui-create-client-case')">載入表單</button>
+                        <button class="btn btn-primary" onclick="executeStep('ui-create-client-case')">獲取表單 Schema</button>
                     `;
                 },
                 execute: async () => {
-                    // Just return success to render the form
-                    return { response: { ok: true }, data: { message: '表單已載入' } };
+                    // Fetch both schemas in one call
+                    const response = await fetch(`${BASE_URL}/api/v1/ui/field-schemas/client-case`, {
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    });
+                    const data = await response.json();
+
+                    return {
+                        response,
+                        data: {
+                            client_schema: data.client,
+                            case_schema: data.case,
+                            tenant_id: data.tenant_id
+                        }
+                    };
                 },
-                renderPreview: (data) => `
-                    <style>
-                        .create-form-preview {
-                            width: 390px;
-                            height: 844px;
-                            background: #000;
-                            border-radius: 50px;
-                            padding: 12px;
-                            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-                            position: relative;
-                            margin: 0 auto;
-                        }
-                        .create-form-preview .screen {
-                            width: 100%;
-                            height: 100%;
-                            background: #fff;
-                            border-radius: 40px;
-                            overflow: hidden;
-                            display: flex;
-                            flex-direction: column;
-                        }
-                        .create-form-preview .form-content {
-                            flex: 1;
-                            overflow-y: auto;
-                            padding: 20px;
-                            background: #f9f9f9;
-                        }
-                        .create-form-preview input,
-                        .create-form-preview select,
-                        .create-form-preview textarea {
-                            width: 100%;
-                            padding: 12px;
-                            border: 1px solid #e5e5e7;
-                            border-radius: 8px;
-                            font-size: 16px;
-                            margin-bottom: 12px;
-                        }
-                        .create-form-preview .submit-btn {
-                            width: 100%;
-                            padding: 16px;
-                            background: #5ac8fa;
-                            color: #fff;
-                            border: none;
-                            border-radius: 12px;
-                            font-size: 17px;
-                            font-weight: 600;
-                            cursor: pointer;
-                        }
-                        .create-form-preview .submit-btn:hover {
-                            background: #2ab7f3;
-                        }
-                    </style>
-                    <div class="create-form-preview">
-                        <div class="notch" style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 30px; background: #000; border-radius: 0 0 20px 20px; z-index: 10;"></div>
-                        <div class="screen">
-                            <div class="status-bar" style="display: flex; justify-content: space-between; padding: 0 20px; height: 44px; align-items: center; font-size: 15px; font-weight: 600;">
-                                <span style="margin-left: 60px;">9:41</span>
-                                <div>⚡️ 📶 🔋</div>
-                            </div>
-                            <div class="nav-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #e5e5e7;">
-                                <div>‹</div>
-                                <div style="font-size: 17px; font-weight: 600; flex: 1; text-align: center;">建立新個案</div>
-                                <div style="width: 36px;"></div>
-                            </div>
-                            <div class="form-content">
-                                <div style="background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;">📝 基本資料</h3>
-                                    <input type="text" placeholder="姓名 *" id="preview-name" value="張小明" />
-                                    <input type="email" placeholder="Email *" id="preview-email" value="test@example.com" />
-                                    <select id="preview-gender">
-                                        <option>男</option>
-                                        <option>女</option>
-                                        <option>其他</option>
-                                    </select>
-                                    <input type="date" id="preview-birth" value="1995-01-01" />
-                                    <input type="tel" placeholder="手機號碼 *" id="preview-phone" value="0912345678" />
-                                </div>
+                renderPreview: (data) => {
+                    const clientFields = data.client_schema?.sections?.[0]?.fields?.slice(0, 5) || [];
+                    const caseFields = data.case_schema?.sections?.[0]?.fields?.slice(0, 3) || [];
 
-                                <div style="background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;">💼 職涯資訊</h3>
-                                    <select id="preview-identity">
-                                        <option>學生</option>
-                                        <option>社會新鮮人</option>
-                                        <option selected>轉職者</option>
-                                        <option>在職者</option>
-                                    </select>
-                                    <input type="text" placeholder="目前現況 *" value="正在考慮轉職" />
-                                    <input type="text" placeholder="職業（選填）" value="工程師" />
-                                    <input type="text" placeholder="學歷（選填）" value="大學" />
-                                </div>
-
-                                <div style="background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 80px;">
-                                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;">📋 個案資訊</h3>
-                                    <textarea rows="4" placeholder="個案摘要（選填）">職涯轉換諮詢</textarea>
-                                </div>
-
-                                <div style="position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 350px;">
-                                    <button class="submit-btn" onclick="alert('這是示意圖，請使用上方的 UI-4 建立客戶個案 API 實際建立')">
-                                        建立個案
-                                    </button>
-                                </div>
-                            </div>
+                    return `
+                        <div class="info-card">
+                            <h3>✅ Schema 獲取成功</h3>
+                            <p style="color: #86868b; margin-top: 8px;">租戶: <strong>${data.tenant_id}</strong></p>
                         </div>
-                    </div>
-                `
+
+                        <div class="info-card" style="margin-top: 16px;">
+                            <h4>📝 Client Schema (前 5 個欄位)</h4>
+                            ${clientFields.map(f => `
+                                <div style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
+                                    <div style="font-weight: 600;">${f.label}${f.required ? ' *' : ''}</div>
+                                    <div style="color: #86868b; font-size: 12px;">
+                                        key: ${f.key} | type: ${f.type}
+                                        ${f.options ? `| options: ${f.options.join(', ')}` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                            <p style="color: #86868b; font-size: 12px; margin-top: 8px;">
+                                總共 ${data.client_schema?.sections?.[0]?.fields?.length || 0} 個欄位
+                            </p>
+                        </div>
+
+                        <div class="info-card" style="margin-top: 16px;">
+                            <h4>📋 Case Schema (前 3 個欄位)</h4>
+                            ${caseFields.map(f => `
+                                <div style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
+                                    <div style="font-weight: 600;">${f.label}${f.required ? ' *' : ''}</div>
+                                    <div style="color: #86868b; font-size: 12px;">
+                                        key: ${f.key} | type: ${f.type}
+                                        ${f.options ? `| options: ${f.options.join(', ')}` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                            <p style="color: #86868b; font-size: 12px; margin-top: 8px;">
+                                總共 ${data.case_schema?.sections?.[0]?.fields?.length || 0} 個欄位
+                            </p>
+                        </div>
+
+                        <div class="info-card" style="margin-top: 16px; background: #f0f9ff; border-color: #0ea5e9;">
+                            <p style="color: #0369a1; font-size: 13px;">
+                                💡 <strong>iOS 使用方式：</strong><br>
+                                1. 解析 client_schema 和 case_schema<br>
+                                2. 根據 field type 動態生成 UI 元件<br>
+                                3. 用戶填寫後，POST 到 /api/v1/ui/client-case
+                            </p>
+                        </div>
+                    `;
+                }
             },
 
             // ================== 客戶個案管理 CRUD ==================
@@ -4378,6 +4492,10 @@
                         <p style="color: #86868b; font-size: 14px; margin-top: 8px;">• Client Code 和 Case Number 自動生成</p>
                     </div>
 
+                    <button class="btn" onclick="generateRandomClientData()" style="background: #10b981; color: white; margin-bottom: 16px; width: 100%;">
+                        🎲 隨機生成測試資料
+                    </button>
+
                     <h4 style="margin: 20px 0 12px;">📝 Client 必填欄位</h4>
                     <div class="form-group">
                         <label>姓名 *</label>
@@ -4468,6 +4586,19 @@
                         body: JSON.stringify(requestBody)
                     });
                     const data = await response.json();
+
+                    // Refresh the list after successful creation
+                    if (response.ok) {
+                        const listResponse = await fetch(`${BASE_URL}/api/v1/ui/client-case-list?skip=0&limit=100`, {
+                            headers: { 'Authorization': `Bearer ${state.token}` }
+                        });
+                        if (listResponse.ok) {
+                            const listData = await listResponse.json();
+                            state.clientCases = listData.items;
+                            console.log('✅ Client-case list refreshed after creation');
+                        }
+                    }
+
                     return { response, data };
                 },
                 renderPreview: (data) => `
@@ -4507,11 +4638,10 @@
                 `
             },
 
-            'update-client-case': {
-                title: '更新客戶個案',
-                subtitle: 'PATCH /api/v1/ui/client-case/{id}',
+            'get-client-case-detail': {
+                title: '🔍 獲取個案詳情',
+                subtitle: 'GET /api/v1/ui/client-case/{id}',
                 renderForm: () => {
-                    // Generate dropdown from state.clientCases
                     const caseOptions = (state.clientCases || []).map(c =>
                         `<option value="${c.case_id}">${c.client_name} - ${c.case_number}</option>`
                     ).join('');
@@ -4519,8 +4649,144 @@
                     return `
                         ${renderTenantBanner()}
                         <div class="info-card">
-                            <p>✏️ 更新客戶與個案資料</p>
-                            <p style="color: #86868b; font-size: 14px; margin-top: 8px;">• 所有欄位都是選填，只更新提供的欄位</p>
+                            <p>🔍 獲取單一個案的完整資訊</p>
+                            <p style="color: #86868b; font-size: 14px; margin-top: 8px;">
+                                • 用於 iOS 更新表單載入現有資料<br>
+                                • 返回所有 Client 和 Case 欄位
+                            </p>
+                        </div>
+
+                        <div class="form-group">
+                            <label>選擇個案 *</label>
+                            <select id="detail-case-id">
+                                <option value="">-- 請先執行「列出客戶個案」--</option>
+                                ${caseOptions}
+                            </select>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="executeGetClientCaseDetail()">獲取詳情</button>
+                    `;
+                },
+                execute: async () => {
+                    const caseId = document.getElementById('detail-case-id').value;
+                    if (!caseId) {
+                        throw new Error('Please select a case');
+                    }
+
+                    const response = await fetch(`${BASE_URL}/api/v1/ui/client-case/${caseId}`, {
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    });
+                    const data = await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card">
+                        <h3>✅ 個案詳情</h3>
+                    </div>
+
+                    <div class="info-card" style="margin-top: 16px;">
+                        <h4>👤 Client 資訊</h4>
+                        <div class="info-row">
+                            <span class="info-label">姓名</span>
+                            <span class="info-value">${data.client_name}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Code</span>
+                            <span class="info-value">${data.client_code}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Email</span>
+                            <span class="info-value">${data.client_email}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">性別</span>
+                            <span class="info-value">${data.gender}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">生日</span>
+                            <span class="info-value">${data.birth_date}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">手機</span>
+                            <span class="info-value">${data.phone}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">身份</span>
+                            <span class="info-value">${data.identity_option}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">目前現況</span>
+                            <span class="info-value">${data.current_status}</span>
+                        </div>
+                        ${data.nickname ? `<div class="info-row"><span class="info-label">暱稱</span><span class="info-value">${data.nickname}</span></div>` : ''}
+                        ${data.education ? `<div class="info-row"><span class="info-label">學歷</span><span class="info-value">${data.education}</span></div>` : ''}
+                        ${data.occupation ? `<div class="info-row"><span class="info-label">職業</span><span class="info-value">${data.occupation}</span></div>` : ''}
+                        ${data.location ? `<div class="info-row"><span class="info-label">地點</span><span class="info-value">${data.location}</span></div>` : ''}
+                    </div>
+
+                    <div class="info-card" style="margin-top: 16px;">
+                        <h4>📋 Case 資訊</h4>
+                        <div class="info-row">
+                            <span class="info-label">Case Number</span>
+                            <span class="info-value">${data.case_number}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">狀態</span>
+                            <span class="info-value">${data.case_status_label} (${data.case_status})</span>
+                        </div>
+                        ${data.case_summary ? `<div class="info-row"><span class="info-label">摘要</span><span class="info-value">${data.case_summary}</span></div>` : ''}
+                        ${data.case_goals ? `<div class="info-row"><span class="info-label">目標</span><span class="info-value">${data.case_goals}</span></div>` : ''}
+                        ${data.problem_description ? `<div class="info-row"><span class="info-label">問題敘述</span><span class="info-value">${data.problem_description}</span></div>` : ''}
+                    </div>
+
+                    <div class="info-card" style="margin-top: 16px; background: #f0f9ff; border-color: #0ea5e9;">
+                        <p style="color: #0369a1; font-size: 13px;">
+                            💡 <strong>iOS 使用方式：</strong><br>
+                            將此資料填充到更新表單中，用戶修改後再 PATCH 更新
+                        </p>
+                    </div>
+                `
+            },
+
+            'update-client-case': {
+                title: '更新客戶個案',
+                subtitle: 'PATCH /api/v1/ui/client-case/{id}',
+                renderForm: () => {
+                    // Check if schemas are loaded, if not, load them automatically
+                    if ((!state.clientSchema || !state.caseSchema) && state.token) {
+                        // Trigger async load and re-render
+                        setTimeout(async () => {
+                            await loadFieldSchemas();
+                            selectStep('update-client-case'); // Re-render this step
+                        }, 100);
+
+                        return `
+                            ${renderTenantBanner()}
+                            <div class="info-card" style="background: #fff3cd; border-color: #ffc107;">
+                                <p style="color: #856404;">
+                                    ⏳ 正在載入表單 Schema...
+                                </p>
+                            </div>
+                        `;
+                    }
+
+                    // Generate dropdown from state.clientCases
+                    const caseOptions = (state.clientCases || []).map(c =>
+                        `<option value="${c.case_id}">${c.client_name} - ${c.case_number}</option>`
+                    ).join('');
+
+                    // Generate dynamic form from schemas
+                    const clientFormHTML = generateFormFromSchema(state.clientSchema, 'cc-update-client-');
+                    const caseFormHTML = generateFormFromSchema(state.caseSchema, 'cc-update-case-');
+
+                    return `
+                        ${renderTenantBanner()}
+                        <div class="info-card">
+                            <p>✏️ 更新客戶與個案資料（動態欄位 by Tenant）</p>
+                            <p style="color: #86868b; font-size: 14px; margin-top: 8px;">
+                                • 所有欄位都是選填，只更新提供的欄位<br>
+                                • 欄位根據租戶 (${state.currentUser?.tenant_id || 'unknown'}) 動態生成
+                            </p>
                         </div>
 
                         <div class="form-group">
@@ -4532,34 +4798,10 @@
                         </div>
 
                         <h4 style="margin: 20px 0 12px;">📝 Client 欄位 (選填)</h4>
-                        <div class="form-group">
-                            <label>姓名</label>
-                            <input type="text" id="cc-update-name" placeholder="不更新則留空" />
-                        </div>
-                        <div class="form-group">
-                            <label>手機號碼</label>
-                            <input type="tel" id="cc-update-phone" placeholder="不更新則留空" />
-                        </div>
-                        <div class="form-group">
-                            <label>目前現況</label>
-                            <input type="text" id="cc-update-status" placeholder="不更新則留空" />
-                        </div>
+                        ${clientFormHTML}
 
                         <h4 style="margin: 20px 0 12px;">📋 Case 欄位 (選填)</h4>
-                        <div class="form-group">
-                            <label>Case 狀態</label>
-                            <select id="cc-update-case-status">
-                                <option value="">不更新</option>
-                                <option value="active">進行中 (active)</option>
-                                <option value="completed">已完成 (completed)</option>
-                                <option value="suspended">暫停中 (suspended)</option>
-                                <option value="referred">已轉介 (referred)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>個案摘要</label>
-                            <textarea id="cc-update-summary" rows="3" placeholder="不更新則留空"></textarea>
-                        </div>
+                        ${caseFormHTML}
 
                         <button class="btn btn-primary" onclick="executeUpdateClientCase()">更新</button>
                     `;
@@ -4570,23 +4812,20 @@
                         throw new Error('Please select a case to update');
                     }
 
-                    const requestBody = {};
+                    // Collect values dynamically from schemas
+                    const clientValues = collectFormValues(state.clientSchema, 'cc-update-client-');
+                    const caseValues = collectFormValues(state.caseSchema, 'cc-update-case-');
 
-                    // Only include fields that are not empty
-                    const name = document.getElementById('cc-update-name').value;
-                    if (name) requestBody.name = name;
+                    // Merge client and case values
+                    const requestBody = { ...clientValues };
 
-                    const phone = document.getElementById('cc-update-phone').value;
-                    if (phone) requestBody.phone = phone;
+                    // Map case fields to API request format
+                    if (caseValues.status !== undefined) requestBody.case_status = caseValues.status;
+                    if (caseValues.summary) requestBody.case_summary = caseValues.summary;
+                    if (caseValues.goals) requestBody.case_goals = caseValues.goals;
+                    if (caseValues.problem_description) requestBody.problem_description = caseValues.problem_description;
 
-                    const status = document.getElementById('cc-update-status').value;
-                    if (status) requestBody.current_status = status;
-
-                    const caseStatus = document.getElementById('cc-update-case-status').value;
-                    if (caseStatus) requestBody.case_status = caseStatus;
-
-                    const summary = document.getElementById('cc-update-summary').value;
-                    if (summary) requestBody.case_summary = summary;
+                    console.log('📤 Update request body:', requestBody);
 
                     const response = await fetch(`${BASE_URL}/api/v1/ui/client-case/${caseId}`, {
                         method: 'PATCH',
@@ -4597,6 +4836,19 @@
                         body: JSON.stringify(requestBody)
                     });
                     const data = await response.json();
+
+                    // Refresh the list after successful update
+                    if (response.ok) {
+                        const listResponse = await fetch(`${BASE_URL}/api/v1/ui/client-case-list?skip=0&limit=100`, {
+                            headers: { 'Authorization': `Bearer ${state.token}` }
+                        });
+                        if (listResponse.ok) {
+                            const listData = await listResponse.json();
+                            state.clientCases = listData.items;
+                            console.log('✅ Client-case list refreshed after update');
+                        }
+                    }
+
                     return { response, data };
                 },
                 renderPreview: (data) => `
@@ -4667,6 +4919,19 @@
                         headers: { 'Authorization': `Bearer ${state.token}` }
                     });
                     const data = await response.json();
+
+                    // Refresh the list after successful deletion
+                    if (response.ok) {
+                        const listResponse = await fetch(`${BASE_URL}/api/v1/ui/client-case-list?skip=0&limit=100`, {
+                            headers: { 'Authorization': `Bearer ${state.token}` }
+                        });
+                        if (listResponse.ok) {
+                            const listData = await listResponse.json();
+                            state.clientCases = listData.items;
+                            console.log('✅ Client-case list refreshed after deletion');
+                        }
+                    }
+
                     return { response, data };
                 },
                 renderPreview: (data) => `
@@ -4947,12 +5212,7 @@
         // Load client-case data for update form (UI-5)
         window.loadClientCaseForUpdate = function(caseId) {
             if (!caseId || !state.clientCases) {
-                // Clear all fields
-                document.getElementById('cc-update-name').value = '';
-                document.getElementById('cc-update-phone').value = '';
-                document.getElementById('cc-update-status').value = '';
-                document.getElementById('cc-update-case-status').value = '';
-                document.getElementById('cc-update-summary').value = '';
+                console.warn('No case selected or clientCases not loaded');
                 return;
             }
 
@@ -4963,18 +5223,39 @@
                 return;
             }
 
-            // Populate Client fields with current values
-            const nameEl = document.getElementById('cc-update-name');
-            const phoneEl = document.getElementById('cc-update-phone');
-            const statusEl = document.getElementById('cc-update-status');
-            const caseStatusEl = document.getElementById('cc-update-case-status');
-            const summaryEl = document.getElementById('cc-update-summary');
+            console.log('📋 Loading case for update:', selectedCase);
 
-            if (nameEl) nameEl.value = selectedCase.client_name || '';
-            if (phoneEl) phoneEl.value = ''; // Phone not in list response, leave empty
-            if (statusEl) statusEl.value = selectedCase.current_status || '';
-            if (caseStatusEl) caseStatusEl.value = selectedCase.case_status || '';
-            if (summaryEl) summaryEl.value = ''; // Summary not in list response, leave empty
+            // Clear and populate Client fields dynamically from schema
+            if (state.clientSchema?.sections) {
+                state.clientSchema.sections.forEach(section => {
+                    section.fields.forEach(field => {
+                        const fieldId = `cc-update-client-${field.key}`;
+                        const element = document.getElementById(fieldId);
+                        if (element) {
+                            // Map from selectedCase properties to form fields
+                            const value = selectedCase[`client_${field.key}`] || selectedCase[field.key] || '';
+                            element.value = value;
+                        }
+                    });
+                });
+            }
+
+            // Clear and populate Case fields dynamically from schema
+            if (state.caseSchema?.sections) {
+                state.caseSchema.sections.forEach(section => {
+                    section.fields.forEach(field => {
+                        const fieldId = `cc-update-case-${field.key}`;
+                        const element = document.getElementById(fieldId);
+                        if (element) {
+                            // Map from selectedCase properties to form fields
+                            const value = selectedCase[`case_${field.key}`] || selectedCase[field.key] || '';
+                            element.value = value;
+                        }
+                    });
+                });
+            }
+
+            console.log('✅ Form populated with current values');
 
             console.log('Loaded client-case data:', selectedCase);
         };
@@ -5446,8 +5727,47 @@ Cl: 我開始用你上次建議的方法，先確認主管的需求再開始做�
         // Client-Case CRUD functions
         window.executeListClientCases = () => executeStep('list-client-cases');
         window.executeCreateClientCase = () => executeStep('create-client-case');
+        window.executeGetClientCaseDetail = () => executeStep('get-client-case-detail');
         window.executeUpdateClientCase = () => executeStep('update-client-case');
         window.executeDeleteClientCase = () => executeStep('delete-client-case');
+
+        // Generate random test data for create-client-case form
+        window.generateRandomClientData = () => {
+            const timestamp = Date.now();
+            const surnames = ['王', '李', '張', '劉', '陳', '楊', '黃', '吳', '趙', '周'];
+            const givenNames = ['小明', '小華', '小芳', '建國', '志偉', '淑芬', '雅婷', '冠宇', '怡君', '佳玲'];
+            const identities = ['學生', '社會新鮮人', '轉職者', '在職者', '其他'];
+            const statuses = ['求職中', '在學中', '考慮轉職', '探索新方向', '穩定就業'];
+            const genders = ['男', '女', '其他'];
+            const educations = ['高中', '大學', '研究所', '博士'];
+            const occupations = ['工程師', '設計師', '行銷人員', '產品經理', '學生', '教師'];
+            const locations = ['台北市', '新北市', '台中市', '台南市', '高雄市', '桃園市'];
+
+            const randomSurname = surnames[Math.floor(Math.random() * surnames.length)];
+            const randomGivenName = givenNames[Math.floor(Math.random() * givenNames.length)];
+            const fullName = randomSurname + randomGivenName;
+
+            document.getElementById('cc-name').value = fullName;
+            document.getElementById('cc-email').value = `test${timestamp}@example.com`;
+            document.getElementById('cc-gender').value = genders[Math.floor(Math.random() * genders.length)];
+
+            // Random birth date between 1970 and 2005
+            const randomYear = 1970 + Math.floor(Math.random() * 35);
+            const randomMonth = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
+            const randomDay = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
+            document.getElementById('cc-birth-date').value = `${randomYear}-${randomMonth}-${randomDay}`;
+
+            document.getElementById('cc-phone').value = `09${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
+            document.getElementById('cc-identity').value = identities[Math.floor(Math.random() * identities.length)];
+            document.getElementById('cc-status').value = statuses[Math.floor(Math.random() * statuses.length)];
+            document.getElementById('cc-nickname').value = randomGivenName;
+            document.getElementById('cc-education').value = educations[Math.floor(Math.random() * educations.length)];
+            document.getElementById('cc-occupation').value = occupations[Math.floor(Math.random() * occupations.length)];
+            document.getElementById('cc-location').value = locations[Math.floor(Math.random() * locations.length)];
+            document.getElementById('cc-case-summary').value = '職涯諮詢';
+
+            console.log('✅ 隨機測試資料已生成:', fullName, `test${timestamp}@example.com`);
+        };
 
         // Auto-select first step
         selectStep('login');

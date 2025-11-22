@@ -256,6 +256,97 @@ class TestUIClientCaseAPI:
         )
         assert response.status_code == 403
 
+    # ==================== UI-4: Get Client-Case Detail ====================
+    def test_get_client_case_detail_success(self, test_client: TestClient, db_session: Session, counselor: Counselor, auth_headers):
+        """Test GET /api/v1/ui/client-case/{id} - Get single client-case detail"""
+
+        # Create test client and case
+        client = Client(
+            id=uuid4(),
+            counselor_id=counselor.id,
+            tenant_id="career",
+            name="詳情測試客戶",
+            code="DETAIL001",
+            email="detail@example.com",
+            gender="女",
+            birth_date=date(1992, 6, 15),
+            phone="0955555555",
+            identity_option="轉職者",
+            current_status="面試準備中",
+            nickname="小明",
+            education="大學",
+            occupation="工程師",
+            location="台北市",
+        )
+        db_session.add(client)
+        db_session.flush()
+
+        case = Case(
+            id=uuid4(),
+            case_number="DETAILCASE001",
+            counselor_id=counselor.id,
+            client_id=client.id,
+            tenant_id="career",
+            status=CaseStatus.IN_PROGRESS,
+            summary="職涯轉換諮詢",
+            goals="成功轉職到科技業",
+            problem_description="對目前工作不滿意，想轉換跑道",
+        )
+        db_session.add(case)
+        db_session.commit()
+
+        response = test_client.get(
+            f"/api/v1/ui/client-case/{case.id}",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify client fields
+        assert data["client_id"] == str(client.id)
+        assert data["client_name"] == "詳情測試客戶"
+        assert data["client_code"] == "DETAIL001"
+        assert data["client_email"] == "detail@example.com"
+        assert data["gender"] == "女"
+        assert data["birth_date"] == "1992-06-15"
+        assert data["phone"] == "0955555555"
+        assert data["identity_option"] == "轉職者"
+        assert data["current_status"] == "面試準備中"
+        assert data["nickname"] == "小明"
+        assert data["education"] == "大學"
+        assert data["occupation"] == "工程師"
+        assert data["location"] == "台北市"
+
+        # Verify case fields
+        assert data["case_id"] == str(case.id)
+        assert data["case_number"] == "DETAILCASE001"
+        assert data["case_status"] == 1  # IN_PROGRESS
+        assert data["case_status_label"] == "進行中"
+        assert data["case_summary"] == "職涯轉換諮詢"
+        assert data["case_goals"] == "成功轉職到科技業"
+        assert data["problem_description"] == "對目前工作不滿意，想轉換跑道"
+
+    def test_get_client_case_detail_not_found(self, test_client: TestClient, counselor: Counselor, auth_headers):
+        """Test getting non-existent case returns 404"""
+        fake_id = uuid4()
+
+        response = test_client.get(
+            f"/api/v1/ui/client-case/{fake_id}",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()
+
+    def test_get_client_case_detail_unauthorized(self, test_client: TestClient):
+        """Test getting detail without auth returns 403"""
+        fake_id = uuid4()
+
+        response = test_client.get(f"/api/v1/ui/client-case/{fake_id}")
+
+        assert response.status_code == 403
+
     # ==================== UI-5: Update Client-Case ====================
     def test_update_client_case_success(self, test_client: TestClient, db_session: Session, counselor: Counselor, auth_headers):
         """Test PATCH /api/v1/ui/client-case/{id} - Update client and case"""

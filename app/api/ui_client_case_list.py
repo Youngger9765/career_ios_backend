@@ -73,6 +73,43 @@ class CreateClientCaseResponse(BaseModel):
         from_attributes = True
 
 
+class ClientCaseDetailResponse(BaseModel):
+    """客戶個案詳細資訊回應（用於單一個案查詢）"""
+
+    # Client 資訊
+    client_id: UUID
+    client_name: str
+    client_code: str
+    client_email: str
+    gender: str
+    birth_date: date
+    phone: str
+    identity_option: str
+    current_status: str
+    nickname: Optional[str] = None
+    notes: Optional[str] = None
+    education: Optional[str] = None
+    occupation: Optional[str] = None
+    location: Optional[str] = None
+
+    # Case 資訊
+    case_id: UUID
+    case_number: str
+    case_status: int
+    case_status_label: str
+    case_summary: Optional[str] = None
+    case_goals: Optional[str] = None
+    problem_description: Optional[str] = None
+
+    # Metadata
+    counselor_id: UUID
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 class UpdateClientCaseRequest(BaseModel):
     """更新客戶+個案請求"""
 
@@ -320,6 +357,9 @@ def create_client_and_case(
         db.refresh(new_case)
 
         # Step 7: Return response
+        # Handle status (compatible with both int and enum)
+        status_value = new_case.status if isinstance(new_case.status, int) else new_case.status.value
+
         return CreateClientCaseResponse(
             client_id=new_client.id,
             client_code=new_client.code,
@@ -327,7 +367,7 @@ def create_client_and_case(
             client_email=new_client.email,
             case_id=new_case.id,
             case_number=new_case.case_number,
-            case_status=new_case.status.value,
+            case_status=status_value,
             created_at=new_client.created_at,
         )
 
@@ -497,6 +537,98 @@ def get_client_case_list(
     )
 
 
+@router.get("/client-case/{case_id}", response_model=ClientCaseDetailResponse)
+def get_client_case_detail(
+    case_id: UUID,
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+    db: Session = Depends(get_db),
+) -> ClientCaseDetailResponse:
+    """
+    獲取單一客戶個案詳細資訊
+
+    **功能說明：**
+    - 返回指定個案的完整 Client + Case 資訊
+    - 用於 iOS 更新表單載入現有資料
+    - 包含所有可編輯欄位
+
+    **使用場景：**
+    - iOS 進入更新畫面時，先調用此 API 獲取現有資料
+    - 顯示個案詳情頁面
+    """
+    try:
+        # Find case by ID with joined client
+        case = db.execute(
+            select(Case)
+            .options(joinedload(Case.client))
+            .where(
+                Case.id == case_id,
+                Case.tenant_id == tenant_id,
+                Case.deleted_at.is_(None),
+            )
+        ).scalar_one_or_none()
+
+        if not case:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Case {case_id} not found"
+            )
+
+        client = case.client
+        if not client or client.deleted_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Client for case {case_id} not found"
+            )
+
+        # Get case status label
+        status_labels = {
+            0: "未進行",
+            1: "進行中",
+            2: "已完成",
+        }
+        status_value = case.status if isinstance(case.status, int) else case.status.value
+        status_label = status_labels.get(status_value, "未知")
+
+        return ClientCaseDetailResponse(
+            # Client fields
+            client_id=client.id,
+            client_name=client.name,
+            client_code=client.code,
+            client_email=client.email,
+            gender=client.gender,
+            birth_date=client.birth_date,
+            phone=client.phone,
+            identity_option=client.identity_option,
+            current_status=client.current_status,
+            nickname=client.nickname,
+            notes=client.notes,
+            education=client.education,
+            occupation=client.occupation,
+            location=client.location,
+            # Case fields
+            case_id=case.id,
+            case_number=case.case_number,
+            case_status=status_value,
+            case_status_label=status_label,
+            case_summary=case.summary,
+            case_goals=case.goals,
+            problem_description=case.problem_description,
+            # Metadata
+            counselor_id=case.counselor_id,
+            created_at=case.created_at,
+            updated_at=case.updated_at,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get client-case detail: {str(e)}"
+        )
+
+
 @router.patch("/client-case/{case_id}", response_model=CreateClientCaseResponse)
 def update_client_and_case(
     case_id: UUID,
@@ -637,6 +769,9 @@ def update_client_and_case(
             db.refresh(case)
 
         # Step 6: Return response
+        # Handle status (compatible with both int and enum)
+        status_value = case.status if isinstance(case.status, int) else case.status.value
+
         return CreateClientCaseResponse(
             client_id=client.id,
             client_code=client.code,
@@ -644,7 +779,7 @@ def update_client_and_case(
             client_email=client.email,
             case_id=case.id,
             case_number=case.case_number,
-            case_status=case.status.value,
+            case_status=status_value,
             created_at=client.created_at,
             message="客戶與個案更新成功",
         )
