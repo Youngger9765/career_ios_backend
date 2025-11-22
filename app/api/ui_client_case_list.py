@@ -462,8 +462,11 @@ def get_client_case_list(
         items.append(item)
 
     # Step 6: Sort by last_session_date (newest first, None at the end)
+    # Use timezone-aware datetime.min to avoid comparison errors
+    from datetime import timezone
+    min_datetime = datetime.min.replace(tzinfo=timezone.utc)
     items.sort(
-        key=lambda x: x.last_session_date if x.last_session_date else datetime.min,
+        key=lambda x: x.last_session_date if x.last_session_date else min_datetime,
         reverse=True
     )
 
