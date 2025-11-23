@@ -765,5 +765,40 @@ SECRET_KEY=your-secret-key
 
 ---
 
-**版本**: v2.1 (Phase 2 已完成)
-**最後更新**: 2025-10-28
+## 第八部分：系統現況（2025-11-24）
+
+### 8.1 當前可用功能
+
+**個案管理** (`/api/v1/ui/*`)
+- ✅ 創建客戶與個案（自動生成代碼）
+- ✅ 列出客戶個案（分頁、搜尋）
+- ✅ 個案詳情查詢
+- ✅ 刪除個案
+- ✅ 動態表單 schema
+
+**報告生成** (`/api/v1/reports/*`)
+- ✅ 異步報告生成（Background Tasks）
+- ✅ 報告狀態追蹤（processing → draft/failed）
+- ✅ 報告列表與詳情查詢
+- ✅ 報告編輯功能（Markdown）
+
+**系統狀態**: ✅ Healthy | CI/CD: ✅ All tests passing
+
+### 8.2 尚未實作功能
+
+- [ ] 音訊上傳 + Whisper STT（Job model 已建立，待串接 Whisper API）
+- [ ] 督導審核流程
+- [ ] 提醒系統
+
+**計劃**: Phase 3 報告生成整合（預計 2 週）
+
+### 8.3 API 文檔
+
+- Swagger UI: `https://<cloud-run-url>/docs`
+- ReDoc: `https://<cloud-run-url>/redoc`
+- iOS 快速指南: `IOS_API_GUIDE.md`
+
+---
+
+**版本**: v2.2 (系統現況更新)
+**最後更新**: 2025-11-24
