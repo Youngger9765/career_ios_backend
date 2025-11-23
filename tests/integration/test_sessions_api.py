@@ -2,17 +2,18 @@
 Integration tests for Sessions API
 TDD - Write tests first, then implement
 """
+from datetime import datetime, timezone
+from uuid import uuid4
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from uuid import uuid4
-from datetime import datetime, timezone
 
 from app.core.security import hash_password
 from app.main import app
-from app.models.counselor import Counselor
-from app.models.client import Client
 from app.models.case import Case, CaseStatus
+from app.models.client import Client
+from app.models.counselor import Counselor
 from app.models.session import Session as SessionModel
 
 
@@ -38,7 +39,11 @@ class TestSessionsAPI:
         with TestClient(app) as client:
             login_response = client.post(
                 "/api/auth/login",
-                json={"email": "counselor-sessions@test.com", "password": "password123", "tenant_id": "career"},
+                json={
+                    "email": "counselor-sessions@test.com",
+                    "password": "password123",
+                    "tenant_id": "career",
+                },
             )
             token = login_response.json()["access_token"]
 
@@ -47,7 +52,13 @@ class TestSessionsAPI:
     @pytest.fixture
     def test_case_obj(self, db_session: Session):
         """Create a test case for session tests"""
-        counselor = db_session.query(Counselor).filter_by(email="counselor-sessions@test.com").first()
+        from datetime import date
+
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-sessions@test.com")
+            .first()
+        )
 
         client = Client(
             id=uuid4(),
@@ -55,6 +66,12 @@ class TestSessionsAPI:
             tenant_id="career",
             name="會談測試客戶",
             code="SCLI001",
+            email="scli001@example.com",
+            gender="不透露",
+            birth_date=date(1995, 1, 1),
+            phone="0912345678",
+            identity_option="其他",
+            current_status="探索中",
         )
         db_session.add(client)
         db_session.commit()
@@ -72,7 +89,9 @@ class TestSessionsAPI:
 
         return case
 
-    def test_create_session_success(self, db_session: Session, auth_headers, test_case_obj):
+    def test_create_session_success(
+        self, db_session: Session, auth_headers, test_case_obj
+    ):
         """Test POST /api/v1/sessions - Create new session"""
         with TestClient(app) as client:
             response = client.post(
@@ -94,7 +113,9 @@ class TestSessionsAPI:
             assert "session_number" in data
             assert "id" in data
 
-    def test_create_session_with_recordings(self, db_session: Session, auth_headers, test_case_obj):
+    def test_create_session_with_recordings(
+        self, db_session: Session, auth_headers, test_case_obj
+    ):
         """Test creating session with recordings array"""
         with TestClient(app) as client:
             response = client.post(
@@ -129,7 +150,9 @@ class TestSessionsAPI:
             assert "第一段逐字稿" in (data["transcript_text"] or "")
             assert "第二段逐字稿" in (data["transcript_text"] or "")
 
-    def test_create_session_minimal_fields(self, db_session: Session, auth_headers, test_case_obj):
+    def test_create_session_minimal_fields(
+        self, db_session: Session, auth_headers, test_case_obj
+    ):
         """Test creating session with only required fields"""
         with TestClient(app) as client:
             response = client.post(
@@ -158,7 +181,9 @@ class TestSessionsAPI:
 
             assert response.status_code == 403
 
-    def test_list_sessions_success(self, db_session: Session, auth_headers, test_case_obj):
+    def test_list_sessions_success(
+        self, db_session: Session, auth_headers, test_case_obj
+    ):
         """Test GET /api/v1/sessions - List all sessions"""
         # Create test sessions
         session1 = SessionModel(
@@ -190,12 +215,14 @@ class TestSessionsAPI:
             assert "items" in data
             assert data["total"] >= 2
 
-    def test_list_sessions_filter_by_client(self, db_session: Session, auth_headers, test_case_obj):
+    def test_list_sessions_filter_by_client(
+        self, db_session: Session, auth_headers, test_case_obj
+    ):
         """Test GET /api/v1/sessions?client_id=xxx - Filter by client"""
-        counselor = db_session.query(Counselor).filter_by(email="counselor-sessions@test.com").first()
-
         # Get the client from test_case_obj
-        client_obj = db_session.query(Client).filter_by(id=test_case_obj.client_id).first()
+        client_obj = (
+            db_session.query(Client).filter_by(id=test_case_obj.client_id).first()
+        )
 
         session = SessionModel(
             id=uuid4(),
@@ -219,7 +246,9 @@ class TestSessionsAPI:
             for item in data["items"]:
                 assert item["client_id"] == str(client_obj.id)
 
-    def test_get_session_success(self, db_session: Session, auth_headers, test_case_obj):
+    def test_get_session_success(
+        self, db_session: Session, auth_headers, test_case_obj
+    ):
         """Test GET /api/v1/sessions/{id} - Get session details"""
         test_session = SessionModel(
             id=uuid4(),
@@ -256,7 +285,9 @@ class TestSessionsAPI:
 
             assert response.status_code == 404
 
-    def test_update_session_success(self, db_session: Session, auth_headers, test_case_obj):
+    def test_update_session_success(
+        self, db_session: Session, auth_headers, test_case_obj
+    ):
         """Test PATCH /api/v1/sessions/{id} - Update session"""
         test_session = SessionModel(
             id=uuid4(),
@@ -282,7 +313,9 @@ class TestSessionsAPI:
             data = response.json()
             assert data["notes"] == "更新後的會談筆記"
 
-    def test_delete_session_success(self, db_session: Session, auth_headers, test_case_obj):
+    def test_delete_session_success(
+        self, db_session: Session, auth_headers, test_case_obj
+    ):
         """Test DELETE /api/v1/sessions/{id} - Soft delete session"""
         test_session = SessionModel(
             id=uuid4(),
@@ -326,7 +359,9 @@ class TestSessionsAPI:
 
             assert response.status_code == 404
 
-    def test_get_client_timeline_success(self, db_session: Session, auth_headers, test_case_obj):
+    def test_get_client_timeline_success(
+        self, db_session: Session, auth_headers, test_case_obj
+    ):
         """Test GET /api/v1/sessions/timeline?client_id=xxx - Get client timeline"""
         # Create multiple sessions
         for i in range(3):
@@ -341,7 +376,9 @@ class TestSessionsAPI:
             db_session.add(session)
         db_session.commit()
 
-        client_obj = db_session.query(Client).filter_by(id=test_case_obj.client_id).first()
+        client_obj = (
+            db_session.query(Client).filter_by(id=test_case_obj.client_id).first()
+        )
 
         with TestClient(app) as client:
             response = client.get(
@@ -355,7 +392,9 @@ class TestSessionsAPI:
             assert "sessions" in data
             assert len(data["sessions"]) == 3
 
-    def test_get_reflection_success(self, db_session: Session, auth_headers, test_case_obj):
+    def test_get_reflection_success(
+        self, db_session: Session, auth_headers, test_case_obj
+    ):
         """Test GET /api/v1/sessions/{id}/reflection - Get reflection"""
         test_session = SessionModel(
             id=uuid4(),
@@ -363,7 +402,10 @@ class TestSessionsAPI:
             tenant_id="career",
             session_number=1,
             session_date=datetime.now(timezone.utc),
-            reflection={"key_insights": "個案顯示出積極態度", "next_steps": "繼續探索職涯選項"},
+            reflection={
+                "key_insights": "個案顯示出積極態度",
+                "next_steps": "繼續探索職涯選項",
+            },
         )
         db_session.add(test_session)
         db_session.commit()
@@ -379,7 +421,9 @@ class TestSessionsAPI:
             assert "reflection" in data
             assert data["reflection"]["key_insights"] == "個案顯示出積極態度"
 
-    def test_update_reflection_success(self, db_session: Session, auth_headers, test_case_obj):
+    def test_update_reflection_success(
+        self, db_session: Session, auth_headers, test_case_obj
+    ):
         """Test PUT /api/v1/sessions/{id}/reflection - Update reflection"""
         test_session = SessionModel(
             id=uuid4(),
