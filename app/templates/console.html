@@ -4881,192 +4881,115 @@
                     const data = await response.json();
                     return { response, data };
                 },
-                                renderPreview: (data) => `
-                    <style>
-                        .iphone-preview {
-                            width: 390px;
-                            height: 844px;
-                            background: #000;
-                            border-radius: 50px;
-                            padding: 12px;
-                            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-                            position: relative;
-                            margin: 0 auto;
-                        }
-                        .iphone-preview .notch {
-                            position: absolute;
-                            top: 0;
-                            left: 50%;
-                            transform: translateX(-50%);
-                            width: 120px;
-                            height: 30px;
-                            background: #000;
-                            border-radius: 0 0 20px 20px;
-                            z-index: 10;
-                        }
-                        .iphone-preview .screen {
-                            width: 100%;
-                            height: 100%;
-                            background: #fff;
-                            border-radius: 40px;
-                            overflow: hidden;
-                        }
-                        .iphone-preview .status-bar {
-                            display: flex;
-                            justify-content: space-between;
-                            padding: 0 20px;
-                            height: 44px;
-                            align-items: center;
-                            font-size: 15px;
-                            font-weight: 600;
-                        }
-                        .iphone-preview .status-bar .time {
-                            margin-left: 60px;
-                        }
-                        .iphone-preview .nav-bar {
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            padding: 16px 20px;
-                            border-bottom: 1px solid #e5e5e7;
-                            background: white;
-                        }
-                        .iphone-preview .nav-bar .title {
-                            font-size: 17px;
-                            font-weight: 600;
-                            flex: 1;
-                            text-align: center;
-                        }
-                        .iphone-preview .content {
-                            height: calc(100% - 44px - 60px);
-                            overflow-y: auto;
-                            padding: 0;
-                            background: #f9f9f9;
-                        }
-                        .iphone-preview .hero-section {
-                            background: white;
-                            padding: 24px 20px;
-                            border-bottom: 1px solid #e5e5e7;
-                        }
-                        .iphone-preview .hero-name {
-                            font-size: 24px;
-                            font-weight: 700;
-                            color: #1d1d1f;
-                            margin-bottom: 4px;
-                        }
-                        .iphone-preview .hero-email {
-                            font-size: 14px;
-                            color: #6e6e73;
-                        }
-                        .iphone-preview .section {
-                            background: white;
-                            margin-top: 12px;
-                            padding: 16px 20px;
-                        }
-                        .iphone-preview .section-title {
-                            font-size: 13px;
-                            font-weight: 600;
-                            color: #86868b;
-                            text-transform: uppercase;
-                            letter-spacing: 0.5px;
-                            margin-bottom: 12px;
-                        }
-                        .iphone-preview .detail-row {
-                            display: flex;
-                            justify-content: space-between;
-                            padding: 10px 0;
-                            border-bottom: 1px solid #f0f0f0;
-                        }
-                        .iphone-preview .detail-row:last-child {
-                            border-bottom: none;
-                        }
-                        .iphone-preview .detail-label {
-                            font-size: 14px;
-                            color: #1d1d1f;
-                        }
-                        .iphone-preview .detail-value {
-                            font-size: 14px;
-                            color: #86868b;
-                            text-align: right;
-                            max-width: 200px;
-                        }
-                        .iphone-preview .case-badge {
-                            display: inline-block;
-                            padding: 4px 12px;
-                            border-radius: 12px;
-                            font-size: 12px;
-                            background: #e0f0ff;
-                            color: #0071e3;
-                            font-weight: 500;
-                        }
-                    </style>
-                    <div class="iphone-preview">
-                        <div class="notch"></div>
-                        <div class="screen">
-                            <div class="status-bar">
-                                <span class="time">9:41</span>
-                                <div>⚡️ 📶 🔋</div>
-                            </div>
-                            <div class="nav-bar">
-                                <div>‹</div>
-                                <div class="title">個案詳情</div>
-                                <div>編輯</div>
-                            </div>
-                            <div class="content">
-                                <div class="hero-section">
-                                    <div class="hero-name">${data.client_name}</div>
-                                    <div class="hero-email">${data.client_email}</div>
-                                    <div style="margin-top: 12px;">
-                                        <span class="case-badge">${data.identity_option}</span>
-                                    </div>
-                                </div>
+                                                renderPreview: (data) => {
+                    // Generate Client fields dynamically from schema
+                    let clientFieldsHTML = '';
+                    if (state.clientSchema?.sections) {
+                        state.clientSchema.sections.forEach(section => {
+                            section.fields.forEach(field => {
+                                const value = data[field.key] || data['client_' + field.key] || '';
+                                if (value) {
+                                    // Format value based on type
+                                    let displayValue = value;
+                                    if (field.type === 'date' && value) {
+                                        displayValue = value.split('T')[0];
+                                    }
 
-                                <div class="section">
-                                    <div class="section-title">基本資訊</div>
-                                    <div class="detail-row">
-                                        <span class="detail-label">Client Code</span>
-                                        <span class="detail-value">${data.client_code}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="detail-label">性別</span>
-                                        <span class="detail-value">${data.gender}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="detail-label">生日</span>
-                                        <span class="detail-value">${data.birth_date}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="detail-label">手機</span>
-                                        <span class="detail-value">${data.phone}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="detail-label">目前現況</span>
-                                        <span class="detail-value">${data.current_status}</span>
-                                    </div>
-                                    ${data.nickname ? `<div class="detail-row"><span class="detail-label">暱稱</span><span class="detail-value">${data.nickname}</span></div>` : ''}
-                                    ${data.education ? `<div class="detail-row"><span class="detail-label">學歷</span><span class="detail-value">${data.education}</span></div>` : ''}
-                                    ${data.occupation ? `<div class="detail-row"><span class="detail-label">職業</span><span class="detail-value">${data.occupation}</span></div>` : ''}
-                                    ${data.location ? `<div class="detail-row"><span class="detail-label">地點</span><span class="detail-value">${data.location}</span></div>` : ''}
-                                </div>
+                                    clientFieldsHTML += '<div class="detail-row">' +
+                                        '<span class="detail-label">' + field.label + '</span>' +
+                                        '<span class="detail-value">' + displayValue + '</span>' +
+                                    '</div>';
+                                }
+                            });
+                        });
+                    } else {
+                        // Fallback to hardcoded fields if schema not loaded
+                        clientFieldsHTML = '<div class="detail-row"><span class="detail-label">Client Code</span><span class="detail-value">' + data.client_code + '</span></div>' +
+                            '<div class="detail-row"><span class="detail-label">性別</span><span class="detail-value">' + data.gender + '</span></div>' +
+                            '<div class="detail-row"><span class="detail-label">生日</span><span class="detail-value">' + data.birth_date + '</span></div>' +
+                            '<div class="detail-row"><span class="detail-label">手機</span><span class="detail-value">' + data.phone + '</span></div>' +
+                            '<div class="detail-row"><span class="detail-label">目前現況</span><span class="detail-value">' + data.current_status + '</span></div>';
+                    }
 
-                                <div class="section">
-                                    <div class="section-title">個案資訊</div>
-                                    <div class="detail-row">
-                                        <span class="detail-label">Case Number</span>
-                                        <span class="detail-value">${data.case_number}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="detail-label">狀態</span>
-                                        <span class="detail-value">${data.case_status_label}</span>
-                                    </div>
-                                    ${data.case_summary ? `<div class="detail-row"><span class="detail-label">摘要</span><span class="detail-value">${data.case_summary}</span></div>` : ''}
-                                    ${data.case_goals ? `<div class="detail-row"><span class="detail-label">目標</span><span class="detail-value">${data.case_goals}</span></div>` : ''}
-                                    ${data.problem_description ? `<div class="detail-row"><span class="detail-label">問題敘述</span><span class="detail-value">${data.problem_description}</span></div>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `
+                    // Generate Case fields dynamically from schema
+                    let caseFieldsHTML = '';
+                    if (state.caseSchema?.sections) {
+                        state.caseSchema.sections.forEach(section => {
+                            section.fields.forEach(field => {
+                                const value = data[field.key] || data['case_' + field.key] || '';
+                                if (value) {
+                                    let displayValue = value;
+                                    // Handle case_status specially to show label
+                                    if (field.key === 'status' && data.case_status_label) {
+                                        displayValue = data.case_status_label;
+                                    }
+
+                                    caseFieldsHTML += '<div class="detail-row">' +
+                                        '<span class="detail-label">' + field.label + '</span>' +
+                                        '<span class="detail-value">' + displayValue + '</span>' +
+                                    '</div>';
+                                }
+                            });
+                        });
+                    } else {
+                        // Fallback to hardcoded fields
+                        caseFieldsHTML = '<div class="detail-row"><span class="detail-label">Case Number</span><span class="detail-value">' + data.case_number + '</span></div>' +
+                            '<div class="detail-row"><span class="detail-label">狀態</span><span class="detail-value">' + data.case_status_label + '</span></div>';
+                    }
+
+                    return '<style>' +
+                        '.iphone-preview { width: 390px; height: 844px; background: #000; border-radius: 50px; padding: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); position: relative; margin: 0 auto; }' +
+                        '.iphone-preview .notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 30px; background: #000; border-radius: 0 0 20px 20px; z-index: 10; }' +
+                        '.iphone-preview .screen { width: 100%; height: 100%; background: #fff; border-radius: 40px; overflow: hidden; }' +
+                        '.iphone-preview .status-bar { display: flex; justify-content: space-between; padding: 0 20px; height: 44px; align-items: center; font-size: 15px; font-weight: 600; }' +
+                        '.iphone-preview .status-bar .time { margin-left: 60px; }' +
+                        '.iphone-preview .nav-bar { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #e5e5e7; background: white; }' +
+                        '.iphone-preview .nav-bar .title { font-size: 17px; font-weight: 600; flex: 1; text-align: center; }' +
+                        '.iphone-preview .content { height: calc(100% - 44px - 60px); overflow-y: auto; padding: 0; background: #f9f9f9; }' +
+                        '.iphone-preview .hero-section { background: white; padding: 24px 20px; border-bottom: 1px solid #e5e5e7; }' +
+                        '.iphone-preview .hero-name { font-size: 24px; font-weight: 700; color: #1d1d1f; margin-bottom: 4px; }' +
+                        '.iphone-preview .hero-email { font-size: 14px; color: #6e6e73; }' +
+                        '.iphone-preview .section { background: white; margin-top: 12px; padding: 16px 20px; }' +
+                        '.iphone-preview .section-title { font-size: 13px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }' +
+                        '.iphone-preview .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }' +
+                        '.iphone-preview .detail-row:last-child { border-bottom: none; }' +
+                        '.iphone-preview .detail-label { font-size: 14px; color: #1d1d1f; }' +
+                        '.iphone-preview .detail-value { font-size: 14px; color: #86868b; text-align: right; max-width: 200px; word-wrap: break-word; }' +
+                        '.iphone-preview .case-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; background: #e0f0ff; color: #0071e3; font-weight: 500; }' +
+                    '</style>' +
+                    '<div class="iphone-preview">' +
+                        '<div class="notch"></div>' +
+                        '<div class="screen">' +
+                            '<div class="status-bar">' +
+                                '<span class="time">9:41</span>' +
+                                '<div>⚡️ 📶 🔋</div>' +
+                            '</div>' +
+                            '<div class="nav-bar">' +
+                                '<div>‹</div>' +
+                                '<div class="title">個案詳情</div>' +
+                                '<div>編輯</div>' +
+                            '</div>' +
+                            '<div class="content">' +
+                                '<div class="hero-section">' +
+                                    '<div class="hero-name">' + data.client_name + '</div>' +
+                                    '<div class="hero-email">' + (data.client_email || data.email) + '</div>' +
+                                    '<div style="margin-top: 12px;">' +
+                                        '<span class="case-badge">' + data.identity_option + '</span>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div class="section">' +
+                                    '<div class="section-title">Client 資訊</div>' +
+                                    clientFieldsHTML +
+                                '</div>' +
+                                '<div class="section">' +
+                                    '<div class="section-title">個案資訊</div>' +
+                                    caseFieldsHTML +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+                }
+
 
             },
 
