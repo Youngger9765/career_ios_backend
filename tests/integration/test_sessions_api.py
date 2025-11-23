@@ -107,7 +107,7 @@ class TestSessionsAPI:
                 },
             )
 
-            assert response.status_code == 200
+            assert response.status_code == 201
             data = response.json()
             assert data["case_id"] == str(test_case_obj.id)
             assert "session_number" in data
@@ -143,7 +143,7 @@ class TestSessionsAPI:
                 },
             )
 
-            assert response.status_code == 200
+            assert response.status_code == 201
             data = response.json()
             assert len(data["recordings"]) == 2
             # Transcript should be auto-aggregated
@@ -164,7 +164,7 @@ class TestSessionsAPI:
                 },
             )
 
-            assert response.status_code == 200
+            assert response.status_code == 201
             data = response.json()
             assert data["case_id"] == str(test_case_obj.id)
 
