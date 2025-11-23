@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
 
@@ -9,7 +11,7 @@ class RefreshToken(Base, BaseModel):
     __tablename__ = "refresh_tokens"
 
     token = Column(String, unique=True, index=True, nullable=False)
-    counselor_id = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
+    counselor_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
     tenant_id = Column(String, nullable=False, index=True)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     is_revoked = Column(Boolean, default=False)

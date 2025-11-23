@@ -1,3 +1,4 @@
+import uuid
 
 from sqlalchemy import (
     JSON,
@@ -61,7 +62,7 @@ class Client(Base, BaseModel):
 
     # Multi-tenant & relationships
     tenant_id = Column(String, nullable=False, index=True)
-    counselor_id = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
+    counselor_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
 
     # Relationships
     counselor = relationship("Counselor", back_populates="clients")

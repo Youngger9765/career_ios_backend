@@ -1,4 +1,5 @@
 import enum
+import uuid
 
 from sqlalchemy import JSON, Column, ForeignKey, Integer, String, Text
 from sqlalchemy import Enum as SQLEnum
@@ -21,9 +22,9 @@ class ReportStatus(str, enum.Enum):
 class Report(Base, BaseModel):
     __tablename__ = "reports"
 
-    session_id = Column(GUID(), ForeignKey("sessions.id"), nullable=False)
-    client_id = Column(GUID(), ForeignKey("clients.id"), nullable=False)
-    created_by_id = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
+    session_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("sessions.id"), nullable=False)
+    client_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("clients.id"), nullable=False)
+    created_by_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
     tenant_id = Column(String, nullable=False, index=True)
     version = Column(Integer, default=1)
     status: Column[ReportStatus] = Column(SQLEnum(ReportStatus, values_callable=lambda x: [e.value for e in x]), default=ReportStatus.DRAFT, nullable=False)
@@ -63,7 +64,7 @@ class Report(Base, BaseModel):
     quality_weaknesses = Column(JSON)  # List of weaknesses
 
     # Review
-    reviewed_by_id = Column(GUID(), ForeignKey("counselors.id"))
+    reviewed_by_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("counselors.id"))
     review_notes = Column(Text)
 
     # Error handling

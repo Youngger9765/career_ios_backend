@@ -1,4 +1,5 @@
 import enum
+import uuid
 
 from sqlalchemy import Column, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
@@ -26,8 +27,8 @@ class Case(Base, BaseModel):
     )
 
     case_number = Column(String, index=True, nullable=False)
-    counselor_id = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
-    client_id = Column(GUID(), ForeignKey("clients.id"), nullable=False)
+    counselor_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
+    client_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("clients.id"), nullable=False)
     tenant_id = Column(String, nullable=False, index=True)
     status = Column(Integer, default=CaseStatus.NOT_STARTED.value, nullable=False)
     summary = Column(Text)

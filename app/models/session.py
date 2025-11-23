@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
@@ -8,7 +10,7 @@ from app.models.base import GUID, BaseModel
 class Session(Base, BaseModel):
     __tablename__ = "sessions"
 
-    case_id = Column(GUID(), ForeignKey("cases.id"), nullable=False)
+    case_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("cases.id"), nullable=False)
     tenant_id = Column(String, nullable=False, index=True)
     session_number = Column(Integer, nullable=False)
     session_date = Column(DateTime(timezone=True), nullable=False)
