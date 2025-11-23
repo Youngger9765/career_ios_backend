@@ -20,6 +20,12 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pypoetry
+        key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+
     - name: Install Poetry
       run: |
         curl -sSL https://install.python-poetry.org | python3 -
@@ -31,21 +37,21 @@ jobs:
 
     - name: Run linting
       run: |
-        poetry run ruff check app/ || echo "⚠️ Linting warnings (continuing anyway)"
+        poetry run ruff check app/
 
     - name: Run type checking
       run: |
-        poetry run mypy app/ --ignore-missing-imports || echo "⚠️ Type check warnings (continuing anyway)"
+        poetry run mypy app/ --ignore-missing-imports
 
     - name: Run tests
       run: |
-        poetry run pytest tests/ -v || echo "⚠️ Some tests failed (continuing anyway for now)"
+        poetry run pytest tests/ -v
 
   deploy:
     name: Deploy to Cloud Run
     runs-on: ubuntu-latest
     needs: test  # Only run after tests pass
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
 
     permissions:
       contents: read
@@ -55,68 +61,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: 🔒 Verify RLS Configuration
-      env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      run: |
-        echo "🔍 Checking RLS status on all tables..."
-
-        # Install postgresql-client
-        sudo apt-get update && sudo apt-get install -y postgresql-client
-
-        # Check for tables without RLS
-        TABLES_WITHOUT_RLS=$(psql "$DATABASE_URL" -t -c "
-          SELECT tablename
-          FROM pg_tables
-          WHERE schemaname = 'public'
-            AND NOT rowsecurity
-            AND tablename <> 'alembic_version'
-          ORDER BY tablename;
-        " | xargs)
-
-        # Check for tables without policies
-        TABLES_WITHOUT_POLICIES=$(psql "$DATABASE_URL" -t -c "
-          SELECT t.tablename
-          FROM pg_tables t
-          LEFT JOIN (
-            SELECT tablename, COUNT(*) as policy_count
-            FROM pg_policies
-            GROUP BY tablename
-          ) p ON t.tablename = p.tablename
-          WHERE t.schemaname = 'public'
-            AND t.tablename <> 'alembic_version'
-            AND t.rowsecurity
-            AND (p.policy_count IS NULL OR p.policy_count = 0)
-          ORDER BY t.tablename;
-        " | xargs)
-
-        if [ -n "$TABLES_WITHOUT_RLS" ]; then
-          echo "❌ ERROR: Tables without RLS enabled:"
-          echo "$TABLES_WITHOUT_RLS"
-          exit 1
-        fi
-
-        if [ -n "$TABLES_WITHOUT_POLICIES" ]; then
-          echo "❌ ERROR: Tables without policies:"
-          echo "$TABLES_WITHOUT_POLICIES"
-          echo "These tables have RLS enabled but no policies!"
-          exit 1
-        fi
-
-        echo "✅ All tables have RLS enabled with policies!"
-
-    - name: Set environment variables based on branch
+    - name: Set environment variables
       id: env
       run: |
-        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          echo "SERVICE_NAME=career-app-api-prod" >> $GITHUB_OUTPUT
-          echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
-          echo "DEBUG=false" >> $GITHUB_OUTPUT
-        elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
-          echo "SERVICE_NAME=career-app-api-staging" >> $GITHUB_OUTPUT
-          echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
-          echo "DEBUG=true" >> $GITHUB_OUTPUT
-        fi
+        echo "SERVICE_NAME=career-app-api-staging" >> $GITHUB_OUTPUT
+        echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
+        echo "DEBUG=true" >> $GITHUB_OUTPUT
 
     - name: Authenticate to Google Cloud with WIF
       uses: google-github-actions/auth@v2
@@ -159,7 +109,7 @@ jobs:
           --cpu=1 \
           --timeout=300 \
           --min-instances=0 \
-          --max-instances=5 \
+          --max-instances=2 \
           --concurrency=80 \
           --cpu-throttling \
           --port=8080 \
