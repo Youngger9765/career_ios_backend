@@ -4888,9 +4888,10 @@
                         state.clientSchema.sections.forEach(section => {
                             section.fields.forEach(field => {
                                 const value = data[field.key] || data['client_' + field.key] || '';
-                                if (value) {
+                                // Display all fields including empty ones
+
                                     // Format value based on type
-                                    let displayValue = value;
+                                    let displayValue = value || '-';
                                     if (field.type === 'date' && value) {
                                         displayValue = value.split('T')[0];
                                     }
@@ -4899,7 +4900,6 @@
                                         '<span class="detail-label">' + field.label + '</span>' +
                                         '<span class="detail-value">' + displayValue + '</span>' +
                                     '</div>';
-                                }
                             });
                         });
                     } else {
@@ -4917,8 +4917,9 @@
                         state.caseSchema.sections.forEach(section => {
                             section.fields.forEach(field => {
                                 const value = data[field.key] || data['case_' + field.key] || '';
-                                if (value) {
-                                    let displayValue = value;
+                                // Display all fields including empty ones
+
+                                    let displayValue = value || '-';
                                     // Handle case_status specially to show label
                                     if (field.key === 'status' && data.case_status_label) {
                                         displayValue = data.case_status_label;
@@ -4928,7 +4929,6 @@
                                         '<span class="detail-label">' + field.label + '</span>' +
                                         '<span class="detail-value">' + displayValue + '</span>' +
                                     '</div>';
-                                }
                             });
                         });
                     } else {
