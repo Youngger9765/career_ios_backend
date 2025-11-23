@@ -102,30 +102,47 @@ Content-Type: application/json
 
 ---
 
-### 3. 🆕 個案管理 UI 介面 API
+### 3. 🆕 個案管理 UI API (JSON - iOS 使用)
 
-**新增兩個 HTML UI 頁面:**
+⚠️ **重要：iOS 只使用 JSON API**
 
-#### 📋 個案列表頁面
-```
-GET https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app/client-case-list
-```
-- 查看所有個案及其關聯的 Cases
-- 搜尋、篩選、分頁功能
-- 快速查看個案基本資訊和會談次數
+❌ **已移除的 HTML 路由（不要使用）:**
+- `/client-case-list` - 已移除
+- `/create-client-case` - 已移除
 
-#### ➕ 建立個案與 Case 頁面
-```
-GET https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app/create-client-case
-```
-- 一次建立個案（Client）和 Case
-- 自動生成個案代碼（C0001, C0002...）
-- 自動生成 Case 編號（CASE-20251123-001...）
+✅ **正確的 JSON API 端點（iOS 使用）:**
 
-**用途:**
-- Web 端快速建立和管理個案
-- 測試 API 時可用此介面快速新增測試資料
-- iOS 開發時可參考此介面的 API 調用方式
+#### 📋 列出個案（Read）
+```http
+GET /api/v1/ui/client-case-list?skip=0&limit=20
+Authorization: Bearer {token}
+```
+返回：JSON（個案列表 + 客戶資訊 + 會談次數）
+
+#### ➕ 創建個案（Create）
+```http
+POST /api/v1/ui/client-case
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+返回：JSON（新創建的個案和客戶 ID）
+
+#### 🔍 個案詳情（Read）
+```http
+GET /api/v1/ui/client-case/{case_id}
+Authorization: Bearer {token}
+```
+返回：JSON（個案 + 客戶 + 會談列表）
+
+#### 🗑️ 刪除個案（Delete）
+```http
+DELETE /api/v1/ui/client-case/{case_id}
+Authorization: Bearer {token}
+```
+
+**測試工具:**
+- 訪問 `/console` 查看所有 API 的 Web 測試界面（僅用於測試，iOS 不調用）
+- 訪問 `/docs` 查看完整 OpenAPI 文檔
 
 **注意:** 這些是 Web UI 介面，iOS App 應使用對應的 REST API：
 - `POST /api/v1/clients` - 建立個案

@@ -277,7 +277,29 @@ def _format_session_date(dt: Optional[datetime]) -> Optional[str]:
 # ============================================================================
 
 
-@router.post("/client-case", response_model=CreateClientCaseResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/client-case",
+    response_model=CreateClientCaseResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="創建客戶與個案（iOS 使用）",
+    description="""
+    ## 一次性創建客戶（Client）和個案（Case）
+
+    **用途**: iOS App 創建新個案時使用，一個 API 完成客戶和個案的創建
+
+    **自動生成**:
+    - 客戶代碼（code）: C0001, C0002...（租戶內唯一）
+    - 個案編號（case_number）: CASE-20251124-001...（租戶內唯一）
+
+    **必填欄位**:
+    - name, email, gender, birth_date, phone
+    - identity_option, current_status
+
+    **選填欄位**: education, current_job, case 相關欄位等
+
+    **返回**: 創建的客戶 ID 和個案 ID
+    """,
+)
 def create_client_and_case(
     request: CreateClientCaseRequest,
     current_user: Counselor = Depends(get_current_user),
@@ -285,7 +307,7 @@ def create_client_and_case(
     db: Session = Depends(get_db),
 ) -> CreateClientCaseResponse:
     """
-    建立客戶與個案（一次完成）
+    建立客戶與個案（一次完成）- iOS 使用
 
     **功能說明：**
     - 同時建立 Client 和 Case
@@ -390,7 +412,27 @@ def create_client_and_case(
         )
 
 
-@router.get("/client-case-list", response_model=ClientCaseListResponse)
+@router.get(
+    "/client-case-list",
+    response_model=ClientCaseListResponse,
+    summary="列出所有客戶個案（iOS 使用）",
+    description="""
+    ## 獲取個案列表（Client + Case + Session 統計）
+
+    **用途**: iOS App 個案列表頁面使用
+
+    **返回內容**:
+    - 個案基本資訊（case_id, case_number, status）
+    - 客戶資訊（client_id, client_name, client_email）
+    - 會談統計（session_count, latest_session_date）
+
+    **分頁參數**:
+    - skip: 跳過筆數（默認 0）
+    - limit: 每頁筆數（默認 100，最大 500）
+
+    **排序**: 按創建時間倒序（最新的在前）
+    """,
+)
 def get_client_case_list(
     skip: int = Query(0, ge=0, description="跳過筆數"),
     limit: int = Query(100, ge=1, le=500, description="每頁筆數"),
