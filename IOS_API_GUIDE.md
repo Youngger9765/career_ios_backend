@@ -38,7 +38,7 @@
 - ~~`/api/v1/field-schemas/*`~~ → `/api/v1/ui/field-schemas/*` (統一UI API前綴)
 
 **Case Status 變更:**
-- ~~字串enum~~ → **整數** (0=未進行, 1=進行中, 2=已完成)
+- ~~字串enum~~ → **整數** (0=未開始, 1=進行中, 2=已完成)
 
 **詳細文件:** 請參閱本文件「動態表單 Schema APIs」章節
 
@@ -311,7 +311,7 @@ struct ClientCaseDetailResponse: Codable {
     // Case 資訊
     let case_id: UUID
     let case_number: String
-    let case_status: Int  // 0=未進行, 1=進行中, 2=已完成
+    let case_status: Int  // 0=未開始, 1=進行中, 2=已完成
     let case_status_label: String
     let case_summary: String?
     let case_goals: String?
@@ -544,7 +544,7 @@ Authorization: Bearer {access_token}
             "required": true,
             "options": ["0", "1", "2"],
             "default_value": "0",
-            "help_text": "0=未進行(NOT_STARTED), 1=進行中(IN_PROGRESS), 2=已完成(COMPLETED)",
+            "help_text": "0=未開始(NOT_STARTED), 1=進行中(IN_PROGRESS), 2=已完成(COMPLETED)",
             "order": 2
           }
         ]
@@ -645,7 +645,7 @@ Authorization: Bearer {access_token}
 
 **⚠️ Case Status 重要變更:**
 - `status` 欄位從字串 enum 改為**整數**
-- 值: `"0"` (未進行), `"1"` (進行中), `"2"` (已完成)
+- 值: `"0"` (未開始), `"1"` (進行中), `"2"` (已完成)
 - 前端需要顯示對應的 label
 
 ---

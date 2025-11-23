@@ -64,7 +64,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 **⭐️ 最新更新 (2025-11-23):**
 - API 路徑變更：`/api/v1/field-schemas/*` → `/api/v1/ui/field-schemas/*`
 - 新增組合端點：`/api/v1/ui/field-schemas/client-case` (一次獲取兩個 Schema)
-- Case status 改為整數：0=未進行, 1=進行中, 2=已完成
+- Case status 改為整數：0=未開始, 1=進行中, 2=已完成
 
 ---
 
@@ -232,7 +232,7 @@ Authorization: Bearer <token>
           "required": true,
           "options": ["0", "1", "2"],
           "default_value": "0",
-          "help_text": "0=未進行(NOT_STARTED), 1=進行中(IN_PROGRESS), 2=已完成(COMPLETED)"
+          "help_text": "0=未開始(NOT_STARTED), 1=進行中(IN_PROGRESS), 2=已完成(COMPLETED)"
         },
         {
           "key": "summary",
@@ -571,7 +571,7 @@ Content-Type: application/json
 |------|------|------|------|
 | `client_id` | UUID | ✅ | 客戶 ID |
 | `case_number` | string | ❌ | 個案編號（不填則自動生成 CASE0001, CASE0002...） |
-| `status` | integer | ❌ | 個案狀態（0=未進行, 1=進行中, 2=已完成，預設 0） |
+| `status` | integer | ❌ | 個案狀態（0=未開始, 1=進行中, 2=已完成，預設 0） |
 | `summary` | string | ❌ | 個案摘要 |
 | `goals` | string | ❌ | 諮商目標 |
 | `problem_description` | string | ❌ | 問題描述 |

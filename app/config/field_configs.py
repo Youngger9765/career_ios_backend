@@ -170,7 +170,7 @@ CAREER_CASE_SECTIONS = [
                 required=True,
                 options=["0", "1", "2"],
                 default_value="0",
-                help_text="0=未進行(NOT_STARTED), 1=進行中(IN_PROGRESS), 2=已完成(COMPLETED)",
+                help_text="0=未開始(NOT_STARTED), 1=進行中(IN_PROGRESS), 2=已完成(COMPLETED)",
                 order=2,
             ),
             FieldSchema(
@@ -323,7 +323,7 @@ ISLAND_CASE_SECTIONS = [
                 required=True,
                 options=["0", "1", "2"],
                 default_value="0",
-                help_text="0=未進行(NOT_STARTED), 1=進行中(IN_PROGRESS), 2=已完成(COMPLETED)",
+                help_text="0=未開始(NOT_STARTED), 1=進行中(IN_PROGRESS), 2=已完成(COMPLETED)",
                 order=2,
             ),
             FieldSchema(

@@ -11,7 +11,7 @@ from app.models.base import BaseModel
 class CaseStatus(enum.IntEnum):
     """
     Case status using integer values
-    0 = 未進行 (Not Started)
+    0 = 未開始 (Not Started)
     1 = 進行中 (In Progress)
     2 = 已完成 (Completed)
     """

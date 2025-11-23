@@ -128,7 +128,7 @@ class UpdateClientCaseRequest(BaseModel):
     location: Optional[str] = None
 
     # Case 欄位 (all optional)
-    case_status: Optional[str] = Field(None, description="個案狀態: 0=未進行, 1=進行中, 2=已完成")
+    case_status: Optional[str] = Field(None, description="個案狀態: 0=未開始, 1=進行中, 2=已完成")
     case_summary: Optional[str] = None
     case_goals: Optional[str] = None
     problem_description: Optional[str] = None
@@ -153,7 +153,7 @@ class ClientCaseListItem(BaseModel):
 
     # Case 資訊
     case_number: str = Field(..., description="個案編號")
-    case_status: int = Field(..., description="個案狀態（整數：0=未進行, 1=進行中, 2=已完成）")
+    case_status: int = Field(..., description="個案狀態（整數：0=未開始, 1=進行中, 2=已完成）")
     case_status_label: str = Field(..., description="個案狀態（中文）")
 
     # Session 資訊
@@ -253,7 +253,7 @@ def _generate_case_number(db: Session, tenant_id: str) -> str:
 def _map_case_status_to_label(status: CaseStatus) -> str:
     """將 Case Status 映射為中文標籤"""
     status_map = {
-        CaseStatus.NOT_STARTED: "未進行",
+        CaseStatus.NOT_STARTED: "未開始",
         CaseStatus.IN_PROGRESS: "進行中",
         CaseStatus.COMPLETED: "已完成",
     }
@@ -583,7 +583,7 @@ def get_client_case_detail(
 
         # Get case status label
         status_labels = {
-            0: "未進行",
+            0: "未開始",
             1: "進行中",
             2: "已完成",
         }
@@ -750,7 +750,7 @@ def update_client_and_case(
             except (ValueError, TypeError):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid case_status: {request.case_status}. Must be 0 (未進行), 1 (進行中), or 2 (已完成)"
+                    detail=f"Invalid case_status: {request.case_status}. Must be 0 (未開始), 1 (進行中), or 2 (已完成)"
                 )
         if request.case_summary is not None:
             case.summary = request.case_summary
