@@ -2,19 +2,20 @@
 Integration tests for Reports API
 TDD - Write tests first, then implement
 """
+from datetime import datetime, timezone
+from uuid import uuid4
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from uuid import uuid4
-from datetime import datetime, timezone
 
 from app.core.security import hash_password
 from app.main import app
-from app.models.counselor import Counselor
-from app.models.client import Client
 from app.models.case import Case, CaseStatus
-from app.models.session import Session as SessionModel
+from app.models.client import Client
+from app.models.counselor import Counselor
 from app.models.report import Report, ReportStatus
+from app.models.session import Session as SessionModel
 
 
 class TestReportsAPI:
@@ -39,7 +40,11 @@ class TestReportsAPI:
         with TestClient(app) as client:
             login_response = client.post(
                 "/api/auth/login",
-                json={"email": "counselor-reports@test.com", "password": "password123", "tenant_id": "career"},
+                json={
+                    "email": "counselor-reports@test.com",
+                    "password": "password123",
+                    "tenant_id": "career",
+                },
             )
             token = login_response.json()["access_token"]
 
@@ -48,7 +53,13 @@ class TestReportsAPI:
     @pytest.fixture
     def test_session_obj(self, db_session: Session):
         """Create a test session for report tests"""
-        counselor = db_session.query(Counselor).filter_by(email="counselor-reports@test.com").first()
+        from datetime import date
+
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-reports@test.com")
+            .first()
+        )
 
         client = Client(
             id=uuid4(),
@@ -56,6 +67,12 @@ class TestReportsAPI:
             tenant_id="career",
             name="報告測試客戶",
             code="RCLI001",
+            email="rcli001@example.com",
+            gender="不透露",
+            birth_date=date(1995, 1, 1),
+            phone="0912345678",
+            identity_option="其他",
+            current_status="探索中",
         )
         db_session.add(client)
         db_session.commit()
@@ -84,7 +101,9 @@ class TestReportsAPI:
 
         return session
 
-    def test_list_reports_success(self, db_session: Session, auth_headers, test_session_obj):
+    def test_list_reports_success(
+        self, db_session: Session, auth_headers, test_session_obj
+    ):
         """Test GET /api/v1/reports - List all reports"""
         # Create test reports
         report1 = Report(
@@ -116,7 +135,9 @@ class TestReportsAPI:
             assert "items" in data
             assert data["total"] >= 2
 
-    def test_list_reports_filter_by_session(self, db_session: Session, auth_headers, test_session_obj):
+    def test_list_reports_filter_by_session(
+        self, db_session: Session, auth_headers, test_session_obj
+    ):
         """Test GET /api/v1/reports?session_id=xxx - Filter by session"""
         report = Report(
             id=uuid4(),
@@ -140,7 +161,9 @@ class TestReportsAPI:
             for item in data["items"]:
                 assert item["session_id"] == str(test_session_obj.id)
 
-    def test_get_report_success(self, db_session: Session, auth_headers, test_session_obj):
+    def test_get_report_success(
+        self, db_session: Session, auth_headers, test_session_obj
+    ):
         """Test GET /api/v1/reports/{id} - Get report details"""
         test_report = Report(
             id=uuid4(),
@@ -176,7 +199,9 @@ class TestReportsAPI:
 
             assert response.status_code == 404
 
-    def test_update_report_success(self, db_session: Session, auth_headers, test_session_obj):
+    def test_update_report_success(
+        self, db_session: Session, auth_headers, test_session_obj
+    ):
         """Test PATCH /api/v1/reports/{id} - Update report (iOS only)"""
         test_report = Report(
             id=uuid4(),
