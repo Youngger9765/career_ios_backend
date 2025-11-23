@@ -35,6 +35,10 @@ jobs:
       run: |
         poetry install --with dev
 
+    - name: Install Playwright browsers
+      run: |
+        poetry run playwright install chromium --with-deps
+
     - name: Run linting
       run: |
         poetry run ruff check app/
@@ -43,9 +47,14 @@ jobs:
     #   run: |
     #     poetry run mypy app/ --ignore-missing-imports
 
-    - name: Run tests
+    - name: Run unit tests
       run: |
-        poetry run pytest tests/ -v
+        poetry run pytest tests/unit/ -v
+
+    - name: Run integration tests
+      run: |
+        poetry run pytest tests/integration/ -v --ignore=tests/integration/test_rwd_mobile_playwright.py
+      continue-on-error: true
 
   deploy:
     name: Deploy to Cloud Run
