@@ -383,9 +383,7 @@ class TestCasesAPI:
                 headers=auth_headers,
             )
 
-            assert response.status_code == 200
-            data = response.json()
-            assert "message" in data
+            assert response.status_code == 204
 
             # Verify case no longer appears in list
             list_response = client.get(

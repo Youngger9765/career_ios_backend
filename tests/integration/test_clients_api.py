@@ -90,6 +90,8 @@ class TestClientsAPI:
                     "gender": "女",
                     "birth_date": "1995-06-20",
                     "phone": "0923456789",
+                    "identity_option": "學生",
+                    "current_status": "探索中",
                 },
             )
 
@@ -332,9 +334,7 @@ class TestClientsAPI:
                 headers=auth_headers,
             )
 
-            assert response.status_code == 200
-            data = response.json()
-            assert "message" in data
+            assert response.status_code == 204
 
             # Verify client no longer appears in list
             list_response = client.get(
