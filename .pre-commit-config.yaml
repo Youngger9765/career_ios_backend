@@ -21,7 +21,7 @@ repos:
     hooks:
       - id: console-api-tests
         name: Run Critical Console API Smoke Tests
-        entry: bash -c 'echo "🧪 Running critical console API tests..."; poetry run pytest tests/integration/ -v --tb=short -x -k "test_login_success or test_create_case_success or test_create_session_success or test_list_cases"'
+        entry: bash -c 'echo "🧪 Running critical console API tests..."; poetry run pytest tests/integration/ -q --tb=line -x -k "test_login_success or test_create_case_success or test_create_session_success or test_list_cases"'
         language: system
         pass_filenames: false
         always_run: true
