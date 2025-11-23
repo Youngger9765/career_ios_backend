@@ -507,12 +507,602 @@
             color: #111827;
             font-weight: 500;
         }
+
+        /* Mobile Top Navigation Bar */
+        .mobile-nav-bar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            z-index: 999;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            align-items: center;
+            padding: 0 16px;
+            gap: 12px;
+        }
+
+        .mobile-menu-toggle {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(245, 158, 11, 0.25);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .mobile-menu-toggle:active {
+            transform: scale(0.95);
+        }
+
+        .mobile-current-api {
+            flex: 1;
+            font-size: 14px;
+            color: #374151;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .mobile-current-api.empty {
+            color: #9ca3af;
+            font-weight: 400;
+        }
+
+        /* ================================================
+           RESPONSIVE DESIGN - Media Queries
+           ================================================ */
+
+        /* Tablet: 768px - 1024px */
+        @media (max-width: 1024px) and (min-width: 768px) {
+            .sidebar {
+                width: 220px;
+            }
+
+            .sidebar h2 {
+                font-size: 16px;
+            }
+
+            .flow-group-title {
+                font-size: 12px;
+                padding: 12px 14px;
+            }
+
+            .step-title {
+                font-size: 13px;
+            }
+
+            .step-number {
+                width: 24px;
+                height: 24px;
+                line-height: 24px;
+                font-size: 11px;
+            }
+
+            .preview-panel {
+                padding: 20px;
+            }
+
+            .preview-header h1 {
+                font-size: 20px;
+            }
+        }
+
+        /* Mobile overlay for sidebar */
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease-out;
+        }
+
+        .mobile-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        /* Mobile Tab Navigation */
+        .mobile-tabs {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 2px solid #e5e7eb;
+            z-index: 997;
+            box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-tabs-nav {
+            display: flex;
+            justify-content: space-around;
+            padding: 0;
+        }
+
+        .mobile-tab-btn {
+            flex: 1;
+            padding: 16px 20px;
+            border: none;
+            border-right: 1px solid #e5e7eb;
+            background: transparent;
+            color: #6b7280;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 4px solid transparent;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .mobile-tab-btn:last-child {
+            border-right: none;
+        }
+
+        .mobile-tab-btn.active {
+            color: #0ea5e9;
+            border-bottom-color: #0ea5e9;
+            background: rgba(14, 165, 233, 0.03);
+        }
+
+        .mobile-tab-btn:active {
+            background: rgba(14, 165, 233, 0.08);
+        }
+
+        /* Mobile: < 768px */
+        @media (max-width: 767px) {
+            body {
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+
+            .container {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            /* Prevent horizontal overflow */
+            * {
+                max-width: 100%;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            }
+
+            pre, code {
+                white-space: pre-wrap;
+                word-break: break-all;
+            }
+
+            /* Show mobile navigation bar */
+            .mobile-nav-bar {
+                display: flex;
+            }
+
+            /* Show mobile tabs */
+            .mobile-tabs {
+                display: block;
+            }
+
+            /* Sidebar becomes collapsible left panel */
+            .sidebar {
+                width: 280px;
+                position: fixed;
+                top: 0;
+                left: -280px;
+                bottom: 0;
+                z-index: 1001;
+                transition: left 0.3s ease-out;
+                overflow-y: auto;
+                box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
+            }
+
+            .sidebar.mobile-open {
+                left: 0;
+            }
+
+            .sidebar h2 {
+                font-size: 16px;
+                margin-bottom: 16px;
+            }
+
+            /* Flow groups and steps remain as desktop */
+            .flow-group-title {
+                font-size: 13px;
+                padding: 12px 14px;
+            }
+
+            .flow-step {
+                padding: 10px 12px;
+            }
+
+            .step-title {
+                font-size: 13px;
+            }
+
+            .step-subtitle {
+                font-size: 10px;
+            }
+
+            /* Preview panel takes full width */
+            .preview-panel {
+                flex: 1;
+                width: 100%;
+                padding: 72px 16px 90px 16px;
+                overflow-y: auto;
+                display: block;
+            }
+
+            .preview-panel.mobile-hidden {
+                display: none;
+            }
+
+            .preview-header h1 {
+                font-size: 18px;
+            }
+
+            .preview-header p {
+                font-size: 12px;
+            }
+
+            .preview-content {
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            /* Adjust mockup font sizes for mobile */
+            .preview-content h1,
+            .preview-content h2,
+            .preview-content h3 {
+                font-size: 16px;
+                margin-bottom: 8px;
+            }
+
+            .preview-content h4 {
+                font-size: 14px;
+                margin-bottom: 6px;
+            }
+
+            .preview-content p,
+            .preview-content div,
+            .preview-content span {
+                font-size: 13px;
+                line-height: 1.5;
+            }
+
+            .preview-content .info-card {
+                margin-bottom: 12px;
+            }
+
+            .preview-content .info-label,
+            .preview-content .info-value {
+                font-size: 12px;
+            }
+
+            /* Action panel becomes full width */
+            .action-panel {
+                width: 100%;
+                border-left: none;
+                border-top: none;
+                max-height: none;
+                padding-top: 72px;
+                padding-bottom: 90px;
+                display: none;
+            }
+
+            .action-panel.mobile-visible {
+                display: flex;
+            }
+
+            .action-header {
+                padding: 12px 16px;
+            }
+
+            .action-header h3 {
+                font-size: 14px;
+            }
+
+            .action-header p {
+                font-size: 11px;
+            }
+
+            .action-form {
+                padding: 12px 16px;
+                max-height: 400px;
+            }
+
+            .response-section {
+                max-height: 250px;
+                padding: 12px 16px;
+            }
+
+            .response-title {
+                font-size: 12px;
+            }
+
+            .response-content {
+                font-size: 11px;
+                padding: 10px;
+            }
+
+            /* Adjust form elements for mobile */
+            .form-group {
+                margin-bottom: 12px;
+            }
+
+            .form-group label {
+                font-size: 12px;
+                margin-bottom: 4px;
+            }
+
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                font-size: 13px;
+                padding: 9px 11px;
+            }
+
+            .btn {
+                width: 100%;
+                padding: 11px 14px;
+                font-size: 13px;
+            }
+
+            .status-badge {
+                font-size: 10px;
+                padding: 3px 7px;
+            }
+
+            /* Flow steps */
+            .flow-group-title {
+                font-size: 13px;
+                padding: 12px 14px;
+            }
+
+            .flow-step {
+                padding: 12px;
+            }
+
+            .step-title {
+                font-size: 13px;
+            }
+
+            .step-subtitle {
+                font-size: 10px;
+            }
+        }
+
+        /* Extra small mobile: < 480px */
+        @media (max-width: 480px) {
+            .mobile-nav-bar {
+                height: 50px;
+                padding: 0 12px;
+                gap: 8px;
+            }
+
+            .mobile-menu-toggle {
+                font-size: 13px;
+                padding: 7px 12px;
+            }
+
+            .mobile-current-api {
+                font-size: 13px;
+            }
+
+            .mobile-tab-btn {
+                font-size: 14px;
+                padding: 14px 16px;
+            }
+
+            .sidebar {
+                width: 260px;
+                left: -260px;
+                padding: 16px;
+            }
+
+            .flow-group-title {
+                font-size: 12px;
+                padding: 10px 12px;
+            }
+
+            .preview-panel {
+                padding: 62px 10px 80px 10px;
+            }
+
+            .preview-content {
+                padding: 10px;
+                font-size: 13px;
+            }
+
+            .preview-content h1,
+            .preview-content h2,
+            .preview-content h3 {
+                font-size: 15px;
+            }
+
+            .preview-content h4 {
+                font-size: 13px;
+            }
+
+            .preview-content p,
+            .preview-content div,
+            .preview-content span {
+                font-size: 12px;
+            }
+
+            .action-panel {
+                padding-top: 62px;
+                padding-bottom: 80px;
+            }
+
+            .action-header {
+                padding: 10px 12px;
+            }
+
+            .action-header h3 {
+                font-size: 13px;
+            }
+
+            .action-header p {
+                font-size: 10px;
+            }
+
+            .action-form {
+                padding: 10px 12px;
+            }
+
+            .form-group label {
+                font-size: 11px;
+            }
+
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                font-size: 12px;
+                padding: 8px 10px;
+            }
+
+            .btn {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+
+            .preview-header h1 {
+                font-size: 18px;
+            }
+
+            .preview-header p {
+                font-size: 12px;
+            }
+
+            .preview-content {
+                padding: 12px;
+            }
+
+            .flow-group-title {
+                font-size: 12px;
+                padding: 10px 12px;
+                letter-spacing: 0.5px;
+            }
+
+            .step-number {
+                width: 26px;
+                height: 26px;
+                line-height: 26px;
+                font-size: 11px;
+            }
+
+            .step-title {
+                font-size: 12px;
+            }
+
+            .action-header {
+                padding: 12px;
+            }
+
+            .action-header h3 {
+                font-size: 14px;
+            }
+
+            .action-header p {
+                font-size: 11px;
+            }
+
+            .action-form {
+                padding: 12px;
+            }
+
+            .form-group {
+                margin-bottom: 12px;
+            }
+
+            .form-group label {
+                font-size: 12px;
+            }
+
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                font-size: 13px;
+                padding: 9px 10px;
+            }
+
+            .btn {
+                font-size: 13px;
+                padding: 10px 14px;
+            }
+
+            .response-section {
+                padding: 12px;
+                max-height: 200px;
+            }
+
+            .response-content {
+                font-size: 11px;
+                padding: 10px;
+            }
+
+            .info-card {
+                padding: 12px;
+            }
+
+            .info-row {
+                padding: 6px 0;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .info-label,
+            .info-value {
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Mobile Navigation Bar -->
+    <div class="mobile-nav-bar" id="mobileNavBar">
+        <button class="mobile-menu-toggle" id="mobileMenuToggle">
+            ☰ 選單
+        </button>
+        <div class="mobile-current-api empty" id="mobileCurrentApi">
+            請選擇 API
+        </div>
+    </div>
+
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <!-- Mobile Tabs Navigation -->
+    <div class="mobile-tabs" id="mobileTabs">
+        <div class="mobile-tabs-nav">
+            <button class="mobile-tab-btn active" data-tab="preview">
+                📱 手機模擬圖
+            </button>
+            <button class="mobile-tab-btn" data-tab="params">
+                ⚙️ 參數輸入
+            </button>
+        </div>
+    </div>
+
     <div class="container">
         <!-- Left Sidebar: Flow Steps -->
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
             <h2>📱 iOS API 測試流程</h2>
 
             <!-- 諮商師管理 -->
@@ -6377,6 +6967,86 @@ Cl: 我開始用你上次建議的方法，先確認主管的需求再開始做�
         document.querySelectorAll('.flow-group-content').forEach(content => {
             content.classList.add('collapsed');
         });
+
+        // ================================================
+        // Mobile Tabs Functionality
+        // ================================================
+        const mobileTabBtns = document.querySelectorAll('.mobile-tab-btn');
+        const previewPanel = document.querySelector('.preview-panel');
+        const actionPanel = document.querySelector('.action-panel');
+
+        mobileTabBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetTab = this.dataset.tab;
+
+                // Update active tab button
+                mobileTabBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                // Show/hide panels based on selected tab
+                if (targetTab === 'preview') {
+                    previewPanel.classList.remove('mobile-hidden');
+                    actionPanel.classList.remove('mobile-visible');
+                } else if (targetTab === 'params') {
+                    previewPanel.classList.add('mobile-hidden');
+                    actionPanel.classList.add('mobile-visible');
+                }
+            });
+        });
+
+        // ================================================
+        // Mobile Menu Toggle
+        // ================================================
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+
+        function closeSidebar() {
+            sidebar.classList.remove('mobile-open');
+            mobileOverlay.classList.remove('active');
+            mobileMenuToggle.textContent = '☰ 選單';
+        }
+
+        function openSidebar() {
+            sidebar.classList.add('mobile-open');
+            mobileOverlay.classList.add('active');
+            mobileMenuToggle.textContent = '✕ 關閉';
+        }
+
+        if (mobileMenuToggle && sidebar) {
+            mobileMenuToggle.addEventListener('click', function() {
+                if (sidebar.classList.contains('mobile-open')) {
+                    closeSidebar();
+                } else {
+                    openSidebar();
+                }
+            });
+
+            // Close sidebar when clicking overlay
+            if (mobileOverlay) {
+                mobileOverlay.addEventListener('click', closeSidebar);
+            }
+
+            // Update current API display and close sidebar when clicking a flow step on mobile
+            const flowSteps = document.querySelectorAll('.flow-step');
+            const mobileCurrentApi = document.getElementById('mobileCurrentApi');
+
+            flowSteps.forEach(step => {
+                step.addEventListener('click', function() {
+                    // Update current API display
+                    if (window.innerWidth < 768 && mobileCurrentApi) {
+                        const apiTitle = this.querySelector('.step-title');
+                        if (apiTitle) {
+                            mobileCurrentApi.textContent = apiTitle.textContent;
+                            mobileCurrentApi.classList.remove('empty');
+                        }
+
+                        // Close sidebar
+                        closeSidebar();
+                    }
+                });
+            });
+        }
     </script>
 </body>
 </html>
