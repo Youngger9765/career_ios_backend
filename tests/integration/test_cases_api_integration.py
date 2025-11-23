@@ -117,8 +117,9 @@ class TestCasesAPI:
             assert data["client_id"] == str(test_client_obj.id)
             assert data["status"] == 0  # NOT_STARTED
 
-    def test_create_case_unauthorized(self, test_client_obj):
+    def test_create_case_unauthorized(self, auth_headers, test_client_obj):
         """Test creating case without auth returns 403"""
+        # auth_headers dependency ensures counselor exists for test_client_obj
         with TestClient(app) as client:
             response = client.post(
                 "/api/v1/cases",
