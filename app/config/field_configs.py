@@ -3,7 +3,6 @@ Tenant-specific field configurations for Client and Case forms
 """
 from app.schemas.field_config import FieldSchema, FieldSection, FieldType, FormSchema
 
-
 # ============================================================================
 # CAREER TENANT - Client Form Configuration
 # ============================================================================

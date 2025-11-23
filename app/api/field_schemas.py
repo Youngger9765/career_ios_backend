@@ -1,7 +1,6 @@
 """
 Field Schema API - Returns tenant-specific form configurations for iOS
 """
-from typing import Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 

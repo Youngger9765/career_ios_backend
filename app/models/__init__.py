@@ -1,27 +1,27 @@
 """Database models"""
 
 # Console models
+from .agent import Agent, AgentVersion
 from .case import Case
+from .chat import ChatLog
 from .client import Client
+from .collection import Collection, CollectionItem
 from .counselor import Counselor
-from .job import Job
-from .refresh_token import RefreshToken
-from .reminder import Reminder
-from .report import Report
-from .session import Session
 
 # RAG models
 from .document import Chunk, Datasource, Document, Embedding
-from .collection import Collection, CollectionItem
-from .chat import ChatLog
 from .evaluation import (
     DocumentQualityMetric,
     EvaluationExperiment,
     EvaluationResult,
     EvaluationTestSet,
 )
-from .agent import Agent, AgentVersion
+from .job import Job
 from .pipeline import PipelineRun
+from .refresh_token import RefreshToken
+from .reminder import Reminder
+from .report import Report
+from .session import Session
 
 __all__ = [
     # Console models

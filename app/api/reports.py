@@ -45,7 +45,8 @@ async def _generate_report_background(
         report_type: 報告類型 (enhanced/legacy)
         rag_system: RAG 系統 (openai/gemini)
     """
-    from app.api.rag_report import ReportRequest, generate_report as rag_generate
+    from app.api.rag_report import ReportRequest
+    from app.api.rag_report import generate_report as rag_generate
     from app.core.database import SessionLocal
     from app.services.session_summary_service import session_summary_service
 
@@ -493,7 +494,7 @@ async def generate_report(
             version=1,
             status=ReportStatus.PROCESSING,  # 狀態:生成中
             mode=request.report_type,
-            ai_model=f"gpt-4.1-mini" if request.rag_system == "openai" else "gemini-2.5-flash",
+            ai_model="gpt-4.1-mini" if request.rag_system == "openai" else "gemini-2.5-flash",
         )
         db.add(report)
         db.commit()
