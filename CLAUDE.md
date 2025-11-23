@@ -172,8 +172,8 @@ poetry run pre-commit run --hook-stage push
 # 手動運行完整測試（106+ tests）
 poetry run pytest tests/integration/ -v
 
-# 緊急跳過測試（不推薦）
-git push --no-verify
+# ❌ 絕對禁止跳過檢查！
+# git push --no-verify  # 禁止使用！
 ```
 
 ### Commit Message 格式
@@ -270,17 +270,22 @@ git push --no-verify
 1. **❌ 不 commit 到 main/master**
    - 永遠在 staging/feature branch 開發
 
-2. **✅ Integration tests 必須通過**
+2. **❌ 絕對禁止使用 `--no-verify`**
+   - ❌ `git commit --no-verify` - 禁止
+   - ❌ `git push --no-verify` - 禁止
+   - 如果 hooks 失敗，修復問題，不要跳過檢查
+
+3. **✅ Integration tests 必須通過**
    - API 不能壞掉
    - **所有 console.html 使用的 API 都必須有測試**
 
-3. **✅ 代碼要能跑**
+4. **✅ 代碼要能跑**
    - 至少手動測試過
 
-4. **❌ 不繞過 CI**
+5. **❌ 不繞過 CI**
    - 雖然簡化，但 CI 必須跑
 
-5. **✅ TDD 用於關鍵功能**
+6. **✅ TDD 用於關鍵功能**
    - 關鍵 API 必須先寫測試
    - 測試定義行為，AI 實作代碼
 
