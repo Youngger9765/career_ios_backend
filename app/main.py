@@ -157,15 +157,15 @@ async def console_page(request: Request) -> Response:
     return templates.TemplateResponse("console.html", {"request": request})
 
 
-@app.get("/client-case-list", response_class=HTMLResponse)
+@app.get("/web/client-case-list", response_class=HTMLResponse)
 async def client_case_list_page(request: Request) -> Response:
-    """Client-Case List (Mobile App Style)"""
+    """Client-Case List - Web Preview (HTML, not API!)"""
     return templates.TemplateResponse("client_case_list.html", {"request": request})
 
 
-@app.get("/create-client-case", response_class=HTMLResponse)
+@app.get("/web/create-client-case", response_class=HTMLResponse)
 async def create_client_case_page(request: Request) -> Response:
-    """Create Client-Case Form (Mobile App Style)"""
+    """Create Client-Case Form - Web Preview (HTML, not API!)"""
     return templates.TemplateResponse("create_client_case.html", {"request": request})
 
 
