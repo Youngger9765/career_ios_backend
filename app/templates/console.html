@@ -5681,36 +5681,23 @@
                 const caseDetail = await response.json();
                 console.log('✅ Fetched case details:', caseDetail);
 
-                // Map API field names to schema field keys (snake_case → camelCase where needed)
-                const fieldMapping = {
-                    // Client fields
-                    'client_name': 'name',
-                    'client_email': 'email',
-                    'client_code': 'code',
-                    // Case fields
-                    'case_status': 'status',
-                    'case_summary': 'summary',
-                    'case_goals': 'goals',
-                    'case_number': 'number'
-                };
-
                 // Populate Client fields dynamically from schema
                 if (state.clientSchema?.sections) {
                     state.clientSchema.sections.forEach(section => {
                         section.fields.forEach(field => {
-                            const fieldId = `cc-update-client-${field.key}`;
+                            const fieldId = 'cc-update-client-' + field.key;
                             const element = document.getElementById(fieldId);
                             if (element) {
-                                // Try different property name variations
-                                const apiKey = fieldMapping[`client_${field.key}`] || field.key;
-                                let value = caseDetail[`client_${field.key}`] || caseDetail[apiKey] || '';
+                                // Try direct field name first, then with client_ prefix
+                                let value = caseDetail[field.key] || caseDetail['client_' + field.key] || '';
 
                                 // Handle date fields - format as YYYY-MM-DD for input[type=date]
                                 if (field.type === 'date' && value) {
-                                    value = value.split('T')[0]; // Extract date part from ISO string
+                                    value = value.split('T')[0];
                                 }
 
                                 element.value = value;
+                                console.log('Set ' + fieldId + ' = ' + value);
                             }
                         });
                     });
@@ -5720,14 +5707,14 @@
                 if (state.caseSchema?.sections) {
                     state.caseSchema.sections.forEach(section => {
                         section.fields.forEach(field => {
-                            const fieldId = `cc-update-case-${field.key}`;
+                            const fieldId = 'cc-update-case-' + field.key;
                             const element = document.getElementById(fieldId);
                             if (element) {
-                                // Try different property name variations
-                                const apiKey = fieldMapping[`case_${field.key}`] || field.key;
-                                let value = caseDetail[`case_${field.key}`] || caseDetail[apiKey] || '';
+                                // Try direct field name first, then with case_ prefix
+                                let value = caseDetail[field.key] || caseDetail['case_' + field.key] || '';
 
                                 element.value = value;
+                                console.log('Set ' + fieldId + ' = ' + value);
                             }
                         });
                     });
