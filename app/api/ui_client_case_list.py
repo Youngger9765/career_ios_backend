@@ -39,11 +39,13 @@ class CreateClientCaseRequest(BaseModel):
     current_status: str = Field(..., description="目前現況")
 
     # Client 選填欄位
-    nickname: Optional[str] = Field(None, description="暱稱")
-    notes: Optional[str] = Field(None, description="備註")
     education: Optional[str] = Field(None, description="學歷")
-    occupation: Optional[str] = Field(None, description="職業")
-    location: Optional[str] = Field(None, description="地點")
+    current_job: Optional[str] = Field(None, description="您的現職（職業／年資）")
+    career_status: Optional[str] = Field(None, description="職涯現況")
+    has_consultation_history: Optional[str] = Field(None, description="過往諮詢經驗")
+    has_mental_health_history: Optional[str] = Field(None, description="心理或精神醫療史")
+    location: Optional[str] = Field(None, description="居住地區")
+    notes: Optional[str] = Field(None, description="備註")
 
     # Case 選填欄位
     case_summary: Optional[str] = Field(None, description="個案摘要")
@@ -86,11 +88,13 @@ class ClientCaseDetailResponse(BaseModel):
     phone: str
     identity_option: str
     current_status: str
-    nickname: Optional[str] = None
-    notes: Optional[str] = None
     education: Optional[str] = None
-    occupation: Optional[str] = None
+    current_job: Optional[str] = None
+    career_status: Optional[str] = None
+    has_consultation_history: Optional[str] = None
+    has_mental_health_history: Optional[str] = None
     location: Optional[str] = None
+    notes: Optional[str] = None
 
     # Case 資訊
     case_id: UUID
@@ -121,11 +125,13 @@ class UpdateClientCaseRequest(BaseModel):
     phone: Optional[str] = None
     identity_option: Optional[str] = None
     current_status: Optional[str] = None
-    nickname: Optional[str] = None
-    notes: Optional[str] = None
     education: Optional[str] = None
-    occupation: Optional[str] = None
+    current_job: Optional[str] = None
+    career_status: Optional[str] = None
+    has_consultation_history: Optional[str] = None
+    has_mental_health_history: Optional[str] = None
     location: Optional[str] = None
+    notes: Optional[str] = None
 
     # Case 欄位 (all optional)
     case_status: Optional[str] = Field(None, description="個案狀態: 0=未開始, 1=進行中, 2=已完成")
@@ -227,12 +233,11 @@ def _generate_case_number(db: Session, tenant_id: str) -> str:
     Returns:
         Generated case number
     """
-    # Find the highest existing case number for this tenant (exclude deleted)
+    # Find the highest existing case number for this tenant (include all, even deleted)
     result = db.execute(
         select(Case.case_number)
         .where(Case.tenant_id == tenant_id)
         .where(Case.case_number.like("CASE%"))
-        .where(Case.deleted_at.is_(None))
         .order_by(Case.case_number.desc())
     )
     numbers = result.scalars().all()
@@ -318,15 +323,18 @@ def create_client_and_case(
         new_client = Client(
             code=client_code,
             name=request.name,
-            nickname=request.nickname,
             email=request.email,
             gender=request.gender,
             birth_date=request.birth_date,
             phone=request.phone,
             identity_option=request.identity_option,
             current_status=request.current_status,
+            # Optional fields
             education=request.education,
-            occupation=request.occupation,
+            current_job=request.current_job,
+            career_status=request.career_status,
+            has_consultation_history=request.has_consultation_history,
+            has_mental_health_history=request.has_mental_health_history,
             location=request.location,
             notes=request.notes,
             counselor_id=current_user.id,
@@ -601,11 +609,13 @@ def get_client_case_detail(
             phone=client.phone,
             identity_option=client.identity_option,
             current_status=client.current_status,
-            nickname=client.nickname,
-            notes=client.notes,
             education=client.education,
-            occupation=client.occupation,
+            current_job=client.current_job,
+            career_status=client.career_status,
+            has_consultation_history=client.has_consultation_history,
+            has_mental_health_history=client.has_mental_health_history,
             location=client.location,
+            notes=client.notes,
             # Case fields
             case_id=case.id,
             case_number=case.case_number,
@@ -720,20 +730,26 @@ def update_client_and_case(
         if request.current_status is not None:
             client.current_status = request.current_status
             client_updated = True
-        if request.nickname is not None:
-            client.nickname = request.nickname
-            client_updated = True
-        if request.notes is not None:
-            client.notes = request.notes
-            client_updated = True
         if request.education is not None:
             client.education = request.education
             client_updated = True
-        if request.occupation is not None:
-            client.occupation = request.occupation
+        if request.current_job is not None:
+            client.current_job = request.current_job
+            client_updated = True
+        if request.career_status is not None:
+            client.career_status = request.career_status
+            client_updated = True
+        if request.has_consultation_history is not None:
+            client.has_consultation_history = request.has_consultation_history
+            client_updated = True
+        if request.has_mental_health_history is not None:
+            client.has_mental_health_history = request.has_mental_health_history
             client_updated = True
         if request.location is not None:
             client.location = request.location
+            client_updated = True
+        if request.notes is not None:
+            client.notes = request.notes
             client_updated = True
 
         # Step 4: Update Case fields (only if provided)

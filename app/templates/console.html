@@ -4620,32 +4620,69 @@
                         <input type="text" id="cc-status" value="正在考慮轉職" required />
                     </div>
 
-                    <h4 style="margin: 20px 0 12px;">📋 選填欄位</h4>
-                    <div class="form-group">
-                        <label>暱稱</label>
-                        <input type="text" id="cc-nickname" value="小明" />
-                    </div>
+                    <h4 style="margin: 20px 0 12px;">📋 Client 選填欄位</h4>
                     <div class="form-group">
                         <label>學歷</label>
-                        <input type="text" id="cc-education" value="大學" />
+                        <select id="cc-education">
+                            <option value="">請選擇</option>
+                            <option value="高中">高中</option>
+                            <option value="大學" selected>大學</option>
+                            <option value="研究所">研究所</option>
+                            <option value="博士">博士</option>
+                            <option value="其他">其他</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>職業</label>
-                        <input type="text" id="cc-occupation" value="工程師" />
+                        <label>您的現職（職業／年資）</label>
+                        <input type="text" id="cc-current-job" value="軟體工程師 / 3年" placeholder="例：軟體工程師 / 3年" />
                     </div>
                     <div class="form-group">
-                        <label>地點</label>
-                        <input type="text" id="cc-location" value="台北市" />
+                        <label>職涯現況</label>
+                        <select id="cc-career-status">
+                            <option value="">請選擇</option>
+                            <option value="探索中">探索中</option>
+                            <option value="轉職準備" selected>轉職準備</option>
+                            <option value="面試中">面試中</option>
+                            <option value="已在職">已在職</option>
+                            <option value="待業中">待業中</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>過往諮詢經驗</label>
+                        <textarea id="cc-consultation-history" rows="2" placeholder="是／否，若有請簡述"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>心理或精神醫療史</label>
+                        <textarea id="cc-mental-health-history" rows="2" placeholder="是／否，若有請簡述（敏感資訊）"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>居住地區</label>
+                        <input type="text" id="cc-location" value="台北市" placeholder="例：台北市" />
+                    </div>
+                    <div class="form-group">
+                        <label>備註</label>
+                        <textarea id="cc-notes" rows="2" placeholder="其他需要記錄的資訊"></textarea>
+                    </div>
+
+                    <h4 style="margin: 20px 0 12px;">📋 Case 選填欄位</h4>
+                    <div class="form-group">
+                        <label>問題敘述</label>
+                        <textarea id="cc-problem-description" rows="3" placeholder="請描述本次諮詢的問題與目的"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>預期收穫</label>
+                        <textarea id="cc-goals" rows="3" placeholder="請描述本次諮詢的預期收穫"></textarea>
                     </div>
                     <div class="form-group">
                         <label>個案摘要</label>
-                        <textarea id="cc-case-summary" rows="3">職涯轉換諮詢</textarea>
+                        <textarea id="cc-summary" rows="3" placeholder="整體個案摘要">職涯轉換諮詢</textarea>
                     </div>
 
                     <button class="btn btn-primary" onclick="executeCreateClientCase()">建立</button>
                 `,
                 execute: async () => {
                     const requestBody = {
+                        // Client 必填欄位
                         name: document.getElementById('cc-name').value,
                         email: document.getElementById('cc-email').value,
                         gender: document.getElementById('cc-gender').value,
@@ -4653,11 +4690,18 @@
                         phone: document.getElementById('cc-phone').value,
                         identity_option: document.getElementById('cc-identity').value,
                         current_status: document.getElementById('cc-status').value,
-                        nickname: document.getElementById('cc-nickname').value || undefined,
+                        // Client 選填欄位
                         education: document.getElementById('cc-education').value || undefined,
-                        occupation: document.getElementById('cc-occupation').value || undefined,
+                        current_job: document.getElementById('cc-current-job').value || undefined,
+                        career_status: document.getElementById('cc-career-status').value || undefined,
+                        has_consultation_history: document.getElementById('cc-consultation-history').value || undefined,
+                        has_mental_health_history: document.getElementById('cc-mental-health-history').value || undefined,
                         location: document.getElementById('cc-location').value || undefined,
-                        case_summary: document.getElementById('cc-case-summary').value || undefined,
+                        notes: document.getElementById('cc-notes').value || undefined,
+                        // Case 選填欄位
+                        problem_description: document.getElementById('cc-problem-description').value || undefined,
+                        case_goals: document.getElementById('cc-goals').value || undefined,
+                        case_summary: document.getElementById('cc-summary').value || undefined,
                     };
 
                     const response = await fetch(`${BASE_URL}/api/v1/ui/client-case`, {
@@ -6131,14 +6175,16 @@ Cl: 我開始用你上次建議的方法，先確認主管的需求再開始做�
             const identities = ['學生', '社會新鮮人', '轉職者', '在職者', '其他'];
             const statuses = ['求職中', '在學中', '考慮轉職', '探索新方向', '穩定就業'];
             const genders = ['男', '女', '其他'];
-            const educations = ['高中', '大學', '研究所', '博士'];
-            const occupations = ['工程師', '設計師', '行銷人員', '產品經理', '學生', '教師'];
+            const educations = ['高中', '大學', '研究所', '博士', '其他'];
+            const jobs = ['軟體工程師 / 3年', 'UI設計師 / 2年', '產品經理 / 5年', '行銷專員 / 1年', '待業中', '學生'];
+            const careerStatuses = ['探索中', '轉職準備', '面試中', '已在職', '待業中'];
             const locations = ['台北市', '新北市', '台中市', '台南市', '高雄市', '桃園市'];
 
             const randomSurname = surnames[Math.floor(Math.random() * surnames.length)];
             const randomGivenName = givenNames[Math.floor(Math.random() * givenNames.length)];
             const fullName = randomSurname + randomGivenName;
 
+            // 必填欄位
             document.getElementById('cc-name').value = fullName;
             document.getElementById('cc-email').value = `test${timestamp}@example.com`;
             document.getElementById('cc-gender').value = genders[Math.floor(Math.random() * genders.length)];
@@ -6152,11 +6198,20 @@ Cl: 我開始用你上次建議的方法，先確認主管的需求再開始做�
             document.getElementById('cc-phone').value = `09${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
             document.getElementById('cc-identity').value = identities[Math.floor(Math.random() * identities.length)];
             document.getElementById('cc-status').value = statuses[Math.floor(Math.random() * statuses.length)];
-            document.getElementById('cc-nickname').value = randomGivenName;
+
+            // Client 選填欄位
             document.getElementById('cc-education').value = educations[Math.floor(Math.random() * educations.length)];
-            document.getElementById('cc-occupation').value = occupations[Math.floor(Math.random() * occupations.length)];
+            document.getElementById('cc-current-job').value = jobs[Math.floor(Math.random() * jobs.length)];
+            document.getElementById('cc-career-status').value = careerStatuses[Math.floor(Math.random() * careerStatuses.length)];
+            document.getElementById('cc-consultation-history').value = '';
+            document.getElementById('cc-mental-health-history').value = '';
             document.getElementById('cc-location').value = locations[Math.floor(Math.random() * locations.length)];
-            document.getElementById('cc-case-summary').value = '職涯諮詢';
+            document.getElementById('cc-notes').value = '';
+
+            // Case 選填欄位
+            document.getElementById('cc-problem-description').value = '';
+            document.getElementById('cc-goals').value = '';
+            document.getElementById('cc-summary').value = '職涯諮詢';
 
             console.log('✅ 隨機測試資料已生成:', fullName, `test${timestamp}@example.com`);
         };
