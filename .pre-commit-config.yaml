@@ -1,0 +1,73 @@
+# Pre-commit hooks configuration
+# Install:
+#   poetry run pre-commit install
+#   poetry run pre-commit install --hook-type pre-push
+# Run manually: poetry run pre-commit run --all-files
+
+repos:
+  # Branch validation - prevent commits to main/master
+  - repo: local
+    hooks:
+      - id: check-branch
+        name: Check branch (no main/master)
+        entry: bash -c 'BRANCH=$(git branch --show-current); if [[ "$BRANCH" == "main" || "$BRANCH" == "master" ]]; then echo "❌ Cannot commit to $BRANCH. Use staging or feature branch."; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+
+  # Run integration tests before push
+  - repo: local
+    hooks:
+      - id: console-api-tests
+        name: Run Console API Integration Tests
+        entry: bash -c 'echo "🧪 Running Console API tests..."; poetry run pytest tests/integration/ -v --tb=short -x'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [push]
+
+  # Ruff - Python linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Security checks - prevent committing secrets
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: detect-private-key
+        name: 🔒 Detect private keys
+      - id: check-merge-conflict
+        name: 🔒 Check merge conflicts
+      - id: check-case-conflict
+        name: 🔒 Check case conflicts
+      - id: forbid-new-submodules
+        name: 🔒 Forbid submodules
+
+  # Additional security - check for actual secret values (not just variable names)
+  - repo: local
+    hooks:
+      - id: check-secrets
+        name: 🔒 Check for actual API keys and secrets
+        entry: bash -c 'if git diff --cached | grep -E "(sk-[a-zA-Z0-9]{20,}|pk-[a-zA-Z0-9]{20,}|eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}|postgresql://[^@]+:[^@]+@|postgres://[^@]+:[^@]+@|mysql://[^@]+:[^@]+@|mongodb://[^@]+:[^@]+@|['\"]password['\"]:\s*['\"][^'\"]{8,}|Bearer\s+[a-zA-Z0-9_-]{20,})"; then echo "❌ Actual secret value detected in commit!"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]

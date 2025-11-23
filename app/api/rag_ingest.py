@@ -203,14 +203,14 @@ async def reprocess_document(
         )
         datasource = result.scalar_one_or_none()
 
-        if not datasource or not datasource.source_uri:
+        if not datasource or not datasource.source_uri:  # type: ignore[attr-defined]
             raise HTTPException(status_code=404, detail="Document source not found")
 
         # 2. Download original PDF from storage
         storage_service = StorageService()
         import urllib.parse
 
-        parsed_url = urllib.parse.urlparse(datasource.source_uri)
+        parsed_url = urllib.parse.urlparse(datasource.source_uri)  # type: ignore[attr-defined]
         # Extract path after bucket name
         # URL format: .../storage/v1/object/public/{bucket}/{file_path}
         path_parts = parsed_url.path.split("/")

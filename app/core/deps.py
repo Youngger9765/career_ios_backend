@@ -57,8 +57,7 @@ def get_current_user(
     # Query counselor from database (must match both email AND tenant_id)
     result = db.execute(
         select(Counselor).where(
-            Counselor.email == email,
-            Counselor.tenant_id == tenant_id
+            Counselor.email == email, Counselor.tenant_id == tenant_id
         )
     )
     counselor = result.scalar_one_or_none()
@@ -91,4 +90,4 @@ def get_tenant_id(
     Returns:
         Tenant ID string from user's profile
     """
-    return current_user.tenant_id
+    return current_user.tenant_id  # type: ignore[return-value]

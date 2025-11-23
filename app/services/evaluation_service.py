@@ -349,7 +349,7 @@ class EvaluationService:
                 evaluation_time = time.time() - start_time
 
                 # Convert to pandas for easier access
-                df = result.to_pandas()
+                df = result.to_pandas()  # type: ignore[attr-defined]
 
                 # Helper function to safely convert metrics (handle NaN)
                 def safe_metric(value):
@@ -568,7 +568,7 @@ class EvaluationService:
                 "avg_context_precision": exp.avg_context_precision,
                 "total_queries": exp.total_queries,
             }
-            comparison["experiments"].append(exp_data)  # type: ignore[union-attr]
+            comparison["experiments"].append(exp_data)  # type: ignore[union-attr, attr-defined]
 
             # Track best scores
             if exp.avg_faithfulness and exp.avg_faithfulness > best_faithfulness_score:

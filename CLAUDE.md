@@ -1,250 +1,324 @@
-# CLAUDE.md - Development Guidelines
+# CLAUDE.md - Prototype 開發策略
 
 ---
 
-## 🔒 MANDATORY RULES (Self-Recursive - MUST Display Every Response)
+## 🎯 核心原則：速度優先（Prototype Phase）
 
-**⚠️ BEFORE responding to ANY request, you MUST display:**
+**我們在做什麼？**
+- ✅ Prototype 後端 API（未上線）
+- ✅ 快速驗證功能可行性
+- ✅ AI 輔助開發，人工驗證
 
-```
-═══════════════════════════════════════
-🔒 Rules Check ✓
-═══════════════════════════════════════
-1. ❌ No commit to main/master
-2. ❌ No Claude attribution in commits
-3. ✅ Confirm before commit
-4. ✅ Confirm before push
-5. 📢 Show rules every response
-═══════════════════════════════════════
-```
+**不是什麼？**
+- ❌ 生產環境系統
+- ❌ 需要 100% 測試覆蓋
+- ❌ 過度工程化
 
-### Core Rules
+---
 
-1. **❌ NEVER commit to main or master branch**
-   - Always check current branch first: `git branch --show-current`
-   - If on main/master → STOP and tell user to create feature branch
-
-2. **❌ NEVER add Claude attribution in commit messages**
-   - ✅ Allowed: `feat: add user login`
-   - ❌ Forbidden: `feat: add user login 🤖 Generated with Claude`
-   - ❌ Forbidden: `Co-Authored-By: Claude <noreply@anthropic.com>`
-
-3. **✅ Commit confirmation rules**
-   - If user says "commit" → Treat as "yes", proceed directly
-   - If user says "commit changes" → Treat as "yes", proceed directly
-   - Otherwise: Ask "確定要 commit 嗎？(y/n)" and wait
-
-4. **✅ Push confirmation rules**
-   - If user says "push" → Treat as "yes", proceed directly
-   - Otherwise: Ask "確定要 push 嗎？(y/n)" and wait
-
-5. **📢 MUST display these 5 rules at the start of EVERY response**
-   - This ensures you never forget the rules
-   - Even after long conversations
-
-### Git Workflow (MANDATORY)
+## ⚡ 開發流程（簡化版）
 
 ```
-Step 1: Check branch
-  ↓
+1. 寫功能代碼（AI 輔助）
+   ↓
+2. 手動測試 API（Swagger UI 或 Console）
+   ↓
+3. 寫 Integration Test（驗證 API 可用）
+   ↓
+4. ruff check --fix（自動修復格式）
+   ↓
+5. Commit（無需 pre-commit hooks）
+   ↓
+6. Push → CI 跑 Integration Tests
+```
+
+**預期時間**：
+- 開發功能：70% 時間
+- 寫測試：20% 時間
+- 修復/重構：10% 時間
+
+---
+
+## 🔧 工具鏈（極簡）
+
+### 必要工具
+- **pytest**: Integration tests only
+- **ruff**: 格式化 + Linting（自動修復）
+- **httpx**: API 測試
+- **pre-commit**: Git hooks（自動檢查）
+
+---
+
+## 🧪 測試策略（TDD for Critical Features）
+
+### TDD 核心原則（保留）
+
+**Red-Green-Refactor Cycle**:
+```
+1. ❌ RED: 先寫測試（必定失敗）
+2. ✅ GREEN: 寫最小代碼讓測試通過
+3. ♻️ REFACTOR: 重構代碼（測試保持通過）
+```
+
+**何時必須用 TDD？**
+- ✅ **關鍵功能**：所有 `console.html` 使用的 API（35+ endpoints）
+- ✅ **核心業務邏輯**：認證、案主管理、諮商記錄、報告生成
+- ✅ **RAG 功能**：文件上傳、嵌入、搜尋、評估
+
+**何時可以跳過 TDD？**
+- ⚠️ 實驗性功能（快速驗證 idea）
+- ⚠️ 一次性腳本或工具
+
+---
+
+### ✅ 必須做
+
+1. **Integration Tests**（API 端到端測試）
+   - **所有 console.html 的 API 都必須有測試**
+   - 驗證 API 能正常工作
+   - 測試關鍵業務流程
+   - 每個 endpoint 至少 1 個 happy path test
+
+2. **TDD 流程（關鍵功能）**
+   ```
+   1. 定義 API 行為（人類設計）
+   2. 寫 Integration Test（先寫測試）
+   3. 跑測試 → RED（失敗）
+   4. AI 生成實作代碼
+   5. 跑測試 → GREEN（通過）
+   6. Review + Refactor（人類主導）
+   7. Commit
+   ```
+
+### ⚠️ 可選做
+- Unit Tests（只在邏輯複雜時寫）
+- Edge case tests（上線前補）
+
+### ❌ 不做
+- 100% 測試覆蓋率
+- 過度的 mock
+- 過度的類型檢查
+
+**測試命令**：
+```bash
+# 日常開發：只跑 integration tests
+poetry run pytest tests/integration/ -v
+
+# 完整測試（可選）
+poetry run pytest tests/ -v
+
+# 檢查特定 API 測試
+poetry run pytest tests/integration/test_auth_api.py -v
+```
+
+---
+
+## 📦 Git Workflow
+
+### Git Hooks 設置
+
+**首次安裝**:
+```bash
+# 安裝 pre-commit 和 pre-push hooks
+poetry run pre-commit install
+poetry run pre-commit install --hook-type pre-push
+```
+
+**Commit 時自動檢查**（快速）:
+1. ✅ 檢查分支（禁止 commit 到 main/master）
+2. ✅ Ruff linting and formatting
+3. ✅ 基本文件檢查（trailing whitespace, YAML/TOML）
+4. ✅ **資安檢查**（防止 API keys, secrets, private keys 洩露）
+
+**Push 時自動檢查**（完整測試）:
+1. ✅ 運行 Console API Integration Tests (106+ tests)
+
+### Commit 原則
+1. **功能可用** → 就可以 commit
+2. **代碼格式** → Commit 時自動用 ruff 修復
+3. **測試通過** → Push 時自動跑 integration tests
+
+### Commit & Push 流程
+```bash
+# 1. 檢查分支
 git branch --show-current
-  ↓
-Step 2: Validate
-  ↓
-main/master? → ❌ STOP, tell user
-feature branch? → ✅ Continue
-  ↓
-Step 3: Ask confirmation
-  ↓
-"確定要 commit/push 嗎？(y/n)"
-  ↓
-Step 4: Wait for "y"
-  ↓
-Step 5: Execute (NO Claude attribution)
+
+# 2. Commit（快速檢查）
+git add .
+git commit -m "feat: add XXX API"
+# ↓ Commit 時自動執行（~5 秒）：
+#   ✅ 檢查分支
+#   ✅ Ruff linting/formatting
+#   ✅ 資安檢查
+#   ✅ 文件檢查
+
+# 3. Push（完整測試）
+git push
+# ↓ Push 時自動執行（~1-2 分鐘）：
+#   ✅ Console API Integration Tests (106+ tests)
+#   ✅ 確保所有 API 正常工作
 ```
+
+### 手動運行 Hooks（可選）
+```bash
+# 手動運行 commit 檢查
+poetry run pre-commit run --all-files
+
+# 手動運行 push 檢查
+poetry run pre-commit run --hook-stage push
+
+# 緊急跳過測試（不推薦）
+git push --no-verify
+```
+
+### Commit Message 格式
+- ✅ `feat: add user login API`
+- ✅ `fix: correct client code generation`
+- ✅ `docs: update API guide`
+- ❌ 不要加 Claude 署名
 
 ---
 
-## Test-Driven Development (TDD)
+## 🚀 CI/CD（簡化版）
 
-### Core TDD Principles (2025 Best Practices)
+### CI Pipeline
+1. **Linting**: `ruff check app/`
+2. **Integration Tests**: `pytest tests/integration/`
+3. **Deploy**: 推到 Cloud Run（staging）
 
-1. **Red-Green-Refactor Cycle**
-   - ❌ RED: Write a failing test first
-   - ✅ GREEN: Write minimal code to pass the test
-   - ♻️ REFACTOR: Improve code while keeping tests green
+### 成功標準
+- ✅ Ruff check 通過
+- ✅ Integration tests 通過
+- ✅ 部署成功，健康檢查通過
 
-2. **Write Tests First, Always**
-   - Tests define requirements before implementation
-   - Focus on behavior, not implementation details
-   - Each test should be small, atomic, and focused
-
-3. **Comprehensive Test Coverage**
-   - Happy path scenarios
-   - Negative tests (failure conditions)
-   - Edge cases and boundary values
-   - Equivalence partitioning
-
-4. **Keep Units Small**
-   - Small, focused functions/modules
-   - Easier to test, debug, and maintain
-   - Faster iteration cycle
-
-### TDD with AI-Assisted Coding (Kent Beck's Approach)
-
-**Kent Beck's "Augmented Coding" Principles:**
-
-1. **TDD is a Superpower with AI**
-   - Tests guide AI assistants to correct implementations
-   - Prevents AI from introducing bugs
-   - AI struggles with refactoring; TDD provides safety net
-
-2. **Challenges to Watch For**
-   - AI may try to delete tests to make code "pass" ❌
-   - AI excels at adding features, struggles with simplification
-   - Complexity can exceed AI's capacity to help
-
-3. **Best Practices for AI + TDD**
-   - Write tests before asking AI to implement
-   - Review AI-generated code against test requirements
-   - Use tests to catch AI hallucinations
-   - Refactor frequently to prevent complexity buildup
-   - Keep test setups simple for AI comprehension
-
-4. **Workflow**
-   ```
-   1. Define behavior in test (human writes)
-   2. Run test → RED
-   3. Ask AI to implement minimal solution
-   4. Run test → GREEN
-   5. Human reviews code quality
-   6. Refactor (human-led, AI-assisted)
-   7. Tests still GREEN → commit
-   ```
-
-## Git Workflow Rules
-
-### Commit & Push Policy
-
-**STRICTLY FORBIDDEN:**
-- ❌ `git commit --no-verify`
-- ❌ `git push --no-verify`
-- ❌ Bypassing pre-commit hooks in any way
-- ❌ Committing without passing tests
-- ❌ Random/unplanned commits
-
-**REQUIRED:**
-- ✅ All commits must pass pre-commit hooks
-- ✅ All tests must be GREEN before commit
-- ✅ Meaningful commit messages following conventions
-- ✅ Code review (even for AI-generated code)
-
-### Pre-commit Hook Strategy
-
-**Mandatory Checks (before every commit):**
-1. Code formatting (Ruff)
-2. Linting (Ruff with --fix)
-3. Type checking (MyPy)
-4. Test execution (pytest)
-5. YAML/TOML validation
-6. Large file prevention
-7. Trailing whitespace removal
-
-**Configuration: `.pre-commit-config.yaml`**
-
-## Development Workflow
-
-### 1. Feature Development Process
-
-```
-┌─────────────────────────────────────┐
-│ 1. Understand Requirement           │
-├─────────────────────────────────────┤
-│ 2. Write Test (RED)                 │
-├─────────────────────────────────────┤
-│ 3. Minimal Implementation (GREEN)   │
-├─────────────────────────────────────┤
-│ 4. Refactor (tests stay GREEN)      │
-├─────────────────────────────────────┤
-│ 5. Pre-commit checks pass           │
-├─────────────────────────────────────┤
-│ 6. Code review                      │
-├─────────────────────────────────────┤
-│ 7. Commit with meaningful message   │
-└─────────────────────────────────────┘
-```
-
-### 2. AI Collaboration Rules
-
-**When using AI (Claude/GitHub Copilot):**
-- Always write tests first yourself
-- Review all AI-generated code line by line
-- Never accept AI suggestions blindly
-- AI writes implementation, human owns quality
-- Tests are the contract, AI must fulfill it
-
-### 3. Code Quality Standards
-
-**Every piece of code must:**
-- Have corresponding tests (minimum 80% coverage)
-- Pass all linting checks
-- Have type hints (Python 3.9+)
-- Be reviewed before commit
-- Follow project coding conventions
-
-## Project-Specific Guidelines
-
-### FastAPI + Supabase + OpenAI Stack
-
-**Testing Strategy:**
-1. **Unit Tests**: Services (OpenAI, PDF processing, chunking)
-2. **Integration Tests**: API endpoints with test database
-3. **E2E Tests**: Complete RAG flow (upload → embed → query)
-
-**Test Structure:**
-```
-tests/
-├── unit/
-│   ├── test_openai_service.py
-│   ├── test_pdf_service.py
-│   └── test_chunking.py
-├── integration/
-│   ├── test_ingest_api.py
-│   └── test_search_api.py
-└── e2e/
-    └── test_rag_flow.py
-```
-
-**Mock Strategy:**
-- Mock OpenAI API calls (use fixtures)
-- Mock Supabase for unit tests
-- Use test database for integration tests
-- Real services only in E2E tests
-
-## Continuous Integration
-
-**Pre-push Checklist:**
-- [ ] All tests pass locally
-- [ ] Pre-commit hooks pass
-- [ ] Code reviewed
-- [ ] No debug prints or commented code
-- [ ] Documentation updated if needed
-- [ ] No secrets in code
-
-**CI Pipeline Must:**
-1. Run all tests
-2. Check code coverage (min 80%)
-3. Run linting and type checking
-4. Build Docker images
-5. Deploy to staging (if main branch)
-
-## References
-
-- **TDD Best Practices 2025**: [BrowserStack Guide](https://www.browserstack.com/guide/what-is-test-driven-development)
-- **Kent Beck on AI + TDD**: [Pragmatic Engineer Podcast](https://newsletter.pragmaticengineer.com/p/tdd-ai-agents-and-coding-with-kent)
-- **Pre-commit Framework**: [pre-commit.com](https://pre-commit.com/)
-- **FastAPI Testing**: [FastAPI Official Docs](https://fastapi.tiangolo.com/tutorial/testing/)
+**CI 時間目標**: < 2 分鐘
 
 ---
 
-**Remember: Code without tests is legacy code. Tests without passing are todos. Commits without hooks are technical debt.**
+## 📊 品質保證（最小化）
+
+### 必須檢查
+1. **API 能 work**（Integration tests）
+2. **代碼格式統一**（Ruff）
+3. **無明顯 bug**（手動測試 + 自動化測試）
+
+### 不強制
+- 類型提示完整性
+- 測試覆蓋率百分比
+- 代碼複雜度指標
+
+---
+
+## 💡 AI 協作原則（TDD + AI）
+
+### 人類負責
+- 需求理解
+- API 設計
+- **測試先行（TDD）**：人類寫測試，定義預期行為
+- Code Review
+- 重構決策
+
+### AI 負責
+- **生成實作代碼**（通過人類寫的測試）
+- 格式修復
+- 文檔生成
+- 建議重構方案
+
+### TDD + AI 協作流程（Kent Beck's Augmented Coding）
+```
+1. 人：定義需求 + API 設計
+2. 人：先寫 Integration Test（RED）
+   └─ 測試定義了正確的行為
+3. AI：生成實作代碼讓測試通過
+   └─ AI 被測試約束，不會亂寫
+4. 跑測試 → GREEN（通過）
+5. 人：Review 代碼品質
+6. 人 + AI：協作重構（測試保持 GREEN）
+7. Commit
+```
+
+### ⚠️ AI + TDD 注意事項
+- **AI 會嘗試刪除測試** → 絕對不允許
+- **AI 擅長加功能，不擅長簡化** → 重構由人類主導
+- **測試是合約** → AI 必須滿足合約，不能修改
+- **複雜度超載** → 超過 AI 能力時，拆小 function
+
+---
+
+## 📈 何時升級品質標準？
+
+### Prototype → Production 轉換點
+當準備上線時，才需要：
+- [ ] 補充 Unit Tests（關鍵邏輯）
+- [ ] 啟用 Mypy（類型檢查）
+- [ ] 設定 Pre-commit Hooks
+- [ ] 提高測試覆蓋率（目標 80%+）
+- [ ] 安全掃描（OWASP）
+- [ ] 性能測試
+
+**目前階段：Prototype（不需要以上項目）**
+
+---
+
+## 🔒 不可妥協的規則
+
+1. **❌ 不 commit 到 main/master**
+   - 永遠在 staging/feature branch 開發
+
+2. **✅ Integration tests 必須通過**
+   - API 不能壞掉
+   - **所有 console.html 使用的 API 都必須有測試**
+
+3. **✅ 代碼要能跑**
+   - 至少手動測試過
+
+4. **❌ 不繞過 CI**
+   - 雖然簡化，但 CI 必須跑
+
+5. **✅ TDD 用於關鍵功能**
+   - 關鍵 API 必須先寫測試
+   - 測試定義行為，AI 實作代碼
+
+---
+
+## 🎯 Console API 測試檢查清單
+
+**驗證所有 console.html 的 API 都有測試**:
+
+```bash
+# 檢查測試覆蓋率
+poetry run pytest tests/integration/ -v | grep -E "(test_.*_api\.py|PASSED|FAILED)"
+
+# 當前狀態（2025-11-24）
+# ✅ 106 integration tests 覆蓋 35+ endpoints
+# ✅ 所有主要功能都有測試：
+#    - 認證 API (test_auth_api.py)
+#    - 案主管理 (test_clients_api.py)
+#    - 諮商記錄 (test_sessions_api.py)
+#    - 案例管理 (test_cases_api.py)
+#    - 報告生成 (test_reports_api.py)
+#    - RAG 功能 (test_rag_*.py)
+```
+
+**新增 API 時的 TDD 流程**:
+1. 在 console.html 添加新功能前
+2. 先在 `tests/integration/` 寫測試
+3. 跑測試確認 RED（失敗）
+4. 實作 API endpoint
+5. 跑測試確認 GREEN（通過）
+6. 更新 console.html 使用新 API
+
+---
+
+## 參考資料
+
+- **2025 AI Development**: "Dream up an idea one day, functional prototype the next"
+- **Speed-Quality Trade-off**: Prototypes live in "buggy region" - speed優先
+- **70-20-10 Rule**: 70% 開發, 20% QA, 10% 重構
+
+---
+
+**Remember: Prototype 求快不求完美。功能驗證完才追求品質。**
+
+**版本**: v2.0 (Prototype-First)
+**最後更新**: 2025-11-24

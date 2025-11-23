@@ -36,10 +36,7 @@ def aggregate_transcript_from_recordings(recordings: list) -> str:
         return ""
 
     # 按 segment_number 排序（如果有的話）
-    sorted_recordings = sorted(
-        recordings,
-        key=lambda r: r.get("segment_number", 0)
-    )
+    sorted_recordings = sorted(recordings, key=lambda r: r.get("segment_number", 0))
 
     # 聚合所有 transcript_text
     transcripts = [
@@ -55,6 +52,7 @@ def aggregate_transcript_from_recordings(recordings: list) -> str:
 # Schemas
 class RecordingSegment(BaseModel):
     """錄音片段"""
+
     segment_number: int
     start_time: str
     end_time: str
@@ -71,7 +69,7 @@ class RecordingSegment(BaseModel):
                     "end_time": "2025-01-15 10:30",
                     "duration_seconds": 1800,
                     "transcript_text": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
-                    "transcript_sanitized": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘..."
+                    "transcript_sanitized": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
                 }
             ]
         }
@@ -84,8 +82,9 @@ class AppendRecordingRequest(BaseModel):
 
     不需要提供 segment_number，系統會自動計算
     """
+
     start_time: str  # ISO format: YYYY-MM-DD HH:MM or YYYY-MM-DDTHH:MM:SS
-    end_time: str    # ISO format: YYYY-MM-DD HH:MM or YYYY-MM-DDTHH:MM:SS
+    end_time: str  # ISO format: YYYY-MM-DD HH:MM or YYYY-MM-DDTHH:MM:SS
     duration_seconds: int
     transcript_text: str
     transcript_sanitized: Optional[str] = None
@@ -98,7 +97,7 @@ class AppendRecordingRequest(BaseModel):
                     "end_time": "2025-01-15 10:30",
                     "duration_seconds": 1800,
                     "transcript_text": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘，不知道該選擇什麼工作...",
-                    "transcript_sanitized": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘，不知道該選擇什麼工作..."
+                    "transcript_sanitized": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘，不知道該選擇什麼工作...",
                 }
             ]
         }
@@ -113,6 +112,7 @@ class SessionCreateRequest(BaseModel):
       - transcript: 直接提供完整逐字稿（傳統方式）
       - recordings: 提供分段錄音逐字稿（推薦），系統會自動聚合成 transcript_text
     """
+
     case_id: UUID
     session_date: str  # YYYY-MM-DD
     start_time: Optional[str] = None  # YYYY-MM-DD HH:MM
@@ -121,7 +121,9 @@ class SessionCreateRequest(BaseModel):
     duration_minutes: Optional[int] = None  # 保留向下兼容
     notes: Optional[str] = None
     reflection: Optional[dict] = None  # 諮商師反思（JSON 格式，彈性支援不同租戶需求）
-    recordings: Optional[list[RecordingSegment]] = None  # 錄音片段（推薦），系統會自動聚合成 transcript_text
+    recordings: Optional[
+        list[RecordingSegment]
+    ] = None  # 錄音片段（推薦），系統會自動聚合成 transcript_text
 
     model_config = {
         "json_schema_extra": {
@@ -139,7 +141,7 @@ class SessionCreateRequest(BaseModel):
                             "end_time": "2025-01-15 10:30",
                             "duration_seconds": 1800,
                             "transcript_text": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
-                            "transcript_sanitized": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘..."
+                            "transcript_sanitized": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
                         },
                         {
                             "segment_number": 2,
@@ -147,9 +149,9 @@ class SessionCreateRequest(BaseModel):
                             "end_time": "2025-01-15 11:00",
                             "duration_seconds": 1800,
                             "transcript_text": "諮商師：那我們來探索一下你的興趣...\n個案：我對科技和教育都有興趣...",
-                            "transcript_sanitized": "諮商師：那我們來探索一下你的興趣...\n個案：我對科技和教育都有興趣..."
-                        }
-                    ]
+                            "transcript_sanitized": "諮商師：那我們來探索一下你的興趣...\n個案：我對科技和教育都有興趣...",
+                        },
+                    ],
                 }
             ]
         }
@@ -162,6 +164,7 @@ class SessionUpdateRequest(BaseModel):
 
     - 更新時 transcript 與 recordings 二選一（與創建邏輯相同）
     """
+
     session_date: Optional[str] = None  # YYYY-MM-DD
     start_time: Optional[str] = None  # YYYY-MM-DD HH:MM
     end_time: Optional[str] = None  # YYYY-MM-DD HH:MM
@@ -169,7 +172,9 @@ class SessionUpdateRequest(BaseModel):
     notes: Optional[str] = None
     duration_minutes: Optional[int] = None  # 保留向下兼容
     reflection: Optional[dict] = None  # 諮商師反思
-    recordings: Optional[list[RecordingSegment]] = None  # 錄音片段（更新時也支援從 recordings 聚合）
+    recordings: Optional[
+        list[RecordingSegment]
+    ] = None  # 錄音片段（更新時也支援從 recordings 聚合）
 
 
 class SessionResponse(BaseModel):
@@ -179,6 +184,7 @@ class SessionResponse(BaseModel):
     - transcript_text: 完整逐字稿（若提供 recordings 則自動聚合）
     - recordings: 原始錄音片段數組
     """
+
     id: UUID
     client_id: UUID
     client_name: Optional[str] = None  # 個案姓名
@@ -204,6 +210,7 @@ class SessionResponse(BaseModel):
 
 class SessionListResponse(BaseModel):
     """會談記錄列表響應"""
+
     total: int
     items: list[SessionResponse]
 
@@ -247,21 +254,20 @@ def create_session(
         )
 
     try:
-
         # Parse start_time and end_time if provided
         start_time = None
         end_time = None
         if request.start_time:
             # Handle both "YYYY-MM-DD HH:MM" and "HH:MM" formats
             time_str = request.start_time.strip()
-            if ' ' in time_str or 'T' in time_str or len(time_str) > 10:
+            if " " in time_str or "T" in time_str or len(time_str) > 10:
                 # Full datetime string
-                start_time = datetime.fromisoformat(time_str.replace(' ', 'T'))
+                start_time = datetime.fromisoformat(time_str.replace(" ", "T"))
             else:
                 # Only time provided, combine with session_date
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="start_time must include date (format: YYYY-MM-DD HH:MM)"
+                    detail="start_time must include date (format: YYYY-MM-DD HH:MM)",
                 )
             if start_time.tzinfo is None:
                 start_time = start_time.replace(tzinfo=timezone.utc)
@@ -269,14 +275,14 @@ def create_session(
         if request.end_time:
             # Handle both "YYYY-MM-DD HH:MM" and "HH:MM" formats
             time_str = request.end_time.strip()
-            if ' ' in time_str or 'T' in time_str or len(time_str) > 10:
+            if " " in time_str or "T" in time_str or len(time_str) > 10:
                 # Full datetime string
-                end_time = datetime.fromisoformat(time_str.replace(' ', 'T'))
+                end_time = datetime.fromisoformat(time_str.replace(" ", "T"))
             else:
                 # Only time provided, combine with session_date
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="end_time must include date (format: YYYY-MM-DD HH:MM)"
+                    detail="end_time must include date (format: YYYY-MM-DD HH:MM)",
                 )
             if end_time.tzinfo is None:
                 end_time = end_time.replace(tzinfo=timezone.utc)
@@ -296,10 +302,12 @@ def create_session(
             .where(Session.case_id == case.id)
             .order_by(
                 func.coalesce(Session.start_time, Session.session_date).asc(),
-                Session.created_at.asc()  # 同一時間則按創建時間排序
+                Session.created_at.asc(),  # 同一時間則按創建時間排序
             )
         )
-        existing_sessions = [(row[0], row[1] if row[1] else row[2]) for row in result.all()]
+        existing_sessions = [
+            (row[0], row[1] if row[1] else row[2]) for row in result.all()
+        ]
 
         # 找出新會談應該排在第幾次
         session_number = 1
@@ -313,7 +321,7 @@ def create_session(
         if session_number <= len(existing_sessions):
             # 更新所有 >= session_number 的 sessions，將它們的編號 +1
             db.execute(
-                Session.__table__.update()
+                Session.__table__.update()  # type: ignore[attr-defined]
                 .where(Session.case_id == case.id)
                 .where(Session.session_number >= session_number)
                 .values(session_number=Session.session_number + 1)
@@ -321,9 +329,7 @@ def create_session(
             db.flush()
 
         # 從 case 獲取 client 信息
-        client_result = db.execute(
-            select(Client).where(Client.id == case.client_id)
-        )
+        client_result = db.execute(select(Client).where(Client.id == case.client_id))
         client = client_result.scalar_one()
 
         # 處理逐字稿：優先從 recordings 聚合，若無則使用直接提供的 transcript
@@ -358,9 +364,11 @@ def create_session(
         # 檢查是否有報告
         result = db.execute(
             select(func.count()).where(
-                select(1).where(
+                select(1)
+                .where(
                     Session.id == session.id,
-                ).exists()
+                )
+                .exists()
             )
         )
 
@@ -449,10 +457,14 @@ def list_sessions(
     total = db.execute(count_query).scalar()
 
     # 分頁查詢 - 先按個案，再按會談時間排序（確保順序正確）
-    query = query.offset(skip).limit(limit).order_by(
-        Case.id.asc(),
-        func.coalesce(Session.start_time, Session.session_date).asc(),
-        Session.created_at.asc()  # 同一時間則按創建時間排序
+    query = (
+        query.offset(skip)
+        .limit(limit)
+        .order_by(
+            Case.id.asc(),
+            func.coalesce(Session.start_time, Session.session_date).asc(),
+            Session.created_at.asc(),  # 同一時間則按創建時間排序
+        )
     )
     results = db.execute(query).all()
 
@@ -655,7 +667,10 @@ def get_session(
     # 檢查是否有報告
     has_report_result = db.execute(
         select(func.count()).select_from(
-            select(1).where(Session.id == session.id).where(Session.reports.any()).subquery()
+            select(1)
+            .where(Session.id == session.id)
+            .where(Session.reports.any())
+            .subquery()
         )
     )
     has_report = (has_report_result.scalar() or 0) > 0
@@ -745,12 +760,12 @@ def update_session(
 
         if request.start_time is not None:
             time_str = request.start_time.strip()
-            if ' ' in time_str or 'T' in time_str or len(time_str) > 10:
-                new_start_time = datetime.fromisoformat(time_str.replace(' ', 'T'))
+            if " " in time_str or "T" in time_str or len(time_str) > 10:
+                new_start_time = datetime.fromisoformat(time_str.replace(" ", "T"))
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="start_time must include date (format: YYYY-MM-DD HH:MM)"
+                    detail="start_time must include date (format: YYYY-MM-DD HH:MM)",
                 )
             if new_start_time.tzinfo is None:
                 new_start_time = new_start_time.replace(tzinfo=timezone.utc)
@@ -760,12 +775,12 @@ def update_session(
 
         if request.end_time is not None:
             time_str = request.end_time.strip()
-            if ' ' in time_str or 'T' in time_str or len(time_str) > 10:
-                new_end_time = datetime.fromisoformat(time_str.replace(' ', 'T'))
+            if " " in time_str or "T" in time_str or len(time_str) > 10:
+                new_end_time = datetime.fromisoformat(time_str.replace(" ", "T"))
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="end_time must include date (format: YYYY-MM-DD HH:MM)"
+                    detail="end_time must include date (format: YYYY-MM-DD HH:MM)",
                 )
             if new_end_time.tzinfo is None:
                 new_end_time = new_end_time.replace(tzinfo=timezone.utc)
@@ -777,7 +792,9 @@ def update_session(
             # 更新 recordings 並重新聚合逐字稿
             session.recordings = request.recordings
             if request.recordings:
-                full_transcript = aggregate_transcript_from_recordings(request.recordings)
+                full_transcript = aggregate_transcript_from_recordings(
+                    request.recordings
+                )
                 session.transcript_text = full_transcript
                 session.transcript_sanitized = full_transcript
         elif request.transcript is not None:
@@ -796,7 +813,9 @@ def update_session(
 
         # 如果 session_date 或 start_time 改變，需要重新計算 session_number
         # 決定新的排序時間：優先使用 start_time，若無則使用 session_date
-        new_sort_time = session.start_time if session.start_time else session.session_date
+        new_sort_time = (
+            session.start_time if session.start_time else session.session_date
+        )
 
         if time_changed:
             # 1. 先將當前 session 的 session_number 設為 0（臨時值）
@@ -805,7 +824,7 @@ def update_session(
 
             # 2. 將原本 > old_session_number 的所有 sessions 編號 -1
             db.execute(
-                Session.__table__.update()
+                Session.__table__.update()  # type: ignore[attr-defined]
                 .where(Session.case_id == session.case_id)
                 .where(Session.session_number > old_session_number)
                 .values(session_number=Session.session_number - 1)
@@ -817,13 +836,9 @@ def update_session(
                 select(Session.start_time, Session.session_date)
                 .where(Session.case_id == session.case_id)
                 .where(Session.id != session.id)
-                .order_by(
-                    func.coalesce(Session.start_time, Session.session_date).asc()
-                )
+                .order_by(func.coalesce(Session.start_time, Session.session_date).asc())
             )
-            existing_times = [
-                (row[0] if row[0] else row[1]) for row in result.all()
-            ]
+            existing_times = [(row[0] if row[0] else row[1]) for row in result.all()]
 
             # 4. 找出新 session_number
             new_session_number = 1
@@ -835,7 +850,7 @@ def update_session(
 
             # 5. 更新 >= new_session_number 的所有 sessions（不包括當前 session）編號 +1
             db.execute(
-                Session.__table__.update()
+                Session.__table__.update()  # type: ignore[attr-defined]
                 .where(Session.case_id == session.case_id)
                 .where(Session.session_number >= new_session_number)
                 .where(Session.id != session.id)
@@ -852,7 +867,10 @@ def update_session(
         # 檢查是否有報告
         has_report_result = db.execute(
             select(func.count()).select_from(
-                select(1).where(Session.id == session.id).where(Session.reports.any()).subquery()
+                select(1)
+                .where(Session.id == session.id)
+                .where(Session.reports.any())
+                .subquery()
             )
         )
         has_report = (has_report_result.scalar() or 0) > 0
@@ -931,7 +949,10 @@ def delete_session(
     # 檢查是否有報告
     has_report_result = db.execute(
         select(func.count()).select_from(
-            select(1).where(Session.id == session.id).where(Session.reports.any()).subquery()
+            select(1)
+            .where(Session.id == session.id)
+            .where(Session.reports.any())
+            .subquery()
         )
     )
     has_report = (has_report_result.scalar() or 0) > 0
@@ -958,6 +979,7 @@ def delete_session(
 # Reflection CRUD Endpoints
 class ReflectionRequest(BaseModel):
     """諮商師反思請求"""
+
     working_with_client: Optional[str] = None
     feeling_source: Optional[str] = None
     current_challenges: Optional[str] = None
@@ -966,6 +988,7 @@ class ReflectionRequest(BaseModel):
 
 class ReflectionResponse(BaseModel):
     """諮商師反思響應"""
+
     session_id: UUID
     reflection: Optional[dict] = None
     updated_at: datetime
@@ -1097,6 +1120,7 @@ def update_reflection(
 # Recording Append Endpoint
 class AppendRecordingResponse(BaseModel):
     """Append 錄音片段響應"""
+
     session_id: UUID
     recording_added: RecordingSegment
     total_recordings: int
@@ -1186,7 +1210,8 @@ def append_recording(
             "end_time": request.end_time,
             "duration_seconds": request.duration_seconds,
             "transcript_text": request.transcript_text,
-            "transcript_sanitized": request.transcript_sanitized or request.transcript_text,
+            "transcript_sanitized": request.transcript_sanitized
+            or request.transcript_text,
         }
 
         # Append 到 recordings 陣列
@@ -1218,5 +1243,3 @@ def append_recording(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to append recording: {str(e)}",
         )
-
-

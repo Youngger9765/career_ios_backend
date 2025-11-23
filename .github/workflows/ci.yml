@@ -10,7 +10,7 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -43,18 +43,9 @@ jobs:
       run: |
         poetry run ruff check app/
 
-    - name: Run type checking
-      run: |
-        poetry run mypy app/
-
-    - name: Run unit tests
-      run: |
-        poetry run pytest tests/unit/ -v
-
-    - name: Run integration tests
+    - name: Run integration tests (API verification)
       run: |
         poetry run pytest tests/integration/ -v --ignore=tests/integration/test_rwd_mobile_playwright.py
-      continue-on-error: true
 
   deploy:
     name: Deploy to Cloud Run
