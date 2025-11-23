@@ -2,16 +2,17 @@
 Integration tests for Cases API
 TDD - Write tests first, then implement
 """
+from uuid import uuid4
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from uuid import uuid4
 
 from app.core.security import hash_password
 from app.main import app
-from app.models.counselor import Counselor
-from app.models.client import Client
 from app.models.case import Case, CaseStatus
+from app.models.client import Client
+from app.models.counselor import Counselor
 
 
 class TestCasesAPI:
@@ -36,7 +37,11 @@ class TestCasesAPI:
         with TestClient(app) as client:
             login_response = client.post(
                 "/api/auth/login",
-                json={"email": "counselor-cases@test.com", "password": "password123", "tenant_id": "career"},
+                json={
+                    "email": "counselor-cases@test.com",
+                    "password": "password123",
+                    "tenant_id": "career",
+                },
             )
             token = login_response.json()["access_token"]
 
@@ -45,7 +50,13 @@ class TestCasesAPI:
     @pytest.fixture
     def test_client_obj(self, db_session: Session):
         """Create a test client for case tests"""
-        counselor = db_session.query(Counselor).filter_by(email="counselor-cases@test.com").first()
+        from datetime import date
+
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-cases@test.com")
+            .first()
+        )
 
         client = Client(
             id=uuid4(),
@@ -53,12 +64,20 @@ class TestCasesAPI:
             tenant_id="career",
             name="測試客戶",
             code="TCLI001",
+            email="testclient001@example.com",
+            gender="不透露",
+            birth_date=date(1995, 1, 1),
+            phone="0912345678",
+            identity_option="其他",
+            current_status="探索中",
         )
         db_session.add(client)
         db_session.commit()
         return client
 
-    def test_create_case_success(self, db_session: Session, auth_headers, test_client_obj):
+    def test_create_case_success(
+        self, db_session: Session, auth_headers, test_client_obj
+    ):
         """Test POST /api/v1/cases - Create new case"""
         with TestClient(app) as client:
             response = client.post(
@@ -80,7 +99,9 @@ class TestCasesAPI:
             assert "case_number" in data
             assert "id" in data
 
-    def test_create_case_minimal_fields(self, db_session: Session, auth_headers, test_client_obj):
+    def test_create_case_minimal_fields(
+        self, db_session: Session, auth_headers, test_client_obj
+    ):
         """Test creating case with only required fields"""
         with TestClient(app) as client:
             response = client.post(
@@ -119,9 +140,15 @@ class TestCasesAPI:
 
             assert response.status_code == 404
 
-    def test_list_cases_success(self, db_session: Session, auth_headers, test_client_obj):
+    def test_list_cases_success(
+        self, db_session: Session, auth_headers, test_client_obj
+    ):
         """Test GET /api/v1/cases - List all cases"""
-        counselor = db_session.query(Counselor).filter_by(email="counselor-cases@test.com").first()
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-cases@test.com")
+            .first()
+        )
 
         case1 = Case(
             id=uuid4(),
@@ -154,9 +181,15 @@ class TestCasesAPI:
             assert "items" in data
             assert data["total"] >= 2
 
-    def test_list_cases_filter_by_client(self, db_session: Session, auth_headers, test_client_obj):
+    def test_list_cases_filter_by_client(
+        self, db_session: Session, auth_headers, test_client_obj
+    ):
         """Test GET /api/v1/cases?client_id=xxx - Filter by client"""
-        counselor = db_session.query(Counselor).filter_by(email="counselor-cases@test.com").first()
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-cases@test.com")
+            .first()
+        )
 
         # Create another client
         other_client = Client(
@@ -203,7 +236,11 @@ class TestCasesAPI:
 
     def test_get_case_success(self, db_session: Session, auth_headers, test_client_obj):
         """Test GET /api/v1/cases/{id} - Get case details"""
-        counselor = db_session.query(Counselor).filter_by(email="counselor-cases@test.com").first()
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-cases@test.com")
+            .first()
+        )
 
         test_case = Case(
             id=uuid4(),
@@ -241,9 +278,15 @@ class TestCasesAPI:
 
             assert response.status_code == 404
 
-    def test_update_case_success(self, db_session: Session, auth_headers, test_client_obj):
+    def test_update_case_success(
+        self, db_session: Session, auth_headers, test_client_obj
+    ):
         """Test PATCH /api/v1/cases/{id} - Update case"""
-        counselor = db_session.query(Counselor).filter_by(email="counselor-cases@test.com").first()
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-cases@test.com")
+            .first()
+        )
 
         test_case = Case(
             id=uuid4(),
@@ -271,9 +314,15 @@ class TestCasesAPI:
             assert data["summary"] == "更新後的摘要"
             assert data["goals"] == "新的諮商目標"
 
-    def test_update_case_status(self, db_session: Session, auth_headers, test_client_obj):
+    def test_update_case_status(
+        self, db_session: Session, auth_headers, test_client_obj
+    ):
         """Test updating case status"""
-        counselor = db_session.query(Counselor).filter_by(email="counselor-cases@test.com").first()
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-cases@test.com")
+            .first()
+        )
 
         test_case = Case(
             id=uuid4(),
@@ -297,9 +346,15 @@ class TestCasesAPI:
             data = response.json()
             assert data["status"] == 2  # COMPLETED
 
-    def test_delete_case_success(self, db_session: Session, auth_headers, test_client_obj):
+    def test_delete_case_success(
+        self, db_session: Session, auth_headers, test_client_obj
+    ):
         """Test DELETE /api/v1/cases/{id} - Soft delete case"""
-        counselor = db_session.query(Counselor).filter_by(email="counselor-cases@test.com").first()
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-cases@test.com")
+            .first()
+        )
 
         test_case = Case(
             id=uuid4(),
@@ -346,7 +401,11 @@ class TestCasesAPI:
 
     def test_pagination(self, db_session: Session, auth_headers, test_client_obj):
         """Test pagination parameters (skip, limit)"""
-        counselor = db_session.query(Counselor).filter_by(email="counselor-cases@test.com").first()
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-cases@test.com")
+            .first()
+        )
 
         # Create multiple cases
         for i in range(5):
