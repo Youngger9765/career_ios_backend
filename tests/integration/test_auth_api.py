@@ -17,21 +17,22 @@ class TestAuthAPI:
 
     def test_login_success(self, db_session: Session):
         """Test successful login returns access token"""
-        with TestClient(app) as client:
-            # Create test counselor
-            counselor = Counselor(
-                id=uuid4(),
-                email="test@example.com",
-                username="testuser",
-                full_name="Test User",
-                hashed_password=hash_password("password123"),
-                tenant_id="career",
-                role="counselor",
-                is_active=True,
-            )
-            db_session.add(counselor)
-            db_session.commit()
+        # Create test counselor
+        counselor = Counselor(
+            id=uuid4(),
+            email="test@example.com",
+            username="testuser",
+            full_name="Test User",
+            hashed_password=hash_password("password123"),
+            tenant_id="career",
+            role="counselor",
+            is_active=True,
+        )
+        db_session.add(counselor)
+        db_session.commit()
 
+        # Create client after database setup
+        with TestClient(app) as client:
             # Attempt login
             response = client.post(
                 "/api/auth/login",
@@ -48,29 +49,29 @@ class TestAuthAPI:
 
     def test_login_wrong_password(self, db_session: Session):
         """Test login with wrong password returns 401"""
-        with TestClient(app) as client:
-            # Create test counselor
-            counselor = Counselor(
-                id=uuid4(),
-                email="test@example.com",
-                username="testuser",
-                full_name="Test User",
-                hashed_password=hash_password("correct_password"),
-                tenant_id="career",
-                role="counselor",
-                is_active=True,
-            )
-            db_session.add(counselor)
-            db_session.commit()
+        # Create test counselor
+        counselor = Counselor(
+            id=uuid4(),
+            email="test@example.com",
+            username="testuser",
+            full_name="Test User",
+            hashed_password=hash_password("correct_password"),
+            tenant_id="career",
+            role="counselor",
+            is_active=True,
+        )
+        db_session.add(counselor)
+        db_session.commit()
 
+        with TestClient(app) as client:
             # Attempt login with wrong password
             response = client.post(
                 "/api/auth/login",
-                json={"email": "test@example.com", "password": "wrong_password"},
+                json={"email": "test@example.com", "password": "wrong_password", "tenant_id": "career"},
             )
 
             assert response.status_code == 401
-            assert response.json()["detail"] == "Incorrect email or password"
+            assert response.json()["detail"] == "Incorrect email, password, or tenant ID"
 
     def test_login_nonexistent_user(self):
         """Test login with nonexistent email returns 401"""
@@ -81,7 +82,7 @@ class TestAuthAPI:
             )
 
             assert response.status_code == 401
-            assert response.json()["detail"] == "Incorrect email or password"
+            assert response.json()["detail"] == "Incorrect email, password, or tenant ID"
 
     def test_login_inactive_user(self, db_session: Session):
         """Test login with inactive account returns 403"""

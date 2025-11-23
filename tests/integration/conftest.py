@@ -8,17 +8,34 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.main import app
 
 # Import all models to ensure they're registered with Base.metadata
+# Console models
 from app.models.counselor import Counselor  # noqa: F401
 from app.models.client import Client  # noqa: F401
 from app.models.case import Case  # noqa: F401
 from app.models.session import Session as SessionModel  # noqa: F401
 from app.models.report import Report  # noqa: F401
 from app.models.job import Job  # noqa: F401
+from app.models.reminder import Reminder  # noqa: F401
+from app.models.refresh_token import RefreshToken  # noqa: F401
+
+# RAG models
+from app.models.document import Datasource, Document, Chunk, Embedding  # noqa: F401
+from app.models.collection import Collection, CollectionItem  # noqa: F401
+from app.models.chat import ChatLog  # noqa: F401
+from app.models.evaluation import (  # noqa: F401
+    EvaluationExperiment,
+    EvaluationResult,
+    EvaluationTestSet,
+    DocumentQualityMetric,
+)
+from app.models.agent import Agent, AgentVersion  # noqa: F401
+from app.models.pipeline import PipelineRun  # noqa: F401
 
 
 @pytest.fixture
@@ -61,13 +78,14 @@ async def async_db_session() -> AsyncGenerator[AsyncSession, None]:
 @pytest.fixture(scope="function")
 def db_session() -> Generator[Session, None, None]:
     """Create a synchronous test database session for integration tests"""
-    # Use in-memory SQLite for testing
+    # Use in-memory SQLite with StaticPool for testing (works across threads)
     SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
         connect_args={"check_same_thread": False},
-        echo=True  # Enable SQL logging for debugging
+        echo=True,  # Enable SQL logging for debugging
+        poolclass=StaticPool  # Keep connection alive across requests
     )
 
     # Create all tables - this will show which tables are being created
