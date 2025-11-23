@@ -91,7 +91,7 @@ class TestCasesAPI:
                 },
             )
 
-            assert response.status_code == 200
+            assert response.status_code == 201
             data = response.json()
             assert data["client_id"] == str(test_client_obj.id)
             assert data["summary"] == "職涯諮商個案"
@@ -112,7 +112,7 @@ class TestCasesAPI:
                 },
             )
 
-            assert response.status_code == 200
+            assert response.status_code == 201
             data = response.json()
             assert data["client_id"] == str(test_client_obj.id)
             assert data["status"] == 0  # NOT_STARTED
