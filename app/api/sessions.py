@@ -344,7 +344,7 @@ def create_session(
             start_time=start_time,
             end_time=end_time,
             transcript_text=full_transcript,
-            transcript_sanitized=full_transcript,  # TODO: 實作脫敏
+            transcript_sanitized=full_transcript,  # TODO: 串接 app.services.sanitizer_service（已實作）
             source_type="transcript",
             duration_minutes=request.duration_minutes,
             notes=request.notes,
