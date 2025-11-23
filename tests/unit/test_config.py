@@ -9,7 +9,7 @@ class TestSettingsConfig:
         from app.core.config import Settings
 
         # Create fresh settings without env vars
-        settings = Settings(_env_file=None, DEBUG=False)
+        settings = Settings(_env_file=None, DEBUG=False, SECRET_KEY="test-secret-key-123")
 
         assert settings.APP_NAME == "Career Counseling API"
         assert settings.DEBUG is False
@@ -22,6 +22,7 @@ class TestSettingsConfig:
         # Test validator directly via __init__
         settings = Settings(
             _env_file=None,
+            SECRET_KEY="test-secret-key-123",
             CORS_ORIGINS="http://localhost:3000,https://example.com"  # type: ignore
         )
 
@@ -34,6 +35,7 @@ class TestSettingsConfig:
         # Direct instantiation with list
         settings = Settings(
             _env_file=None,
+            SECRET_KEY="test-secret-key-123",
             CORS_ORIGINS=["http://localhost:3000", "https://api.example.com"]
         )
 
@@ -45,6 +47,7 @@ class TestSettingsConfig:
 
         settings = Settings(
             _env_file=None,
+            SECRET_KEY="test-secret-key-123",
             CORS_ORIGINS="http://localhost:3000 , https://example.com , https://api.example.com"  # type: ignore
         )
 

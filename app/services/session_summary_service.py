@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class SessionSummaryService:
     """會談摘要生成服務"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = "gpt-4o-mini"  # 使用 4o-mini 降低成本
 
@@ -62,11 +62,16 @@ class SessionSummaryService:
                 max_tokens=200,  # 100 中文字約 150-200 tokens
             )
 
-            summary = response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            if content is None:
+                raise ValueError("OpenAI response content is None")
+            summary = content.strip()
 
+            usage = response.usage
+            total_tokens = usage.total_tokens if usage else 0
             logger.info(
                 f"Generated summary: {len(summary)} chars, "
-                f"tokens used: {response.usage.total_tokens}"
+                f"tokens used: {total_tokens}"
             )
 
             return summary

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class ReportGenerationService:
     """個案報告生成服務 - 整合 RAG Agent"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         self.chat_model = settings.OPENAI_CHAT_MODEL or "gpt-4o-mini"
 
@@ -136,6 +136,8 @@ class ReportGenerationService:
         import re
 
         response_text = response.choices[0].message.content
+        if response_text is None:
+            return {}
 
         try:
             return json.loads(response_text)
@@ -252,7 +254,8 @@ class ReportGenerationService:
             temperature=0.6,
         )
 
-        return response.choices[0].message.content
+        content = response.choices[0].message.content
+        return content or ""
 
     async def _extract_key_dialogues(
         self, transcript: str, num_participants: int
@@ -296,6 +299,8 @@ class ReportGenerationService:
         import re
 
         response_text = response.choices[0].message.content
+        if response_text is None:
+            return []
 
         try:
             data = json.loads(response_text)

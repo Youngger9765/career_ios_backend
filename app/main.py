@@ -1,6 +1,8 @@
+from typing import Dict
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -89,83 +91,86 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
+async def root(request: Request) -> Response:
     """Root endpoint - Homepage with entry points"""
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "version": settings.APP_VERSION,
-    })
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "version": settings.APP_VERSION,
+        },
+    )
 
 
 # RAG Ops Console (FastAPI Templates)
 @app.get("/rag", response_class=HTMLResponse)
-async def rag_index(request: Request):
+async def rag_index(request: Request) -> Response:
     """RAG Ops Console - Main page"""
     return templates.TemplateResponse("rag/index.html", {"request": request})
 
 
 @app.get("/rag/agents", response_class=HTMLResponse)
-async def rag_agents_page(request: Request):
+async def rag_agents_page(request: Request) -> Response:
     """RAG Ops Console - Agents page"""
     return templates.TemplateResponse("rag/agents.html", {"request": request})
 
 
 @app.get("/rag/documents", response_class=HTMLResponse)
-async def rag_documents_page(request: Request):
+async def rag_documents_page(request: Request) -> Response:
     """RAG Ops Console - Documents page"""
     return templates.TemplateResponse("rag/documents.html", {"request": request})
 
 
 @app.get("/rag/upload", response_class=HTMLResponse)
-async def rag_upload(request: Request):
+async def rag_upload(request: Request) -> Response:
     """RAG Ops Console - Upload page"""
     return templates.TemplateResponse("rag/upload.html", {"request": request})
 
 
 @app.get("/rag/test", response_class=HTMLResponse)
-async def rag_test(request: Request):
+async def rag_test(request: Request) -> Response:
     """RAG Ops Console - Test Bench page"""
     return templates.TemplateResponse("rag/test.html", {"request": request})
 
 
 @app.get("/rag/stats", response_class=HTMLResponse)
-async def rag_stats_page(request: Request):
+async def rag_stats_page(request: Request) -> Response:
     """RAG Ops Console - Stats page"""
     return templates.TemplateResponse("rag/stats.html", {"request": request})
 
 
 @app.get("/rag/chat", response_class=HTMLResponse)
-async def rag_chat_page(request: Request):
+async def rag_chat_page(request: Request) -> Response:
     """RAG Ops Console - Chat page"""
     return templates.TemplateResponse("rag/chat.html", {"request": request})
 
 
 @app.get("/rag/report", response_class=HTMLResponse)
-async def rag_report_page(request: Request):
+async def rag_report_page(request: Request) -> Response:
     """RAG Ops Console - Report Generation page"""
     return templates.TemplateResponse("rag/report.html", {"request": request})
 
 
 @app.get("/console", response_class=HTMLResponse)
-async def console_page(request: Request):
+async def console_page(request: Request) -> Response:
     """Counseling System Debug Console"""
     return templates.TemplateResponse("console.html", {"request": request})
 
 
 @app.get("/client-case-list", response_class=HTMLResponse)
-async def client_case_list_page(request: Request):
+async def client_case_list_page(request: Request) -> Response:
     """Client-Case List (Mobile App Style)"""
     return templates.TemplateResponse("client_case_list.html", {"request": request})
 
 
 @app.get("/create-client-case", response_class=HTMLResponse)
-async def create_client_case_page(request: Request):
+async def create_client_case_page(request: Request) -> Response:
     """Create Client-Case Form (Mobile App Style)"""
     return templates.TemplateResponse("create_client_case.html", {"request": request})
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> Dict[str, str]:
     """Health check endpoint"""
     return {"status": "healthy", "timestamp": "2024-01-01T00:00:00Z"}
 

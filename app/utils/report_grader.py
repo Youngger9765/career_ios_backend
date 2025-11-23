@@ -147,7 +147,10 @@ async def grade_report_with_llm(
             temperature=0.3,  # 較低的溫度確保評分一致性
         )
 
-        result = json.loads(response.choices[0].message.content)
+        content = response.choices[0].message.content
+        if content is None:
+            raise ValueError("OpenAI response content is None")
+        result = json.loads(content)
 
         # 確保所有必要欄位都存在
         required_fields = [

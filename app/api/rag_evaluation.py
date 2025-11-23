@@ -119,7 +119,7 @@ async def create_experiment(
         config=request.config,
     )
 
-    return ExperimentResponse(
+    return ExperimentResponse(  # type: ignore[call-arg]
         id=str(experiment.id),
         name=experiment.name,
         description=experiment.description,
@@ -172,7 +172,7 @@ async def run_evaluation(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
 
-    return ExperimentResponse(
+    return ExperimentResponse(  # type: ignore[call-arg]
         id=str(experiment.id),
         name=experiment.name,
         description=experiment.description,
@@ -306,7 +306,7 @@ async def get_experiment(
     if not experiment:
         raise HTTPException(status_code=404, detail="Experiment not found")
 
-    return ExperimentResponse(
+    return ExperimentResponse(  # type: ignore[call-arg]
         id=str(experiment.id),
         name=experiment.name,
         description=experiment.description,

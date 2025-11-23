@@ -28,8 +28,8 @@ class Job(Base, BaseModel):
     __tablename__ = "jobs"
 
     session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
-    job_type = Column(SQLEnum(JobType), nullable=False)
-    status = Column(SQLEnum(JobStatus), default=JobStatus.PENDING, nullable=False)
+    job_type: Column[JobType] = Column(SQLEnum(JobType), nullable=False)
+    status: Column[JobStatus] = Column(SQLEnum(JobStatus), default=JobStatus.PENDING, nullable=False)
 
     # Processing info
     started_at = Column(DateTime(timezone=True))

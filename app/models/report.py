@@ -27,7 +27,7 @@ class Report(Base, BaseModel):
     created_by_id = Column(UUID(as_uuid=True), ForeignKey("counselors.id"), nullable=False)
     tenant_id = Column(String, nullable=False, index=True)
     version = Column(Integer, default=1)
-    status = Column(SQLEnum(ReportStatus, values_callable=lambda x: [e.value for e in x]), default=ReportStatus.DRAFT, nullable=False)
+    status: Column[ReportStatus] = Column(SQLEnum(ReportStatus, values_callable=lambda x: [e.value for e in x]), default=ReportStatus.DRAFT, nullable=False)
     mode = Column(String)  # 報告生成模式
 
     # Report content - 結構化報告內容

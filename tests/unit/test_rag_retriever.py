@@ -33,6 +33,7 @@ class TestRAGRetriever:
     def mock_db(self):
         """Mock database session"""
         db = MagicMock()
+        db.execute = AsyncMock()  # Make execute async
         return db
 
     @pytest.fixture

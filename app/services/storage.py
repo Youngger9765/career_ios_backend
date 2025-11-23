@@ -25,7 +25,7 @@ except ImportError:
 class StorageService:
     """Storage service for file uploads using direct HTTP"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.supabase_url = SUPABASE_URL
         self.supabase_key = SUPABASE_SERVICE_KEY
         self.bucket = SUPABASE_BUCKET

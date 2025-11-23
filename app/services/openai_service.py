@@ -22,7 +22,7 @@ except ImportError:
 class OpenAIService:
     """Service for interacting with OpenAI API"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize OpenAI client"""
         self.client = AsyncOpenAI(api_key=OPENAI_API_KEY)
         self.embedding_model = EMBEDDING_MODEL
@@ -74,7 +74,7 @@ class OpenAIService:
         messages: list[dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 1000,
-        response_format: dict = None,
+        response_format: dict[str, str] | None = None,
     ) -> str:
         """
         Get chat completion from OpenAI
@@ -88,17 +88,21 @@ class OpenAIService:
         Returns:
             Response text from assistant
         """
-        kwargs = {
-            "model": self.chat_model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
-
         if response_format:
-            kwargs["response_format"] = response_format
-
-        response = await self.client.chat.completions.create(**kwargs)
+            response = await self.client.chat.completions.create(
+                model=self.chat_model,
+                messages=messages,  # type: ignore[arg-type]
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_format=response_format,  # type: ignore[arg-type]
+            )
+        else:
+            response = await self.client.chat.completions.create(
+                model=self.chat_model,
+                messages=messages,  # type: ignore[arg-type]
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
 
         return response.choices[0].message.content or ""
 

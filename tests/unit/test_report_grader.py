@@ -311,6 +311,27 @@ class TestGradeReportWithLLM:
         assert "Failed to parse LLM response as JSON" in str(exc_info.value)
 
     @pytest.mark.asyncio
+    async def test_grade_report_content_is_none(self, mock_openai_client):
+        """測試 OpenAI 回傳 content = None 的情況"""
+        mock_message = MagicMock()
+        mock_message.content = None  # 模擬 OpenAI API 回傳 None
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+
+        mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await grade_report_with_llm(
+                report_text="測試報告",
+                use_legacy=False,
+                client=mock_openai_client
+            )
+
+        assert "OpenAI response content is None" in str(exc_info.value)
+
+    @pytest.mark.asyncio
     async def test_grade_report_openai_api_error(self, mock_openai_client):
         """測試 OpenAI API 錯誤"""
         from openai import RateLimitError

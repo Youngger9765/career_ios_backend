@@ -2,10 +2,24 @@
 
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional, TypedDict
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+
+
+class ChunkStrategyDict(TypedDict):
+    """Type definition for chunk strategy dictionary"""
+
+    id: str
+    name: str
+    type: str
+    chunk_size: int
+    chunk_overlap: int
+    description: Optional[str]
+    is_default: bool
+    created_at: str
+
 
 router = APIRouter(
     prefix="/api/rag/evaluation/chunk-strategies", tags=["chunk-strategies"]
@@ -43,7 +57,7 @@ class ChunkStrategyResponse(BaseModel):
 
 
 # In-memory storage (replace with database in production)
-_strategies_store = {}
+_strategies_store: Dict[str, ChunkStrategyDict] = {}
 
 
 def get_all_strategies():

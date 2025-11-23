@@ -10,7 +10,7 @@ from app.core.config import settings
 class STTService:
     """OpenAI Whisper Speech-to-Text Service"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         self.model = "whisper-1"
 
@@ -37,9 +37,9 @@ class STTService:
         with open(audio_file_path, "rb") as audio_file:
             response = await self.client.audio.transcriptions.create(
                 model=self.model,
-                file=audio_file,
-                language=language,
-                response_format=response_format,
+                file=audio_file,  # type: ignore[arg-type]
+                language=language,  # type: ignore[arg-type]
+                response_format=response_format,  # type: ignore[arg-type]
             )
 
         if response_format == "text":
@@ -80,7 +80,7 @@ class STTService:
                     "end": segment.end,
                     "text": segment.text,
                 }
-                for segment in response.segments
+                for segment in (response.segments or [])
             ],
             "language": response.language,
             "duration": response.duration,

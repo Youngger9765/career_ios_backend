@@ -64,7 +64,7 @@ async def chat_with_rag(request: ChatRequest, db: AsyncSession = Depends(get_db)
 
         from app.models.document import Document
 
-        result = db.execute(select(Document.title).distinct())
+        result = await db.execute(select(Document.title).distinct())
         doc_titles = [row[0] for row in result.fetchall()]
 
         # Format document list for prompt
@@ -238,7 +238,7 @@ Examples:
                 bindparam("top_k", type_=Integer),
             )
 
-        result = db.execute(query_sql, params)
+        result = await db.execute(query_sql, params)
 
         rows = result.fetchall()
 

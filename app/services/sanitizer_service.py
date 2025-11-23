@@ -7,7 +7,7 @@ from typing import Dict, Tuple
 class SanitizerService:
     """文字脫敏服務 - 移除或遮蔽敏感資訊"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Patterns for sensitive information
         self.patterns = {
             "id_card": re.compile(r"[A-Z]\d{9}"),  # 台灣身分證字號

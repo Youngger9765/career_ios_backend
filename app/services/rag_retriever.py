@@ -70,7 +70,7 @@ class RAGRetriever:
             bindparam("top_k", type_=Integer),
         )
 
-        result = db.execute(
+        result = await db.execute(
             query_sql,
             {
                 "query_embedding": embedding_str,

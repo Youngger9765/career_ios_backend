@@ -9,7 +9,7 @@ from passlib.context import CryptContext
 
 from app.core.config import Settings
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

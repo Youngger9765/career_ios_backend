@@ -27,8 +27,8 @@ class Reminder(Base, BaseModel):
     __tablename__ = "reminders"
 
     case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id"), nullable=False)
-    reminder_type = Column(SQLEnum(ReminderType), nullable=False)
-    status = Column(
+    reminder_type: Column[ReminderType] = Column(SQLEnum(ReminderType), nullable=False)
+    status: Column[ReminderStatus] = Column(
         SQLEnum(ReminderStatus), default=ReminderStatus.ACTIVE, nullable=False
     )
 

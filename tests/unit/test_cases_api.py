@@ -4,7 +4,7 @@ Tests the API logic without requiring a real database
 """
 from datetime import datetime
 from unittest.mock import MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException, status
@@ -32,7 +32,7 @@ def create_mock_case(**kwargs):
         "counselor_id": uuid4(),
         "client_id": uuid4(),
         "tenant_id": "career",
-        "status": CaseStatus.ACTIVE,
+        "status": CaseStatus.IN_PROGRESS,
         "summary": None,
         "goals": None,
         "problem_description": None,
@@ -209,7 +209,7 @@ class TestCreateCase:
             goals="找到方向",
         )
 
-        result = create_case(
+        create_case(
             case_data=case_data,
             current_user=mock_counselor,
             tenant_id="career",
@@ -343,7 +343,7 @@ class TestUpdateCase:
             summary="更新的摘要",
         )
 
-        result = update_case(
+        update_case(
             case_id=case_id,
             case_data=update_data,
             current_user=mock_counselor,

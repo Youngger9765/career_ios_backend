@@ -23,15 +23,15 @@ def analyze_chunk_strategy_performance(
 
         if exp.chunk_strategy not in strategy_performance:
             strategy_performance[exp.chunk_strategy] = {
-                "count": 0,
-                "total_faithfulness": 0,
-                "total_answer_relevancy": 0,
-                "total_context_recall": 0,
-                "total_context_precision": 0,
+                "count": 0.0,
+                "total_faithfulness": 0.0,
+                "total_answer_relevancy": 0.0,
+                "total_context_recall": 0.0,
+                "total_context_precision": 0.0,
             }
 
         perf = strategy_performance[exp.chunk_strategy]
-        perf["count"] += 1
+        perf["count"] += 1.0
 
         if exp.avg_faithfulness:
             perf["total_faithfulness"] += float(exp.avg_faithfulness)
@@ -57,7 +57,7 @@ def find_best_chunk_strategy(
         Tuple of (best_strategy_name, best_average_score)
     """
     best_strategy = None
-    best_avg = 0
+    best_avg: float = 0.0
 
     for strategy, perf in strategy_performance.items():
         count = perf["count"]
@@ -97,14 +97,14 @@ def analyze_instruction_version_performance(
 
         if exp.instruction_version not in version_performance:
             version_performance[exp.instruction_version] = {
-                "count": 0,
-                "total_score": 0,
+                "count": 0.0,
+                "total_score": 0.0,
             }
 
         perf = version_performance[exp.instruction_version]
-        perf["count"] += 1
+        perf["count"] += 1.0
 
-        score_sum = 0
+        score_sum = 0.0
         score_count = 0
         if exp.avg_faithfulness:
             score_sum += float(exp.avg_faithfulness)
@@ -131,7 +131,7 @@ def find_best_instruction_version(
         Tuple of (best_version_name, best_average_score)
     """
     best_version = None
-    best_version_avg = 0
+    best_version_avg: float = 0.0
 
     for version, perf in version_performance.items():
         if perf["count"] == 0:
@@ -210,7 +210,7 @@ def calculate_average_metrics(experiments: list[Any]) -> dict[str, Optional[floa
     Returns:
         Dict with average values for each metric (None if no data)
     """
-    metrics = {
+    metrics: dict[str, list[float]] = {
         "faithfulness": [],
         "answer_relevancy": [],
         "context_recall": [],
