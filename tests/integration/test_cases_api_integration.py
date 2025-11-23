@@ -193,12 +193,20 @@ class TestCasesAPI:
         )
 
         # Create another client
+        from datetime import date
+
         other_client = Client(
             id=uuid4(),
             counselor_id=counselor.id,
             tenant_id="career",
             name="另一個客戶",
             code="TCLI002",
+            email="testclient002@example.com",
+            gender="不透露",
+            birth_date=date(1990, 1, 1),
+            phone="0922334455",
+            identity_option="其他",
+            current_status="探索中",
         )
         db_session.add(other_client)
         db_session.commit()
