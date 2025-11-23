@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     REDIS_URL: Optional[str] = None
 
     # Security
-    SECRET_KEY: str  # REQUIRED: Must be set in .env (generate with: openssl rand -hex 32)
+    SECRET_KEY: str = "test-secret-key-CHANGE-IN-PRODUCTION"  # REQUIRED: Must be set in .env (generate with: openssl rand -hex 32)
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # 7 days
