@@ -130,8 +130,10 @@ poetry run pre-commit install --hook-type pre-push
 3. ✅ 基本文件檢查（trailing whitespace, YAML/TOML）
 4. ✅ **資安檢查**（防止 API keys, secrets, private keys 洩露）
 
-**Push 時自動檢查**（完整測試）:
-1. ✅ 運行 Console API Integration Tests (106+ tests)
+**Push 時自動檢查**（關鍵冒煙測試，~10 秒）:
+1. ✅ 運行關鍵 Console API 冒煙測試
+   - 登入、案主、案例、會談的核心功能
+   - 完整測試在 CI 跑（106+ tests）
 
 ### Commit 原則
 1. **功能可用** → 就可以 commit
@@ -152,11 +154,11 @@ git commit -m "feat: add XXX API"
 #   ✅ 資安檢查
 #   ✅ 文件檢查
 
-# 3. Push（完整測試）
+# 3. Push（冒煙測試）
 git push
-# ↓ Push 時自動執行（~1-2 分鐘）：
-#   ✅ Console API Integration Tests (106+ tests)
-#   ✅ 確保所有 API 正常工作
+# ↓ Push 時自動執行（~10 秒）：
+#   ✅ 關鍵 Console API 冒煙測試
+#   ✅ 確保核心功能正常（完整測試在 CI 跑）
 ```
 
 ### 手動運行 Hooks（可選）
@@ -164,8 +166,11 @@ git push
 # 手動運行 commit 檢查
 poetry run pre-commit run --all-files
 
-# 手動運行 push 檢查
+# 手動運行 push 冒煙測試
 poetry run pre-commit run --hook-stage push
+
+# 手動運行完整測試（106+ tests）
+poetry run pytest tests/integration/ -v
 
 # 緊急跳過測試（不推薦）
 git push --no-verify

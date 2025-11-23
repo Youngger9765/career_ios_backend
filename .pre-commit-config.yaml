@@ -16,12 +16,12 @@ repos:
         always_run: true
         stages: [commit]
 
-  # Run integration tests before push
+  # Run critical console API smoke tests before push (fast)
   - repo: local
     hooks:
       - id: console-api-tests
-        name: Run Console API Integration Tests
-        entry: bash -c 'echo "🧪 Running Console API tests..."; poetry run pytest tests/integration/ -v --tb=short -x'
+        name: Run Critical Console API Smoke Tests
+        entry: bash -c 'echo "🧪 Running critical console API tests..."; poetry run pytest tests/integration/ -v --tb=short -x -k "test_login_success or test_create_client_success or test_create_case_success or test_create_session_success or test_get_clients or test_list_cases"'
         language: system
         pass_filenames: false
         always_run: true
