@@ -35,11 +35,11 @@ class STTService:
             raise FileNotFoundError(f"Audio file not found: {audio_file_path}")
 
         with open(audio_file_path, "rb") as audio_file:
-            response = await self.client.audio.transcriptions.create(
+            response = await self.client.audio.transcriptions.create(  # type: ignore[call-overload]
                 model=self.model,
-                file=audio_file,  # type: ignore[arg-type]
-                language=language,  # type: ignore[arg-type]
-                response_format=response_format,  # type: ignore[arg-type]
+                file=audio_file,
+                language=language,
+                response_format=response_format,
             )
 
         if response_format == "text":

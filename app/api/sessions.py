@@ -464,7 +464,7 @@ def list_sessions(
             .select_from(Report)
             .where(Report.session_id == session.id)
         )
-        has_report = has_report_result.scalar() > 0
+        has_report = (has_report_result.scalar() or 0) > 0
 
         items.append(
             SessionResponse(
@@ -658,7 +658,7 @@ def get_session(
             select(1).where(Session.id == session.id).where(Session.reports.any()).subquery()
         )
     )
-    has_report = has_report_result.scalar() > 0
+    has_report = (has_report_result.scalar() or 0) > 0
 
     return SessionResponse(
         id=session.id,
@@ -855,7 +855,7 @@ def update_session(
                 select(1).where(Session.id == session.id).where(Session.reports.any()).subquery()
             )
         )
-        has_report = has_report_result.scalar() > 0
+        has_report = (has_report_result.scalar() or 0) > 0
 
         return SessionResponse(
             id=session.id,
@@ -934,7 +934,7 @@ def delete_session(
             select(1).where(Session.id == session.id).where(Session.reports.any()).subquery()
         )
     )
-    has_report = has_report_result.scalar() > 0
+    has_report = (has_report_result.scalar() or 0) > 0
 
     if has_report:
         raise HTTPException(

@@ -450,29 +450,29 @@ async def generate_report(
         # Format based on output_format
         if request.output_format == "html":
             formatted_report = format_report_as_html(report)
-            result = {
+            html_result: dict[str, object] = {
                 "mode": request.mode,
                 "report": formatted_report,
                 "format": "html",
             }
             if quality_summary:
-                result["quality_summary"] = quality_summary
-            return result
+                html_result["quality_summary"] = quality_summary
+            return html_result
         elif request.output_format == "markdown":
             formatted_report = format_report_as_markdown(report)
-            result = {
+            md_result: dict[str, object] = {
                 "mode": request.mode,
                 "report": formatted_report,
                 "format": "markdown",
             }
             if quality_summary:
-                result["quality_summary"] = quality_summary
-            return result
+                md_result["quality_summary"] = quality_summary
+            return md_result
         else:  # json (default)
-            result = {"mode": request.mode, "report": report, "format": "json"}
+            json_result: dict[str, object] = {"mode": request.mode, "report": report, "format": "json"}
             if quality_summary:
-                result["quality_summary"] = quality_summary
-            return result
+                json_result["quality_summary"] = quality_summary
+            return json_result
 
     except Exception as e:
         raise HTTPException(

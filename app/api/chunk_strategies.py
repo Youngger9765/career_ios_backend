@@ -132,7 +132,7 @@ def _init_default_strategies():
             },
         ]
         for strategy in defaults:
-            _strategies_store[strategy["id"]] = strategy
+            _strategies_store[str(strategy["id"])] = strategy
 
 
 # API Endpoints

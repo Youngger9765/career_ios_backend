@@ -89,12 +89,12 @@ class OpenAIService:
             Response text from assistant
         """
         if response_format:
-            response = await self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(  # type: ignore[call-overload]
                 model=self.chat_model,
-                messages=messages,  # type: ignore[arg-type]
+                messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                response_format=response_format,  # type: ignore[arg-type]
+                response_format=response_format,
             )
         else:
             response = await self.client.chat.completions.create(

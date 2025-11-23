@@ -2,7 +2,7 @@ import enum
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import UUID
+from app.models.base import GUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -26,7 +26,7 @@ class ReminderStatus(str, enum.Enum):
 class Reminder(Base, BaseModel):
     __tablename__ = "reminders"
 
-    case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id"), nullable=False)
+    case_id = Column(GUID(), ForeignKey("cases.id"), nullable=False)
     reminder_type: Column[ReminderType] = Column(SQLEnum(ReminderType), nullable=False)
     status: Column[ReminderStatus] = Column(
         SQLEnum(ReminderStatus), default=ReminderStatus.ACTIVE, nullable=False

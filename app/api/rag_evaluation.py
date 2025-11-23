@@ -434,7 +434,7 @@ async def list_prompt_versions(
     )
 
     # Group by version
-    versions = defaultdict(
+    versions: dict[str, dict[str, object]] = defaultdict(
         lambda: {
             "version": None,
             "template": None,
@@ -446,16 +446,16 @@ async def list_prompt_versions(
     )
 
     for exp in experiments:
-        version = exp.instruction_version
+        version = str(exp.instruction_version)
         if version not in versions or versions[version]["version"] is None:
-            versions[version]["version"] = version
+            versions[version]["version"] = exp.instruction_version
             versions[version]["template"] = exp.instruction_template
             versions[version]["hash"] = exp.instruction_hash
             versions[version]["first_used"] = (
                 exp.created_at.isoformat() if exp.created_at else None
             )
 
-        versions[version]["experiments_count"] += 1
+        versions[version]["experiments_count"] += 1  # type: ignore[operator]
         if exp.created_at:
             last_used = exp.created_at.isoformat()
             if (

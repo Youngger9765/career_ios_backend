@@ -66,13 +66,16 @@ async def evaluation_matrix(request: Request, db: Session = Depends(get_db)):
 
         # 5. 組織matrix數據結構：matrix[chunk_strategy][prompt_version][testset_name] = experiment
         logger.debug("Step 5: Building matrix structure...")
-        matrix = {}
+        matrix: dict[str, dict[str, dict[str, dict[str, object]]]] = {}
         for cs in chunk_strategies:
-            matrix[cs["name"]] = {}
+            cs_name = str(cs["name"])
+            matrix[cs_name] = {}
             for p in prompts:
-                matrix[cs["name"]][p["version"]] = {}
+                p_version = str(p["version"])
+                matrix[cs_name][p_version] = {}
                 for ts in testsets:
-                    matrix[cs["name"]][p["version"]][ts["name"]] = None
+                    ts_name = str(ts["name"])
+                    matrix[cs_name][p_version][ts_name] = None
         logger.debug("Matrix structure built")
 
         # 6. 填充實驗數據
@@ -99,8 +102,9 @@ async def evaluation_matrix(request: Request, db: Session = Depends(get_db)):
             # 目前實驗沒有testset關聯，先用實驗名稱猜測
             # TODO: 需要在experiment model加testset_id
             for ts in testsets:
-                if ts["name"] in exp.name:
-                    matrix[matching_strategy][prompt_ver][ts["name"]] = {
+                ts_name = str(ts["name"])
+                if ts_name in exp.name:
+                    matrix[matching_strategy][str(prompt_ver)][ts_name] = {
                         "id": str(exp.id),
                         "status": exp.status,
                         "faithfulness": exp.avg_faithfulness,

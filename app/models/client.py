@@ -9,7 +9,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from app.models.base import GUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -62,7 +62,7 @@ class Client(Base, BaseModel):
 
     # Multi-tenant & relationships
     tenant_id = Column(String, nullable=False, index=True)
-    counselor_id = Column(UUID(as_uuid=True), ForeignKey("counselors.id"), nullable=False)
+    counselor_id = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
 
     # Relationships
     counselor = relationship("Counselor", back_populates="clients")

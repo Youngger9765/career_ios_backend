@@ -43,9 +43,9 @@ jobs:
       run: |
         poetry run ruff check app/
 
-    # - name: Run type checking
-    #   run: |
-    #     poetry run mypy app/ --ignore-missing-imports
+    - name: Run type checking
+      run: |
+        poetry run mypy app/
 
     - name: Run unit tests
       run: |

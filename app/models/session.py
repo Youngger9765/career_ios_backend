@@ -1,5 +1,5 @@
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from app.models.base import GUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -9,7 +9,7 @@ from app.models.base import BaseModel
 class Session(Base, BaseModel):
     __tablename__ = "sessions"
 
-    case_id = Column(UUID(as_uuid=True), ForeignKey("cases.id"), nullable=False)
+    case_id = Column(GUID(), ForeignKey("cases.id"), nullable=False)
     tenant_id = Column(String, nullable=False, index=True)
     session_number = Column(Integer, nullable=False)
     session_date = Column(DateTime(timezone=True), nullable=False)

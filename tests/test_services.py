@@ -23,40 +23,42 @@ class TestSTTService:
         """Test successful audio transcription"""
         mock_audio_path = "/tmp/test_audio.m4a"
 
-        with patch.object(stt_service.client.audio.transcriptions, 'create', new_callable=AsyncMock) as mock_create:
-            mock_create.return_value = "這是測試逐字稿內容"
+        with patch("os.path.exists", return_value=True):
+            with patch.object(stt_service.client.audio.transcriptions, 'create', new_callable=AsyncMock) as mock_create:
+                mock_create.return_value = "這是測試逐字稿內容"
 
-            with patch("builtins.open", create=True) as mock_open:
-                mock_open.return_value.__enter__.return_value = MagicMock()
+                with patch("builtins.open", create=True) as mock_open:
+                    mock_open.return_value.__enter__.return_value = MagicMock()
 
-                result = await stt_service.transcribe_audio(mock_audio_path, language="zh")
+                    result = await stt_service.transcribe_audio(mock_audio_path, language="zh")
 
-                assert isinstance(result, str)
-                assert len(result) > 0
-                mock_create.assert_called_once()
+                    assert isinstance(result, str)
+                    assert len(result) > 0
+                    mock_create.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_transcribe_audio_with_timestamps(self, stt_service):
         """Test transcription with timestamps"""
         mock_audio_path = "/tmp/test_audio.m4a"
 
-        with patch.object(stt_service.client.audio.transcriptions, 'create', new_callable=AsyncMock) as mock_create:
-            # Create a mock response object with attributes
-            mock_segment_1 = MagicMock(start=0.0, end=2.5, text="這是")
-            mock_segment_2 = MagicMock(start=2.5, end=5.0, text="測試內容")
-            mock_response = MagicMock(
-                text="這是測試內容",
-                segments=[mock_segment_1, mock_segment_2],
-                language="zh",
-                duration=5.0
-            )
-            mock_create.return_value = mock_response
+        with patch("os.path.exists", return_value=True):
+            with patch.object(stt_service.client.audio.transcriptions, 'create', new_callable=AsyncMock) as mock_create:
+                # Create a mock response object with attributes
+                mock_segment_1 = MagicMock(start=0.0, end=2.5, text="這是")
+                mock_segment_2 = MagicMock(start=2.5, end=5.0, text="測試內容")
+                mock_response = MagicMock(
+                    text="這是測試內容",
+                    segments=[mock_segment_1, mock_segment_2],
+                    language="zh",
+                    duration=5.0
+                )
+                mock_create.return_value = mock_response
 
-            with patch("builtins.open", create=True):
-                result = await stt_service.transcribe_with_timestamps(mock_audio_path)
+                with patch("builtins.open", create=True):
+                    result = await stt_service.transcribe_with_timestamps(mock_audio_path)
 
-                assert "text" in result
-                assert "segments" in result
+                    assert "text" in result
+                    assert "segments" in result
 
     @pytest.mark.asyncio
     async def test_transcribe_audio_file_not_found(self, stt_service):

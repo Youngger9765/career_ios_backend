@@ -14,12 +14,11 @@ def test_health_check(client):
 
 
 def test_root_endpoint(client):
-    """Test the root endpoint"""
+    """Test the root endpoint returns HTML"""
     response = client.get("/")
     assert response.status_code == 200
-    data = response.json()
-    assert "message" in data
-    assert "version" in data
+    assert response.headers["content-type"] == "text/html; charset=utf-8"
+    assert "職涯諮詢平台" in response.text
 
 
 def test_nonexistent_endpoint(client):

@@ -160,7 +160,7 @@ class EvaluationService:
                 total_documents = len(document_ids)
 
             # Store document snapshot in config_json
-            config = experiment.config_json or {}
+            config: dict[str, object] = experiment.config_json or {}
             config.update(
                 {
                     "document_ids": document_ids,
@@ -258,11 +258,11 @@ class EvaluationService:
 
                 answer = await openai_service.chat_completion(
                     messages=[
-                        {"role": "system", "content": system_prompt},
+                        {"role": "system", "content": str(system_prompt)},
                         {
                             "role": "user",
                             "content": f"參考文件：\n{context_text}\n\n問題：{question}",
-                        },
+                        },  # type: ignore[dict-item]
                     ],
                     temperature=0.7,
                 )
@@ -323,7 +323,7 @@ class EvaluationService:
                 # Configure RAGAS to use gpt-4o-mini for better cost-performance balance
                 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
-                llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+                llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)  # type: ignore[call-arg]
                 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 
                 # Select metrics based on whether we have ground truth
@@ -542,7 +542,7 @@ class EvaluationService:
             .all()
         )
 
-        comparison = {
+        comparison: dict[str, object] = {
             "experiments": [],
             "best_faithfulness": None,
             "best_answer_relevancy": None,
@@ -568,7 +568,7 @@ class EvaluationService:
                 "avg_context_precision": exp.avg_context_precision,
                 "total_queries": exp.total_queries,
             }
-            comparison["experiments"].append(exp_data)
+            comparison["experiments"].append(exp_data)  # type: ignore[union-attr]
 
             # Track best scores
             if exp.avg_faithfulness and exp.avg_faithfulness > best_faithfulness_score:

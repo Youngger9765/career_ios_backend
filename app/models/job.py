@@ -2,7 +2,7 @@ import enum
 
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import UUID
+from app.models.base import GUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -27,7 +27,7 @@ class JobStatus(str, enum.Enum):
 class Job(Base, BaseModel):
     __tablename__ = "jobs"
 
-    session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
+    session_id = Column(GUID(), ForeignKey("sessions.id"), nullable=False)
     job_type: Column[JobType] = Column(SQLEnum(JobType), nullable=False)
     status: Column[JobStatus] = Column(SQLEnum(JobStatus), default=JobStatus.PENDING, nullable=False)
 

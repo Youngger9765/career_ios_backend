@@ -1,7 +1,7 @@
 """Database models for RAG evaluation system"""
 
 from sqlalchemy import JSON, Boolean, Column, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from app.models.base import GUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -69,7 +69,7 @@ class EvaluationResult(Base, BaseModel):
     __tablename__ = "evaluation_results"
 
     experiment_id = Column(
-        UUID(as_uuid=True), ForeignKey("evaluation_experiments.id"), nullable=False
+        GUID(), ForeignKey("evaluation_experiments.id"), nullable=False
     )
 
     # Query details
