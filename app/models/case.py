@@ -1,11 +1,10 @@
 import enum
 
 from sqlalchemy import Column, ForeignKey, Integer, String, Text, UniqueConstraint
-from app.models.base import GUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.models.base import BaseModel
+from app.models.base import GUID, BaseModel
 
 
 class CaseStatus(enum.IntEnum):

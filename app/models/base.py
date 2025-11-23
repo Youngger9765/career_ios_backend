@@ -1,9 +1,8 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import Column, DateTime, String, TypeDecorator
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-from sqlalchemy import TypeDecorator
 
 
 class GUID(TypeDecorator):

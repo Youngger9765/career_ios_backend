@@ -1,11 +1,10 @@
 """Database models for RAG evaluation system"""
 
 from sqlalchemy import JSON, Boolean, Column, Float, ForeignKey, Integer, String, Text
-from app.models.base import GUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.models.base import BaseModel
+from app.models.base import GUID, BaseModel
 
 
 class EvaluationExperiment(Base, BaseModel):

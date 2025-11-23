@@ -2,11 +2,10 @@ import enum
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy import Enum as SQLEnum
-from app.models.base import GUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.models.base import BaseModel
+from app.models.base import GUID, BaseModel
 
 
 class ReminderType(str, enum.Enum):
