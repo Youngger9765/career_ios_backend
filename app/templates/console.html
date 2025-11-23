@@ -27,37 +27,57 @@
         /* Left Sidebar - Flow */
         .sidebar {
             width: 280px;
-            background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%);
-            color: white;
+            background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+            color: #1e293b;
             padding: 20px;
             overflow-y: auto;
+            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
         }
 
         .sidebar h2 {
             font-size: 18px;
             margin-bottom: 20px;
             padding-bottom: 10px;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 2px solid rgba(30, 41, 59, 0.15);
         }
 
         .flow-group-title {
             font-size: 14px;
             font-weight: 700;
-            color: #ffffff;
+            color: #1e293b;
             text-transform: uppercase;
             letter-spacing: 0.8px;
             margin-top: 24px;
             margin-bottom: 12px;
-            padding: 14px 12px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.18));
-            border-radius: 10px;
-            border-left: 4px solid #10b981;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.2));
+            border-radius: 12px;
+            border-left: 4px solid #0ea5e9;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 12px rgba(14, 165, 233, 0.15);
+        }
+
+        /* UI-driven APIs - Warm Amber theme (溫暖琥珀黃橘) */
+        .flow-group-title[data-group$="-ui"] {
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.3), rgba(245, 158, 11, 0.25));
+            border-left: 4px solid #f59e0b;
+            box-shadow: 0 2px 12px rgba(245, 158, 11, 0.2);
+        }
+
+        .flow-group-title[data-group$="-ui"]:hover {
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.4), rgba(245, 158, 11, 0.35));
+            box-shadow: 0 3px 16px rgba(245, 158, 11, 0.3);
+            transform: translateX(2px);
+        }
+
+        .flow-group-title[data-group$="-ui"]::before {
+            content: '📱 ';
+            font-size: 16px;
+            margin-right: 4px;
         }
 
         .flow-group-title:hover {
@@ -96,58 +116,92 @@
         .flow-step {
             margin-bottom: 8px;
             padding: 10px 12px;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s;
-            border-left: 3px solid transparent;
-            background: rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+            border: 2px solid rgba(30, 41, 59, 0.15);
+            border-left: 4px solid rgba(30, 41, 59, 0.2);
+            background: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .flow-step:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.6);
+            border-color: rgba(30, 41, 59, 0.25);
+            border-left-color: rgba(30, 41, 59, 0.4);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            transform: translateX(2px);
         }
 
         .flow-step.active {
-            background: rgba(255, 255, 255, 0.15);
-            border-left-color: #10b981;
+            background: rgba(14, 165, 233, 0.15);
+            border-color: rgba(14, 165, 233, 0.3);
+            border-left-color: #0ea5e9;
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
         }
 
         .flow-step.completed {
-            background: rgba(16, 185, 129, 0.2);
-            border-left-color: #10b981;
+            background: rgba(14, 165, 233, 0.2);
+            border-color: rgba(14, 165, 233, 0.35);
+            border-left-color: #0ea5e9;
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
         }
 
         .flow-step.error {
-            background: rgba(239, 68, 68, 0.2);
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
             border-left-color: #ef4444;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
         }
 
         .step-number {
             display: inline-block;
             width: 28px;
             height: 28px;
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(30, 41, 59, 0.1);
             border-radius: 50%;
             text-align: center;
             line-height: 28px;
             font-size: 13px;
             font-weight: 600;
             margin-right: 10px;
-            color: rgba(255, 255, 255, 0.9);
+            color: #475569;
         }
 
         .flow-step.completed .step-number {
-            background: #10b981;
+            background: #0ea5e9;
+            color: #ffffff;
         }
 
         .flow-step.error .step-number {
             background: #ef4444;
+            color: #ffffff;
+        }
+
+        /* UI-driven APIs flow-step styling */
+        [data-group-content$="-ui"] .flow-step.active {
+            background: rgba(251, 146, 60, 0.15);
+            border-color: rgba(245, 158, 11, 0.3);
+            border-left-color: #f59e0b;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+        }
+
+        [data-group-content$="-ui"] .flow-step.completed {
+            background: rgba(251, 146, 60, 0.2);
+            border-color: rgba(245, 158, 11, 0.35);
+            border-left-color: #f59e0b;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+        }
+
+        [data-group-content$="-ui"] .flow-step.completed .step-number {
+            background: #f59e0b;
+            color: #ffffff;
         }
 
         .step-title {
             font-size: 14px;
             font-weight: 500;
-            color: rgba(255, 255, 255, 0.95);
+            color: #1e293b;
         }
 
         .step-subtitle {
@@ -542,8 +596,8 @@
             </div>
             </div>
 
-            <!-- 個案管理 -->
-            <div class="flow-group-title" data-group="case">📋 個案管理 Case</div>
+            <!-- 案件管理 -->
+            <div class="flow-group-title" data-group="case">📋 案件管理 Case</div>
             <div class="flow-group-content" data-group-content="case">
 
             <div class="flow-step" data-step="get-case-field-schema">
@@ -710,12 +764,12 @@
             </div>
 
             <!-- 1. 登入註冊 -->
-            <div class="flow-group-title" data-group="auth-ui">🔐 1. 登入註冊</div>
+            <div class="flow-group-title" data-group="auth-ui">1. 登入註冊</div>
             <div class="flow-group-content" data-group-content="auth-ui">
 
             <div class="flow-step" data-step="ui-mobile-login">
                 <div>
-                    <span class="step-number">UI-0</span>
+                    <span class="step-number">0</span>
                     <span class="step-title">登入頁面 (手機模擬)</span>
                 </div>
                 <div class="step-subtitle">POST /api/auth/login</div>
@@ -723,13 +777,13 @@
 
             </div>
 
-            <!-- 2. Client-Case CRUD (iOS UI APIs) -->
-            <div class="flow-group-title" data-group="case-ui">📱 2. Client-Case CRUD (iOS UI APIs)</div>
+            <!-- 2. 個案管理 -->
+            <div class="flow-group-title" data-group="case-ui">2. 個案管理</div>
             <div class="flow-group-content" data-group-content="case-ui">
 
             <div class="flow-step" data-step="ui-create-client-case">
                 <div>
-                    <span class="step-number">UI-1</span>
+                    <span class="step-number">1</span>
                     <span class="step-title">📝 獲取表單 Schema</span>
                 </div>
                 <div class="step-subtitle">GET /api/v1/ui/field-schemas/client-case</div>
@@ -737,7 +791,7 @@
 
             <div class="flow-step" data-step="list-client-cases">
                 <div>
-                    <span class="step-number">UI-2</span>
+                    <span class="step-number">2</span>
                     <span class="step-title">📋 列出客戶個案</span>
                 </div>
                 <div class="step-subtitle">GET /api/v1/ui/client-case-list</div>
@@ -745,7 +799,7 @@
 
             <div class="flow-step" data-step="create-client-case">
                 <div>
-                    <span class="step-number">UI-3</span>
+                    <span class="step-number">3</span>
                     <span class="step-title">➕ 建立客戶個案</span>
                 </div>
                 <div class="step-subtitle">POST /api/v1/ui/client-case</div>
@@ -753,7 +807,7 @@
 
             <div class="flow-step" data-step="get-client-case-detail">
                 <div>
-                    <span class="step-number">UI-4</span>
+                    <span class="step-number">4</span>
                     <span class="step-title">🔍 獲取個案詳情</span>
                 </div>
                 <div class="step-subtitle">GET /api/v1/ui/client-case/{id}</div>
@@ -761,7 +815,7 @@
 
             <div class="flow-step" data-step="update-client-case">
                 <div>
-                    <span class="step-number">UI-5</span>
+                    <span class="step-number">5</span>
                     <span class="step-title">✏️ 更新客戶個案</span>
                 </div>
                 <div class="step-subtitle">PATCH /api/v1/ui/client-case/{id}</div>
@@ -769,7 +823,7 @@
 
             <div class="flow-step" data-step="delete-client-case">
                 <div>
-                    <span class="step-number">UI-6</span>
+                    <span class="step-number">6</span>
                     <span class="step-title">🗑️ 刪除客戶個案</span>
                 </div>
                 <div class="step-subtitle">DELETE /api/v1/ui/client-case/{id}</div>
@@ -891,6 +945,11 @@
 
         // Generate form HTML from field schema
         const generateFieldHTML = (field, formPrefix = '') => {
+            // Skip auto-generated fields
+            if (field.key === 'case_number' || field.placeholder === '自動生成') {
+                return '';
+            }
+
             const fieldId = `${formPrefix}${field.key}`;
             const isRequired = field.required ? ' *' : '';
             const placeholder = field.placeholder || '不更新則留空';
@@ -915,7 +974,6 @@
                 case 'single_select':
                     const options = field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
                     inputHTML = `<select id="${fieldId}">
-                        <option value="">不更新</option>
                         ${options}
                     </select>`;
                     break;
@@ -926,7 +984,6 @@
 
                 case 'boolean':
                     inputHTML = `<select id="${fieldId}">
-                        <option value="">不更新</option>
                         <option value="true">是</option>
                         <option value="false">否</option>
                     </select>`;
@@ -4568,141 +4625,124 @@
             'create-client-case': {
                 title: '建立客戶個案',
                 subtitle: 'POST /api/v1/ui/client-case',
-                renderForm: () => `
-                    ${renderTenantBanner()}
-                    <div class="info-card">
-                        <p>➕ 同時建立 Client + Case</p>
-                        <p style="color: #86868b; font-size: 14px; margin-top: 8px;">• Client Code 和 Case Number 自動生成</p>
-                    </div>
+                init: async () => {
+                    // Ensure schemas are loaded
+                    if (!state.clientSchema || !state.caseSchema) {
+                        await loadFieldSchemas();
+                    }
+                },
+                renderForm: () => {
+                    // Check if schemas are loaded
+                    if (!state.clientSchema || !state.caseSchema) {
+                        return `
+                            ${renderTenantBanner()}
+                            <div class="info-card" style="background: #fff3cd; border-color: #ffc107;">
+                                <p>⏳ 正在載入 Schema...</p>
+                            </div>
+                        `;
+                    }
 
-                    <button class="btn" onclick="generateRandomClientData()" style="background: #10b981; color: white; margin-bottom: 16px; width: 100%;">
-                        🎲 隨機生成測試資料
-                    </button>
+                    let html = `
+                        ${renderTenantBanner()}
+                        <div class="info-card">
+                            <p>➕ 同時建立 Client + Case</p>
+                            <p style="color: #86868b; font-size: 14px; margin-top: 8px;">• Client Code 和 Case Number 自動生成</p>
+                            <p style="color: #86868b; font-size: 14px;">• 表單完全基於 Schema 動態生成</p>
+                        </div>
 
-                    <h4 style="margin: 20px 0 12px;">📝 Client 必填欄位</h4>
-                    <div class="form-group">
-                        <label>姓名 *</label>
-                        <input type="text" id="cc-name" value="張小明" required />
-                    </div>
-                    <div class="form-group">
-                        <label>Email *</label>
-                        <input type="email" id="cc-email" value="test@example.com" required />
-                    </div>
-                    <div class="form-group">
-                        <label>性別 *</label>
-                        <select id="cc-gender">
-                            <option value="男">男</option>
-                            <option value="女">女</option>
-                            <option value="其他">其他</option>
-                            <option value="不便透露">不便透露</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>生日 *</label>
-                        <input type="date" id="cc-birth-date" value="1995-01-01" required />
-                    </div>
-                    <div class="form-group">
-                        <label>手機號碼 *</label>
-                        <input type="tel" id="cc-phone" value="0912345678" required />
-                    </div>
-                    <div class="form-group">
-                        <label>身份選項 *</label>
-                        <select id="cc-identity">
-                            <option value="學生">學生</option>
-                            <option value="社會新鮮人">社會新鮮人</option>
-                            <option value="轉職者" selected>轉職者</option>
-                            <option value="在職者">在職者</option>
-                            <option value="其他">其他</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>目前現況 *</label>
-                        <input type="text" id="cc-status" value="正在考慮轉職" required />
-                    </div>
+                        <button class="btn" onclick="generateRandomClientData()" style="background: #10b981; color: white; margin-bottom: 16px; width: 100%;">
+                            🎲 隨機生成測試資料
+                        </button>
+                    `;
 
-                    <h4 style="margin: 20px 0 12px;">📋 Client 選填欄位</h4>
-                    <div class="form-group">
-                        <label>學歷</label>
-                        <select id="cc-education">
-                            <option value="">請選擇</option>
-                            <option value="高中">高中</option>
-                            <option value="大學" selected>大學</option>
-                            <option value="研究所">研究所</option>
-                            <option value="博士">博士</option>
-                            <option value="其他">其他</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>您的現職（職業／年資）</label>
-                        <input type="text" id="cc-current-job" value="軟體工程師 / 3年" placeholder="例：軟體工程師 / 3年" />
-                    </div>
-                    <div class="form-group">
-                        <label>職涯現況</label>
-                        <select id="cc-career-status">
-                            <option value="">請選擇</option>
-                            <option value="探索中">探索中</option>
-                            <option value="轉職準備" selected>轉職準備</option>
-                            <option value="面試中">面試中</option>
-                            <option value="已在職">已在職</option>
-                            <option value="待業中">待業中</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>過往諮詢經驗</label>
-                        <textarea id="cc-consultation-history" rows="2" placeholder="是／否，若有請簡述"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>心理或精神醫療史</label>
-                        <textarea id="cc-mental-health-history" rows="2" placeholder="是／否，若有請簡述（敏感資訊）"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>居住地區</label>
-                        <input type="text" id="cc-location" value="台北市" placeholder="例：台北市" />
-                    </div>
-                    <div class="form-group">
-                        <label>備註</label>
-                        <textarea id="cc-notes" rows="2" placeholder="其他需要記錄的資訊"></textarea>
-                    </div>
+                    // 动态生成 Client 字段
+                    if (state.clientSchema?.sections) {
+                        const requiredFields = [];
+                        const optionalFields = [];
 
-                    <h4 style="margin: 20px 0 12px;">📋 Case 選填欄位</h4>
-                    <div class="form-group">
-                        <label>問題敘述</label>
-                        <textarea id="cc-problem-description" rows="3" placeholder="請描述本次諮詢的問題與目的"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>預期收穫</label>
-                        <textarea id="cc-goals" rows="3" placeholder="請描述本次諮詢的預期收穫"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>個案摘要</label>
-                        <textarea id="cc-summary" rows="3" placeholder="整體個案摘要">職涯轉換諮詢</textarea>
-                    </div>
+                        state.clientSchema.sections.forEach(section => {
+                            section.fields.forEach(field => {
+                                if (field.required) {
+                                    requiredFields.push(field);
+                                } else {
+                                    optionalFields.push(field);
+                                }
+                            });
+                        });
 
-                    <button class="btn btn-primary" onclick="executeCreateClientCase()">建立</button>
-                `,
+                        // 必填字段
+                        if (requiredFields.length > 0) {
+                            html += '<h4 style="margin: 20px 0 12px;">📝 Client 必填欄位</h4>';
+                            requiredFields.forEach(field => {
+                                html += window.renderFormField(field, 'cc-client');
+                            });
+                        }
+
+                        // 选填字段
+                        if (optionalFields.length > 0) {
+                            html += '<h4 style="margin: 20px 0 12px;">📋 Client 選填欄位</h4>';
+                            optionalFields.forEach(field => {
+                                html += window.renderFormField(field, 'cc-client');
+                            });
+                        }
+                    }
+
+                    // 动态生成 Case 字段
+                    if (state.caseSchema?.sections) {
+                        html += '<h4 style="margin: 20px 0 12px;">📋 Case 選填欄位</h4>';
+                        state.caseSchema.sections.forEach(section => {
+                            section.fields.forEach(field => {
+                                // Skip case_number and status (auto-generated)
+                                if (field.key !== 'case_number' && field.key !== 'status') {
+                                    html += window.renderFormField(field, 'cc-case');
+                                }
+                            });
+                        });
+                    }
+
+                    html += '<button class="btn btn-primary" onclick="executeCreateClientCase()">建立</button>';
+                    return html;
+                },
                 execute: async () => {
-                    const requestBody = {
-                        // Client 必填欄位
-                        name: document.getElementById('cc-name').value,
-                        email: document.getElementById('cc-email').value,
-                        gender: document.getElementById('cc-gender').value,
-                        birth_date: document.getElementById('cc-birth-date').value,
-                        phone: document.getElementById('cc-phone').value,
-                        identity_option: document.getElementById('cc-identity').value,
-                        current_status: document.getElementById('cc-status').value,
-                        // Client 選填欄位
-                        education: document.getElementById('cc-education').value || undefined,
-                        current_job: document.getElementById('cc-current-job').value || undefined,
-                        career_status: document.getElementById('cc-career-status').value || undefined,
-                        has_consultation_history: document.getElementById('cc-consultation-history').value || undefined,
-                        has_mental_health_history: document.getElementById('cc-mental-health-history').value || undefined,
-                        location: document.getElementById('cc-location').value || undefined,
-                        notes: document.getElementById('cc-notes').value || undefined,
-                        // Case 選填欄位
-                        problem_description: document.getElementById('cc-problem-description').value || undefined,
-                        case_goals: document.getElementById('cc-goals').value || undefined,
-                        case_summary: document.getElementById('cc-summary').value || undefined,
-                    };
+                    const requestBody = {};
+
+                    // 动态收集 Client 字段数据
+                    if (state.clientSchema?.sections) {
+                        state.clientSchema.sections.forEach(section => {
+                            section.fields.forEach(field => {
+                                const fieldId = 'cc-client-' + field.key;
+                                const element = document.getElementById(fieldId);
+                                if (element) {
+                                    const value = element.value;
+                                    if (value || field.required) {
+                                        requestBody[field.key] = value || undefined;
+                                    }
+                                }
+                            });
+                        });
+                    }
+
+                    // 动态收集 Case 字段数据
+                    if (state.caseSchema?.sections) {
+                        state.caseSchema.sections.forEach(section => {
+                            section.fields.forEach(field => {
+                                // Skip auto-generated fields
+                                if (field.key === 'case_number' || field.key === 'status') return;
+
+                                const fieldId = 'cc-case-' + field.key;
+                                const element = document.getElementById(fieldId);
+                                if (element) {
+                                    const value = element.value;
+                                    if (value) {
+                                        // Case fields use 'case_' prefix
+                                        requestBody['case_' + field.key] = value;
+                                    }
+                                }
+                            });
+                        });
+                    }
+
+                    console.log('📤 Request Body:', requestBody);
 
                     const response = await fetch(`${BASE_URL}/api/v1/ui/client-case`, {
                         method: 'POST',
@@ -4887,6 +4927,12 @@
             'get-client-case-detail': {
                 title: '🔍 獲取個案詳情',
                 subtitle: 'GET /api/v1/ui/client-case/{id}',
+                init: async () => {
+                    // Ensure schemas are loaded for preview rendering
+                    if (!state.clientSchema || !state.caseSchema) {
+                        await loadFieldSchemas();
+                    }
+                },
                 renderForm: () => {
                     const caseOptions = (state.clientCases || []).map(c =>
                         `<option value="${c.case_id}">${c.client_name} - ${c.case_number}</option>`
@@ -4895,10 +4941,10 @@
                     return `
                         ${renderTenantBanner()}
                         <div class="info-card">
-                            <p>🔍 獲取單一個案的完整資訊</p>
+                            <p>🔍 獲取單一個案的完整資訊（動態欄位）</p>
                             <p style="color: #86868b; font-size: 14px; margin-top: 8px;">
                                 • 用於 iOS 更新表單載入現有資料<br>
-                                • 返回所有 Client 和 Case 欄位
+                                • 返回所有 Client 和 Case 欄位（基於 Schema）
                             </p>
                         </div>
 
@@ -4926,44 +4972,40 @@
                     return { response, data };
                 },
                                                 renderPreview: (data) => {
+                    // Check if schemas are loaded
+                    if (!state.clientSchema || !state.caseSchema) {
+                        return `
+                            <div class="info-card" style="background: #fff3cd; border-color: #ffc107;">
+                                <p style="color: #856404;">⚠️ Schema 未載入，無法顯示詳情</p>
+                                <p style="color: #856404; font-size: 13px; margin-top: 8px;">請重新整理頁面或重新登入</p>
+                            </div>
+                        `;
+                    }
+
                     // Generate Client fields dynamically from schema
                     let clientFieldsHTML = '';
-                    if (state.clientSchema?.sections) {
-                        state.clientSchema.sections.forEach(section => {
-                            section.fields.forEach(field => {
-                                const value = data[field.key] || data['client_' + field.key] || '';
-                                // Display all fields including empty ones
+                    state.clientSchema.sections.forEach(section => {
+                        section.fields.forEach(field => {
+                            const value = data[field.key] || data['client_' + field.key] || '';
+                            // Format value based on type
+                            let displayValue = value || '-';
+                            if (field.type === 'date' && value) {
+                                displayValue = value.split('T')[0];
+                            }
 
-                                    // Format value based on type
-                                    let displayValue = value || '-';
-                                    if (field.type === 'date' && value) {
-                                        displayValue = value.split('T')[0];
-                                    }
-
-                                    clientFieldsHTML += '<div class="detail-row">' +
-                                        '<span class="detail-label">' + field.label + '</span>' +
-                                        '<span class="detail-value">' + displayValue + '</span>' +
-                                    '</div>';
-                            });
+                            clientFieldsHTML += '<div class="detail-row">' +
+                                '<span class="detail-label">' + field.label + '</span>' +
+                                '<span class="detail-value">' + displayValue + '</span>' +
+                            '</div>';
                         });
-                    } else {
-                        // Fallback to hardcoded fields if schema not loaded
-                        clientFieldsHTML = '<div class="detail-row"><span class="detail-label">Client Code</span><span class="detail-value">' + data.client_code + '</span></div>' +
-                            '<div class="detail-row"><span class="detail-label">性別</span><span class="detail-value">' + data.gender + '</span></div>' +
-                            '<div class="detail-row"><span class="detail-label">生日</span><span class="detail-value">' + data.birth_date + '</span></div>' +
-                            '<div class="detail-row"><span class="detail-label">手機</span><span class="detail-value">' + data.phone + '</span></div>' +
-                            '<div class="detail-row"><span class="detail-label">目前現況</span><span class="detail-value">' + data.current_status + '</span></div>';
-                    }
+                    });
 
                     // Generate Case fields dynamically from schema
                     let caseFieldsHTML = '';
-                    if (state.caseSchema?.sections) {
-                        state.caseSchema.sections.forEach(section => {
-                            section.fields.forEach(field => {
-                                const value = data[field.key] || data['case_' + field.key] || '';
-                                // Display all fields including empty ones
-
-                                    let displayValue = value || '-';
+                    state.caseSchema.sections.forEach(section => {
+                        section.fields.forEach(field => {
+                            const value = data[field.key] || data['case_' + field.key] || '';
+                            let displayValue = value || '-';
                                     // Handle case_status specially to show label
                                     if (field.key === 'status' && data.case_status_label) {
                                         displayValue = data.case_status_label;
@@ -4975,11 +5017,6 @@
                                     '</div>';
                             });
                         });
-                    } else {
-                        // Fallback to hardcoded fields
-                        caseFieldsHTML = '<div class="detail-row"><span class="detail-label">Case Number</span><span class="detail-value">' + data.case_number + '</span></div>' +
-                            '<div class="detail-row"><span class="detail-label">狀態</span><span class="detail-value">' + data.case_status_label + '</span></div>';
-                    }
 
                     return '<style>' +
                         '.iphone-preview { width: 390px; height: 844px; background: #000; border-radius: 50px; padding: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); position: relative; margin: 0 auto; }' +
@@ -5108,11 +5145,12 @@
                     // Merge client and case values
                     const requestBody = { ...clientValues };
 
-                    // Map case fields to API request format
-                    if (caseValues.status !== undefined) requestBody.case_status = caseValues.status;
-                    if (caseValues.summary) requestBody.case_summary = caseValues.summary;
-                    if (caseValues.goals) requestBody.case_goals = caseValues.goals;
-                    if (caseValues.problem_description) requestBody.problem_description = caseValues.problem_description;
+                    // Map case fields to API request format (add case_ prefix dynamically)
+                    Object.keys(caseValues).forEach(key => {
+                        if (caseValues[key] !== undefined && caseValues[key] !== null && caseValues[key] !== '') {
+                            requestBody['case_' + key] = caseValues[key];
+                        }
+                    });
 
                     console.log('📤 Update request body:', requestBody);
 
@@ -6160,6 +6198,48 @@ Cl: 我開始用你上次建議的方法，先確認主管的需求再開始做�
         window.executeViewReport = () => executeStep('view-report');
         window.executeUpdateReport = () => executeStep('update-report');
 
+        // Dynamic form field renderer
+        window.renderFormField = (field, prefix) => {
+            const fieldId = prefix + '-' + field.key;
+            const requiredMark = field.required ? ' *' : '';
+            let fieldHTML = '<div class="form-group">';
+            fieldHTML += '<label>' + field.label + requiredMark + '</label>';
+
+            if (field.type === 'text' || field.type === 'email' || field.type === 'phone') {
+                const inputType = field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : 'text';
+                fieldHTML += '<input type="' + inputType + '" id="' + fieldId + '" ';
+                if (field.placeholder) fieldHTML += 'placeholder="' + field.placeholder + '" ';
+                if (field.required) fieldHTML += 'required ';
+                fieldHTML += '/>';
+            } else if (field.type === 'date') {
+                fieldHTML += '<input type="date" id="' + fieldId + '" ';
+                if (field.required) fieldHTML += 'required ';
+                fieldHTML += '/>';
+            } else if (field.type === 'textarea') {
+                fieldHTML += '<textarea id="' + fieldId + '" rows="3" ';
+                if (field.placeholder) fieldHTML += 'placeholder="' + field.placeholder + '" ';
+                if (field.required) fieldHTML += 'required ';
+                fieldHTML += '></textarea>';
+            } else if (field.type === 'single_select') {
+                fieldHTML += '<select id="' + fieldId + '" ';
+                if (field.required) fieldHTML += 'required ';
+                fieldHTML += '>';
+                if (!field.required) fieldHTML += '<option value="">請選擇</option>';
+                if (field.options) {
+                    field.options.forEach(opt => {
+                        fieldHTML += '<option value="' + opt + '">' + opt + '</option>';
+                    });
+                }
+                fieldHTML += '</select>';
+            }
+
+            if (field.help_text) {
+                fieldHTML += '<small style="color: #86868b; font-size: 12px; display: block; margin-top: 4px;">' + field.help_text + '</small>';
+            }
+            fieldHTML += '</div>';
+            return fieldHTML;
+        };
+
         // Client-Case CRUD functions
         window.executeListClientCases = () => executeStep('list-client-cases');
         window.executeCreateClientCase = () => executeStep('create-client-case');
@@ -6167,53 +6247,99 @@ Cl: 我開始用你上次建議的方法，先確認主管的需求再開始做�
         window.executeUpdateClientCase = () => executeStep('update-client-case');
         window.executeDeleteClientCase = () => executeStep('delete-client-case');
 
-        // Generate random test data for create-client-case form
+        // Generate random test data for create-client-case form (dynamic)
         window.generateRandomClientData = () => {
             const timestamp = Date.now();
-            const surnames = ['王', '李', '張', '劉', '陳', '楊', '黃', '吳', '趙', '周'];
-            const givenNames = ['小明', '小華', '小芳', '建國', '志偉', '淑芬', '雅婷', '冠宇', '怡君', '佳玲'];
-            const identities = ['學生', '社會新鮮人', '轉職者', '在職者', '其他'];
-            const statuses = ['求職中', '在學中', '考慮轉職', '探索新方向', '穩定就業'];
-            const genders = ['男', '女', '其他'];
-            const educations = ['高中', '大學', '研究所', '博士', '其他'];
-            const jobs = ['軟體工程師 / 3年', 'UI設計師 / 2年', '產品經理 / 5年', '行銷專員 / 1年', '待業中', '學生'];
-            const careerStatuses = ['探索中', '轉職準備', '面試中', '已在職', '待業中'];
-            const locations = ['台北市', '新北市', '台中市', '台南市', '高雄市', '桃園市'];
+            const randomData = {
+                names: { surnames: ['王', '李', '張', '劉', '陳', '楊', '黃', '吳', '趙', '周'], givenNames: ['小明', '小華', '小芳', '建國', '志偉', '淑芬', '雅婷', '冠宇', '怡君', '佳玲'] },
+                phones: () => `09${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
+                dates: () => {
+                    const year = 1970 + Math.floor(Math.random() * 35);
+                    const month = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
+                    const day = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                },
+                locations: ['台北市', '新北市', '台中市', '台南市', '高雄市', '桃園市'],
+                currentStatus: ['求職中', '在學中', '考慮轉職', '探索新方向', '穩定就業', '準備面試'],
+                currentJobs: ['軟體工程師 / 3年', 'UI設計師 / 2年', '產品經理 / 5年', '行銷專員 / 1年', '資料分析師 / 4年', '專案經理 / 6年'],
+                consultationHistory: ['否', '是，曾接受過生涯諮詢', '是，參加過職涯工作坊'],
+                mentalHealthHistory: ['否', '否，無相關紀錄'],
+                problems: ['不確定職涯方向', '想轉換跑道但不知如何開始', '面試屢次失敗需要協助', '工作不快樂想尋求改變'],
+                goals: ['找到適合的職涯方向', '成功轉職到理想產業', '提升面試技巧', '釐清職涯規劃'],
+                summaries: ['職涯諮詢', '轉職諮詢', '面試輔導', '職涯探索']
+            };
 
-            const randomSurname = surnames[Math.floor(Math.random() * surnames.length)];
-            const randomGivenName = givenNames[Math.floor(Math.random() * givenNames.length)];
-            const fullName = randomSurname + randomGivenName;
+            const fullName = randomData.names.surnames[Math.floor(Math.random() * 10)] +
+                           randomData.names.givenNames[Math.floor(Math.random() * 10)];
 
-            // 必填欄位
-            document.getElementById('cc-name').value = fullName;
-            document.getElementById('cc-email').value = `test${timestamp}@example.com`;
-            document.getElementById('cc-gender').value = genders[Math.floor(Math.random() * genders.length)];
+            // 动态填充 Client 字段
+            if (state.clientSchema?.sections) {
+                state.clientSchema.sections.forEach(section => {
+                    section.fields.forEach(field => {
+                        const fieldId = 'cc-client-' + field.key;
+                        const element = document.getElementById(fieldId);
+                        if (!element) return;
 
-            // Random birth date between 1970 and 2005
-            const randomYear = 1970 + Math.floor(Math.random() * 35);
-            const randomMonth = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
-            const randomDay = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
-            document.getElementById('cc-birth-date').value = `${randomYear}-${randomMonth}-${randomDay}`;
+                        // 特定欄位的隨機資料
+                        if (field.key === 'name') {
+                            element.value = fullName;
+                        } else if (field.key === 'email') {
+                            element.value = `test${timestamp}@example.com`;
+                        } else if (field.key === 'phone') {
+                            element.value = randomData.phones();
+                        } else if (field.key === 'birth_date') {
+                            element.value = randomData.dates();
+                        } else if (field.key === 'location') {
+                            element.value = randomData.locations[Math.floor(Math.random() * randomData.locations.length)];
+                        } else if (field.key === 'current_status') {
+                            element.value = randomData.currentStatus[Math.floor(Math.random() * randomData.currentStatus.length)];
+                        } else if (field.key === 'current_job') {
+                            element.value = randomData.currentJobs[Math.floor(Math.random() * randomData.currentJobs.length)];
+                        } else if (field.key === 'has_consultation_history') {
+                            element.value = randomData.consultationHistory[Math.floor(Math.random() * randomData.consultationHistory.length)];
+                        } else if (field.key === 'has_mental_health_history') {
+                            element.value = randomData.mentalHealthHistory[Math.floor(Math.random() * randomData.mentalHealthHistory.length)];
+                        } else if (field.key === 'notes') {
+                            element.value = ''; // 備註留空
+                        } else if (field.type === 'single_select' && field.options && field.options.length > 0) {
+                            // 其他 select 欄位隨機選擇
+                            element.value = field.options[Math.floor(Math.random() * field.options.length)];
+                        } else if (field.type === 'text' && !element.value) {
+                            // 其他 text 欄位如果沒有特別處理，使用 placeholder 或留空
+                            element.value = '';
+                        } else if (field.type === 'textarea' && !element.value) {
+                            // 其他 textarea 欄位留空
+                            element.value = '';
+                        }
+                    });
+                });
+            }
 
-            document.getElementById('cc-phone').value = `09${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
-            document.getElementById('cc-identity').value = identities[Math.floor(Math.random() * identities.length)];
-            document.getElementById('cc-status').value = statuses[Math.floor(Math.random() * statuses.length)];
+            // 动态填充 Case 字段
+            if (state.caseSchema?.sections) {
+                state.caseSchema.sections.forEach(section => {
+                    section.fields.forEach(field => {
+                        if (field.key === 'case_number' || field.key === 'status') return;
+                        const fieldId = 'cc-case-' + field.key;
+                        const element = document.getElementById(fieldId);
+                        if (!element) return;
 
-            // Client 選填欄位
-            document.getElementById('cc-education').value = educations[Math.floor(Math.random() * educations.length)];
-            document.getElementById('cc-current-job').value = jobs[Math.floor(Math.random() * jobs.length)];
-            document.getElementById('cc-career-status').value = careerStatuses[Math.floor(Math.random() * careerStatuses.length)];
-            document.getElementById('cc-consultation-history').value = '';
-            document.getElementById('cc-mental-health-history').value = '';
-            document.getElementById('cc-location').value = locations[Math.floor(Math.random() * locations.length)];
-            document.getElementById('cc-notes').value = '';
+                        if (field.key === 'summary') {
+                            element.value = randomData.summaries[Math.floor(Math.random() * randomData.summaries.length)];
+                        } else if (field.key === 'problem_description') {
+                            element.value = randomData.problems[Math.floor(Math.random() * randomData.problems.length)];
+                        } else if (field.key === 'goals') {
+                            element.value = randomData.goals[Math.floor(Math.random() * randomData.goals.length)];
+                        } else if (field.type === 'single_select' && field.options && field.options.length > 0) {
+                            element.value = field.options[Math.floor(Math.random() * field.options.length)];
+                        } else {
+                            element.value = '';
+                        }
+                    });
+                });
+            }
 
-            // Case 選填欄位
-            document.getElementById('cc-problem-description').value = '';
-            document.getElementById('cc-goals').value = '';
-            document.getElementById('cc-summary').value = '職涯諮詢';
-
-            console.log('✅ 隨機測試資料已生成:', fullName, `test${timestamp}@example.com`);
+            console.log('✅ 隨機測試資料已生成 (動態):', fullName, `test${timestamp}@example.com`);
         };
 
         // Auto-select first step
@@ -6242,6 +6368,14 @@ Cl: 我開始用你上次建議的方法，先確認主管的需求再開始做�
                 title.classList.toggle('collapsed');
                 content.classList.toggle('collapsed');
             });
+        });
+
+        // 初始狀態：全部收起
+        document.querySelectorAll('.flow-group-title').forEach(title => {
+            title.classList.add('collapsed');
+        });
+        document.querySelectorAll('.flow-group-content').forEach(content => {
+            content.classList.add('collapsed');
         });
     </script>
 </body>
