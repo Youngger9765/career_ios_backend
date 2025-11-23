@@ -153,20 +153,8 @@ async def rag_report_page(request: Request) -> Response:
 
 @app.get("/console", response_class=HTMLResponse)
 async def console_page(request: Request) -> Response:
-    """Counseling System Debug Console"""
+    """Counseling System Debug Console - All API testing in one place"""
     return templates.TemplateResponse("console.html", {"request": request})
-
-
-@app.get("/web/client-case-list", response_class=HTMLResponse)
-async def client_case_list_page(request: Request) -> Response:
-    """Client-Case List - Web Preview (HTML, not API!)"""
-    return templates.TemplateResponse("client_case_list.html", {"request": request})
-
-
-@app.get("/web/create-client-case", response_class=HTMLResponse)
-async def create_client_case_page(request: Request) -> Response:
-    """Create Client-Case Form - Web Preview (HTML, not API!)"""
-    return templates.TemplateResponse("create_client_case.html", {"request": request})
 
 
 @app.get("/health")
