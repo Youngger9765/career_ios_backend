@@ -476,8 +476,11 @@ def list_sessions(
     total = db.execute(count_query).scalar()
 
     # 分頁查詢 - 先按個案，再按會談時間排序（確保順序正確）
+    # 使用 LEFT JOIN 避免 N+1 query problem
     query = (
-        query.offset(skip)
+        query.outerjoin(Report, Report.session_id == Session.id)
+        .add_columns(Report.id.label("report_id"))  # Add report_id to check existence
+        .offset(skip)
         .limit(limit)
         .order_by(
             Case.id.asc(),
@@ -488,14 +491,9 @@ def list_sessions(
     results = db.execute(query).all()
 
     items = []
-    for session, client, case in results:
-        # 檢查是否有報告
-        has_report_result = db.execute(
-            select(func.count())
-            .select_from(Report)
-            .where(Report.session_id == session.id)
-        )
-        has_report = (has_report_result.scalar() or 0) > 0
+    for session, client, case, report_id in results:
+        # 檢查是否有報告（從 JOIN 結果判斷，無需額外查詢）
+        has_report = report_id is not None
 
         items.append(
             SessionResponse(
@@ -660,10 +658,12 @@ def get_session(
     Raises:
         HTTPException: 404 if not found
     """
+    # 使用 LEFT JOIN 避免 N+1 query
     result = db.execute(
-        select(Session, Client, Case)
+        select(Session, Client, Case, Report.id.label("report_id"))
         .join(Case, Session.case_id == Case.id)
         .join(Client, Case.client_id == Client.id)
+        .outerjoin(Report, Report.session_id == Session.id)
         .where(
             Session.id == session_id,
             Client.counselor_id == current_user.id,
@@ -681,18 +681,10 @@ def get_session(
             detail="Session not found",
         )
 
-    session, client, case = row
+    session, client, case, report_id = row
 
-    # 檢查是否有報告
-    has_report_result = db.execute(
-        select(func.count()).select_from(
-            select(1)
-            .where(Session.id == session.id)
-            .where(Session.reports.any())
-            .subquery()
-        )
-    )
-    has_report = (has_report_result.scalar() or 0) > 0
+    # 檢查是否有報告（從 JOIN 結果判斷，無需額外查詢）
+    has_report = report_id is not None
 
     return SessionResponse(
         id=session.id,
