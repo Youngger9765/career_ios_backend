@@ -221,7 +221,7 @@ class TestReportsAPI:
             data = response.json()
             assert data["id"] == str(test_report.id)
             assert data["status"] == "final"
-            assert "formatted_markdown" in data
+            assert "content_markdown" in data
 
     def test_get_report_not_found(self, db_session: Session, auth_headers):
         """Test getting non-existent report returns 404"""
