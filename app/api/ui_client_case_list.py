@@ -491,9 +491,26 @@ def get_client_case_list(
         .subquery()
     )
 
-    # Step 2: Join clients with their first case
+    # Step 2: Create session stats subquery (to avoid N+1)
+    session_stats_subquery = (
+        select(
+            SessionModel.case_id,
+            func.count(SessionModel.id).label("total_sessions"),
+            func.max(SessionModel.session_date).label("last_session_date"),
+        )
+        .where(SessionModel.deleted_at.is_(None))
+        .group_by(SessionModel.case_id)
+        .subquery()
+    )
+
+    # Step 3: Join clients with their first case and session stats
     query = (
-        select(Client, Case)
+        select(
+            Client,
+            Case,
+            session_stats_subquery.c.total_sessions,
+            session_stats_subquery.c.last_session_date,
+        )
         .join(case_subquery, Client.id == case_subquery.c.client_id)
         .join(
             Case,
@@ -501,13 +518,14 @@ def get_client_case_list(
             & (Case.created_at == case_subquery.c.first_case_created_at)
             & (Case.deleted_at.is_(None)),
         )
+        .outerjoin(session_stats_subquery, Case.id == session_stats_subquery.c.case_id)
         .where(
             Client.tenant_id == tenant_id,
             Client.deleted_at.is_(None),
         )
     )
 
-    # Step 3: Count total items
+    # Step 4: Count total items
     count_query = select(func.count()).select_from(
         select(Client.id)
         .join(case_subquery, Client.id == case_subquery.c.client_id)
@@ -519,26 +537,15 @@ def get_client_case_list(
     )
     total = db.execute(count_query).scalar() or 0
 
-    # Step 4: Execute query with pagination
+    # Step 5: Execute query with pagination
     result = db.execute(query.offset(skip).limit(limit))
-    client_case_pairs = result.all()
+    rows = result.all()
 
-    # Step 5: Build response items
+    # Step 6: Build response items
     items = []
-    for client, case in client_case_pairs:
-        # Get session info for this case
-        session_stats = db.execute(
-            select(
-                func.count(SessionModel.id).label("total_sessions"),
-                func.max(SessionModel.session_date).label("last_session_date"),
-            ).where(
-                SessionModel.case_id == case.id,
-                SessionModel.deleted_at.is_(None),
-            )
-        ).first()
-
-        total_sessions = session_stats.total_sessions if session_stats else 0
-        last_session_date = session_stats.last_session_date if session_stats else None
+    for client, case, total_sessions, last_session_date in rows:
+        # Session stats already fetched via JOIN (no N+1 query)
+        total_sessions = total_sessions or 0
 
         # Handle status (compatible with old string data and new IntEnum)
         if isinstance(case.status, int):
@@ -583,15 +590,22 @@ def get_client_case_list(
         )
         items.append(item)
 
-    # Step 6: Sort by last_session_date (newest first, None at the end)
-    # Use timezone-aware datetime.min to avoid comparison errors
+    # Step 7: Sort by last_session_date (newest first, None at the end)
+    # Handle both timezone-aware and timezone-naive datetimes
     from datetime import timezone
 
     min_datetime = datetime.min.replace(tzinfo=timezone.utc)
-    items.sort(
-        key=lambda x: x.last_session_date if x.last_session_date else min_datetime,
-        reverse=True,
-    )
+
+    def sort_key(item):
+        if item.last_session_date is None:
+            return min_datetime
+        # Convert to timezone-aware if needed
+        dt = item.last_session_date
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+
+    items.sort(key=sort_key, reverse=True)
 
     return ClientCaseListResponse(
         items=items,
