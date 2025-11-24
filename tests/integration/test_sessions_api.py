@@ -50,7 +50,7 @@ class TestSessionsAPI:
         return {"Authorization": f"Bearer {token}"}
 
     @pytest.fixture
-    def test_case_obj(self, db_session: Session):
+    def test_case_obj(self, db_session: Session, auth_headers):
         """Create a test case for session tests"""
         from datetime import date
 

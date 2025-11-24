@@ -35,7 +35,9 @@ class CreateClientCaseRequest(BaseModel):
     gender: str = Field(..., description="性別：男/女/其他/不便透露")
     birth_date: date = Field(..., description="生日（西元年）")
     phone: str = Field(..., description="手機號碼")
-    identity_option: str = Field(..., description="身份選項（學生/社會新鮮人/轉職者/在職者/其他）")
+    identity_option: str = Field(
+        ..., description="身份選項（學生/社會新鮮人/轉職者/在職者/其他）"
+    )
     current_status: str = Field(..., description="目前現況")
 
     # Client 選填欄位
@@ -43,7 +45,9 @@ class CreateClientCaseRequest(BaseModel):
     current_job: Optional[str] = Field(None, description="您的現職（職業／年資）")
     career_status: Optional[str] = Field(None, description="職涯現況")
     has_consultation_history: Optional[str] = Field(None, description="過往諮詢經驗")
-    has_mental_health_history: Optional[str] = Field(None, description="心理或精神醫療史")
+    has_mental_health_history: Optional[str] = Field(
+        None, description="心理或精神醫療史"
+    )
     location: Optional[str] = Field(None, description="居住地區")
     notes: Optional[str] = Field(None, description="備註")
 
@@ -88,7 +92,9 @@ class ClientCaseDetailResponse(BaseModel):
     phone: str
     identity_option: str
     current_status: str
+    nickname: Optional[str] = None
     education: Optional[str] = None
+    occupation: Optional[str] = None
     current_job: Optional[str] = None
     career_status: Optional[str] = None
     has_consultation_history: Optional[str] = None
@@ -134,7 +140,9 @@ class UpdateClientCaseRequest(BaseModel):
     notes: Optional[str] = None
 
     # Case 欄位 (all optional)
-    case_status: Optional[str] = Field(None, description="個案狀態: 0=未開始, 1=進行中, 2=已完成")
+    case_status: Optional[str] = Field(
+        None, description="個案狀態: 0=未開始, 1=進行中, 2=已完成"
+    )
     case_summary: Optional[str] = None
     case_goals: Optional[str] = None
     problem_description: Optional[str] = None
@@ -154,17 +162,23 @@ class ClientCaseListItem(BaseModel):
     client_email: str = Field(..., description="客戶 Email")
 
     # Client 狀態資訊
-    identity_option: str = Field(..., description="身分選項（學生/社會新鮮人/轉職者/在職者/其他）")
+    identity_option: str = Field(
+        ..., description="身分選項（學生/社會新鮮人/轉職者/在職者/其他）"
+    )
     current_status: str = Field(..., description="當前狀況")
 
     # Case 資訊
     case_number: str = Field(..., description="個案編號")
-    case_status: int = Field(..., description="個案狀態（整數：0=未開始, 1=進行中, 2=已完成）")
+    case_status: int = Field(
+        ..., description="個案狀態（整數：0=未開始, 1=進行中, 2=已完成）"
+    )
     case_status_label: str = Field(..., description="個案狀態（中文）")
 
     # Session 資訊
     last_session_date: Optional[datetime] = Field(None, description="最後諮詢日期")
-    last_session_date_display: Optional[str] = Field(None, description="最後諮詢日期（顯示格式）")
+    last_session_date_display: Optional[str] = Field(
+        None, description="最後諮詢日期（顯示格式）"
+    )
     total_sessions: int = Field(0, description="總會談次數")
 
     # 時間戳記
@@ -338,7 +352,7 @@ def create_client_and_case(
         if existing_client:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Email {request.email} already exists for this tenant"
+                detail=f"Email {request.email} already exists for this tenant",
             )
 
         # Step 3: Create Client
@@ -388,7 +402,11 @@ def create_client_and_case(
 
         # Step 7: Return response
         # Handle status (compatible with both int and enum)
-        status_value = new_case.status if isinstance(new_case.status, int) else new_case.status.value
+        status_value = (
+            new_case.status
+            if isinstance(new_case.status, int)
+            else new_case.status.value
+        )
 
         return CreateClientCaseResponse(
             client_id=new_client.id,
@@ -408,7 +426,7 @@ def create_client_and_case(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create client and case: {str(e)}"
+            detail=f"Failed to create client and case: {str(e)}",
         )
 
 
@@ -464,10 +482,7 @@ def get_client_case_list(
     # Step 1: 查詢所有 clients 和他們的第一個 case
     # 使用 subquery 找出每個 client 的第一個 case (按 created_at 最早)
     case_subquery = (
-        select(
-            Case.client_id,
-            func.min(Case.created_at).label("first_case_created_at")
-        )
+        select(Case.client_id, func.min(Case.created_at).label("first_case_created_at"))
         .where(
             Case.tenant_id == tenant_id,
             Case.deleted_at.is_(None),
@@ -479,15 +494,12 @@ def get_client_case_list(
     # Step 2: Join clients with their first case
     query = (
         select(Client, Case)
-        .join(
-            case_subquery,
-            Client.id == case_subquery.c.client_id
-        )
+        .join(case_subquery, Client.id == case_subquery.c.client_id)
         .join(
             Case,
-            (Case.client_id == Client.id) &
-            (Case.created_at == case_subquery.c.first_case_created_at) &
-            (Case.deleted_at.is_(None))
+            (Case.client_id == Client.id)
+            & (Case.created_at == case_subquery.c.first_case_created_at)
+            & (Case.deleted_at.is_(None)),
         )
         .where(
             Client.tenant_id == tenant_id,
@@ -519,8 +531,7 @@ def get_client_case_list(
             select(
                 func.count(SessionModel.id).label("total_sessions"),
                 func.max(SessionModel.session_date).label("last_session_date"),
-            )
-            .where(
+            ).where(
                 SessionModel.case_id == case.id,
                 SessionModel.deleted_at.is_(None),
             )
@@ -539,14 +550,16 @@ def get_client_case_list(
         else:
             # Legacy string data - convert to integer
             status_map = {
-                'ACTIVE': CaseStatus.NOT_STARTED,
-                'IN_PROGRESS': CaseStatus.IN_PROGRESS,
-                'COMPLETED': CaseStatus.COMPLETED,
-                'SUSPENDED': CaseStatus.IN_PROGRESS,
-                'REFERRED': CaseStatus.COMPLETED,
-                'NOT_STARTED': CaseStatus.NOT_STARTED,
+                "ACTIVE": CaseStatus.NOT_STARTED,
+                "IN_PROGRESS": CaseStatus.IN_PROGRESS,
+                "COMPLETED": CaseStatus.COMPLETED,
+                "SUSPENDED": CaseStatus.IN_PROGRESS,
+                "REFERRED": CaseStatus.COMPLETED,
+                "NOT_STARTED": CaseStatus.NOT_STARTED,
             }
-            status_enum = status_map.get(str(case.status).upper(), CaseStatus.NOT_STARTED)
+            status_enum = status_map.get(
+                str(case.status).upper(), CaseStatus.NOT_STARTED
+            )
             status_value = status_enum.value
 
         # Build item
@@ -573,10 +586,11 @@ def get_client_case_list(
     # Step 6: Sort by last_session_date (newest first, None at the end)
     # Use timezone-aware datetime.min to avoid comparison errors
     from datetime import timezone
+
     min_datetime = datetime.min.replace(tzinfo=timezone.utc)
     items.sort(
         key=lambda x: x.last_session_date if x.last_session_date else min_datetime,
-        reverse=True
+        reverse=True,
     )
 
     return ClientCaseListResponse(
@@ -621,14 +635,14 @@ def get_client_case_detail(
         if not case:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Case {case_id} not found"
+                detail=f"Case {case_id} not found",
             )
 
         client = case.client
         if not client or client.deleted_at is not None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Client for case {case_id} not found"
+                detail=f"Client for case {case_id} not found",
             )
 
         # Get case status label
@@ -637,7 +651,9 @@ def get_client_case_detail(
             1: "進行中",
             2: "已完成",
         }
-        status_value = case.status if isinstance(case.status, int) else case.status.value
+        status_value = (
+            case.status if isinstance(case.status, int) else case.status.value
+        )
         status_label = status_labels.get(status_value, "未知")
 
         return ClientCaseDetailResponse(
@@ -651,7 +667,9 @@ def get_client_case_detail(
             phone=client.phone,
             identity_option=client.identity_option,
             current_status=client.current_status,
+            nickname=client.nickname,
             education=client.education,
+            occupation=client.occupation,
             current_job=client.current_job,
             career_status=client.career_status,
             has_consultation_history=client.has_consultation_history,
@@ -677,7 +695,7 @@ def get_client_case_detail(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get client-case detail: {str(e)}"
+            detail=f"Failed to get client-case detail: {str(e)}",
         )
 
 
@@ -705,8 +723,7 @@ def update_client_and_case(
     try:
         # Step 1: Find case by ID
         case = db.execute(
-            select(Case)
-            .where(
+            select(Case).where(
                 Case.id == case_id,
                 Case.tenant_id == tenant_id,
                 Case.deleted_at.is_(None),
@@ -716,13 +733,12 @@ def update_client_and_case(
         if not case:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Case {case_id} not found"
+                detail=f"Case {case_id} not found",
             )
 
         # Step 2: Find associated client
         client = db.execute(
-            select(Client)
-            .where(
+            select(Client).where(
                 Client.id == case.client_id,
                 Client.tenant_id == tenant_id,
                 Client.deleted_at.is_(None),
@@ -732,7 +748,7 @@ def update_client_and_case(
         if not client:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Client {case.client_id} not found"
+                detail=f"Client {case.client_id} not found",
             )
 
         # Step 3: Update Client fields (only if provided)
@@ -753,7 +769,7 @@ def update_client_and_case(
             if existing_client:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Email {request.email} already exists for another client"
+                    detail=f"Email {request.email} already exists for another client",
                 )
             client.email = request.email
             client_updated = True
@@ -808,7 +824,7 @@ def update_client_and_case(
             except (ValueError, TypeError):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid case_status: {request.case_status}. Must be 0 (未開始), 1 (進行中), or 2 (已完成)"
+                    detail=f"Invalid case_status: {request.case_status}. Must be 0 (未開始), 1 (進行中), or 2 (已完成)",
                 )
         if request.case_summary is not None:
             case.summary = request.case_summary
@@ -828,7 +844,9 @@ def update_client_and_case(
 
         # Step 6: Return response
         # Handle status (compatible with both int and enum)
-        status_value = case.status if isinstance(case.status, int) else case.status.value
+        status_value = (
+            case.status if isinstance(case.status, int) else case.status.value
+        )
 
         return CreateClientCaseResponse(
             client_id=client.id,
@@ -849,7 +867,7 @@ def update_client_and_case(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update client and case: {str(e)}"
+            detail=f"Failed to update client and case: {str(e)}",
         )
 
 
@@ -879,8 +897,7 @@ def delete_client_case(
     try:
         # Step 1: Find case by ID
         case = db.execute(
-            select(Case)
-            .where(
+            select(Case).where(
                 Case.id == case_id,
                 Case.tenant_id == tenant_id,
                 Case.deleted_at.is_(None),
@@ -890,18 +907,19 @@ def delete_client_case(
         if not case:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Case {case_id} not found"
+                detail=f"Case {case_id} not found",
             )
 
         # Step 2: Check ownership (only allow counselor to delete their own cases)
         if case.counselor_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only delete your own cases"
+                detail="You can only delete your own cases",
             )
 
         # Step 3: Soft delete (set deleted_at timestamp)
         from datetime import datetime, timezone
+
         case.deleted_at = datetime.now(timezone.utc)
 
         # Step 4: Commit
@@ -921,5 +939,5 @@ def delete_client_case(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete case: {str(e)}"
+            detail=f"Failed to delete case: {str(e)}",
         )
