@@ -32,10 +32,18 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # 7 days
 
-    # OpenAI
+    # OpenAI (用於 Embeddings, Whisper STT, RAG Chat)
     OPENAI_API_KEY: Optional[str] = "sk-test-key-for-ci"  # Override in .env
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
     OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
+
+    # Gemini / Vertex AI (主要 LLM)
+    GEMINI_PROJECT_ID: str = "groovy-iris-473015-h3"
+    GEMINI_LOCATION: str = "us-central1"
+    GEMINI_CHAT_MODEL: str = "gemini-2.5-flash"  # or "gemini-2.5-flash-lite"
+
+    # LLM Provider Selection
+    DEFAULT_LLM_PROVIDER: str = "gemini"  # "openai" or "gemini" - 預設使用 Gemini
 
     # Supabase
     SUPABASE_URL: Optional[str] = None

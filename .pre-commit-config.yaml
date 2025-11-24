@@ -66,7 +66,7 @@ repos:
     hooks:
       - id: check-secrets
         name: 🔒 Check for actual API keys and secrets
-        entry: bash -c 'if git diff --cached | grep -E "(sk-[a-zA-Z0-9]{20,}|pk-[a-zA-Z0-9]{20,}|eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}|postgresql://[^@]+:[^@]+@|postgres://[^@]+:[^@]+@|mysql://[^@]+:[^@]+@|mongodb://[^@]+:[^@]+@|['\"]password['\"]:\s*['\"][^'\"]{8,}|Bearer\s+[a-zA-Z0-9_-]{20,})"; then echo "❌ Actual secret value detected in commit!"; exit 1; fi'
+        entry: bash -c 'if git diff --cached --diff-filter=AM -- ":(exclude).env.example" | grep -E "(sk-[a-zA-Z0-9]{20,}|pk-[a-zA-Z0-9]{20,}|eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}|postgresql://[^@]+:[^@]+@|postgres://[^@]+:[^@]+@|mysql://[^@]+:[^@]+@|mongodb://[^@]+:[^@]+@|['\"]password['\"]:\s*['\"][^'\"]{8,}|Bearer\s+[a-zA-Z0-9_-]{20,})"; then echo "❌ Actual secret value detected in commit!"; exit 1; fi'
         language: system
         pass_filenames: false
         always_run: true

@@ -7,6 +7,7 @@ import httpx
 from openai import AsyncOpenAI
 
 from app.core.config import settings
+from app.services.gemini_service import gemini_service
 from app.utils.report_formatters import create_formatter
 
 logger = logging.getLogger(__name__)
@@ -15,9 +16,21 @@ logger = logging.getLogger(__name__)
 class ReportGenerationService:
     """個案報告生成服務 - 整合 RAG Agent"""
 
-    def __init__(self) -> None:
+    def __init__(self, provider: Optional[str] = None) -> None:
+        """
+        Initialize service with LLM provider
+
+        Args:
+            provider: "openai" or "gemini" (default: from settings.DEFAULT_LLM_PROVIDER)
+        """
+        self.provider = provider or settings.DEFAULT_LLM_PROVIDER
+
+        # OpenAI client (always available as fallback)
         self.openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        self.chat_model = settings.OPENAI_CHAT_MODEL or "gpt-4o-mini"
+        self.openai_model = settings.OPENAI_CHAT_MODEL or "gpt-4o-mini"
+
+        # Gemini service
+        self.gemini_service = gemini_service
 
     async def generate_report_from_transcript(
         self,
@@ -90,7 +103,10 @@ class ReportGenerationService:
             "citations_json": citations,
             "agent_id": agent_id,
             "metadata": {
-                "model": self.chat_model,
+                "provider": self.provider,
+                "model": self.gemini_service.model_name
+                if self.provider == "gemini"
+                else self.openai_model,
                 "num_citations": len(citations),
                 "num_dialogues": len(dialogue_excerpts),
             },
@@ -126,18 +142,25 @@ class ReportGenerationService:
 }}
 """
 
-        response = await self.openai_client.chat.completions.create(
-            model=self.chat_model,
-            messages=[{"role": "user", "content": parse_prompt}],
-            temperature=0.3,
-        )
+        # Use Gemini or OpenAI
+        if self.provider == "gemini":
+            response_text = await self.gemini_service.chat_completion(
+                prompt=parse_prompt,
+                temperature=0.3,
+                max_tokens=2000,
+            )
+        else:
+            response = await self.openai_client.chat.completions.create(
+                model=self.openai_model,
+                messages=[{"role": "user", "content": parse_prompt}],
+                temperature=0.3,
+            )
+            response_text = response.choices[0].message.content
+            if response_text is None:
+                return {}
 
         import json
         import re
-
-        response_text = response.choices[0].message.content
-        if response_text is None:
-            return {}
 
         try:
             return json.loads(response_text)
@@ -248,13 +271,21 @@ class ReportGenerationService:
 5. 內容直接書寫，不要用項目符號
 """
 
-        response = await self.openai_client.chat.completions.create(
-            model=self.chat_model,
-            messages=[{"role": "user", "content": report_prompt}],
-            temperature=0.6,
-        )
+        # Use Gemini or OpenAI
+        if self.provider == "gemini":
+            content = await self.gemini_service.chat_completion(
+                prompt=report_prompt,
+                temperature=0.6,
+                max_tokens=8000,
+            )
+        else:
+            response = await self.openai_client.chat.completions.create(
+                model=self.openai_model,
+                messages=[{"role": "user", "content": report_prompt}],
+                temperature=0.6,
+            )
+            content = response.choices[0].message.content
 
-        content = response.choices[0].message.content
         return content or ""
 
     async def _extract_key_dialogues(
@@ -289,18 +320,25 @@ class ReportGenerationService:
 - 挑選能展現個案核心議題、情緒狀態、或關鍵轉變的對話
 """
 
-        response = await self.openai_client.chat.completions.create(
-            model=self.chat_model,
-            messages=[{"role": "user", "content": excerpt_prompt}],
-            temperature=0.3,
-        )
+        # Use Gemini or OpenAI
+        if self.provider == "gemini":
+            response_text = await self.gemini_service.chat_completion(
+                prompt=excerpt_prompt,
+                temperature=0.3,
+                max_tokens=2000,
+            )
+        else:
+            response = await self.openai_client.chat.completions.create(
+                model=self.openai_model,
+                messages=[{"role": "user", "content": excerpt_prompt}],
+                temperature=0.3,
+            )
+            response_text = response.choices[0].message.content
+            if response_text is None:
+                return []
 
         import json
         import re
-
-        response_text = response.choices[0].message.content
-        if response_text is None:
-            return []
 
         try:
             data = json.loads(response_text)

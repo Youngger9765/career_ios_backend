@@ -1,16 +1,22 @@
 """LLM-based report quality grading system
 
-Uses OpenAI to evaluate report quality like a real supervisor would.
+Uses LLM (OpenAI or Gemini) to evaluate report quality like a real supervisor would.
 """
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from openai import AsyncOpenAI
 
+from app.core.config import settings
+from app.services.gemini_service import gemini_service
+
 
 async def grade_report_with_llm(
-    report_text: str, use_legacy: bool, client: AsyncOpenAI
+    report_text: str,
+    use_legacy: bool,
+    client: Optional[AsyncOpenAI] = None,
+    provider: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     使用 LLM 評分個案概念化報告品質
@@ -20,7 +26,8 @@ async def grade_report_with_llm(
     Args:
         report_text: 完整的概念化報告文字
         use_legacy: True = 舊版5段式, False = 新版10段式
-        client: OpenAI async client
+        client: OpenAI async client (optional, for backward compatibility)
+        provider: "openai" or "gemini" (default: from settings.DEFAULT_LLM_PROVIDER)
 
     Returns:
         dict: {
@@ -133,24 +140,51 @@ async def grade_report_with_llm(
 }}
 """
 
-    try:
-        response = await client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "你是職涯諮商領域的資深督導，擅長評估個案概念化報告的品質。你的評分客觀、嚴謹，能提供具體且有建設性的回饋。",
-                },
-                {"role": "user", "content": grading_prompt},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3,  # 較低的溫度確保評分一致性
-        )
+    # Determine provider
+    if provider is None:
+        provider = settings.DEFAULT_LLM_PROVIDER
 
-        content = response.choices[0].message.content
-        if content is None:
-            raise ValueError("OpenAI response content is None")
-        result = json.loads(content)
+    try:
+        # Use Gemini or OpenAI
+        if provider == "gemini":
+            # Add JSON instruction to prompt for Gemini
+            full_prompt = f"""你是職涯諮商領域的資深督導，擅長評估個案概念化報告的品質。你的評分客觀、嚴謹，能提供具體且有建設性的回饋。
+
+{grading_prompt}
+
+重要：請確保回應是有效的 JSON 格式。"""
+
+            response_text = await gemini_service.chat_completion(
+                prompt=full_prompt,
+                temperature=0.3,
+                max_tokens=4000,
+                response_format={"type": "json_object"},
+            )
+            result = json.loads(response_text)
+        else:
+            # OpenAI path
+            if client is None:
+                from openai import AsyncOpenAI
+
+                client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+
+            response = await client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "你是職涯諮商領域的資深督導，擅長評估個案概念化報告的品質。你的評分客觀、嚴謹，能提供具體且有建設性的回饋。",
+                    },
+                    {"role": "user", "content": grading_prompt},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+            )
+
+            content = response.choices[0].message.content
+            if content is None:
+                raise ValueError("OpenAI response content is None")
+            result = json.loads(content)
 
         # 確保所有必要欄位都存在
         required_fields = [

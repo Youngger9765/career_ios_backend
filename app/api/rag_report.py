@@ -81,7 +81,7 @@ def format_report_as_markdown(report: dict) -> str:
 class ReportRequest(BaseModel):
     transcript: str
     num_participants: int = 2
-    rag_system: str = "openai"  # "openai" or "gemini"
+    rag_system: str = "gemini"  # "openai" or "gemini" - 預設使用 Gemini
     top_k: int = 7
     similarity_threshold: float = 0.25  # Lowered from 0.5 to 0.25 for better recall
     output_format: str = "json"  # "json", "html", or "markdown"
@@ -469,7 +469,11 @@ async def generate_report(
                 md_result["quality_summary"] = quality_summary
             return md_result
         else:  # json (default)
-            json_result: dict[str, object] = {"mode": request.mode, "report": report, "format": "json"}
+            json_result: dict[str, object] = {
+                "mode": request.mode,
+                "report": report,
+                "format": "json",
+            }
             if quality_summary:
                 json_result["quality_summary"] = quality_summary
             return json_result
