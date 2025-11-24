@@ -2,14 +2,14 @@
 Integration tests for authentication API
 TDD - Write tests first
 """
-import pytest
+from uuid import uuid4
+
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
 from app.main import app
 from app.models.counselor import Counselor
-from uuid import uuid4
 
 
 class TestAuthAPI:
@@ -36,7 +36,11 @@ class TestAuthAPI:
             # Attempt login
             response = client.post(
                 "/api/auth/login",
-                json={"email": "test@example.com", "password": "password123", "tenant_id": "career"},
+                json={
+                    "email": "test@example.com",
+                    "password": "password123",
+                    "tenant_id": "career",
+                },
             )
 
             assert response.status_code == 200
@@ -67,22 +71,34 @@ class TestAuthAPI:
             # Attempt login with wrong password
             response = client.post(
                 "/api/auth/login",
-                json={"email": "test@example.com", "password": "wrong_password", "tenant_id": "career"},
+                json={
+                    "email": "test@example.com",
+                    "password": "wrong_password",
+                    "tenant_id": "career",
+                },
             )
 
             assert response.status_code == 401
-            assert response.json()["detail"] == "Incorrect email, password, or tenant ID"
+            assert (
+                response.json()["detail"] == "Incorrect email, password, or tenant ID"
+            )
 
-    def test_login_nonexistent_user(self):
+    def test_login_nonexistent_user(self, db_session: Session):
         """Test login with nonexistent email returns 401"""
         with TestClient(app) as client:
             response = client.post(
                 "/api/auth/login",
-                json={"email": "nonexistent@example.com", "password": "password123", "tenant_id": "career"},
+                json={
+                    "email": "nonexistent@example.com",
+                    "password": "password123",
+                    "tenant_id": "career",
+                },
             )
 
             assert response.status_code == 401
-            assert response.json()["detail"] == "Incorrect email, password, or tenant ID"
+            assert (
+                response.json()["detail"] == "Incorrect email, password, or tenant ID"
+            )
 
     def test_login_inactive_user(self, db_session: Session):
         """Test login with inactive account returns 403"""
@@ -103,7 +119,11 @@ class TestAuthAPI:
 
             response = client.post(
                 "/api/auth/login",
-                json={"email": "inactive@example.com", "password": "password123", "tenant_id": "career"},
+                json={
+                    "email": "inactive@example.com",
+                    "password": "password123",
+                    "tenant_id": "career",
+                },
             )
 
             assert response.status_code == 403
@@ -129,7 +149,11 @@ class TestAuthAPI:
             # Login to get token
             login_response = client.post(
                 "/api/auth/login",
-                json={"email": "me@example.com", "password": "password123", "tenant_id": "career"},
+                json={
+                    "email": "me@example.com",
+                    "password": "password123",
+                    "tenant_id": "career",
+                },
             )
             token = login_response.json()["access_token"]
 
@@ -185,7 +209,11 @@ class TestAuthAPI:
             # Login to get token
             login_response = client.post(
                 "/api/auth/login",
-                json={"email": "update@example.com", "password": "password123", "tenant_id": "career"},
+                json={
+                    "email": "update@example.com",
+                    "password": "password123",
+                    "tenant_id": "career",
+                },
             )
             token = login_response.json()["access_token"]
 
