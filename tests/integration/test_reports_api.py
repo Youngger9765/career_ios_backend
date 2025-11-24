@@ -105,19 +105,33 @@ class TestReportsAPI:
         self, db_session: Session, auth_headers, test_session_obj
     ):
         """Test GET /api/v1/reports - List all reports"""
+        # Get related entities
+        case = db_session.query(Case).filter_by(id=test_session_obj.case_id).first()
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-reports@test.com")
+            .first()
+        )
+
         # Create test reports
         report1 = Report(
             id=uuid4(),
             session_id=test_session_obj.id,
+            client_id=case.client_id,
+            created_by_id=counselor.id,
+            tenant_id="career",
             content_json={},
-            formatted_markdown="# 報告1",
+            content_markdown="# 報告1",
             status=ReportStatus.DRAFT,
         )
         report2 = Report(
             id=uuid4(),
             session_id=test_session_obj.id,
+            client_id=case.client_id,
+            created_by_id=counselor.id,
+            tenant_id="career",
             content_json={},
-            formatted_markdown="# 報告2",
+            content_markdown="# 報告2",
             status=ReportStatus.FINAL,
         )
         db_session.add_all([report1, report2])
@@ -139,11 +153,22 @@ class TestReportsAPI:
         self, db_session: Session, auth_headers, test_session_obj
     ):
         """Test GET /api/v1/reports?session_id=xxx - Filter by session"""
+        # Get related entities
+        case = db_session.query(Case).filter_by(id=test_session_obj.case_id).first()
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-reports@test.com")
+            .first()
+        )
+
         report = Report(
             id=uuid4(),
             session_id=test_session_obj.id,
+            client_id=case.client_id,
+            created_by_id=counselor.id,
+            tenant_id="career",
             content_json={},
-            formatted_markdown="# 測試報告",
+            content_markdown="# 測試報告",
             status=ReportStatus.DRAFT,
         )
         db_session.add(report)
@@ -165,11 +190,22 @@ class TestReportsAPI:
         self, db_session: Session, auth_headers, test_session_obj
     ):
         """Test GET /api/v1/reports/{id} - Get report details"""
+        # Get related entities
+        case = db_session.query(Case).filter_by(id=test_session_obj.case_id).first()
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-reports@test.com")
+            .first()
+        )
+
         test_report = Report(
             id=uuid4(),
             session_id=test_session_obj.id,
+            client_id=case.client_id,
+            created_by_id=counselor.id,
+            tenant_id="career",
             content_json={"summary": "報告摘要"},
-            formatted_markdown="# 完整報告內容",
+            content_markdown="# 完整報告內容",
             status=ReportStatus.FINAL,
         )
         db_session.add(test_report)
@@ -203,11 +239,22 @@ class TestReportsAPI:
         self, db_session: Session, auth_headers, test_session_obj
     ):
         """Test PATCH /api/v1/reports/{id} - Update report (iOS only)"""
+        # Get related entities
+        case = db_session.query(Case).filter_by(id=test_session_obj.case_id).first()
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-reports@test.com")
+            .first()
+        )
+
         test_report = Report(
             id=uuid4(),
             session_id=test_session_obj.id,
+            client_id=case.client_id,
+            created_by_id=counselor.id,
+            tenant_id="career",
             content_json={"summary": "原始摘要"},
-            formatted_markdown="# 原始內容",
+            content_markdown="# 原始內容",
             status=ReportStatus.DRAFT,
         )
         db_session.add(test_report)
@@ -245,13 +292,24 @@ class TestReportsAPI:
 
     def test_pagination(self, db_session: Session, auth_headers, test_session_obj):
         """Test pagination parameters (skip, limit)"""
+        # Get related entities
+        case = db_session.query(Case).filter_by(id=test_session_obj.case_id).first()
+        counselor = (
+            db_session.query(Counselor)
+            .filter_by(email="counselor-reports@test.com")
+            .first()
+        )
+
         # Create multiple reports
         for i in range(5):
             report = Report(
                 id=uuid4(),
                 session_id=test_session_obj.id,
+                client_id=case.client_id,
+                created_by_id=counselor.id,
+                tenant_id="career",
                 content_json={},
-                formatted_markdown=f"# 報告{i}",
+                content_markdown=f"# 報告{i}",
                 status=ReportStatus.DRAFT,
             )
             db_session.add(report)
