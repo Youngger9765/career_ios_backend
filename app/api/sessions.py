@@ -27,7 +27,7 @@ def aggregate_transcript_from_recordings(recordings: list) -> str:
     從 recordings 聚合完整逐字稿
 
     Args:
-        recordings: 錄音片段列表，每個包含 transcript_text
+        recordings: 錄音片段列表，可以是 dict 或 Pydantic 對象
 
     Returns:
         聚合後的完整逐字稿
@@ -35,15 +35,24 @@ def aggregate_transcript_from_recordings(recordings: list) -> str:
     if not recordings:
         return ""
 
-    # 按 segment_number 排序（如果有的話）
-    sorted_recordings = sorted(recordings, key=lambda r: r.get("segment_number", 0))
+    # 按 segment_number 排序（支援 dict 或 Pydantic 對象）
+    def get_segment_number(r):
+        if isinstance(r, dict):
+            return r.get("segment_number", 0)
+        else:
+            return getattr(r, "segment_number", 0)
 
-    # 聚合所有 transcript_text
-    transcripts = [
-        r.get("transcript_text", "")
-        for r in sorted_recordings
-        if r.get("transcript_text")
-    ]
+    sorted_recordings = sorted(recordings, key=get_segment_number)
+
+    # 聚合所有 transcript_text（支援 dict 或 Pydantic 對象）
+    transcripts = []
+    for r in sorted_recordings:
+        if isinstance(r, dict):
+            text = r.get("transcript_text", "")
+        else:
+            text = getattr(r, "transcript_text", "")
+        if text:
+            transcripts.append(text)
 
     # 用兩個換行符分隔不同段落
     return "\n\n".join(transcripts)
@@ -341,6 +350,16 @@ def create_session(
             # 使用直接提供的 transcript（向下兼容）
             full_transcript = request.transcript
 
+        # 轉換 Pydantic 對象為 dict（用於 JSON 儲存）
+        recordings_dicts = []
+        if recordings_list:
+            for r in recordings_list:
+                if isinstance(r, dict):
+                    recordings_dicts.append(r)
+                else:
+                    # Pydantic 對象轉 dict
+                    recordings_dicts.append(r.model_dump())
+
         # 創建 Session
         session = Session(
             case_id=case.id,
@@ -355,7 +374,7 @@ def create_session(
             duration_minutes=request.duration_minutes,
             notes=request.notes,
             reflection=request.reflection or {},
-            recordings=recordings_list,
+            recordings=recordings_dicts,
         )
         db.add(session)
         db.commit()
@@ -978,12 +997,9 @@ def delete_session(
 
 # Reflection CRUD Endpoints
 class ReflectionRequest(BaseModel):
-    """諮商師反思請求"""
+    """諮商師反思請求 - 支援彈性 JSON 格式"""
 
-    working_with_client: Optional[str] = None
-    feeling_source: Optional[str] = None
-    current_challenges: Optional[str] = None
-    supervision_topics: Optional[str] = None
+    reflection: dict  # 彈性支援任意 JSON 格式的反思內容
 
 
 class ReflectionResponse(BaseModel):
@@ -1088,18 +1104,8 @@ def update_reflection(
     session, _ = row
 
     try:
-        # Build reflection dict from request
-        reflection = {}
-        if reflection_data.working_with_client:
-            reflection["working_with_client"] = reflection_data.working_with_client
-        if reflection_data.feeling_source:
-            reflection["feeling_source"] = reflection_data.feeling_source
-        if reflection_data.current_challenges:
-            reflection["current_challenges"] = reflection_data.current_challenges
-        if reflection_data.supervision_topics:
-            reflection["supervision_topics"] = reflection_data.supervision_topics
-
-        session.reflection = reflection
+        # 直接使用請求中的 reflection dict（支援彈性格式）
+        session.reflection = reflection_data.reflection
         db.commit()
         db.refresh(session)
 

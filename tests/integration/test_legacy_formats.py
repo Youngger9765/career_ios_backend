@@ -1,12 +1,25 @@
 """
 Integration tests for 5-section (legacy) report formats
 Tests JSON, HTML, and Markdown output formats
+
+NOTE: These tests require OpenAI API key and are skipped by default.
+Run with: pytest --run-rag tests/integration/test_legacy_formats.py
 """
+
 
 import pytest
 from httpx import AsyncClient
 
-pytestmark = [pytest.mark.asyncio, pytest.mark.slow, pytest.mark.integration]
+# Skip these tests by default (require OpenAI API key and make real API calls)
+# To run: OPENAI_API_KEY=xxx pytest tests/integration/test_legacy_formats.py
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.slow,
+    pytest.mark.integration,
+    pytest.mark.skip(
+        reason="Requires OpenAI API key and makes real API calls - skip in CI"
+    ),
+]
 
 # Sample transcript for testing
 SAMPLE_TRANSCRIPT = """Co: 你好，今天想聊什麼？
@@ -38,9 +51,9 @@ class TestLegacyJSON:
                 "rag_system": "openai",
                 "num_participants": 2,
                 "top_k": 7,
-                "similarity_threshold": 0.25
+                "similarity_threshold": 0.25,
             },
-            timeout=120.0
+            timeout=120.0,
         )
 
         assert response.status_code == 200
@@ -67,7 +80,10 @@ class TestLegacyJSON:
         assert "【成因分析】" in conceptualization
         assert "【晤談目標" in conceptualization
         assert "【介入策略】" in conceptualization
-        assert "【成效評估】" in conceptualization or "【目前成效評估】" in conceptualization
+        assert (
+            "【成效評估】" in conceptualization
+            or "【目前成效評估】" in conceptualization
+        )
 
         # Verify theories were retrieved
         assert "theories" in report
@@ -100,9 +116,9 @@ class TestLegacyHTML:
                 "rag_system": "openai",
                 "num_participants": 2,
                 "top_k": 5,
-                "similarity_threshold": 0.25
+                "similarity_threshold": 0.25,
             },
-            timeout=120.0
+            timeout=120.0,
         )
 
         assert response.status_code == 200
@@ -146,9 +162,9 @@ class TestLegacyMarkdown:
                 "rag_system": "openai",
                 "num_participants": 2,
                 "top_k": 5,
-                "similarity_threshold": 0.25
+                "similarity_threshold": 0.25,
             },
-            timeout=120.0
+            timeout=120.0,
         )
 
         assert response.status_code == 200
