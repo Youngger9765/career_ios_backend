@@ -132,7 +132,7 @@ class TestReportsAPI:
             tenant_id="career",
             content_json={},
             content_markdown="# 報告2",
-            status=ReportStatus.FINAL,
+            status=ReportStatus.APPROVED,
         )
         db_session.add_all([report1, report2])
         db_session.commit()
@@ -206,7 +206,7 @@ class TestReportsAPI:
             tenant_id="career",
             content_json={"summary": "報告摘要"},
             content_markdown="# 完整報告內容",
-            status=ReportStatus.FINAL,
+            status=ReportStatus.APPROVED,
         )
         db_session.add(test_report)
         db_session.commit()
@@ -220,7 +220,7 @@ class TestReportsAPI:
             assert response.status_code == 200
             data = response.json()
             assert data["id"] == str(test_report.id)
-            assert data["status"] == "final"
+            assert data["status"] == "APPROVED"
             assert "content_markdown" in data
 
     def test_get_report_not_found(self, db_session: Session, auth_headers):
@@ -265,10 +265,7 @@ class TestReportsAPI:
                 f"/api/v1/reports/{test_report.id}",
                 headers=auth_headers,
                 json={
-                    "edited_content_json": {
-                        "summary": "更新後的摘要",
-                        "key_points": ["要點1", "要點2"],
-                    }
+                    "edited_content_markdown": "# 更新後的報告\n\n## 摘要\n更新後的摘要內容"
                 },
             )
 
@@ -285,7 +282,7 @@ class TestReportsAPI:
             response = client.patch(
                 f"/api/v1/reports/{fake_id}",
                 headers=auth_headers,
-                json={"edited_content_json": {}},
+                json={"edited_content_markdown": "# 測試"},
             )
 
             assert response.status_code == 404
