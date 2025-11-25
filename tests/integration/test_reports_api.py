@@ -2,6 +2,7 @@
 Integration tests for Reports API
 TDD - Write tests first, then implement
 """
+import os
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -16,6 +17,12 @@ from app.models.client import Client
 from app.models.counselor import Counselor
 from app.models.report import Report, ReportStatus
 from app.models.session import Session as SessionModel
+
+# Skip expensive background task tests unless on main branch
+skip_expensive = pytest.mark.skipif(
+    not os.getenv("RUN_EXPENSIVE_TESTS") and os.getenv("CI_BRANCH") != "main",
+    reason="Expensive background task tests - only run on main branch or with RUN_EXPENSIVE_TESTS=1",
+)
 
 
 class TestReportsAPI:
@@ -333,6 +340,7 @@ class TestReportsAPI:
             data = response.json()
             assert len(data["items"]) <= 2
 
+    @skip_expensive
     def test_generate_report_success(
         self, db_session: Session, auth_headers, test_session_obj
     ):
@@ -355,6 +363,7 @@ class TestReportsAPI:
             assert data["report"]["status"] == "processing"
             assert data["quality_summary"] is None  # Processing, not ready yet
 
+    @skip_expensive
     def test_generate_report_with_gemini(
         self, db_session: Session, auth_headers, test_session_obj
     ):
