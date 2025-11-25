@@ -43,9 +43,27 @@ jobs:
       run: |
         poetry run ruff check app/
 
-    - name: Run integration tests (API verification)
+    - name: Set CI branch environment variable
       run: |
-        poetry run pytest tests/integration/ -v --ignore=tests/integration/test_rwd_mobile_playwright.py
+        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          echo "CI_BRANCH=main" >> $GITHUB_ENV
+        else
+          echo "CI_BRANCH=staging" >> $GITHUB_ENV
+        fi
+
+    - name: Run integration tests (API verification)
+      env:
+        CI_BRANCH: ${{ env.CI_BRANCH }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        if [ "$CI_BRANCH" == "main" ]; then
+          echo "🔍 Running COMPLETE tests on main branch (includes expensive RAG tests)"
+          poetry run pytest tests/integration/ -v -ra --ignore=tests/integration/test_rwd_mobile_playwright.py
+        else
+          echo "⚡ Running FAST tests on staging branch (skips expensive RAG tests)"
+          echo "ℹ️  Expensive tests will be marked as SKIPPED and shown in summary"
+          poetry run pytest tests/integration/ -v -rs --ignore=tests/integration/test_rwd_mobile_playwright.py
+        fi
 
   deploy:
     name: Deploy to Cloud Run

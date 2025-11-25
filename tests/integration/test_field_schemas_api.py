@@ -86,3 +86,34 @@ class TestFieldSchemasAPI:
             response = client.get("/api/v1/ui/field-schemas/case")
 
             assert response.status_code == 403
+
+    def test_get_client_case_field_schema_success(
+        self, db_session: Session, auth_headers
+    ):
+        """Test GET /api/v1/ui/field-schemas/client-case - Get combined client-case field schema"""
+        with TestClient(app) as client:
+            response = client.get(
+                "/api/v1/ui/field-schemas/client-case",
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            # Should return combined schema with both client and case
+            assert "client" in data
+            assert "case" in data
+            assert "tenant_id" in data
+            assert data["tenant_id"] == "career"
+            # Verify client schema structure
+            assert data["client"]["form_type"] == "client"
+            assert "sections" in data["client"]
+            # Verify case schema structure
+            assert data["case"]["form_type"] == "case"
+            assert "sections" in data["case"]
+
+    def test_get_client_case_field_schema_unauthorized(self):
+        """Test getting client-case schema without auth returns 403"""
+        with TestClient(app) as client:
+            response = client.get("/api/v1/ui/field-schemas/client-case")
+
+            assert response.status_code == 403

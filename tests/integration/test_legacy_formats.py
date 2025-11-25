@@ -2,23 +2,32 @@
 Integration tests for 5-section (legacy) report formats
 Tests JSON, HTML, and Markdown output formats
 
-NOTE: These tests require OpenAI API key and are skipped by default.
-Run with: pytest --run-rag tests/integration/test_legacy_formats.py
+NOTE: These tests require OpenAI API key and are expensive.
+- Skipped in staging/feature branches (fast CI)
+- Run in main branch (complete validation before production)
+
+To run manually: OPENAI_API_KEY=xxx pytest tests/integration/test_legacy_formats.py
 """
 
+
+import os
 
 import pytest
 from httpx import AsyncClient
 
-# Skip these tests by default (require OpenAI API key and make real API calls)
-# To run: OPENAI_API_KEY=xxx pytest tests/integration/test_legacy_formats.py
+# Skip expensive RAG tests unless:
+# 1. Explicitly enabled with --run-expensive flag
+# 2. Running on main branch (complete validation)
+skip_expensive = pytest.mark.skipif(
+    not os.getenv("RUN_EXPENSIVE_TESTS") and os.getenv("CI_BRANCH") != "main",
+    reason="Expensive RAG tests - only run on main branch or with RUN_EXPENSIVE_TESTS=1",
+)
+
 pytestmark = [
     pytest.mark.asyncio,
     pytest.mark.slow,
     pytest.mark.integration,
-    pytest.mark.skip(
-        reason="Requires OpenAI API key and makes real API calls - skip in CI"
-    ),
+    skip_expensive,
 ]
 
 # Sample transcript for testing
