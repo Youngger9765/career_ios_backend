@@ -1,0 +1,30 @@
+{
+  "hooks": [
+    {
+      "matcher": "*",
+      "hooks": [
+        {
+          "eventName": "UserPromptSubmit",
+          "type": "command",
+          "command": "./.claude/hooks/check-agent-rules.py",
+          "timeout": 5,
+          "description": "Check if task requires agent-manager for TDD compliance"
+        }
+      ]
+    }
+  ],
+  "projectName": "Career iOS Backend",
+  "defaultBranch": "staging",
+  "testCommand": "poetry run pytest tests/integration/ -v",
+  "lintCommand": "poetry run ruff check app/",
+  "formatCommand": "poetry run ruff format app/",
+  "deploymentNotes": {
+    "staging": "Auto-deploy on push to staging branch",
+    "production": "Manual approval required"
+  },
+  "tddrules": {
+    "enforced": true,
+    "requireTests": true,
+    "testFirst": true
+  }
+}
