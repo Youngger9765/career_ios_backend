@@ -196,40 +196,15 @@ if "session" in user_prompt and ("name" in user_prompt or "title" in user_prompt
 
 # If it's a task and not simple, enforce agent-manager
 if is_task and not is_simple:
+    detected_keywords = [kw for kw in task_keywords if kw in user_prompt][
+        :3
+    ]  # 只顯示前3個
     print(
-        """
-🎬 CRITICAL: TASK DETECTED → MUST USE AGENT-MANAGER
-
-⚠️  MANDATORY ACTION REQUIRED:
-   ```python
-   Task(
-       subagent_type="agent-manager",
-       description="<brief task description>",
-       prompt="<detailed task explanation>"
-   )
-   ```
-
-🚫 DO NOT:
-   - Directly use Read/Edit/Write tools
-   - Handle the task in main context
-   - Skip TDD workflow
-
-✅ AGENT-MANAGER WILL:
-   1. Analyze task requirements
-   2. Route to appropriate subagent:
-      - New features → tdd-orchestrator
-      - Bug fixes → test-runner + code-generator
-      - Reviews → code-reviewer
-      - Tests → test-writer
-   3. Ensure TDD compliance
-   4. Maintain code quality
-
-📊 Task Keywords Detected: """
-        + str([kw for kw in task_keywords if kw in user_prompt])
-        + """
-
-⏰ EXECUTE IMMEDIATELY - No further analysis needed in main context!
-"""
+        f"""
+🎬 TASK DETECTED → USE AGENT-MANAGER
+   Keywords: {detected_keywords}
+   Action: Task(subagent_type="agent-manager", description="...", prompt="...")
+   """
     )
 
     # Special TDD reminder for feature additions
