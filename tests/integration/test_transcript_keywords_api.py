@@ -100,8 +100,7 @@ class TestTranscriptKeywordsAPI:
                     "phone": "0912345678",
                     "identity_option": "在職者",
                     "current_status": "工作壓力大",
-                    "background": "工作壓力大，情緒困擾",
-                    "main_issues": "焦慮、壓力",
+                    "notes": "工作壓力大，情緒困擾，焦慮、壓力",
                 },
             )
             if client_response.status_code != 201:
@@ -117,8 +116,8 @@ class TestTranscriptKeywordsAPI:
                 headers=auth_headers,
                 json={
                     "client_id": client_id,
-                    "goal": "減輕工作壓力",
-                    "expectations": "學習壓力管理技巧",
+                    "goals": "減輕工作壓力",
+                    "problem_description": "學習壓力管理技巧",
                 },
             )
             assert case_response.status_code == 201

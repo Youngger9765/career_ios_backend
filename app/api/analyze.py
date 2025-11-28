@@ -58,31 +58,31 @@ async def analyze_transcript_keywords(
 
     # Load client profile if requested
     if request.context.include_client_profile:
-        result = await db.execute(select(Client).where(Client.id == request.client_id))
+        result = db.execute(select(Client).where(Client.id == request.client_id))
         client = result.scalar_one_or_none()
 
         if not client:
             raise HTTPException(status_code=404, detail="Client not found")
 
         client_info = f"案主資訊: {client.name}"
-        if client.background:
-            client_info += f", 背景: {client.background}"
-        if client.main_issues:
-            client_info += f", 主要議題: {client.main_issues}"
+        if client.current_status:
+            client_info += f", 當前狀況: {client.current_status}"
+        if client.notes:
+            client_info += f", 備註: {client.notes}"
 
         context_parts.append(client_info)
 
     # Load case goals if requested
     if request.context.include_case_goals:
-        result = await db.execute(select(Case).where(Case.id == request.case_id))
+        result = db.execute(select(Case).where(Case.id == request.case_id))
         case = result.scalar_one_or_none()
 
         if not case:
             raise HTTPException(status_code=404, detail="Case not found")
 
-        case_info = f"案例目標: {case.goal or '未設定'}"
-        if case.expectations:
-            case_info += f", 期待成果: {case.expectations}"
+        case_info = f"案例目標: {case.goals or '未設定'}"
+        if case.problem_description:
+            case_info += f", 問題敘述: {case.problem_description}"
 
         context_parts.append(case_info)
 
