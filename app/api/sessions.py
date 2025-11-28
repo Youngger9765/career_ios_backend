@@ -58,6 +58,58 @@ def aggregate_transcript_from_recordings(recordings: list) -> str:
     return "\n\n".join(transcripts)
 
 
+def calculate_session_timerange_from_recordings(recordings: list) -> tuple:
+    """
+    從 recordings 計算 session 的時間範圍
+
+    Args:
+        recordings: 錄音片段列表，可以是 dict 或 Pydantic 對象
+
+    Returns:
+        (start_time, end_time) - 最早開始時間和最晚結束時間，如果沒有 recordings 則返回 (None, None)
+    """
+    if not recordings:
+        return None, None
+
+    start_times = []
+    end_times = []
+
+    for r in recordings:
+        # 處理 start_time
+        if isinstance(r, dict):
+            start_str = r.get("start_time")
+            end_str = r.get("end_time")
+        else:
+            start_str = getattr(r, "start_time", None)
+            end_str = getattr(r, "end_time", None)
+
+        if start_str:
+            # 解析時間字串為 datetime
+            if isinstance(start_str, str):
+                start_dt = datetime.fromisoformat(start_str.replace(" ", "T"))
+                if start_dt.tzinfo is None:
+                    start_dt = start_dt.replace(tzinfo=timezone.utc)
+                start_times.append(start_dt)
+            elif isinstance(start_str, datetime):
+                start_times.append(start_str)
+
+        if end_str:
+            # 解析時間字串為 datetime
+            if isinstance(end_str, str):
+                end_dt = datetime.fromisoformat(end_str.replace(" ", "T"))
+                if end_dt.tzinfo is None:
+                    end_dt = end_dt.replace(tzinfo=timezone.utc)
+                end_times.append(end_dt)
+            elif isinstance(end_str, datetime):
+                end_times.append(end_str)
+
+    # 找出最早開始和最晚結束
+    session_start = min(start_times) if start_times else None
+    session_end = max(end_times) if end_times else None
+
+    return session_start, session_end
+
+
 # Schemas
 class RecordingSegment(BaseModel):
     """錄音片段"""
@@ -124,6 +176,7 @@ class SessionCreateRequest(BaseModel):
 
     case_id: UUID
     session_date: str  # YYYY-MM-DD
+    name: Optional[str] = None  # 會談名稱（可選，最大 255 字元）
     start_time: Optional[str] = None  # YYYY-MM-DD HH:MM
     end_time: Optional[str] = None  # YYYY-MM-DD HH:MM
     transcript: Optional[str] = None  # 與 recordings 二選一
@@ -175,6 +228,7 @@ class SessionUpdateRequest(BaseModel):
     """
 
     session_date: Optional[str] = None  # YYYY-MM-DD
+    name: Optional[str] = None  # 會談名稱（可選，最大 255 字元）
     start_time: Optional[str] = None  # YYYY-MM-DD HH:MM
     end_time: Optional[str] = None  # YYYY-MM-DD HH:MM
     transcript: Optional[str] = None
@@ -201,6 +255,7 @@ class SessionResponse(BaseModel):
     case_id: UUID
     session_number: int
     session_date: datetime
+    name: Optional[str] = None  # 會談名稱（可選）
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     transcript_text: Optional[str] = None  # 完整逐字稿（自動從 recordings 聚合）
@@ -360,12 +415,25 @@ def create_session(
                     # Pydantic 對象轉 dict
                     recordings_dicts.append(r.model_dump())
 
+        # 如果有 recordings，自動計算 session 時間範圍（覆蓋手動設定的值）
+        if recordings_dicts:
+            (
+                calculated_start,
+                calculated_end,
+            ) = calculate_session_timerange_from_recordings(recordings_dicts)
+            if calculated_start:
+                start_time = calculated_start
+            if calculated_end:
+                end_time = calculated_end
+        # 如果沒有 recordings 但有手動設定的時間，保留手動設定的值
+
         # 創建 Session
         session = Session(
             case_id=case.id,
             tenant_id=tenant_id,
             session_number=session_number,
             session_date=new_session_date,
+            name=request.name,
             start_time=start_time,
             end_time=end_time,
             transcript_text=full_transcript,
@@ -398,6 +466,7 @@ def create_session(
             case_id=case.id,
             session_number=session.session_number,
             session_date=session.session_date,
+            name=session.name,
             start_time=session.start_time,
             end_time=session.end_time,
             transcript_text=session.transcript_text,
@@ -504,6 +573,7 @@ def list_sessions(
                 case_id=case.id,
                 session_number=session.session_number,
                 session_date=session.session_date,
+                name=session.name,
                 start_time=session.start_time,
                 end_time=session.end_time,
                 transcript_text=session.transcript_text,
@@ -694,6 +764,7 @@ def get_session(
         case_id=case.id,
         session_number=session.session_number,
         session_date=session.session_date,
+        name=session.name,
         start_time=session.start_time,
         end_time=session.end_time,
         transcript_text=session.transcript_text,
@@ -808,11 +879,28 @@ def update_session(
                 )
                 session.transcript_text = full_transcript
                 session.transcript_sanitized = full_transcript
+
+                # 重新計算 session 時間範圍（從更新後的 recordings）
+                (
+                    calculated_start,
+                    calculated_end,
+                ) = calculate_session_timerange_from_recordings(request.recordings)
+                if calculated_start:
+                    session.start_time = calculated_start
+                    time_changed = False  # 由 recordings 計算的時間不算是手動更改
+                if calculated_end:
+                    session.end_time = calculated_end
+                    time_changed = False  # 由 recordings 計算的時間不算是手動更改
         elif request.transcript is not None:
             # 直接更新 transcript（向下兼容）
             session.transcript_text = request.transcript
             session.transcript_sanitized = request.transcript
 
+        # Handle name field - Always update if provided in request (even if None)
+        # Use exclude_unset to check if field was explicitly provided
+        update_data = request.model_dump(exclude_unset=True)
+        if "name" in update_data:
+            session.name = update_data["name"]
         if request.notes is not None:
             session.notes = request.notes
 
@@ -894,6 +982,7 @@ def update_session(
             case_id=case.id,
             session_number=session.session_number,
             session_date=session.session_date,
+            name=session.name,
             start_time=session.start_time,
             end_time=session.end_time,
             transcript_text=session.transcript_text,
@@ -1230,6 +1319,15 @@ def append_recording(
         full_transcript = aggregate_transcript_from_recordings(existing_recordings)
         session.transcript_text = full_transcript
         session.transcript_sanitized = full_transcript
+
+        # 自動計算並更新 session 的時間範圍（從所有 recordings）
+        session_start, session_end = calculate_session_timerange_from_recordings(
+            existing_recordings
+        )
+        if session_start:
+            session.start_time = session_start
+        if session_end:
+            session.end_time = session_end
 
         # 保存變更
         db.commit()

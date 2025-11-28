@@ -14,6 +14,7 @@ class Session(Base, BaseModel):
     tenant_id = Column(String, nullable=False, index=True)
     session_number = Column(Integer, nullable=False)
     session_date = Column(DateTime(timezone=True), nullable=False)
+    name = Column(String(255), nullable=True)  # 會談名稱（可選）
     start_time = Column(DateTime(timezone=True))  # 開始時間
     end_time = Column(DateTime(timezone=True))  # 結束時間
     duration_minutes = Column(Integer)  # 保留向下兼容
@@ -32,7 +33,9 @@ class Session(Base, BaseModel):
     notes = Column(Text)
     key_points = Column(Text)
     summary = Column(Text)  # 會談摘要（100字內，用於歷程展示，AI 生成）
-    reflection = Column(JSON, default=dict)  # 諮商師反思（人類撰寫，格式彈性以支援不同租戶需求）
+    reflection = Column(
+        JSON, default=dict
+    )  # 諮商師反思（人類撰寫，格式彈性以支援不同租戶需求）
 
     # Recordings - 會談逐字稿片段（JSON list）
     # 支援會談中斷後繼續的場景，每個 recording 包含：
