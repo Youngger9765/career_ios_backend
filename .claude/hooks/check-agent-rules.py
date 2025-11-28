@@ -19,46 +19,49 @@ except (json.JSONDecodeError, AttributeError):
 # TASK DETECTION PATTERNS
 # ========================================
 
-# Core task patterns using regex for efficiency
-TASK_PATTERNS = {
-    # Development tasks (高優先)
-    "development": r"(add|new|create|implement|build).*(feature|api|endpoint|field|功能|接口)",
-    "chinese_dev": r"(新增|實作|開發|建立|創建)",
-    # Career-specific (專案特定)
-    "career_keywords": r"(session|consultation|client|case|counselor|諮詢|諮商|會談|案主|個案)",
-    "career_features": r"(transcript|recording|reflection|report|逐字稿|錄音|心得|報告)",
-    # Technical tasks (中優先)
-    "bug_fix": r"(fix|bug|error|broken|issue|修復|錯誤|問題)",
-    "testing": r"(test|pytest|verify|測試|驗證)",
-    "database": r"(migration|schema|model.*change|資料庫|模型)",
-    # Maintenance (低優先)
-    "quality": r"(review|refactor|quality|審查|重構)",
-    "deployment": r"(deploy|staging|production|部署)",
+# Core task patterns - ANY of these REQUIRE agent-manager
+CODING_TASK_PATTERNS = {
+    # Development tasks (MANDATORY)
+    "development": r"(add|new|create|implement|build|write|develop|code)",
+    "chinese_dev": r"(新增|實作|開發|建立|創建|撰寫|編寫|處理)",
+    # Bug fixes and changes (MANDATORY)
+    "bug_fix": r"(fix|bug|error|broken|issue|修復|錯誤|問題|修正|解決)",
+    "modification": r"(change|modify|update|edit|refactor|改變|修改|更新|編輯|重構)",
+    # Testing (MANDATORY)
+    "testing": r"(test|pytest|verify|測試|驗證|檢查)",
+    # Database operations (MANDATORY)
+    "database": r"(migration|schema|model|database|資料庫|模型|遷移)",
+    # Deployment (MANDATORY)
+    "deployment": r"(deploy|staging|production|release|部署|發布|上線)",
+    # Career-specific features (MANDATORY)
+    "career": r"(session|consultation|transcript|recording|諮詢|諮商|會談|逐字稿|錄音)",
+    # Code review and optimization (MANDATORY)
+    "optimization": r"(optimize|improve|enhance|review|優化|改善|提升|審查)",
 }
 
-# Quick patterns for simple operations (不需要 agent-manager)
+# Simple questions that DON'T need agent-manager
 SIMPLE_PATTERNS = [
-    r"^(what|how|where|explain|show|tell|describe)",  # 問題
-    r"^(read|list|ls|pwd|whoami)",  # 簡單操作
-    r"(什麼|哪裡|解釋|說明|查看|顯示)",  # 中文問題
+    r"^(what|how|where|when|why|explain|show|tell|describe|list)",
+    r"^(read|view|check|look|see|find|search|grep)",
+    r"(什麼|哪裡|為什麼|解釋|說明|查看|顯示|列出)",
+    r"^(ls|pwd|cat|echo|grep|find)($|\s)",  # Shell commands for viewing
 ]
 
 # ========================================
 # DETECTION LOGIC
 # ========================================
 
-# Check if it's a simple operation first (早期返回)
+# Check if it's a simple operation first
 is_simple = any(re.search(pattern, user_prompt) for pattern in SIMPLE_PATTERNS)
 
-# Check if it's a task requiring agent-manager
-is_task = False
+# Check if it's a coding task requiring agent-manager
+is_coding_task = False
 detected_pattern = None
 
 if not is_simple:
-    # Check task patterns with priority
-    for pattern_name, pattern in TASK_PATTERNS.items():
+    for pattern_name, pattern in CODING_TASK_PATTERNS.items():
         if re.search(pattern, user_prompt):
-            is_task = True
+            is_coding_task = True
             detected_pattern = pattern_name
             break
 
@@ -66,20 +69,32 @@ if not is_simple:
 # OUTPUT GENERATION
 # ========================================
 
-# If it's a task, enforce agent-manager
-if is_task:
+# MANDATORY enforcement for coding tasks
+if is_coding_task:
     print(
         f"""
-🎬 TASK [{detected_pattern}] → USE AGENT-MANAGER
-   Action: Task(subagent_type="agent-manager", ...)
-   """
+🚨 CRITICAL: CODING TASK DETECTED [{detected_pattern.upper()}]
+╔═══════════════════════════════════════════════════════════════╗
+║  ⛔ FORBIDDEN: Direct use of Edit/Write/Bash for coding       ║
+║  ✅ MANDATORY: Use Task(subagent_type="general-purpose", ...) ║
+╚═══════════════════════════════════════════════════════════════╝
+
+🎯 YOU MUST execute:
+   Task(
+       subagent_type="general-purpose",
+       prompt="[Your coding task here]",
+       description="[Brief description]"
+   )
+
+⚠️  VIOLATION of this rule = PROJECT STANDARDS BREACH
+"""
     )
 
-# If it's a simple operation, allow direct execution
+# Simple operations can proceed
 elif is_simple:
-    print("✅ Simple operation detected - can proceed directly without agent-manager")
+    print("✅ Simple question detected - proceed with direct answer")
 
-# Default case - suggest using agent-manager for safety
+# Ambiguous cases - STRONG recommendation
 else:
     print(
         """
@@ -89,8 +104,7 @@ else:
    - Bug fixes
    - Testing
 
-   For simple queries, you may proceed directly.
-"""
+   For simple queries, you may proceed directly."""
     )
 
 sys.exit(0)
