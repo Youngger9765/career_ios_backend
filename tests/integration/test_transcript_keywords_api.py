@@ -1,17 +1,56 @@
 """Integration tests for real-time transcript keyword analysis API."""
+import json
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.core.security import create_access_token, hash_password
+from app.core.security import hash_password
 from app.main import app
 from app.models.counselor import Counselor
 
 
 class TestTranscriptKeywordsAPI:
     """Test suite for transcript keyword analysis endpoints"""
+
+    @pytest.fixture(autouse=True)
+    def mock_gemini_service(self):
+        """Mock GeminiService for CI environment to avoid needing GCP credentials"""
+
+        async def mock_generate_text(prompt, *args, **kwargs):
+            # Return realistic mock response based on prompt content
+            if "壓力" in prompt or "焦慮" in prompt:
+                return json.dumps(
+                    {
+                        "keywords": ["壓力", "焦慮", "工作", "主管", "要求"],
+                        "categories": ["情緒", "職場", "人際關係"],
+                        "confidence": 0.85,
+                    }
+                )
+            elif "天氣" in prompt:
+                return json.dumps(
+                    {
+                        "keywords": ["天氣", "公園", "散步"],
+                        "categories": ["日常生活", "休閒"],
+                        "confidence": 0.7,
+                    }
+                )
+            else:
+                return json.dumps(
+                    {
+                        "keywords": ["測試", "關鍵字"],
+                        "categories": ["一般"],
+                        "confidence": 0.5,
+                    }
+                )
+
+        # Patch at the import location in analyze.py
+        with patch("app.api.analyze.GeminiService") as mock_class:
+            mock_instance = mock_class.return_value
+            mock_instance.generate_text = mock_generate_text
+            yield mock_instance
 
     @pytest.fixture
     def auth_headers(self, db_session: Session):
@@ -29,9 +68,18 @@ class TestTranscriptKeywordsAPI:
         db_session.add(counselor)
         db_session.commit()
 
-        # Create token directly
-        token_data = {"sub": str(counselor.id), "tenant": counselor.tenant_id}
-        token = create_access_token(token_data)
+        # Login to get token (same approach as test_clients_api.py)
+        with TestClient(app) as client:
+            login_response = client.post(
+                "/api/auth/login",
+                json={
+                    "email": "counselor-keywords@test.com",
+                    "password": "password123",
+                    "tenant_id": "career",
+                },
+            )
+            token = login_response.json()["access_token"]
+
         return {"Authorization": f"Bearer {token}"}
 
     def test_analyze_transcript_keywords_with_context(
@@ -40,16 +88,25 @@ class TestTranscriptKeywordsAPI:
         """Test transcript keyword analysis with client and case context."""
         # First create a client
         with TestClient(app) as client_api:
-            # Create test client
+            # Create test client with required fields
             client_response = client_api.post(
                 "/api/v1/clients",
                 headers=auth_headers,
                 json={
                     "name": "測試案主",
+                    "email": "test-keywords@example.com",
+                    "gender": "男",
+                    "birth_date": "1990-01-01",
+                    "phone": "0912345678",
+                    "identity_option": "在職者",
+                    "current_status": "工作壓力大",
                     "background": "工作壓力大，情緒困擾",
                     "main_issues": "焦慮、壓力",
                 },
             )
+            if client_response.status_code != 201:
+                print(f"Client creation failed: {client_response.status_code}")
+                print(f"Error: {client_response.json()}")
             assert client_response.status_code == 201
             client_data = client_response.json()
             client_id = client_data["id"]
@@ -117,9 +174,19 @@ class TestTranscriptKeywordsAPI:
     ):
         """Test transcript keyword analysis without client/case context."""
         with TestClient(app) as client_api:
-            # Create test client and case first
+            # Create test client and case first with required fields
             client_response = client_api.post(
-                "/api/v1/clients", headers=auth_headers, json={"name": "測試案主2"}
+                "/api/v1/clients",
+                headers=auth_headers,
+                json={
+                    "name": "測試案主2",
+                    "email": "test-keywords2@example.com",
+                    "gender": "女",
+                    "birth_date": "1985-05-15",
+                    "phone": "0923456789",
+                    "identity_option": "轉職者",
+                    "current_status": "轉換跑道中",
+                },
             )
             client_id = client_response.json()["id"]
 
@@ -179,9 +246,19 @@ class TestTranscriptKeywordsAPI:
     ):
         """Test transcript keyword analysis with empty transcript segment."""
         with TestClient(app) as client_api:
-            # Create test client and case
+            # Create test client and case with required fields
             client_response = client_api.post(
-                "/api/v1/clients", headers=auth_headers, json={"name": "測試案主3"}
+                "/api/v1/clients",
+                headers=auth_headers,
+                json={
+                    "name": "測試案主3",
+                    "email": "test-keywords3@example.com",
+                    "gender": "男",
+                    "birth_date": "1995-12-20",
+                    "phone": "0934567890",
+                    "identity_option": "學生",
+                    "current_status": "就學中",
+                },
             )
             assert client_response.status_code == 201
             client_id = client_response.json()["id"]
