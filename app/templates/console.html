@@ -1314,6 +1314,14 @@
                 </div>
                 <div class="step-subtitle">POST /api/v1/sessions/{id}/recordings/append</div>
             </div>
+
+            <div class="flow-step" data-step="analyze-keywords" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <div>
+                    <span class="step-number">18</span>
+                    <span class="step-title">🔍 即時關鍵字分析 (iOS)</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/analyze/transcript-keywords</div>
+            </div>
             </div>
 
             <!-- 報告管理 -->
@@ -1322,7 +1330,7 @@
 
             <div class="flow-step" data-step="generate-report">
                 <div>
-                    <span class="step-number">17</span>
+                    <span class="step-number">19</span>
                     <span class="step-title">生成報告</span>
                 </div>
                 <div class="step-subtitle">POST /api/v1/reports/generate</div>
@@ -1330,7 +1338,7 @@
 
             <div class="flow-step" data-step="list-reports">
                 <div>
-                    <span class="step-number">18</span>
+                    <span class="step-number">20</span>
                     <span class="step-title">列出報告</span>
                 </div>
                 <div class="step-subtitle">GET /api/v1/reports</div>
@@ -1338,7 +1346,7 @@
 
             <div class="flow-step" data-step="view-report">
                 <div>
-                    <span class="step-number">19</span>
+                    <span class="step-number">21</span>
                     <span class="step-title">查看報告</span>
                 </div>
                 <div class="step-subtitle">GET /api/v1/reports/{id}</div>
@@ -1346,7 +1354,7 @@
 
             <div class="flow-step" data-step="update-report">
                 <div>
-                    <span class="step-number">20</span>
+                    <span class="step-number">22</span>
                     <span class="step-title">更新報告</span>
                 </div>
                 <div class="step-subtitle">PATCH /api/v1/reports/{id}</div>
@@ -2795,6 +2803,179 @@
                         <small style="color: #6b7280; font-size: 12px;">包含所有 ${data.total_recordings} 個片段</small>
                         <div style="background: #f3f4f6; padding: 12px; border-radius: 6px; margin-top: 8px; max-height: 300px; overflow-y: auto;">
                             <p style="font-size: 13px; line-height: 1.6; white-space: pre-wrap;">${data.transcript_text}</p>
+                        </div>
+                    </div>
+                `
+            },
+            'analyze-keywords': {
+                title: '🔍 即時關鍵字分析 (iOS)',
+                subtitle: 'POST /api/v1/analyze/transcript-keywords',
+                init: async () => {
+                    if (state.token) {
+                        try {
+                            // Fetch clients and cases for selection
+                            const [clientsRes, casesRes] = await Promise.all([
+                                fetch(`${BASE_URL}/api/v1/clients`, {
+                                    headers: { 'Authorization': `Bearer ${state.token}` }
+                                }),
+                                fetch(`${BASE_URL}/api/v1/cases`, {
+                                    headers: { 'Authorization': `Bearer ${state.token}` }
+                                })
+                            ]);
+
+                            if (clientsRes.ok) {
+                                const clientsData = await clientsRes.json();
+                                state.clients = clientsData.items;
+                            }
+
+                            if (casesRes.ok) {
+                                const casesData = await casesRes.json();
+                                state.cases = casesData.items;
+                            }
+
+                            document.getElementById('action-form').innerHTML = steps['analyze-keywords'].renderForm();
+                        } catch (error) {
+                            console.error('Failed to load data:', error);
+                        }
+                    }
+                },
+                renderForm: () => {
+                    const clientOptions = state.clients.map(c =>
+                        `<option value="${c.id}">${c.name} (${c.code})</option>`
+                    ).join('');
+
+                    const caseOptions = state.cases.map(c =>
+                        `<option value="${c.id}">${c.goal || '未設定目標'}</option>`
+                    ).join('');
+
+                    return `
+                        <div class="info-card" style="background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%); border-color: #667eea;">
+                            <h4 style="color: #5145cd; margin: 0 0 8px 0;">🔍 即時關鍵字分析</h4>
+                            <p style="color: #6366f1; font-size: 13px; margin: 0;">
+                                從逐字稿片段即時提取關鍵字，不儲存任何資料<br/>
+                                可選擇性帶入案主背景和案例目標作為 AI 分析脈絡
+                            </p>
+                        </div>
+
+                        <div class="form-group">
+                            <label>選擇案主 *</label>
+                            <select id="analyze-client-id">
+                                ${clientOptions}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>選擇案例 *</label>
+                            <select id="analyze-case-id">
+                                ${caseOptions}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>逐字稿片段 *</label>
+                            <textarea id="analyze-transcript" placeholder="輸入或貼上要分析的逐字稿片段..." rows="6"></textarea>
+                            <small style="color: #6b7280; font-size: 12px;">💡 iOS 可即時傳送部分錄音的逐字稿進行分析</small>
+                        </div>
+
+                        <div class="form-group">
+                            <h4 style="margin: 16px 0 8px 0; color: #374151;">分析選項</h4>
+                            <label style="display: flex; align-items: center; gap: 8px; margin: 8px 0;">
+                                <input type="checkbox" id="analyze-include-client" checked />
+                                <span>包含案主背景資料作為分析脈絡</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; margin: 8px 0;">
+                                <input type="checkbox" id="analyze-include-case" checked />
+                                <span>包含案例目標作為分析脈絡</span>
+                            </label>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="executeAnalyzeKeywords()" ${!state.token ? 'disabled' : ''} style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            🔍 分析關鍵字
+                        </button>
+                        <button class="btn btn-secondary" onclick="quickFillAnalyzeKeywords()" ${!state.token ? 'disabled' : ''} style="background: #6366f1; margin-top: 8px;">
+                            🎲 快速填入測試資料
+                        </button>
+                    `;
+                },
+                execute: async () => {
+                    const clientId = document.getElementById('analyze-client-id').value;
+                    const caseId = document.getElementById('analyze-case-id').value;
+                    const transcript = document.getElementById('analyze-transcript').value;
+                    const includeClient = document.getElementById('analyze-include-client').checked;
+                    const includeCase = document.getElementById('analyze-include-case').checked;
+
+                    const requestBody = {
+                        client_id: clientId,
+                        case_id: caseId,
+                        transcript_segment: transcript,
+                        context: {
+                            include_client_profile: includeClient,
+                            include_case_goals: includeCase
+                        }
+                    };
+
+                    const response = await fetch(`${BASE_URL}/api/v1/analyze/transcript-keywords`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    const data = await response.json();
+                    return { response, data };
+                },
+                renderPreview: (data) => `
+                    <div class="info-card" style="background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%); border-color: #667eea;">
+                        <h3 style="color: #5145cd;">🔍 關鍵字分析結果</h3>
+
+                        <div class="info-row">
+                            <span class="info-label">臨時 ID</span>
+                            <span class="info-value" style="font-size: 11px;">${data.segment_id}</span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">信心分數</span>
+                            <span class="info-value">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div style="flex: 1; background: #e5e7eb; border-radius: 4px; height: 8px;">
+                                        <div style="width: ${data.confidence * 100}%; background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; border-radius: 4px;"></div>
+                                    </div>
+                                    <span style="font-weight: 600; color: #5145cd;">${(data.confidence * 100).toFixed(0)}%</span>
+                                </div>
+                            </span>
+                        </div>
+
+                        <div style="margin-top: 16px;">
+                            <h4 style="color: #374151; margin-bottom: 8px;">🏷️ 提取的關鍵字</h4>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                ${data.keywords.map(keyword => `
+                                    <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 12px; border-radius: 16px; font-size: 13px;">
+                                        ${keyword}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        ${data.categories && data.categories.length > 0 ? `
+                            <div style="margin-top: 16px;">
+                                <h4 style="color: #374151; margin-bottom: 8px;">📂 分類</h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                    ${data.categories.map(category => `
+                                        <span style="background: #f0f4ff; color: #5145cd; padding: 4px 12px; border-radius: 8px; font-size: 13px; border: 1px solid #c7d2fe;">
+                                            ${category}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <div class="info-card" style="background: #fef3c7; border-color: #fbbf24; margin-top: 16px;">
+                            <p style="color: #92400e; font-size: 12px; margin: 0;">
+                                ⚠️ 此分析結果不會儲存在資料庫中<br/>
+                                僅供即時參考使用
+                            </p>
                         </div>
                     </div>
                 `
@@ -6682,6 +6863,34 @@ Cl: 謝謝，我會的。`
                     }
                 });
             });
+        };
+
+        // Execute analyze keywords function
+        window.executeAnalyzeKeywords = async () => {
+            showLoading();
+            try {
+                const result = await steps['analyze-keywords'].execute();
+                displayResult(result);
+            } catch (error) {
+                displayError(error);
+            }
+        };
+
+        // Quick fill function for analyze keywords
+        window.quickFillAnalyzeKeywords = () => {
+            const sampleTranscripts = [
+                '我最近在工作上遇到很多壓力，常常感到焦慮和無助。主管對我的要求越來越高，我不知道該如何應對。',
+                '最近家人關係變得很緊張，我覺得很難在家裡找到平靜的空間。每次回家都感到壓抑。',
+                '我對未來感到迷茫，不知道自己的人生方向在哪裡。看到朋友們都很有成就，我感到很自卑。',
+                '失眠問題困擾我很久了，晚上總是翻來覆去睡不著，白天又沒精神工作。'
+            ];
+
+            document.getElementById('analyze-transcript').value =
+                sampleTranscripts[Math.floor(Math.random() * sampleTranscripts.length)];
+
+            // 隨機選擇是否包含背景資料
+            document.getElementById('analyze-include-client').checked = Math.random() > 0.3;
+            document.getElementById('analyze-include-case').checked = Math.random() > 0.3;
         };
 
         // Quick fill function for append recording

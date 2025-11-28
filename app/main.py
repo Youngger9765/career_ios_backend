@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 
 # RAG API routers
 from app.api import (
+    analyze,
     auth,
     cases,
     chunk_strategies,
@@ -68,6 +69,9 @@ app.include_router(reports.router)
 
 # Include sessions routes
 app.include_router(sessions.router)
+
+# Include analyze routes
+app.include_router(analyze.router)
 
 # Include UI API routes
 app.include_router(ui_client_case_list.router)
