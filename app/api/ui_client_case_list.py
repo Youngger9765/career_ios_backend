@@ -924,8 +924,13 @@ def delete_client_case(
                 detail=f"Case {case_id} not found",
             )
 
-        # Step 2: Check ownership (only allow counselor to delete their own cases)
-        if case.counselor_id != current_user.id:
+        # Step 2: Check ownership (only allow counselor to delete their own cases, or admin to delete any)
+        from app.models.counselor import CounselorRole
+
+        if (
+            current_user.role != CounselorRole.ADMIN
+            and case.counselor_id != current_user.id
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You can only delete your own cases",

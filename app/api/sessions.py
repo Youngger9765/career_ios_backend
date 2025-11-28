@@ -932,20 +932,28 @@ def delete_session(
         db: 數據庫 session
 
     Raises:
-        HTTPException: 404 if not found, 400 if has reports, 500 if deletion fails
+        HTTPException: 404 if not found, 400 if has reports, 403 if non-admin tries to delete other's session, 500 if deletion fails
     """
     from datetime import datetime, timezone
+
+    from app.models.counselor import CounselorRole
+
+    # Build query conditions
+    conditions = [
+        Session.id == session_id,
+        Client.tenant_id == tenant_id,
+        Session.deleted_at.is_(None),
+    ]
+
+    # Non-admin users can only delete their own sessions
+    if current_user.role != CounselorRole.ADMIN:
+        conditions.append(Client.counselor_id == current_user.id)
 
     result = db.execute(
         select(Session, Client, Case)
         .join(Case, Session.case_id == Case.id)
         .join(Client, Case.client_id == Client.id)
-        .where(
-            Session.id == session_id,
-            Client.counselor_id == current_user.id,
-            Client.tenant_id == tenant_id,
-            Session.deleted_at.is_(None),
-        )
+        .where(*conditions)
     )
     row = result.first()
 

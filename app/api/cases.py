@@ -52,7 +52,9 @@ def list_cases(
     query = query.order_by(Case.created_at.desc())
 
     # Get total count using SQL COUNT
-    count_query = select(func.count()).select_from(Case).where(Case.tenant_id == tenant_id)
+    count_query = (
+        select(func.count()).select_from(Case).where(Case.tenant_id == tenant_id)
+    )
     if client_id:
         count_query = count_query.where(Case.client_id == client_id)
     total_count = db.execute(count_query).scalar()
@@ -308,18 +310,26 @@ def delete_case(
 
     Raises:
         HTTPException: 404 if case not found
+        HTTPException: 403 if non-admin user tries to delete other's case
         HTTPException: 500 if delete fails
     """
     from datetime import datetime, timezone
 
+    from app.models.counselor import CounselorRole
+
     try:
-        result = db.execute(
-            select(Case).where(
-                Case.id == case_id,
-                Case.tenant_id == tenant_id,
-                Case.deleted_at.is_(None),
-            )
-        )
+        # Build query conditions
+        conditions = [
+            Case.id == case_id,
+            Case.tenant_id == tenant_id,
+            Case.deleted_at.is_(None),
+        ]
+
+        # Non-admin users can only delete their own cases
+        if current_user.role != CounselorRole.ADMIN:
+            conditions.append(Case.counselor_id == current_user.id)
+
+        result = db.execute(select(Case).where(*conditions))
         case = result.scalar_one_or_none()
 
         if not case:

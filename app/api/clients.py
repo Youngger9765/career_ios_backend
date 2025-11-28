@@ -108,6 +108,7 @@ def create_client(
         # Auto-calculate age from birth_date if provided
         if client_dict.get("birth_date") and not client_dict.get("age"):
             from datetime import date
+
             birth_date = client_dict["birth_date"]
             today = date.today()
             age = today.year - birth_date.year
@@ -143,7 +144,9 @@ def create_client(
 def list_clients(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(20, ge=1, le=100, description="Max number of records to return"),
-    search: Optional[str] = Query(None, description="Search by name, nickname, or code"),
+    search: Optional[str] = Query(
+        None, description="Search by name, nickname, or code"
+    ),
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: Session = Depends(get_db),
@@ -285,6 +288,7 @@ def update_client(
         # Auto-calculate age from birth_date if updated
         if "birth_date" in update_data and update_data["birth_date"]:
             from datetime import date
+
             birth_date = update_data["birth_date"]
             today = date.today()
             age = today.year - birth_date.year
@@ -346,18 +350,25 @@ def delete_client(
         db: Database session
 
     Raises:
-        HTTPException: 404 if client not found or not owned by counselor
+        HTTPException: 404 if client not found
+        HTTPException: 403 if non-admin user tries to delete other's client
     """
     from datetime import datetime, timezone
 
-    result = db.execute(
-        select(Client).where(
-            Client.id == client_id,
-            Client.counselor_id == current_user.id,
-            Client.tenant_id == tenant_id,
-            Client.deleted_at.is_(None),  # Only non-deleted clients
-        )
-    )
+    from app.models.counselor import CounselorRole
+
+    # Build query conditions
+    conditions = [
+        Client.id == client_id,
+        Client.tenant_id == tenant_id,
+        Client.deleted_at.is_(None),  # Only non-deleted clients
+    ]
+
+    # Non-admin users can only delete their own clients
+    if current_user.role != CounselorRole.ADMIN:
+        conditions.append(Client.counselor_id == current_user.id)
+
+    result = db.execute(select(Client).where(*conditions))
     client = result.scalar_one_or_none()
 
     if not client:
@@ -464,7 +475,8 @@ def get_client_timeline(
         .join(Case, SessionModel.case_id == Case.id)
         .outerjoin(
             Report,
-            (Report.session_id == SessionModel.id) & (Report.status == ReportStatus.DRAFT),
+            (Report.session_id == SessionModel.id)
+            & (Report.status == ReportStatus.DRAFT),
         )  # 只取 draft 狀態的報告
         .where(Case.client_id == client_id, SessionModel.tenant_id == tenant_id)
         .order_by(SessionModel.session_date.asc())  # 按日期排序
