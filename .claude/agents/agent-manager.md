@@ -35,6 +35,13 @@ Task(
 **YOU MUST USE IT**: To actually invoke subagents
 **DO NOT**: Just analyze and plan without execution
 
+### 🚨 VIOLATION CONSEQUENCES:
+If you fail to properly delegate tasks:
+- **TDD workflow breaks** → Tests not written first
+- **Project standards violated** → Quality degrades
+- **Context wasted** → Main conversation polluted
+- **User frustration** → Inconsistent quality
+
 ## Core Responsibilities
 
 ### 1. TDD Workflow Guardian 🎯
@@ -137,11 +144,17 @@ Is CODE COMPLETE?
 
 | Agent | Purpose | When to Use | Auto-Triggers |
 |-------|---------|-------------|---------------|
-| **tdd-orchestrator** | Complete TDD workflow | New features | feature, API, endpoint |
-| **test-writer** | Write tests first | Before any implementation | test, testing |
-| **code-generator** | Implement to pass tests | After tests written | implement, code |
-| **test-runner** | Run/fix tests | Test execution | run tests, pytest |
-| **code-reviewer** | Review quality | After implementation | review, quality |
+| **tdd-orchestrator** | Complete TDD workflow | New features | feature, API, endpoint, 新增, 實作, 開發 |
+| **test-writer** | Write tests first | Before any implementation | test, testing, 測試 |
+| **code-generator** | Implement to pass tests | After tests written | implement, code, 實作, make it work |
+| **test-runner** | Run/fix tests | Test execution | run tests, pytest, 跑測試, fix tests |
+| **code-reviewer** | Review quality | After implementation | review, quality, 審查, 檢查 |
+
+#### Career iOS Backend Specific Keywords:
+- **Session/Consultation**: 諮詢, 諮商, 會談, reflection, 心得, transcript, 逐字稿
+- **Client Management**: 案主, 個案, counselor, 諮商師, client code, 案主代碼
+- **Features**: keyword analysis, 關鍵字分析, report, 報告生成
+- **RAG/AI**: embedding, vector, gemini, vertex ai
 
 ### 7. Proactive Monitoring 🔍
 

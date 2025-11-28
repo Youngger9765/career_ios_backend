@@ -229,24 +229,41 @@ poetry run pytest tests/integration/ -v
 - 文檔生成
 - 建議重構方案
 
-### TDD + AI 協作流程（Kent Beck's Augmented Coding）
+### TDD + AI 協作流程
 ```
 1. 人：定義需求 + API 設計
-2. 人：先寫 Integration Test（RED）
-   └─ 測試定義了正確的行為
-3. AI：生成實作代碼讓測試通過
-   └─ AI 被測試約束，不會亂寫
-4. 跑測試 → GREEN（通過）
-5. 人：Review 代碼品質
-6. 人 + AI：協作重構（測試保持 GREEN）
-7. Commit
+2. 人：先寫測試（RED）→ 定義預期行為
+3. AI：生成實作讓測試通過（GREEN）
+4. 人：Review + 重構（測試保持 GREEN）
 ```
 
-### ⚠️ AI + TDD 注意事項
-- **AI 會嘗試刪除測試** → 絕對不允許
-- **AI 擅長加功能，不擅長簡化** → 重構由人類主導
-- **測試是合約** → AI 必須滿足合約，不能修改
-- **複雜度超載** → 超過 AI 能力時，拆小 function
+⚠️ **注意**：AI 不能修改測試，測試是合約
+
+---
+
+## 🤖 Agent-Manager 強制使用規則
+
+**CRITICAL: 所有開發任務必須透過 agent-manager**
+
+```yaml
+規則：
+  1. 收到任何 coding task → 立即使用 Task(subagent_type="agent-manager", ...)
+  2. Agent-manager 會自動路由到適當的 subagent
+  3. 詳細規則請參考：.claude/agents/agent-manager.md
+
+例外（可跳過 agent-manager）：
+  - 單純讀檔案
+  - 回答概念問題
+  - 解釋現有程式碼
+```
+
+**可用的 Slash Commands：**
+- `/tdd` - 完整 TDD 開發流程
+- `/test-api` - 快速測試 API
+- `/review-pr` - PR 審查
+- `/deploy-check` - 部署前檢查
+
+詳細說明請參考 `.claude/commands/` 目錄。
 
 ---
 
@@ -267,27 +284,40 @@ poetry run pytest tests/integration/ -v
 
 ## 🔒 不可妥協的規則
 
-1. **❌ 不 commit 到 main/master**
-   - 永遠在 staging/feature branch 開發
+**CRITICAL: These rules are ABSOLUTE and CANNOT be violated**
 
-2. **❌ 絕對禁止使用 `--no-verify`**
-   - ❌ `git commit --no-verify` - 禁止
-   - ❌ `git push --no-verify` - 禁止
-   - 如果 hooks 失敗，修復問題，不要跳過檢查
+1. **❌ YOU MUST NOT commit 到 main/master**
+   - IMPORTANT: 永遠在 staging/feature branch 開發
+   - VIOLATION CONSEQUENCE: 破壞 production 環境
 
-3. **✅ Integration tests 必須通過**
-   - API 不能壞掉
-   - **所有 console.html 使用的 API 都必須有測試**
+2. **❌ ABSOLUTELY FORBIDDEN: `--no-verify`**
+   - ❌ `git commit --no-verify` - **禁止使用**
+   - ❌ `git push --no-verify` - **禁止使用**
+   - CRITICAL: 如果 hooks 失敗，修復問題，不要跳過檢查
+   - NEVER bypass security checks
 
-4. **✅ 代碼要能跑**
-   - 至少手動測試過
+3. **✅ MANDATORY: Integration tests 必須通過**
+   - IMPORTANT: API 不能壞掉
+   - **YOU MUST ensure 所有 console.html 使用的 API 都有測試**
+   - ZERO tolerance for broken APIs
 
-5. **❌ 不繞過 CI**
-   - 雖然簡化，但 CI 必須跑
+4. **✅ REQUIRED: 代碼要能跑**
+   - MINIMUM: 至少手動測試過
+   - NEVER commit non-functional code
 
-6. **✅ TDD 用於關鍵功能**
-   - 關鍵 API 必須先寫測試
-   - 測試定義行為，AI 實作代碼
+5. **❌ YOU MUST NOT 繞過 CI**
+   - CRITICAL: 雖然簡化，但 CI 必須跑
+   - CI failures MUST be fixed, not ignored
+
+6. **✅ MANDATORY: TDD 用於關鍵功能**
+   - IMPORTANT: 關鍵 API 必須先寫測試
+   - **測試定義行為，AI 實作代碼**
+   - NEVER implement without tests first
+
+7. **🤖 Agent-Manager 強制使用**
+   - 所有開發任務必須透過 agent-manager
+   - 保護主要 context 不被消耗
+   - 確保 TDD 流程一致性
 
 ---
 
