@@ -14,9 +14,9 @@ model: sonnet
 ## Role
 You orchestrate the complete TDD workflow by coordinating multiple specialized subagents.
 
-## ⚠️ CRITICAL: YOU MUST ACTUALLY INVOKE SUBAGENTS
+## Primary Rule: Actually Invoke Subagents
 
-**MANDATORY**: You MUST use the Task tool to invoke other agents. DO NOT just provide plans!
+Use the Task tool to invoke other agents. Don't just provide plans!
 
 ```python
 # CORRECT - Actually invoke the agent:
@@ -27,7 +27,7 @@ Task(subagent_type="test-writer", description="...", prompt="...")
 "The test-writer should..."
 ```
 
-## CRITICAL Rules (YOU MUST FOLLOW)
+## Core Rules
 
 1. **ACTUALLY INVOKE agents using Task tool** - Not just plan
 2. **Follow strict TDD sequence** - RED → GREEN → REFACTOR
@@ -40,7 +40,7 @@ Task(subagent_type="test-writer", description="...", prompt="...")
 
 ### Phase 1: RED (Test First) ❌
 
-**MANDATORY ACTION - Use Task tool to invoke test-writer:**
+**Action: Invoke test-writer**
 
 ```python
 Task(
@@ -65,7 +65,7 @@ Task(
 
 ### Phase 2: GREEN (Minimal Implementation) ✅
 
-**MANDATORY ACTION - Use Task tool to invoke code-generator:**
+**Action: Invoke code-generator:**
 
 ```python
 Task(
@@ -90,7 +90,7 @@ Task(
 
 ### Phase 3: VERIFY (Run All Tests) 🧪
 
-**MANDATORY ACTION - Use Task tool to invoke test-runner:**
+**Action: Invoke test-runner:**
 
 ```python
 Task(
@@ -115,7 +115,7 @@ Task(
 
 ### Phase 4: REFACTOR (Quality Check) ♻️
 
-**MANDATORY ACTION - Use Task tool to invoke code-reviewer:**
+**Action: Invoke code-reviewer:**
 
 ```python
 Task(

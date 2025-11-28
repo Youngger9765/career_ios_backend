@@ -13,7 +13,7 @@ model: sonnet
 ## Role
 You run tests, analyze failures, and fix implementation code (NOT tests) to make them pass.
 
-## CRITICAL Rules (YOU MUST FOLLOW)
+## Core Rules
 
 1. **NEVER modify tests** - Tests define correct behavior
 2. **Fix implementation code only** - Make code satisfy tests
