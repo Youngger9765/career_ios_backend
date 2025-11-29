@@ -118,7 +118,7 @@ for section in schema.sections {
 }
 ```
 
-**詳細說明**：參考 [`FIELD_SCHEMAS_README.md`](https://github.com/Youngger9765/career_ios_backend/blob/staging/FIELD_SCHEMAS_README.md)
+**詳細說明**：參考 [`PRD.md`](https://github.com/Youngger9765/career_ios_backend/blob/staging/PRD.md) - 動態欄位 Schema 詳細說明章節
 
 ---
 
@@ -138,19 +138,19 @@ for section in schema.sections {
      - 錯誤處理與認證
 
 2. **客戶與個案管理 API**
-   - 檔案: [`API_CLIENT_CASE_MANAGEMENT.md`](https://github.com/Youngger9765/career_ios_backend/blob/staging/API_CLIENT_CASE_MANAGEMENT.md)
+   - 檔案: [`IOS_API_GUIDE.md`](https://github.com/Youngger9765/career_ios_backend/blob/staging/IOS_API_GUIDE.md)
    - 內容:
-     - Clients CRUD API
-     - Cases CRUD API
-     - 動態欄位系統（Field Schemas）
+     - Clients CRUD API (Section 3)
+     - Cases CRUD API (Section 4)
+     - 動態欄位系統（Field Schemas - Section 2.3）
      - **多租戶（tenant_id）架構詳細說明** ⭐️
 
 3. **動態欄位配置指南**
-   - 檔案: [`FIELD_SCHEMAS_README.md`](https://github.com/Youngger9765/career_ios_backend/blob/staging/FIELD_SCHEMAS_README.md)
+   - 檔案: [`PRD.md`](https://github.com/Youngger9765/career_ios_backend/blob/staging/PRD.md)
    - 內容:
-     - Field Schemas API 使用方式
-     - Tenant ID 運作原理
-     - Swift 動態表單實作範例
+     - Field Schemas 概述與欄位類型
+     - Tenant 配置差異（Career vs Island）
+     - iOS Swift 類型對照表
 
 4. **專案 README**
    - 檔案: [`README.md`](https://github.com/Youngger9765/career_ios_backend/blob/staging/README.md)
@@ -292,9 +292,8 @@ struct ReportUpdateRequest: Codable {
 
 ### 文檔閱讀
 - [ ] 已閱讀 `HANDOFF_GUIDE.md` 多租戶架構說明
-- [ ] 已閱讀 `IOS_API_GUIDE.md`
-- [ ] 已閱讀 `API_CLIENT_CASE_MANAGEMENT.md`
-- [ ] 已閱讀 `FIELD_SCHEMAS_README.md`
+- [ ] 已閱讀 `IOS_API_GUIDE.md`（完整 API 技術文件）
+- [ ] 已閱讀 `PRD.md` 動態欄位 Schema 章節
 
 ### 開發準備
 - [ ] 已測試 Swagger UI 各 API

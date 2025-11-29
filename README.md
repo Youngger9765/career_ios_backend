@@ -63,8 +63,8 @@ MOCK_MODE=true poetry run uvicorn app.main:app --reload
 
 詳細文件：
 - **[🚀 Handoff Guide](HANDOFF_GUIDE.md)** - 交付說明（給案主與 iOS 開發者）
-- **[Client & Case Management API](API_CLIENT_CASE_MANAGEMENT.md)** - 客戶與個案管理完整文件
-- **[iOS API Guide](IOS_API_GUIDE.md)** - iOS 開發完整指南
+- **[iOS API Guide](IOS_API_GUIDE.md)** - iOS 開發完整指南（包含 Client & Case Management）
+- **[PRD 產品需求文件](PRD.md)** - 系統概述與功能規格
 
 ### 🔑 測試帳號
 
@@ -322,7 +322,7 @@ Authorization: Bearer <token>
 - `PATCH /api/v1/cases/{id}` - 更新個案
 - `DELETE /api/v1/cases/{id}` - 刪除個案
 
-**詳細說明**: 參考 [Client & Case Management API 文件](API_CLIENT_CASE_MANAGEMENT.md)
+**詳細說明**: 參考 [iOS API Guide](IOS_API_GUIDE.md) - Section 3 (Client APIs) 和 Section 4 (Case APIs)
 
 ### 📝 Sessions & Reports（會談與報告）
 
