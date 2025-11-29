@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored Cases API to service layer pattern (352 → 138 lines, -61%)
   - Created CaseService (280 lines) for case CRUD operations
   - Extracted case number generation and validation logic
+- Refactored RAG Chat API to service layer pattern (334 → 114 lines, -66%)
+  - Created RAGChatService (372 lines) for RAG chat business logic
+  - Extracted intent classification, vector search, and answer generation logic
+  - Simplified endpoint to thin routing layer with service delegation
 - Hidden counselor_id field in analysis logs display (privacy improvement)
 - Updated analyze-keywords UI text: "已自動儲存" instead of "不會儲存"
 - Analysis logs display with color-coded AI vs fallback analysis

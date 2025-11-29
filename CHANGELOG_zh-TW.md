@@ -53,6 +53,10 @@
 - 重構 Cases API 至 Service Layer 模式（352 → 138 行，-61%）
   - 建立 CaseService（280 行）處理案例 CRUD 操作
   - 抽取案例編號生成與驗證邏輯
+- 重構 RAG Chat API 至 Service Layer 模式（334 → 114 行，-66%）
+  - 建立 RAGChatService（372 行）處理 RAG 聊天業務邏輯
+  - 抽取意圖分類、向量搜尋、答案生成邏輯
+  - 簡化 endpoint 至薄路由層並委派至 service
 - 隱藏分析記錄中的 counselor_id 欄位（隱私改善）
 - 更新 analyze-keywords UI 文字：「已自動儲存」而非「不會儲存」
 - 分析記錄顯示改用顏色區分 AI 分析與備援分析
