@@ -10,135 +10,34 @@
 ## [未發布]
 
 ### 新增
-- Analysis Logs CRUD API，用於追蹤會談關鍵字分析歷程
-  - `GET /api/v1/sessions/{id}/analysis-logs` - 取得會談的所有分析記錄
-  - `DELETE /api/v1/sessions/{id}/analysis-logs/{log_index}` - 刪除特定分析記錄
-  - 呼叫 analyze-keywords 時自動儲存分析結果
-  - 結構化記錄格式：時間戳記、逐字稿片段、關鍵字、類別、信心分數、洞見、諮商師 ID、備援標記
-- Agent 系統文件大小監控規則（API: 300 行，Services: 400 行）
-- 資料庫遷移：在 sessions 表新增 analysis_logs JSON 欄位
-- Console UI 新增檢視與刪除分析記錄功能（步驟 #19 & #20）
+- Analysis Logs CRUD API，包含自動儲存與結構化追蹤
+- Agent 系統文件大小監控規則
 - Favicon 處理器，避免 404 錯誤
 
 ### 變更
-- **系統性服務層重構（10 個檔案，平均減少 50% 程式碼量）**
-  - 將業務邏輯從 API 端點抽取至專用服務類別
-  - 改善可維護性、可測試性與程式碼組織
-  - 所有整合測試通過（符合 TDD 原則的重構）
-- **程式碼壓縮以符合大小限制（3 個檔案）**
-  - 壓縮 Reports API 文件字串（307 → 293 行，-4.6%）
-  - 壓縮 Sessions API 文件字串（324 → 300 行，-7.4%）
-  - 壓縮 SessionService 文件字串（449 → 379 行，-15.6%）
-  - 移除冗長的 Args/Returns 段落，保留摘要文件字串
-  - 所有整合測試通過（符合 TDD 原則的重構）
-- 重構 Sessions API 拆分為 3 個路由器（424 → 324 行，-24%）
-  - 建立 sessions_keywords.py（53 行）處理關鍵字分析端點
-  - 建立 sessions_analysis.py（72 行）處理分析記錄端點
-  - 保留 sessions.py（324 行）處理核心 CRUD、反思與錄音端點
-  - 所有 29 個整合測試通過（22 個 sessions + 7 個 recordings）
-- 重構 UI Client-Case API 抽取 schemas（452 → 281 行，-38%）
-  - 建立 app/schemas/ui_client_case.py（181 行）放置 Pydantic 模型
-  - 將 UI 優化的請求/回應 schemas 與 API 邏輯分離
-  - 所有 18 個整合測試通過（符合 TDD 原則的重構）
-- 重構 SessionService 抽取輔助模組（555 → 448 行，-19%）
-  - 建立 app/services/helpers/session_transcript.py（102 行）處理逐字稿處理
-  - 建立 app/services/helpers/session_validation.py（26 行）處理日期時間解析
-  - 改善程式碼組織並降低服務檔案複雜度
-  - 所有 22 個整合測試通過（符合 TDD 原則的重構）
-- 重構 RAG Evaluation API 抽取 schemas（399 → 262 行，-34%）
-  - 建立 app/schemas/rag_evaluation.py（151 行）放置 Pydantic 模型與輔助函數
-  - 抽取所有請求/回應模型與輔助函數
-  - 改善程式碼組織與可維護性
-- 重構 Reports API 抽取 schemas（328 → 307 行，-6%）
-  - 建立 app/schemas/reports.py（31 行）放置 Pydantic 請求/回應模型
-  - 抽取 GenerateReportRequest、ProcessingStatus、GenerateReportResponse
-  - 所有 10 個整合測試通過（符合 TDD 原則的重構）
-- 重構 ClientCaseService 抽取輔助模組與查詢建構器（509 → 351 行，-31%）
-  - 建立 app/services/helpers/client_case_helpers.py（91 行）處理代碼生成與格式化
-  - 建立 app/services/helpers/client_case_query_builder.py（130 行）處理複雜查詢邏輯
-  - 抽取所有輔助方法與 SQLAlchemy 查詢建構邏輯
-  - 所有 20 個整合測試通過（符合 TDD 原則的重構）
-- 重構 RAGReportService 抽取 schemas 與提示建構器（495 → 242 行，-51%）
-  - 建立 app/schemas/rag_report.py（51 行）放置 EnhancedReportSchema 與 LegacyReportSchema
-  - 建立 app/services/helpers/rag_report_prompt_builder.py（230 行）處理大型提示建構
-  - 抽取兩個提示建構方法與 Pydantic schemas
-  - 更新 app/api/rag_report.py 使用匯入的提示建構函數
-- 重構 console.html 模組化（程式碼量減少 75%：7245 → 1785 行）
-  - 抽取 5479 行步驟定義至 console-steps.js
-  - 改善可維護性與程式碼組織
-- 重構 Sessions API 至 Service Layer 模式（1,219 → 424 行，-65%）
-  - 建立 KeywordAnalysisService（288 行）用於 AI 關鍵字萃取
-  - 建立 AnalysisLogService（139 行）用於分析記錄 CRUD 操作
-  - 增強 SessionService：新增 get_session_with_details(), update_session(), delete_session()
-  - 整合 ReflectionService, RecordingService, TimelineService 以委派 endpoint 邏輯
-  - 建立回應建構器輔助函數以減少重複代碼 (_build_session_response)
-  - 複雜的會談編號重新計算邏輯已抽取至 service layer
-  - 所有 41 個整合測試通過（符合 TDD 原則的重構）
-- 重構 UI Client-Case List API 至 Service Layer 模式（962 → 452 行，-53%）
-  - 建立 ClientCaseService（516 行）處理客戶個案業務邏輯
-  - 抽取 CRUD 操作、統計計算、代碼生成邏輯
-  - 所有 18 個整合測試通過（符合 TDD 原則的重構）
-- 重構 RAG Evaluation API 至 Service Layer 模式（703 → 397 行，-43%）
-  - 建立 EvaluationPromptsService（230 行）處理 Prompt 版本管理
-  - 建立 EvaluationRecommendationsService（113 行）提供智慧建議
-  - 抽取輔助函數（_build_experiment_response, _parse_experiment_id）
-  - 所有 124 個整合測試通過（符合 TDD 原則的重構）
-- 重構 Reports API 至 Service Layer 模式（529 → 325 行，-39%）
-  - 建立 ReportOperationsService（328 行）處理報告 CRUD 操作
-  - 抽取列表、取得、更新、生成報告邏輯至 service layer
-  - 簡化背景任務協調
-  - 所有 10 個整合測試通過（符合 TDD 原則的重構）
-- 重構 Clients API 至 Service Layer 模式（517 → 197 行，-62%）
-  - 建立 ClientService（385 行）處理客戶 CRUD 與時間線操作
-  - 抽取客戶代碼生成、年齡計算、時間線查詢邏輯
-  - 所有 13 個整合測試通過（符合 TDD 原則的重構）
-- 重構 Cases API 至 Service Layer 模式（352 → 138 行，-61%）
-  - 建立 CaseService（280 行）處理案例 CRUD 操作
-  - 抽取案例編號生成與驗證邏輯
-- 重構 RAG Chat API 至 Service Layer 模式（334 → 114 行，-66%）
-  - 建立 RAGChatService（372 行）處理 RAG 聊天業務邏輯
-  - 抽取意圖分類、向量搜尋、答案生成邏輯
-  - 簡化 endpoint 至薄路由層並委派至 service
-- 重構 RAG Report API 至 Service Layer 模式（484 → 168 行，-65%）
-  - 建立 RAGReportService（499 行）處理報告生成業務邏輯
-  - 抽取逐字稿解析、理論搜尋、提示詞建構、品質評估邏輯
-  - 簡化 endpoint 至薄路由層並委派至 service
-- 重構 RAG Ingest API 至 Service Layer 模式（410 → 267 行，-35%）
-  - 建立 RAGIngestService（275 行）處理文件擷取業務邏輯
-  - 抽取 PDF 上傳/萃取、文字分塊、嵌入生成、儲存操作邏輯
-  - 簡化 endpoint 至薄路由層並委派至 service
-- 重構 Evaluation Service 並抽取輔助函數（599 → 394 行，-34%）
-  - 建立 EvaluationHelpers（340 行）處理 RAG 評估邏輯
-  - 抽取文件 ID 查詢、RAG 答案生成、RAGAS 評估、指標計算邏輯
-  - 分離實驗比較邏輯至可重用輔助函數
-- 隱藏分析記錄中的 counselor_id 欄位（隱私改善）
-- 更新 analyze-keywords UI 文字：「已自動儲存」而非「不會儲存」
-- 分析記錄顯示改用顏色區分 AI 分析與備援分析
+- 系統性服務層重構（10 個檔案，平均減少 50% 程式碼量）
+- 程式碼壓縮以符合大小限制（文件字串簡化）
+- Sessions API 拆分為 3 個路由器（關鍵字、分析記錄、核心 CRUD）
+- Console.html 模組化（減少 75%：7245 → 1785 行）
+- 分析記錄 UI 改善（隱私、顏色標示、自動儲存文字）
 
 ### 修復
-- 修復 SQLAlchemy JSON 欄位變更追蹤（使用 flag_modified() 處理 analysis_logs）
-- 修復 Staging 環境 Vertex AI 權限（新增 roles/aiplatform.user 至 service account）
-- 分析記錄現已正確儲存至資料庫
+- 修復 SQLAlchemy JSON 欄位變更追蹤（analysis_logs）
+- 修復 Staging 環境 Vertex AI 權限
 
 ### 基礎設施
-- 新增 roles/aiplatform.user 至 career-app-sa service account，以存取 Vertex AI
-- Staging 環境現使用 AI 驅動分析，不再使用備援機制
-- Agent 系統強制文檔更新規則（文檔未更新則封鎖 push）
-  - 每次 push 前自動檢查 CHANGELOG、PRD.md、週報
-  - 確保專案文檔保持最新
+- Staging 環境現使用 AI 驅動分析
+- Agent 系統強制文檔更新規則
 
 ---
 
 ## [0.3.1] - 2025-11-29
 
 ### 新增
-- 即時逐字稿關鍵字分析 API（`POST /api/v1/sessions/{id}/analyze-keywords`）
-  - AI 驅動的關鍵字提取，包含類別和信心分數
-  - 基於逐字稿內容提供諮商師洞見和提醒
-- Session 名稱欄位，改善組織管理（Session 模型新增 `name` 欄位）
-- 從錄音片段自動計算時間範圍（start_time/end_time）
+- 即時逐字稿關鍵字分析 API，包含 AI 驅動提取
+- Session 名稱欄位，改善組織管理
+- 從錄音片段自動計算時間範圍
 - Claude Code agent 配置與 TDD 強制執行
-- 智慧模型選擇策略（Haiku/Sonnet/Opus）
 
 ### 變更
 - Gemini 2.5 Flash 作為預設 LLM 提供者（成本降低 40%，回應時間 < 2 秒）
@@ -146,9 +45,8 @@
 - 移除 API 端點標題中的「(iOS)」後綴，統一命名規範
 
 ### 修復
-- 修復 CI/CD 中逐字稿關鍵字 API 測試失敗（使用 GeminiService mock）
-- 修復 Admin 角色資源刪除權限（可刪除租戶內任何資源）
-- 修正 Agent 模型選擇策略文檔（釐清僅支援靜態配置）
+- 修復 CI/CD 中 GeminiService mock 測試失敗
+- 修復 Admin 角色資源刪除權限
 
 ### 效能
 - Session 服務層抽取與 N+1 查詢修復（**快 3 倍**：800ms → 250ms）
@@ -222,10 +120,9 @@
 ## [0.2.3] - 2025-11-23
 
 ### 新增
-- Console 中的 iPhone 模擬器預覽視圖，用於 Client-Case CRUD 操作
-- GET client-case detail 端點（`/api/v1/ui/client-case/{id}`）
+- Console 中的 iPhone 模擬器預覽視圖
+- GET client-case detail 端點
 - 選擇 client-case 時自動填充更新表單
-- Bruno API 客戶端相容性的 OpenAPI 範例
 - 完整的 API 整合測試（66 個測試）
 
 ### 變更
@@ -235,9 +132,9 @@
 - 重新設計 console 側邊欄，使用淺灰色主題
 
 ### 修復
-- 修復 client-case list 的 500 錯誤（timezone-aware datetime 比較）
-- 修復 `loadClientCaseForUpdate` 中的欄位映射優先順序
-- 修復 schema 欄位顯示，包含所有欄位（含空值）
+- 修復 client-case list 的 500 錯誤（timezone-aware datetime）
+- 修復更新表單中的欄位映射優先順序
+- 修復 schema 空值欄位顯示
 
 ### 效能
 - 優化 CI/CD pipeline，提升可靠性和效能
@@ -247,9 +144,7 @@
 ## [0.2.2] - 2025-11-22
 
 ### 新增
-- iOS 專用的追加錄音 API（`POST /api/v1/sessions/{id}/recordings/append`）
-  - 允許在諮商會談期間增量上傳錄音
-  - 自動更新逐字稿和 session metadata
+- iOS 專用的追加錄音 API，支援增量上傳
 
 ### 變更
 - 將 Cloud Run 記憶體恢復為 1Gi，修復容器啟動超時問題
@@ -274,8 +169,7 @@
 ### 新增
 - 為 iOS 開發者提供完整的多租戶文檔
 - OpenAPI/Swagger 文檔的 RecordingSegment schema
-- Sessions API 文檔新增 recordings 欄位
-- 週進度報告（第 46 週：2025-11-11 ~ 2025-11-17）
+- 週進度報告（第 46 週）
 
 ### 變更
 - 整合並清理文檔結構
@@ -284,7 +178,6 @@
 
 ### 移除
 - 未使用的未來功能設計文檔
-- 過時的測試報告和重複文檔
 
 ### 修復
 - 改善報告生成的防重複邏輯
@@ -296,21 +189,16 @@
 **Phase 3 發布** - 認證與業務邏輯
 
 ### 新增
-- JWT 認證系統，token 有效期 24 小時
-- 客戶 CRUD 操作，自動生成客戶代碼（C0001, C0002...）
-- 案件 CRUD 操作，自動生成案件編號（CASE-20251124-001）
-- 會談 CRUD 操作，支援錄音片段和反思
-- 報告生成，使用非同步 background tasks（RAG + GPT-4）
-- iOS 專用的 UI 整合 API（`/api/v1/ui/*`）
-- Web console，用於 API 測試（`/console`）
-- 多租戶架構，使用 tenant_id 隔離
-- 角色型存取控制（admin, counselor）
+- JWT 認證系統（24 小時有效期）
+- Client、Case、Session CRUD，自動生成代碼
+- 報告生成，使用非同步 background tasks
+- iOS 專用 UI 整合 API（`/api/v1/ui/*`）
+- Web console，用於 API 測試
+- 多租戶架構與 RBAC
 
 ### 安全性
-- bcrypt 密碼雜湊
-- JWT token 認證
-- 多租戶資料隔離
-- 列級權限檢查（諮商師僅能存取自己的資料）
+- bcrypt 密碼雜湊、JWT 認證
+- 多租戶資料隔離與列級權限
 
 ---
 
@@ -335,23 +223,21 @@
 ## [0.0.4] - 2025-10-12
 
 ### 新增
-- 報告生成的輸出格式參數（JSON/Markdown）
-- RAG 系統比較模式，用於報告生成
-- Vertex AI RAG Engine POC，用於評估
-- 週進度報告（第 41 週：2025-10-06 ~ 2025-10-12）
+- 報告生成的輸出格式參數
+- RAG 系統比較模式
+- 週進度報告（第 41 週）
 
 ### 變更
-- 報告生成從 GET 改為 POST（安全性改善）
-- 允許未認證存取 Cloud Run 服務
-- 增加 Cloud Run 記憶體限制至 1Gi
-- 更新 RAG 系統使用 Gemini（移除 Vertex AI POC）
+- 報告生成從 GET 改為 POST
+- Cloud Run 記憶體限制至 1Gi
+- RAG 系統改用 Gemini
 
 ### 修復
-- 在 Docker 中安裝 git，以支援 ragas 套件依賴
-- 改善 RAG 檢索和比較模式 UX
+- Docker 中安裝 git 以支援 ragas 依賴
+- RAG 檢索和比較模式 UX
 
 ### 效能
-- 增強統計頁面，支援各策略顯示和更新 LLM 模型
+- 增強統計頁面，支援各策略顯示
 
 ---
 
@@ -371,16 +257,14 @@
 
 ### 新增
 - 多環境部署（staging/production）
-- 案件報告的表格格式，包含多格式分頁
-- Cloud Run 的 CI/CD secrets 配置
+- 案件報告的表格格式
 
 ### 變更
-- 增加 Cloud Run 記憶體從 128Mi 至 512Mi
-- 新增 Cloud Run 的 timeout 配置
+- Cloud Run 記憶體從 128Mi 至 512Mi
 
 ### 修復
-- 更新佔位符憑證，避免誤判為機密洩漏
-- 重組文檔和更新 UI 樣式
+- 佔位符憑證，避免機密洩漏誤判
+- 文檔重組
 
 ---
 
@@ -390,29 +274,21 @@
 
 ### 新增
 - RAG Console，整合 Supabase
-- Alembic 資料庫遷移系統
-- RAG 系統模型和 API 端點（`/api/rag/*`）
+- RAG 系統模型和 API 端點
 - RAG 處理服務（chunking, embedding, retrieval）
-- 諮商 console UI 和測試套件
-- 智慧 RAG 意圖偵測，改善對話 UX
-- RAG chat API 的完整測試
-- 文件 chunks 表格視圖和 modal
-- 多檔案上傳，包含進度追蹤
+- 諮商 console UI，支援文件上傳
 
 ### 變更
-- 改善 RAG chat 測試，使用整合方法
-- 正確同步資料庫 sessions
+- RAG chat 測試改用整合方法
 
 ### 修復
-- 修復檔案上傳功能
-- 增強 RAG Console，改善除錯和 UI 修復
+- 檔案上傳功能
+- RAG Console 除錯和 UI
 
 ### 基礎設施
 - GitHub Actions CI/CD 至 Cloud Run
 - Docker 容器化，使用 Poetry
-- Cloud Build 配置，自動部署
-- Workload Identity Federation（WIF）for GitHub Actions
-- Career Platform API 公開展示頁面
+- Workload Identity Federation 用於部署
 
 ---
 

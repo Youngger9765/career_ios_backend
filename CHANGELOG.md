@@ -10,135 +10,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Analysis Logs CRUD API for session keyword analysis history tracking
-  - `GET /api/v1/sessions/{id}/analysis-logs` - Retrieve all analysis logs for a session
-  - `DELETE /api/v1/sessions/{id}/analysis-logs/{log_index}` - Delete specific log entry
-  - Auto-save analysis results when calling analyze-keywords endpoint
-  - Structured log schema: timestamp, transcript segment, keywords, categories, confidence, insights, counselor_id, fallback flag
-- File size monitoring rules in agent system (API: 300 lines, Services: 400 lines)
-- Database migration for analysis_logs JSON column in sessions table
-- Console UI steps for viewing and deleting analysis logs (Steps #19 & #20)
+- Analysis Logs CRUD API with auto-save and structured tracking
+- File size monitoring rules in agent system
 - Favicon handler to avoid 404 errors
 
 ### Changed
-- **Systematic service layer refactoring (10 files, avg -50% code reduction)**
-  - Extracted business logic from API endpoints to dedicated service classes
-  - Improved maintainability, testability, and code organization
-  - All integration tests pass (TDD-compliant refactoring)
-- **Code compression to meet size limits (3 files)**
-  - Compressed Reports API docstrings (307 → 293 lines, -4.6%)
-  - Compressed Sessions API docstrings (324 → 300 lines, -7.4%)
-  - Compressed SessionService docstrings (449 → 379 lines, -15.6%)
-  - Removed verbose Args/Returns sections while keeping summary docstrings
-  - All integration tests pass (TDD-compliant refactoring)
-- Refactored Sessions API by splitting into 3 routers (424 → 324 lines, -24%)
-  - Created sessions_keywords.py (53 lines) for keyword analysis endpoint
-  - Created sessions_analysis.py (72 lines) for analysis log endpoints
-  - Maintained sessions.py (324 lines) for core CRUD, reflection, and recording endpoints
-  - All 29 integration tests pass (22 sessions + 7 recordings)
-- Refactored UI Client-Case API by extracting schemas (452 → 281 lines, -38%)
-  - Created app/schemas/ui_client_case.py (181 lines) for Pydantic models
-  - Separated UI-optimized request/response schemas from API logic
-  - All 18 integration tests pass (TDD-compliant refactoring)
-- Refactored SessionService by extracting helpers (555 → 448 lines, -19%)
-  - Created app/services/helpers/session_transcript.py (102 lines) for transcript processing
-  - Created app/services/helpers/session_validation.py (26 lines) for date/time parsing
-  - Improved code organization and reduced service file complexity
-  - All 22 integration tests pass (TDD-compliant refactoring)
-- Refactored RAG Evaluation API by extracting schemas (399 → 262 lines, -34%)
-  - Created app/schemas/rag_evaluation.py (151 lines) for Pydantic models and helpers
-  - Extracted all request/response models and helper functions
-  - Improved code organization and maintainability
-- Refactored Reports API by extracting schemas (328 → 307 lines, -6%)
-  - Created app/schemas/reports.py (31 lines) for Pydantic request/response models
-  - Extracted GenerateReportRequest, ProcessingStatus, GenerateReportResponse
-  - All 10 integration tests pass (TDD-compliant refactoring)
-- Refactored ClientCaseService by extracting helpers and query builder (509 → 351 lines, -31%)
-  - Created app/services/helpers/client_case_helpers.py (91 lines) for code generation and formatting
-  - Created app/services/helpers/client_case_query_builder.py (130 lines) for complex query logic
-  - Extracted all helper methods and SQLAlchemy query building logic
-  - All 20 integration tests pass (TDD-compliant refactoring)
-- Refactored RAGReportService by extracting schemas and prompt builders (495 → 242 lines, -51%)
-  - Created app/schemas/rag_report.py (51 lines) for EnhancedReportSchema and LegacyReportSchema
-  - Created app/services/helpers/rag_report_prompt_builder.py (230 lines) for large prompt construction
-  - Extracted both prompt builder methods and Pydantic schemas
-  - Updated app/api/rag_report.py to use imported prompt builders
-- Refactored console.html modularization (75% code reduction: 7245 → 1785 lines)
-  - Extracted 5479 lines of step definitions to console-steps.js
-  - Improved maintainability and code organization
-- Refactored Sessions API to service layer pattern (1,219 → 424 lines, -65%)
-  - Created KeywordAnalysisService (288 lines) for AI-powered keyword extraction
-  - Created AnalysisLogService (139 lines) for analysis logs CRUD operations
-  - Enhanced SessionService with get_session_with_details(), update_session(), delete_session()
-  - Integrated ReflectionService, RecordingService, TimelineService for endpoint delegation
-  - Created response builder helpers to reduce duplication (_build_session_response)
-  - Extracted complex session number recalculation logic to service layer
-  - All 41 integration tests pass (TDD-compliant refactoring)
-- Refactored UI Client-Case List API to service layer pattern (962 → 452 lines, -53%)
-  - Created ClientCaseService (516 lines) for client-case business logic
-  - Extracted CRUD operations, statistics calculation, code generation logic
-  - All 18 integration tests pass (TDD-compliant refactoring)
-- Refactored RAG Evaluation API to service layer pattern (703 → 397 lines, -43%)
-  - Created EvaluationPromptsService (230 lines) for prompt version management
-  - Created EvaluationRecommendationsService (113 lines) for intelligent recommendations
-  - Extracted helper functions (_build_experiment_response, _parse_experiment_id)
-  - All 124 integration tests pass (TDD-compliant refactoring)
-- Refactored Reports API to service layer pattern (529 → 325 lines, -39%)
-  - Created ReportOperationsService (328 lines) for report CRUD operations
-  - Extracted list, get, update, generate report logic to service layer
-  - Simplified background task coordination
-  - All 10 integration tests pass (TDD-compliant refactoring)
-- Refactored Clients API to service layer pattern (517 → 197 lines, -62%)
-  - Created ClientService (385 lines) for client CRUD and timeline operations
-  - Extracted client code generation, age calculation, timeline query logic
-  - All 13 integration tests pass (TDD-compliant refactoring)
-- Refactored Cases API to service layer pattern (352 → 138 lines, -61%)
-  - Created CaseService (280 lines) for case CRUD operations
-  - Extracted case number generation and validation logic
-- Refactored RAG Chat API to service layer pattern (334 → 114 lines, -66%)
-  - Created RAGChatService (372 lines) for RAG chat business logic
-  - Extracted intent classification, vector search, and answer generation logic
-  - Simplified endpoint to thin routing layer with service delegation
-- Refactored RAG Report API to service layer pattern (484 → 168 lines, -65%)
-  - Created RAGReportService (499 lines) for report generation business logic
-  - Extracted transcript parsing, theory search, prompt building, and quality assessment
-  - Simplified endpoint to thin routing layer with service delegation
-- Refactored RAG Ingest API to service layer pattern (410 → 267 lines, -35%)
-  - Created RAGIngestService (275 lines) for document ingestion business logic
-  - Extracted PDF upload/extraction, chunking, embedding generation, and storage operations
-  - Simplified endpoint to thin routing layer with service delegation
-- Refactored Evaluation Service with helper extraction (599 → 394 lines, -34%)
-  - Created EvaluationHelpers (340 lines) for RAG evaluation logic
-  - Extracted document ID queries, RAG answer generation, RAGAS evaluation, metrics calculation
-  - Separated experiment comparison logic to reusable helpers
-- Hidden counselor_id field in analysis logs display (privacy improvement)
-- Updated analyze-keywords UI text: "已自動儲存" instead of "不會儲存"
-- Analysis logs display with color-coded AI vs fallback analysis
+- Systematic service layer refactoring (10 files, avg -50% code reduction)
+- Code compression to meet size limits (docstrings simplified)
+- Sessions API split into 3 routers (keywords, analysis logs, core CRUD)
+- Console.html modularization (75% reduction: 7245 → 1785 lines)
+- Analysis logs UI improvements (privacy, color-coding, auto-save text)
 
 ### Fixed
-- SQLAlchemy JSON column change tracking with flag_modified() for analysis_logs
-- Vertex AI permissions in staging environment (added roles/aiplatform.user to service account)
-- Analysis logs now properly persist in database after keyword analysis
+- SQLAlchemy JSON column change tracking for analysis_logs
+- Vertex AI permissions in staging environment
 
 ### Infrastructure
-- Added roles/aiplatform.user to career-app-sa service account for Vertex AI access
-- Staging environment now uses AI-powered analysis instead of fallback
-- Mandatory documentation update rules in agent system (BLOCKS push if docs not updated)
-  - Auto-checks CHANGELOG, PRD.md, and weekly reports before every push
-  - Ensures project documentation stays current
+- Staging environment now uses AI-powered analysis
+- Mandatory documentation update rules in agent system
 
 ---
 
 ## [0.3.1] - 2025-11-29
 
 ### Added
-- Real-time transcript keyword analysis API (`POST /api/v1/sessions/{id}/analyze-keywords`)
-  - AI-powered keyword extraction with categories and confidence scores
-  - Counselor insights and reminders based on transcript content
-- Session name field for better organization (`name` field in Session model)
-- Auto-calculated time range from recording segments (start_time/end_time)
+- Real-time transcript keyword analysis API with AI-powered extraction
+- Session name field for better organization
+- Auto-calculated time range from recording segments
 - Claude Code agent configuration with TDD enforcement
-- Intelligent model selection strategy (Haiku/Sonnet/Opus)
 
 ### Changed
 - Gemini 2.5 Flash as default LLM provider (40% cost reduction, < 2s response time)
@@ -146,9 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed "(iOS)" suffix from API endpoint titles for consistency
 
 ### Fixed
-- CI/CD test failures in transcript keywords API with GeminiService mocking
-- Admin role resource deletion permissions (can delete any tenant resources)
-- Agent model selection strategy documentation (clarified static configuration only)
+- CI/CD test failures with GeminiService mocking
+- Admin role resource deletion permissions
 
 ### Performance
 - Session service layer extraction with N+1 query fixes (**3x faster**: 800ms → 250ms)
@@ -222,10 +120,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.3] - 2025-11-23
 
 ### Added
-- iPhone simulator preview views in console for Client-Case CRUD operations
-- GET client-case detail endpoint (`/api/v1/ui/client-case/{id}`)
+- iPhone simulator preview views in console
+- GET client-case detail endpoint
 - Auto-populate update form when selecting client-case
-- OpenAPI examples for Bruno API client compatibility
 - Comprehensive API integration tests (66 tests)
 
 ### Changed
@@ -235,9 +132,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Redesigned console sidebar with light gray theme
 
 ### Fixed
-- Client-case list 500 error with timezone-aware datetime comparison
-- Field mapping priority in `loadClientCaseForUpdate`
-- Schema field display to show all fields including empty values
+- Client-case list 500 error with timezone-aware datetime
+- Field mapping priority in update form
+- Schema field display for empty values
 
 ### Performance
 - Optimized CI/CD pipeline for better reliability and performance
@@ -247,9 +144,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.2] - 2025-11-22
 
 ### Added
-- Append recording API for iOS convenience (`POST /api/v1/sessions/{id}/recordings/append`)
-  - Allows incremental recording upload during counseling sessions
-  - Auto-updates transcript and session metadata
+- Append recording API for iOS incremental upload
 
 ### Changed
 - Reverted Cloud Run memory to 1Gi to fix container startup timeout
@@ -273,9 +168,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Comprehensive multi-tenancy documentation for iOS developers
-- RecordingSegment schema for OpenAPI/Swagger documentation
-- Recordings field to Sessions API documentation
-- Weekly progress reports (Week 46: 2025-11-11 ~ 2025-11-17)
+- RecordingSegment schema for OpenAPI/Swagger
+- Weekly progress reports (Week 46)
 
 ### Changed
 - Consolidated and cleaned up documentation structure
@@ -284,7 +178,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - Unused future feature design documents
-- Outdated test reports and duplicate documentation
 
 ### Fixed
 - Report generation anti-duplicate logic improvements
@@ -296,21 +189,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Phase 3 Release** - Authentication & Business Logic
 
 ### Added
-- JWT authentication system with 24h token expiration
-- Client CRUD operations with auto-generated client codes (C0001, C0002...)
-- Case CRUD operations with auto-generated case numbers (CASE-20251124-001)
-- Session CRUD operations with recording segments and reflection support
-- Report generation with async background tasks (RAG + GPT-4)
-- UI integration APIs for iOS convenience (`/api/v1/ui/*`)
-- Web console for API testing (`/console`)
-- Multi-tenant architecture with tenant_id isolation
-- Role-based access control (admin, counselor)
+- JWT authentication system (24h expiration)
+- Client, Case, Session CRUD with auto-generated codes
+- Report generation with async background tasks
+- UI integration APIs for iOS (`/api/v1/ui/*`)
+- Web console for API testing
+- Multi-tenant architecture with RBAC
 
 ### Security
-- bcrypt password hashing
-- JWT token authentication
-- Multi-tenant data isolation
-- Row-level permission checks (counselors can only access own data)
+- bcrypt password hashing, JWT authentication
+- Multi-tenant data isolation with row-level permissions
 
 ---
 
@@ -335,23 +223,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.4] - 2025-10-12
 
 ### Added
-- Output format parameter for report generation (JSON/Markdown)
-- RAG system comparison mode for report generation
-- Vertex AI RAG Engine POC for evaluation
-- Weekly progress reports (W41: 2025-10-06 ~ 2025-10-12)
+- Output format parameter for report generation
+- RAG system comparison mode
+- Weekly progress reports (W41)
 
 ### Changed
-- Report generation from GET to POST (security improvement)
-- Allow unauthenticated access to Cloud Run services
-- Increase Cloud Run memory limit to 1Gi
-- Update RAG system to use Gemini (remove Vertex AI POC)
+- Report generation from GET to POST
+- Cloud Run memory limit to 1Gi
+- RAG system to use Gemini
 
 ### Fixed
-- Install git in Docker for ragas package dependency
-- Improve RAG retrieval and comparison mode UX
+- Docker git installation for ragas dependency
+- RAG retrieval and comparison mode UX
 
 ### Performance
-- Enhance stats page with per-strategy display and update LLM models
+- Enhanced stats page with per-strategy display
 
 ---
 
@@ -371,16 +257,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Multi-environment deployment (staging/production)
-- Table format for case reports with multi-format tabs
-- CI/CD secrets configuration for Cloud Run
+- Table format for case reports
 
 ### Changed
-- Increase Cloud Run memory from 128Mi to 512Mi
-- Add timeout configuration for Cloud Run
+- Cloud Run memory from 128Mi to 512Mi
 
 ### Fixed
-- Update placeholder credentials to avoid false positive secret detection
-- Reorganize documentation and update UI styling
+- Placeholder credentials for secret detection
+- Documentation organization
 
 ---
 
@@ -390,29 +274,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - RAG Console with Supabase integration
-- Alembic database migration system
-- RAG system models and API endpoints (`/api/rag/*`)
+- RAG system models and API endpoints
 - RAG processing services (chunking, embedding, retrieval)
-- Counseling console UI and test suite
-- Intelligent RAG intent detection with improved chat UX
-- Comprehensive tests for RAG chat API
-- Document chunks table view and modal
-- Multiple file upload with progress tracking
+- Counseling console UI with document upload
 
 ### Changed
-- Improve RAG chat tests to use integration approach
-- Sync database sessions properly
+- RAG chat tests to integration approach
 
 ### Fixed
-- File upload functionality fixes
-- Enhance RAG Console with improved debugging and UI fixes
+- File upload functionality
+- RAG Console debugging and UI
 
 ### Infrastructure
 - GitHub Actions CI/CD to Cloud Run
 - Docker containerization with Poetry
-- Cloud Build configuration for automatic deployment
-- Workload Identity Federation (WIF) for GitHub Actions
-- Public demo page for Career Platform API
+- Workload Identity Federation for deployment
 
 ---
 
