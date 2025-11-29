@@ -23,8 +23,9 @@ router = APIRouter(prefix="/api/v1/analyze", tags=["analyze"])
 @router.post(
     "/transcript-keywords",
     response_model=TranscriptKeywordResponse,
-    summary="Analyze transcript keywords in real-time",
-    description="Extract keywords from transcript segment using AI, with optional client/case context. No data is stored.",
+    summary="[DEPRECATED] Analyze transcript keywords in real-time",
+    description="DEPRECATED: Use POST /api/v1/sessions/{session_id}/analyze-keywords instead. This endpoint will be removed in a future version.",
+    deprecated=True,
 )
 async def analyze_transcript_keywords(
     request: TranscriptKeywordRequest,

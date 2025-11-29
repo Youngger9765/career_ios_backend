@@ -357,6 +357,129 @@ class TestClientsAPI:
 
             assert response.status_code == 404
 
+    def test_delete_client_forbidden_for_non_owner(
+        self, db_session: Session, auth_headers
+    ):
+        """Test non-admin counselor cannot delete another counselor's client"""
+        from datetime import date
+
+        # Create another counselor
+        other_counselor = Counselor(
+            id=uuid4(),
+            email="other@test.com",
+            username="othercounselor",
+            full_name="Other Counselor",
+            hashed_password=hash_password("password123"),
+            tenant_id="career",
+            role="counselor",
+            is_active=True,
+        )
+        db_session.add(other_counselor)
+        db_session.commit()
+
+        # Create client owned by other counselor
+        other_client = Client(
+            id=uuid4(),
+            counselor_id=other_counselor.id,
+            tenant_id="career",
+            name="Other's Client",
+            code="OTHER001",
+            email="other@example.com",
+            gender="男",
+            birth_date=date(1990, 1, 1),
+            phone="0911111111",
+            identity_option="在職者",
+            current_status="探索中",
+        )
+        db_session.add(other_client)
+        db_session.commit()
+
+        # Try to delete other counselor's client
+        with TestClient(app) as client:
+            response = client.delete(
+                f"/api/v1/clients/{other_client.id}",
+                headers=auth_headers,
+            )
+
+            # Should return 404 (not found) because counselor_id filter prevents access
+            assert response.status_code == 404
+
+    def test_delete_client_admin_can_delete_any(self, db_session: Session):
+        """Test admin can delete any client in their tenant"""
+        from datetime import date
+
+        # Create admin user
+        admin = Counselor(
+            id=uuid4(),
+            email="admin@test.com",
+            username="admin",
+            full_name="Admin User",
+            hashed_password=hash_password("password123"),
+            tenant_id="career",
+            role="admin",
+            is_active=True,
+        )
+        db_session.add(admin)
+        db_session.commit()
+
+        # Create another counselor
+        other_counselor = Counselor(
+            id=uuid4(),
+            email="other2@test.com",
+            username="othercounselor2",
+            full_name="Other Counselor 2",
+            hashed_password=hash_password("password123"),
+            tenant_id="career",
+            role="counselor",
+            is_active=True,
+        )
+        db_session.add(other_counselor)
+        db_session.commit()
+
+        # Create client owned by other counselor
+        other_client = Client(
+            id=uuid4(),
+            counselor_id=other_counselor.id,
+            tenant_id="career",
+            name="Other's Client",
+            code="OTHER002",
+            email="other2@example.com",
+            gender="女",
+            birth_date=date(1995, 6, 15),
+            phone="0922222222",
+            identity_option="學生",
+            current_status="探索中",
+        )
+        db_session.add(other_client)
+        db_session.commit()
+
+        # Login as admin
+        with TestClient(app) as client:
+            login_response = client.post(
+                "/api/auth/login",
+                json={
+                    "email": "admin@test.com",
+                    "password": "password123",
+                    "tenant_id": "career",
+                },
+            )
+            admin_token = login_response.json()["access_token"]
+            admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+            # Admin should be able to delete other counselor's client
+            response = client.delete(
+                f"/api/v1/clients/{other_client.id}",
+                headers=admin_headers,
+            )
+
+            assert response.status_code == 204
+
+            # Verify client is soft-deleted
+            deleted_client = (
+                db_session.query(Client).filter_by(id=other_client.id).first()
+            )
+            assert deleted_client.deleted_at is not None
+
     def test_pagination(self, db_session: Session, auth_headers):
         """Test pagination parameters (skip, limit)"""
         from datetime import date

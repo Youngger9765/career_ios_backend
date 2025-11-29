@@ -1320,7 +1320,7 @@
                     <span class="step-number">18</span>
                     <span class="step-title">🔍 即時關鍵字分析</span>
                 </div>
-                <div class="step-subtitle">POST /api/v1/analyze/transcript-keywords</div>
+                <div class="step-subtitle">POST /api/v1/sessions/{session_id}/analyze-keywords</div>
             </div>
             </div>
 
@@ -2809,7 +2809,7 @@
             },
             'analyze-keywords': {
                 title: '🔍 即時關鍵字分析',
-                subtitle: 'POST /api/v1/analyze/transcript-keywords',
+                subtitle: 'POST /api/v1/sessions/{session_id}/analyze-keywords',
                 init: async () => {
                     if (state.token) {
                         try {
@@ -2836,10 +2836,11 @@
 
                     return `
                         <div class="info-card" style="background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%); border-color: #667eea;">
-                            <h4 style="color: #5145cd; margin: 0 0 8px 0;">🔍 即時關鍵字分析</h4>
+                            <h4 style="color: #5145cd; margin: 0 0 8px 0;">🔍 即時關鍵字分析 (RESTful)</h4>
                             <p style="color: #6366f1; font-size: 13px; margin: 0;">
                                 從逐字稿片段即時提取關鍵字，不儲存任何資料<br/>
-                                自動帶入選定會談的案主背景和案例目標作為 AI 分析脈絡
+                                自動從會談載入案主背景、案例目標和會談資訊作為 AI 分析脈絡<br/>
+                                <strong>包含諮商師洞見</strong>：AI 會根據背景提供關注重點建議
                             </p>
                         </div>
 
@@ -2869,11 +2870,10 @@
                     const transcript = document.getElementById('analyze-transcript').value;
 
                     const requestBody = {
-                        session_id: sessionId,
                         transcript_segment: transcript
                     };
 
-                    const response = await fetch(`${BASE_URL}/api/v1/analyze/transcript-keywords`, {
+                    const response = await fetch(`${BASE_URL}/api/v1/sessions/${sessionId}/analyze-keywords`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${state.token}`,
@@ -2888,11 +2888,6 @@
                 renderPreview: (data) => `
                     <div class="info-card" style="background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%); border-color: #667eea;">
                         <h3 style="color: #5145cd;">🔍 關鍵字分析結果</h3>
-
-                        <div class="info-row">
-                            <span class="info-label">臨時 ID</span>
-                            <span class="info-value" style="font-size: 11px;">${data.segment_id}</span>
-                        </div>
 
                         <div class="info-row">
                             <span class="info-label">信心分數</span>
@@ -2930,10 +2925,20 @@
                             </div>
                         ` : ''}
 
-                        <div class="info-card" style="background: #fef3c7; border-color: #fbbf24; margin-top: 16px;">
-                            <p style="color: #92400e; font-size: 12px; margin: 0;">
-                                ⚠️ 此分析結果不會儲存在資料庫中<br/>
-                                僅供即時參考使用
+                        ${data.counselor_insights ? `
+                            <div style="margin-top: 16px;">
+                                <h4 style="color: #374151; margin-bottom: 8px;">💡 諮商師洞見</h4>
+                                <div class="info-card" style="background: #fef3c7; border-color: #fbbf24;">
+                                    <p style="color: #92400e; font-size: 13px; margin: 0; line-height: 1.6;">
+                                        ${data.counselor_insights}
+                                    </p>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <div class="info-card" style="background: #e0f2fe; border-color: #0ea5e9; margin-top: 16px;">
+                            <p style="color: #075985; font-size: 12px; margin: 0;">
+                                ℹ️ 此分析結果不會儲存在資料庫中，僅供即時參考使用
                             </p>
                         </div>
                     </div>

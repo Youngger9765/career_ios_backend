@@ -27,6 +27,7 @@ class TestTranscriptKeywordsAPI:
                         "keywords": ["壓力", "焦慮", "工作", "主管", "要求"],
                         "categories": ["情緒", "職場", "人際關係"],
                         "confidence": 0.85,
+                        "counselor_insights": "案主出現明顯的工作壓力和焦慮情緒，建議探索壓力來源及應對策略。",
                     }
                 )
             elif "天氣" in prompt:
@@ -35,6 +36,16 @@ class TestTranscriptKeywordsAPI:
                         "keywords": ["天氣", "公園", "散步"],
                         "categories": ["日常生活", "休閒"],
                         "confidence": 0.7,
+                        "counselor_insights": "案主提到日常休閒活動，可以探索生活品質和壓力調節。",
+                    }
+                )
+            elif "成就感" in prompt or "轉職" in prompt:
+                return json.dumps(
+                    {
+                        "keywords": ["成就感", "焦慮", "壓力", "轉職", "失敗"],
+                        "categories": ["職涯發展", "情緒", "自我懷疑"],
+                        "confidence": 0.9,
+                        "counselor_insights": "案主對職涯轉換感到矛盾，同時存在對現狀的不滿和對改變的恐懼。建議探索職涯價值觀和轉職的真實動機。",
                     }
                 )
             else:
@@ -43,14 +54,21 @@ class TestTranscriptKeywordsAPI:
                         "keywords": ["測試", "關鍵字"],
                         "categories": ["一般"],
                         "confidence": 0.5,
+                        "counselor_insights": "無特定洞見。",
                     }
                 )
 
-        # Patch at the import location in analyze.py
-        with patch("app.api.analyze.GeminiService") as mock_class:
-            mock_instance = mock_class.return_value
-            mock_instance.generate_text = mock_generate_text
-            yield mock_instance
+        # Patch at both import locations
+        with patch("app.api.analyze.GeminiService") as mock_analyze, patch(
+            "app.api.sessions.GeminiService"
+        ) as mock_sessions:
+            mock_analyze_instance = mock_analyze.return_value
+            mock_analyze_instance.generate_text = mock_generate_text
+
+            mock_sessions_instance = mock_sessions.return_value
+            mock_sessions_instance.generate_text = mock_generate_text
+
+            yield mock_sessions_instance
 
     @pytest.fixture
     def auth_headers(self, db_session: Session):
@@ -304,3 +322,100 @@ class TestTranscriptKeywordsAPI:
             )
 
             assert response.status_code == 403  # Returns 403 Forbidden without auth
+
+    def test_analyze_session_keywords_restful(self, db_session: Session, auth_headers):
+        """Test RESTful keyword analysis endpoint using session context."""
+        with TestClient(app) as client_api:
+            # Create test client
+            client_response = client_api.post(
+                "/api/v1/clients",
+                headers=auth_headers,
+                json={
+                    "name": "RESTful 測試案主",
+                    "email": "restful-test@example.com",
+                    "gender": "女",
+                    "birth_date": "1992-03-15",
+                    "phone": "0945678901",
+                    "identity_option": "在職者",
+                    "current_status": "職涯轉換困擾",
+                    "notes": "考慮轉職，對未來感到迷惘",
+                },
+            )
+            assert client_response.status_code == 201
+            client_id = client_response.json()["id"]
+
+            # Create test case
+            case_response = client_api.post(
+                "/api/v1/cases",
+                headers=auth_headers,
+                json={
+                    "client_id": client_id,
+                    "goals": "釐清職涯方向，建立信心",
+                    "problem_description": "對當前工作不滿意，想轉換跑道",
+                },
+            )
+            assert case_response.status_code == 201
+            case_id = case_response.json()["id"]
+
+            # Create test session
+            session_response = client_api.post(
+                "/api/v1/sessions",
+                headers=auth_headers,
+                json={
+                    "case_id": case_id,
+                    "session_date": "2025-01-20",
+                    "transcript": "諮商師：今天想聊些什麼？\n案主：我最近對工作感到很迷惘...",
+                    "notes": "第一次諮商",
+                },
+            )
+            assert session_response.status_code == 201
+            session_id = session_response.json()["id"]
+
+            # Test RESTful keyword analysis endpoint
+            request_data = {
+                "transcript_segment": "我覺得現在的工作沒有成就感，常常感到焦慮和壓力。我不確定是否該轉職，但又害怕失敗。"
+            }
+
+            response = client_api.post(
+                f"/api/v1/sessions/{session_id}/analyze-keywords",
+                json=request_data,
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Verify response structure
+            assert "keywords" in data
+            assert "categories" in data
+            assert "confidence" in data
+            assert "counselor_insights" in data
+
+            # Verify data types
+            assert isinstance(data["keywords"], list)
+            assert isinstance(data["categories"], list)
+            assert isinstance(data["confidence"], float)
+            assert isinstance(data["counselor_insights"], str)
+
+            # Verify counselor insights are provided
+            assert len(data["counselor_insights"]) > 0
+
+            # Verify keywords extraction
+            assert len(data["keywords"]) > 0
+            assert 0.0 <= data["confidence"] <= 1.0
+
+    def test_analyze_session_keywords_not_found(
+        self, db_session: Session, auth_headers
+    ):
+        """Test RESTful keyword analysis with non-existent session."""
+        with TestClient(app) as client_api:
+            request_data = {"transcript_segment": "測試文字"}
+
+            response = client_api.post(
+                f"/api/v1/sessions/{uuid4()}/analyze-keywords",
+                json=request_data,
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 404
+            assert "Session not found" in response.json()["detail"]

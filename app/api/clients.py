@@ -365,6 +365,7 @@ def delete_client(
     ]
 
     # Non-admin users can only delete their own clients
+    # Admin can delete any client in their tenant
     if current_user.role != CounselorRole.ADMIN:
         conditions.append(Client.counselor_id == current_user.id)
 
