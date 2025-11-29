@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created sessions_analysis.py (72 lines) for analysis log endpoints
   - Maintained sessions.py (324 lines) for core CRUD, reflection, and recording endpoints
   - All 29 integration tests pass (22 sessions + 7 recordings)
+- Refactored UI Client-Case API by extracting schemas (452 → 281 lines, -38%)
+  - Created app/schemas/ui_client_case.py (181 lines) for Pydantic models
+  - Separated UI-optimized request/response schemas from API logic
+  - All 18 integration tests pass (TDD-compliant refactoring)
 - Refactored console.html modularization (75% code reduction: 7245 → 1785 lines)
   - Extracted 5479 lines of step definitions to console-steps.js
   - Improved maintainability and code organization

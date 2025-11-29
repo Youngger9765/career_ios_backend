@@ -30,6 +30,10 @@
   - 建立 sessions_analysis.py（72 行）處理分析記錄端點
   - 保留 sessions.py（324 行）處理核心 CRUD、反思與錄音端點
   - 所有 29 個整合測試通過（22 個 sessions + 7 個 recordings）
+- 重構 UI Client-Case API 抽取 schemas（452 → 281 行，-38%）
+  - 建立 app/schemas/ui_client_case.py（181 行）放置 Pydantic 模型
+  - 將 UI 優化的請求/回應 schemas 與 API 邏輯分離
+  - 所有 18 個整合測試通過（符合 TDD 原則的重構）
 - 重構 console.html 模組化（程式碼量減少 75%：7245 → 1785 行）
   - 抽取 5479 行步驟定義至 console-steps.js
   - 改善可維護性與程式碼組織
