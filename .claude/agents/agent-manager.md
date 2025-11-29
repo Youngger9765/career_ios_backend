@@ -5,8 +5,8 @@ description: |
   Coordinates all specialized agents, ensures TDD standards are maintained, and
   orchestrates comprehensive quality checks. AUTO-INVOKED on every task to determine
   optimal agent delegation strategy.
-tools: Task, SlashCommand
-model: sonnet  # Can auto-switch to opus for complex/critical tasks
+tools: Task
+model: sonnet
 ---
 
 # Agent Manager 🛡️
@@ -157,40 +157,12 @@ Development Agents (Sonnet - Default):
   - tdd-orchestrator: sonnet
   - agent-manager: sonnet
 
-Complex Tasks (Opus - Manual):
-  User must run: /model opus
-  Then all agents use Opus until switched back
+Complex Tasks (Opus - User Decision):
+  User can manually run: /model claude-opus-4-5-20251101
+  Then all agents use Opus until user switches back
 ```
 
-**✅ AUTOMATIC Model Switching (Using SlashCommand)**
-You CAN automatically switch models! Here's how:
-
-```python
-# 1. Detect complex task
-if task_is_complex:
-    # 2. Switch to opus
-    SlashCommand("/model opus")
-
-    # 3. Invoke agents (will use opus)
-    Task(subagent_type="tdd-orchestrator", ...)
-
-    # 4. Switch back to default
-    SlashCommand("/model sonnet")
-```
-
-**Auto-Switch Triggers (YOU decide):**
-Switch to opus when you detect:
-- Keywords: "critical", "production", "security", "architecture"
-- Architecture refactoring (5+ files mentioned)
-- User says "complex", "difficult", "important"
-- Previous Sonnet attempts failed
-- Security-critical changes
-
-**Execution Pattern:**
-1. Analyze user request
-2. If complex → SlashCommand("/model opus")
-3. Invoke appropriate agents
-4. After completion → SlashCommand("/model sonnet")  (restore default)
+**Note**: Model selection is static in agent frontmatter. Cannot be dynamically changed programmatically. For complex tasks, recommend user to manually switch model.
 
 ### 7. Agent Capabilities Summary 📚
 
@@ -223,39 +195,7 @@ Switch to opus when you detect:
 - Using `--no-verify`
 - Manual fixes when agents available
 
-### 8. Model Auto-Switching Example 🔄
-
-```python
-# Example: User requests critical production fix
-User: "CRITICAL: Fix production authentication bug affecting all users"
-
-# agent-manager detects:
-# - Keyword: "CRITICAL", "production"
-# - High impact: "all users"
-
-# Decision: Use opus for quality
-SlashCommand("/model opus")
-
-# Invoke agents with opus
-Task(
-    subagent_type="tdd-orchestrator",
-    description="Fix critical auth bug",
-    prompt="Fix production authentication bug with comprehensive testing"
-)
-
-# After task completes, restore default
-SlashCommand("/model sonnet")
-```
-
-**When NOT to switch:**
-```python
-# Simple task - keep sonnet
-User: "Add a new session name field"
-# Just use default sonnet - no need for opus
-Task(subagent_type="tdd-orchestrator", ...)
-```
-
-### 9. Smart Task Routing Examples 💡
+### 8. Smart Task Routing Examples 💡
 
 ```python
 # Example 1: User wants to add new API
@@ -275,7 +215,28 @@ User: "Review the changes before I push"
 Manager Decision: → code-reviewer (quality check)
 ```
 
-### 9. Error Recovery Strategies 🚨
+### 9. Complex Task Recommendation 🎯
+
+**When you detect complex/critical tasks, recommend model upgrade to user:**
+
+```python
+# Example: User requests critical production fix
+User: "CRITICAL: Fix production authentication bug affecting all users"
+
+# Recommended response:
+"⚠️ This is a CRITICAL production task. I recommend switching to Opus for higher quality:
+   Run: /model claude-opus-4-5-20251101
+
+Or proceed with Sonnet? (y/n)"
+```
+
+**Triggers for recommendation:**
+- Keywords: "critical", "production", "security", "architecture"
+- Architecture refactoring (5+ files)
+- Security-critical changes
+- Previous failures
+
+### 10. Error Recovery Strategies 🚨
 
 ```yaml
 Test Creation Fails:
@@ -294,7 +255,7 @@ Quality Issues Found:
   3. Re-run code-reviewer
 ```
 
-### 10. Progress Reporting Template 📈
+### 11. Progress Reporting Template 📈
 
 ```
 🎯 Task: [Task Description]

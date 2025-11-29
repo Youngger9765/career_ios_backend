@@ -73,41 +73,38 @@ Agent-manager can escalate to Opus when:
 - Previous Sonnet attempts failed
 - Security/data loss risk detected
 
-## Implementation (CURRENT LIMITATION)
+## Implementation
 
 ### ✅ What Works: Static Configuration
 Each agent has fixed model in frontmatter:
 ```yaml
 ---
 name: test-runner
-model: haiku  # This WORKS - Claude Code reads this
+model: haiku  # Fast & cheap for simple test execution
+---
+
+---
+name: tdd-orchestrator
+model: sonnet  # Balanced for general development
+---
+
+---
+name: code-reviewer
+model: opus  # High quality for thorough review (optional)
 ---
 ```
 
 **Execution**: When Claude invokes `Task(subagent_type="test-runner", ...)`,
 Claude Code automatically uses the model specified in test-runner.md frontmatter.
 
-### ✅ What WORKS: Automatic Model Switching via SlashCommand
+**How to override globally**: User can manually run `/model claude-opus-4-5-20251101`
+to switch all agents to Opus for complex tasks.
+
+### ❌ What Doesn't Work
+
+#### Per-Agent Model Override
 ```python
-# ✅ THIS WORKS - agent-manager can execute slash commands!
-SlashCommand("/model opus")  # Switch to opus
-
-# Now all agents use opus
-Task(subagent_type="tdd-orchestrator", ...)
-
-# Switch back when done
-SlashCommand("/model sonnet")
-```
-
-**How It Works**:
-1. agent-manager detects task complexity
-2. Executes `SlashCommand("/model opus")`
-3. Invokes agents (they all use opus now)
-4. Executes `SlashCommand("/model sonnet")` to restore default
-
-### ❌ What Doesn't Work: Per-Agent Model Override
-```python
-# ❌ Still not possible - cannot override individual agent models
+# ❌ Cannot override individual agent models dynamically
 Task(
     subagent_type="code-generator",
     model="opus",  # ❌ This parameter doesn't exist!
@@ -116,7 +113,16 @@ Task(
 ```
 
 **Why**: Task tool doesn't accept `model` parameter.
-**Solution**: Use SlashCommand to switch global model before invoking agents.
+
+#### Automatic Model Switching
+```python
+# ❌ Cannot programmatically switch models
+SlashCommand("/model opus")  # Error: not a prompt-based command
+```
+
+**Why**: `/model` is a system command, not accessible via SlashCommand tool.
+
+**Solution**: Use static configuration in agent frontmatter for each agent's optimal model.
 
 ## Cost-Benefit Analysis
 
