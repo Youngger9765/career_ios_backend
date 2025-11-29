@@ -36,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created ClientCaseService (516 lines) for client-case business logic
   - Extracted CRUD operations, statistics calculation, code generation logic
   - All 18 integration tests pass (TDD-compliant refactoring)
+- Refactored RAG Evaluation API to service layer pattern (703 → 397 lines, -43%)
+  - Created EvaluationPromptsService (230 lines) for prompt version management
+  - Created EvaluationRecommendationsService (113 lines) for intelligent recommendations
+  - Extracted helper functions (_build_experiment_response, _parse_experiment_id)
+  - All 124 integration tests pass (TDD-compliant refactoring)
 - Hidden counselor_id field in analysis logs display (privacy improvement)
 - Updated analyze-keywords UI text: "已自動儲存" instead of "不會儲存"
 - Analysis logs display with color-coded AI vs fallback analysis

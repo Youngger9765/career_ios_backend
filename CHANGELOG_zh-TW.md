@@ -36,6 +36,11 @@
   - 建立 ClientCaseService（516 行）處理客戶個案業務邏輯
   - 抽取 CRUD 操作、統計計算、代碼生成邏輯
   - 所有 18 個整合測試通過（符合 TDD 原則的重構）
+- 重構 RAG Evaluation API 至 Service Layer 模式（703 → 397 行，-43%）
+  - 建立 EvaluationPromptsService（230 行）處理 Prompt 版本管理
+  - 建立 EvaluationRecommendationsService（113 行）提供智慧建議
+  - 抽取輔助函數（_build_experiment_response, _parse_experiment_id）
+  - 所有 124 個整合測試通過（符合 TDD 原則的重構）
 - 隱藏分析記錄中的 counselor_id 欄位（隱私改善）
 - 更新 analyze-keywords UI 文字：「已自動儲存」而非「不會儲存」
 - 分析記錄顯示改用顏色區分 AI 分析與備援分析
