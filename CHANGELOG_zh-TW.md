@@ -41,6 +41,11 @@
   - 建立 EvaluationRecommendationsService（113 行）提供智慧建議
   - 抽取輔助函數（_build_experiment_response, _parse_experiment_id）
   - 所有 124 個整合測試通過（符合 TDD 原則的重構）
+- 重構 Reports API 至 Service Layer 模式（529 → 325 行，-39%）
+  - 建立 ReportOperationsService（328 行）處理報告 CRUD 操作
+  - 抽取列表、取得、更新、生成報告邏輯至 service layer
+  - 簡化背景任務協調
+  - 所有 10 個整合測試通過（符合 TDD 原則的重構）
 - 隱藏分析記錄中的 counselor_id 欄位（隱私改善）
 - 更新 analyze-keywords UI 文字：「已自動儲存」而非「不會儲存」
 - 分析記錄顯示改用顏色區分 AI 分析與備援分析

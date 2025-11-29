@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created EvaluationRecommendationsService (113 lines) for intelligent recommendations
   - Extracted helper functions (_build_experiment_response, _parse_experiment_id)
   - All 124 integration tests pass (TDD-compliant refactoring)
+- Refactored Reports API to service layer pattern (529 → 325 lines, -39%)
+  - Created ReportOperationsService (328 lines) for report CRUD operations
+  - Extracted list, get, update, generate report logic to service layer
+  - Simplified background task coordination
+  - All 10 integration tests pass (TDD-compliant refactoring)
 - Hidden counselor_id field in analysis logs display (privacy improvement)
 - Updated analyze-keywords UI text: "已自動儲存" instead of "不會儲存"
 - Analysis logs display with color-coded AI vs fallback analysis
