@@ -50,6 +50,9 @@
   - 建立 ClientService（385 行）處理客戶 CRUD 與時間線操作
   - 抽取客戶代碼生成、年齡計算、時間線查詢邏輯
   - 所有 13 個整合測試通過（符合 TDD 原則的重構）
+- 重構 Cases API 至 Service Layer 模式（352 → 138 行，-61%）
+  - 建立 CaseService（280 行）處理案例 CRUD 操作
+  - 抽取案例編號生成與驗證邏輯
 - 隱藏分析記錄中的 counselor_id 欄位（隱私改善）
 - 更新 analyze-keywords UI 文字：「已自動儲存」而非「不會儲存」
 - 分析記錄顯示改用顏色區分 AI 分析與備援分析

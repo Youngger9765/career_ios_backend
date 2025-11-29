@@ -50,6 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created ClientService (385 lines) for client CRUD and timeline operations
   - Extracted client code generation, age calculation, timeline query logic
   - All 13 integration tests pass (TDD-compliant refactoring)
+- Refactored Cases API to service layer pattern (352 → 138 lines, -61%)
+  - Created CaseService (280 lines) for case CRUD operations
+  - Extracted case number generation and validation logic
 - Hidden counselor_id field in analysis logs display (privacy improvement)
 - Updated analyze-keywords UI text: "已自動儲存" instead of "不會儲存"
 - Analysis logs display with color-coded AI vs fallback analysis
