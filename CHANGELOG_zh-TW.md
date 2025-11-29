@@ -34,6 +34,11 @@
   - 建立 app/schemas/ui_client_case.py（181 行）放置 Pydantic 模型
   - 將 UI 優化的請求/回應 schemas 與 API 邏輯分離
   - 所有 18 個整合測試通過（符合 TDD 原則的重構）
+- 重構 SessionService 抽取輔助模組（555 → 448 行，-19%）
+  - 建立 app/services/helpers/session_transcript.py（102 行）處理逐字稿處理
+  - 建立 app/services/helpers/session_validation.py（26 行）處理日期時間解析
+  - 改善程式碼組織並降低服務檔案複雜度
+  - 所有 22 個整合測試通過（符合 TDD 原則的重構）
 - 重構 console.html 模組化（程式碼量減少 75%：7245 → 1785 行）
   - 抽取 5479 行步驟定義至 console-steps.js
   - 改善可維護性與程式碼組織

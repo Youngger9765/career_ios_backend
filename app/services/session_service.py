@@ -2,7 +2,7 @@
 Session Service - Business logic for session management
 Refactored from app/api/sessions.py to follow Service Layer pattern
 """
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List, Optional, Tuple
 from uuid import UUID
 
@@ -19,6 +19,13 @@ from app.schemas.session import (
     SessionCreateRequest,
     SessionUpdateRequest,
 )
+from app.services.helpers.session_transcript import (
+    aggregate_transcript_from_recordings,
+    calculate_timerange_from_recordings,
+    process_recordings_data,
+    process_transcript_data,
+)
+from app.services.helpers.session_validation import parse_date, parse_datetime
 
 
 class SessionService:
@@ -45,11 +52,9 @@ class SessionService:
             raise ValueError("Case not found or access denied")
 
         # Parse dates and times
-        start_time = (
-            self._parse_datetime(request.start_time) if request.start_time else None
-        )
-        end_time = self._parse_datetime(request.end_time) if request.end_time else None
-        session_date = self._parse_date(request.session_date)
+        start_time = parse_datetime(request.start_time) if request.start_time else None
+        end_time = parse_datetime(request.end_time) if request.end_time else None
+        session_date = parse_date(request.session_date)
 
         # Calculate session number based on chronological order
         session_number, needs_renumbering = self._calculate_session_number_for_new(
@@ -64,14 +69,12 @@ class SessionService:
         _client = self.session_repo.get_client_by_id(case.client_id)
 
         # Process recordings and transcript
-        full_transcript = self._process_transcript_data(request)
-        recordings_data = self._process_recordings_data(request)
+        full_transcript = process_transcript_data(request)
+        recordings_data = process_recordings_data(request)
 
         # Calculate time range from recordings if provided
         if recordings_data:
-            calc_start, calc_end = self._calculate_timerange_from_recordings(
-                recordings_data
-            )
+            calc_start, calc_end = calculate_timerange_from_recordings(recordings_data)
             if calc_start:
                 start_time = calc_start
             if calc_end:
@@ -237,21 +240,21 @@ class SessionService:
 
         # Update session_date
         if request.session_date is not None:
-            new_session_date = self._parse_date(request.session_date)
+            new_session_date = parse_date(request.session_date)
             if new_session_date != session.session_date:
                 time_changed = True
                 session.session_date = new_session_date
 
         # Update start_time
         if request.start_time is not None:
-            new_start_time = self._parse_datetime(request.start_time)
+            new_start_time = parse_datetime(request.start_time)
             if new_start_time != session.start_time:
                 time_changed = True
             session.start_time = new_start_time
 
         # Update end_time
         if request.end_time is not None:
-            new_end_time = self._parse_datetime(request.end_time)
+            new_end_time = parse_datetime(request.end_time)
             session.end_time = new_end_time
 
         # Process recordings and transcript
@@ -259,14 +262,14 @@ class SessionService:
             session.recordings = request.recordings
             if request.recordings:
                 # Aggregate transcript from recordings
-                full_transcript = self._aggregate_transcript_from_recordings(
+                full_transcript = aggregate_transcript_from_recordings(
                     request.recordings
                 )
                 session.transcript_text = full_transcript
                 session.transcript_sanitized = full_transcript
 
                 # Recalculate time range from recordings
-                calc_start, calc_end = self._calculate_timerange_from_recordings(
+                calc_start, calc_end = calculate_timerange_from_recordings(
                     request.recordings
                 )
                 if calc_start:
@@ -331,25 +334,6 @@ class SessionService:
 
     # Helper methods (extracted from sessions.py lines 29-116)
 
-    def _parse_date(self, date_str: str) -> datetime:
-        """Parse date string to datetime with timezone"""
-        dt = datetime.fromisoformat(date_str)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt
-
-    def _parse_datetime(self, datetime_str: str) -> datetime:
-        """Parse datetime string with various formats"""
-        time_str = datetime_str.strip()
-        if " " in time_str or "T" in time_str or len(time_str) > 10:
-            dt = datetime.fromisoformat(time_str.replace(" ", "T"))
-        else:
-            raise ValueError("datetime must include date (format: YYYY-MM-DD HH:MM)")
-
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt
-
     def _calculate_session_number_for_new(
         self, case_id: UUID, new_datetime: datetime
     ) -> Tuple[int, bool]:
@@ -402,96 +386,6 @@ class SessionService:
                 break
 
         return session_number, needs_renumbering
-
-    def _process_transcript_data(self, request: SessionCreateRequest) -> Optional[str]:
-        """Process transcript from request"""
-        if request.recordings:
-            return self._aggregate_transcript_from_recordings(request.recordings)
-        return request.transcript
-
-    def _process_recordings_data(self, request: SessionCreateRequest) -> List[dict]:
-        """Convert recordings to dict format for storage"""
-        if not request.recordings:
-            return []
-
-        recordings_dicts = []
-        for r in request.recordings:
-            if isinstance(r, dict):
-                recordings_dicts.append(r)
-            else:
-                recordings_dicts.append(r.model_dump())
-        return recordings_dicts
-
-    def _aggregate_transcript_from_recordings(self, recordings: List) -> str:
-        """
-        Aggregate transcript text from recording segments.
-        Helper function extracted from sessions.py lines 31-63.
-        """
-        if not recordings:
-            return ""
-
-        def get_segment_number(r):
-            if isinstance(r, dict):
-                return r.get("segment_number", 0)
-            else:
-                return getattr(r, "segment_number", 0)
-
-        sorted_recordings = sorted(recordings, key=get_segment_number)
-
-        transcripts = []
-        for r in sorted_recordings:
-            if isinstance(r, dict):
-                text = r.get("transcript_text", "")
-            else:
-                text = getattr(r, "transcript_text", "")
-            if text:
-                transcripts.append(text)
-
-        return "\n\n".join(transcripts)
-
-    def _calculate_timerange_from_recordings(
-        self, recordings: List
-    ) -> Tuple[Optional[datetime], Optional[datetime]]:
-        """
-        Calculate session time range from recordings.
-        Helper function extracted from sessions.py lines 66-115.
-        """
-        if not recordings:
-            return None, None
-
-        start_times = []
-        end_times = []
-
-        for r in recordings:
-            if isinstance(r, dict):
-                start_str = r.get("start_time")
-                end_str = r.get("end_time")
-            else:
-                start_str = getattr(r, "start_time", None)
-                end_str = getattr(r, "end_time", None)
-
-            if start_str:
-                if isinstance(start_str, str):
-                    start_dt = datetime.fromisoformat(start_str.replace(" ", "T"))
-                    if start_dt.tzinfo is None:
-                        start_dt = start_dt.replace(tzinfo=timezone.utc)
-                    start_times.append(start_dt)
-                elif isinstance(start_str, datetime):
-                    start_times.append(start_str)
-
-            if end_str:
-                if isinstance(end_str, str):
-                    end_dt = datetime.fromisoformat(end_str.replace(" ", "T"))
-                    if end_dt.tzinfo is None:
-                        end_dt = end_dt.replace(tzinfo=timezone.utc)
-                    end_times.append(end_dt)
-                elif isinstance(end_str, datetime):
-                    end_times.append(end_str)
-
-        session_start = min(start_times) if start_times else None
-        session_end = max(end_times) if end_times else None
-
-        return session_start, session_end
 
     def _renumber_session_on_time_change(
         self, session: Session, old_session_number: int, case_id: UUID
