@@ -3712,6 +3712,10 @@
                             <label>會談日期 *</label>
                             <input type="date" id="session-date" value="${new Date().toISOString().split('T')[0]}" />
                         </div>
+                        <div class="form-group">
+                            <label>會談名稱/主題（選填）</label>
+                            <input type="text" id="session-name" placeholder="例如：生涯探索、工作適應、轉職規劃..." />
+                        </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                             <div class="form-group">
                                 <label>開始時間</label>
@@ -3778,6 +3782,7 @@
                     const requestBody = {
                         case_id: document.getElementById('session-case-id').value,
                         session_date: sessionDate,  // Should be in YYYY-MM-DD format from input[type=date]
+                        name: document.getElementById('session-name').value || null,
                         transcript: document.getElementById('session-transcript').value,
                         notes: document.getElementById('session-notes').value || null
                     };
@@ -3841,6 +3846,12 @@
                             <span class="info-label">會談日期</span>
                             <span class="info-value">${new Date(data.session_date).toLocaleDateString('zh-TW')}</span>
                         </div>
+                        ${data.name ? `
+                        <div class="info-row">
+                            <span class="info-label">會談主題</span>
+                            <span class="info-value">${data.name}</span>
+                        </div>
+                        ` : ''}
                         <div class="info-row">
                             <span class="info-label">已生成報告</span>
                             <span class="info-value">${data.has_report ? '是' : '否'}</span>
@@ -3923,6 +3934,12 @@
                                     <span class="info-label">會談編號</span>
                                     <span class="info-value">第 ${s.session_number} 次</span>
                                 </div>
+                                ${s.name ? `
+                                <div class="info-row">
+                                    <span class="info-label">會談主題</span>
+                                    <span class="info-value">${s.name}</span>
+                                </div>
+                                ` : ''}
                                 <div class="info-row">
                                     <span class="info-label">已生成報告</span>
                                     <span class="info-value">${s.has_report ? '✅ 是' : '❌ 否'}</span>
@@ -3995,6 +4012,12 @@
                             <span class="info-label">會談編號</span>
                             <span class="info-value">第 ${data.session_number} 次</span>
                         </div>
+                        ${data.name ? `
+                        <div class="info-row">
+                            <span class="info-label">會談主題</span>
+                            <span class="info-value">${data.name}</span>
+                        </div>
+                        ` : ''}
                         ${data.start_time ? `
                         <div class="info-row">
                             <span class="info-label">開始時間</span>
@@ -4112,6 +4135,10 @@
                             <label>會談日期</label>
                             <input type="date" id="update-session-date" />
                         </div>
+                        <div class="form-group">
+                            <label>會談名稱/主題</label>
+                            <input type="text" id="update-session-name" placeholder="例如：生涯探索、工作適應、轉職規劃..." />
+                        </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                             <div class="form-group">
                                 <label>開始時間</label>
@@ -4157,12 +4184,14 @@
                     const updateData = {};
 
                     const sessionDate = document.getElementById('update-session-date').value;
+                    const sessionName = document.getElementById('update-session-name').value;
                     const startTime = document.getElementById('update-session-start-time').value;
                     const endTime = document.getElementById('update-session-end-time').value;
                     const transcript = document.getElementById('update-session-transcript').value;
                     const notes = document.getElementById('update-session-notes').value;
 
                     if (sessionDate) updateData.session_date = sessionDate;
+                    if (sessionName) updateData.name = sessionName;
                     if (startTime && sessionDate) updateData.start_time = `${sessionDate} ${startTime}`;
                     if (endTime && sessionDate) updateData.end_time = `${sessionDate} ${endTime}`;
                     if (transcript) updateData.transcript = transcript;
@@ -6326,6 +6355,9 @@
                 // Set date
                 const sessionDate = new Date(session.session_date);
                 document.getElementById('update-session-date').value = sessionDate.toISOString().split('T')[0];
+
+                // Set name
+                document.getElementById('update-session-name').value = session.name || '';
 
                 // Set times
                 if (session.start_time) {
