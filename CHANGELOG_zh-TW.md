@@ -24,13 +24,14 @@
 - 重構 console.html 模組化（程式碼量減少 75%：7245 → 1785 行）
   - 抽取 5479 行步驟定義至 console-steps.js
   - 改善可維護性與程式碼組織
-- 重構 Sessions API 至 Service Layer 模式（1,219 → 667 行，-45%）
+- 重構 Sessions API 至 Service Layer 模式（1,219 → 424 行，-65%）
   - 建立 KeywordAnalysisService（288 行）用於 AI 關鍵字萃取
   - 建立 AnalysisLogService（139 行）用於分析記錄 CRUD 操作
-  - 增強 SessionService：新增 get_session_with_details() 與 update_session() 方法
+  - 增強 SessionService：新增 get_session_with_details(), update_session(), delete_session()
+  - 整合 ReflectionService, RecordingService, TimelineService 以委派 endpoint 邏輯
+  - 建立回應建構器輔助函數以減少重複代碼 (_build_session_response)
   - 複雜的會談編號重新計算邏輯已抽取至 service layer
-  - 重構 analyze_session_keywords 與 analysis logs endpoints
-  - 所有整合測試通過（符合 TDD 原則的重構）
+  - 所有 41 個整合測試通過（符合 TDD 原則的重構）
 - 隱藏分析記錄中的 counselor_id 欄位（隱私改善）
 - 更新 analyze-keywords UI 文字：「已自動儲存」而非「不會儲存」
 - 分析記錄顯示改用顏色區分 AI 分析與備援分析

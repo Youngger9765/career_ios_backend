@@ -23,10 +23,13 @@ class ReflectionService:
         session_id: UUID,
         counselor_id: UUID,
         tenant_id: str,
-    ) -> Optional[dict]:
-        """Get reflection for a session"""
+    ) -> tuple[Optional[dict], Session]:
+        """Get reflection for a session
+
+        Returns: (reflection, session) tuple
+        """
         session = self._get_authorized_session(session_id, counselor_id, tenant_id)
-        return session.reflection
+        return session.reflection, session
 
     def update_reflection(
         self,
@@ -34,8 +37,11 @@ class ReflectionService:
         reflection: dict,
         counselor_id: UUID,
         tenant_id: str,
-    ) -> dict:
-        """Update or create reflection for a session"""
+    ) -> tuple[dict, Session]:
+        """Update or create reflection for a session
+
+        Returns: (reflection, session) tuple
+        """
         session = self._get_authorized_session(session_id, counselor_id, tenant_id)
 
         # Update reflection
@@ -43,7 +49,7 @@ class ReflectionService:
         self.db.commit()
         self.db.refresh(session)
 
-        return session.reflection
+        return session.reflection, session
 
     def _get_authorized_session(
         self,

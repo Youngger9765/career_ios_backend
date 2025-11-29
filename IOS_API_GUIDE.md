@@ -20,6 +20,28 @@
 
 ---
 
+## 🎉 最新更新 (2025-11-29) ⭐️ NEW
+
+### 0. 🔍 Session 關鍵字分析 APIs
+
+**新功能:** 即時逐字稿關鍵字分析 + 分析歷程記錄管理
+
+**新增 API:**
+- `POST /api/v1/sessions/{id}/analyze-keywords` - AI 驅動的即時關鍵字分析
+- `GET /api/v1/sessions/{id}/analysis-logs` - 取得分析歷程記錄
+- `DELETE /api/v1/sessions/{id}/analysis-logs/{log_index}` - 刪除特定分析記錄
+
+**Session Name 欄位:**
+- Session 模型新增 `name` 欄位（可選），用於會談命名組織
+
+**自動儲存:**
+- 呼叫 analyze-keywords 時，分析結果自動儲存至 `analysis_logs` 欄位
+- 記錄包含：時間戳記、關鍵字、類別、信心分數、諮商師洞見、AI/備援標記
+
+**詳細文件:** 請參閱本文件「關鍵字分析 APIs」章節
+
+---
+
 ## 🎉 最新更新 (2025-11-23)
 
 ### 0. 🎨 動態表單 Schema API 優化 ⭐️ NEW
@@ -466,12 +488,17 @@ func deleteClientCase(token: String, caseId: UUID) async throws -> DeleteRespons
 16. GET /api/v1/sessions/{id}/reflection - 取得反思內容
 17. PUT /api/v1/sessions/{id}/reflection - 更新反思內容
 
+### 🔍 關鍵字分析 APIs ⭐️ NEW
+18. POST /api/v1/sessions/{id}/analyze-keywords - 即時關鍵字分析
+19. GET /api/v1/sessions/{id}/analysis-logs - 取得分析歷程記錄
+20. DELETE /api/v1/sessions/{id}/analysis-logs/{log_index} - 刪除特定分析記錄
+
 ### 📄 報告 APIs
-18. POST /api/v1/reports/generate - 生成報告 (從已儲存的會談記錄生成，需提供 session_id)
-19. GET /api/v1/reports - 列出報告
-20. GET /api/v1/reports/{id} - 取得單一報告
-21. PATCH /api/v1/reports/{id} - 更新報告 (編輯)
-22. GET /api/v1/reports/{id}/formatted - 取得格式化報告 (Markdown/HTML)
+21. POST /api/v1/reports/generate - 生成報告 (從已儲存的會談記錄生成，需提供 session_id)
+22. GET /api/v1/reports - 列出報告
+23. GET /api/v1/reports/{id} - 取得單一報告
+24. PATCH /api/v1/reports/{id} - 更新報告 (編輯)
+25. GET /api/v1/reports/{id}/formatted - 取得格式化報告 (Markdown/HTML)
 
 ---
 
@@ -1181,6 +1208,7 @@ Content-Type: application/json
 {
   "client_id": "uuid",
   "session_date": "2024-01-15",             // 必填
+  "name": "初次會談 - 職涯探索",              // ⭐️ NEW optional，會談名稱（用於組織管理）
   "start_time": "2024-01-15 14:00",        // optional，會談開始時間
   "end_time": "2024-01-15 15:00",          // optional，會談結束時間
   "transcript": "逐字稿內容...",             // optional（與 recordings 二選一）
@@ -1214,6 +1242,10 @@ Content-Type: application/json
 ```
 
 **📝 欄位說明:**
+- `name`: ⭐️ NEW 會談名稱（optional），用於組織和區分會談記錄
+  - 例如：「初次會談」、「職涯探索」、「壓力管理」、「追蹤會談」
+  - 幫助諮商師快速識別會談主題
+  - 未提供時系統會自動使用 `session_number` 作為預設名稱
 - `transcript` vs `recordings`: **二選一**
   - `transcript`: 直接提供完整逐字稿（傳統方式）
   - `recordings`: ⭐️ 提供分段錄音逐字稿（推薦），系統會**自動聚合**成完整逐字稿
@@ -1236,6 +1268,7 @@ Content-Type: application/json
   "client_name": "個案姓名",
   "case_id": "uuid",
   "session_number": 1,                     // 自動按會談時間排序生成
+  "name": "初次會談 - 職涯探索",              // ⭐️ NEW 會談名稱
   "session_date": "2024-01-15T00:00:00Z",
   "start_time": "2024-01-15T14:00:00Z",   // 會談開始時間
   "end_time": "2024-01-15T15:00:00Z",     // 會談結束時間
@@ -1280,6 +1313,7 @@ struct RecordingSegment: Codable {
 struct SessionCreateRequest: Codable {
     let client_id: UUID
     let session_date: String      // "YYYY-MM-DD"
+    let name: String?             // ⭐️ NEW 會談名稱
     let start_time: String?       // "YYYY-MM-DD HH:MM"
     let end_time: String?         // "YYYY-MM-DD HH:MM"
     let transcript: String?       // ⭐️ Optional，與 recordings 二選一
@@ -1288,9 +1322,10 @@ struct SessionCreateRequest: Codable {
     let notes: String?
 
     // 使用 transcript 的傳統方式
-    init(clientId: UUID, sessionDate: String, transcript: String, notes: String? = nil) {
+    init(clientId: UUID, sessionDate: String, transcript: String, name: String? = nil, notes: String? = nil) {
         self.client_id = clientId
         self.session_date = sessionDate
+        self.name = name
         self.transcript = transcript
         self.recordings = nil
         self.notes = notes
@@ -1300,9 +1335,10 @@ struct SessionCreateRequest: Codable {
     }
 
     // ⭐️ 使用 recordings 的新方式（推薦）
-    init(clientId: UUID, sessionDate: String, recordings: [RecordingSegment], notes: String? = nil) {
+    init(clientId: UUID, sessionDate: String, recordings: [RecordingSegment], name: String? = nil, notes: String? = nil) {
         self.client_id = clientId
         self.session_date = sessionDate
+        self.name = name
         self.recordings = recordings
         self.transcript = nil  // 系統會自動聚合
         self.notes = notes
@@ -1720,6 +1756,412 @@ func updateReflection(token: String, sessionId: UUID, reflection: ReflectionUpda
 2. **補充反思**: 稍後回顧時補充遺漏的問題
 3. **督導前整理**: 督導前重新整理反思內容
 4. **生成報告時**: 反思內容會被包含在報告的「四、個人化分析」章節
+
+---
+
+## 🔍 關鍵字分析 APIs ⭐️ NEW
+
+### 18. 即時關鍵字分析
+
+**Endpoint:** `POST /api/v1/sessions/{session_id}/analyze-keywords`
+
+**描述:** 使用 AI 分析逐字稿片段，提取關鍵字、類別、信心分數與諮商師洞見。分析結果會**自動儲存**至 session 的 `analysis_logs` 欄位，建立完整的分析歷程記錄。
+
+**技術棧:**
+- **AI 引擎**: Google Vertex AI (Gemini 2.5 Flash)
+- **上下文來源**: Session → Case → Client 完整脈絡
+- **儲存機制**: 自動追加至 analysis_logs JSONB 欄位
+- **備援機制**: AI 失敗時使用啟發式關鍵字提取
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "transcript_segment": "個案提到最近工作壓力很大，主管經常在公開場合批評他的表現，讓他感到很挫折和焦慮。他開始懷疑自己的能力，甚至想要離職。"
+}
+```
+
+**Response (200):**
+```json
+{
+  "keywords": [
+    "工作壓力",
+    "主管批評",
+    "挫折感",
+    "焦慮",
+    "自我懷疑",
+    "離職念頭",
+    "公開批評",
+    "職場壓力"
+  ],
+  "categories": [
+    "職場議題",
+    "情緒困擾",
+    "人際關係",
+    "自我認知"
+  ],
+  "confidence": 0.92,
+  "counselor_insights": "個案正經歷職場 PUA（職場霸凌），建議探索：(1) 主管行為模式與頻率 (2) 個案的應對策略 (3) 是否有組織內部支持資源。需評估心理健康風險。"
+}
+```
+
+**自動儲存格式 (analysis_logs):**
+```json
+{
+  "analyzed_at": "2025-11-29T10:30:00Z",
+  "transcript_segment": "個案提到最近工作壓力很大...",
+  "keywords": ["工作壓力", "主管批評", ...],
+  "categories": ["職場議題", "情緒困擾", ...],
+  "confidence": 0.92,
+  "counselor_insights": "個案正經歷職場 PUA...",
+  "counselor_id": "uuid",
+  "fallback": false  // true 表示使用備援機制
+}
+```
+
+**Swift 範例:**
+```swift
+struct KeywordAnalysisRequest: Codable {
+    let transcript_segment: String
+}
+
+struct KeywordAnalysisResponse: Codable {
+    let keywords: [String]           // 最多 10 個關鍵字
+    let categories: [String]         // 最多 5 個類別
+    let confidence: Double           // 0.0 - 1.0
+    let counselor_insights: String   // 最多 200 字
+}
+
+func analyzeKeywords(token: String, sessionId: UUID, segment: String) async throws -> KeywordAnalysisResponse {
+    let url = URL(string: "\(baseURL)/api/v1/sessions/\(sessionId.uuidString)/analyze-keywords")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = KeywordAnalysisRequest(transcript_segment: segment)
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    return try JSONDecoder().decode(KeywordAnalysisResponse.self, from: data)
+}
+```
+
+**💡 使用場景:**
+1. **會談中即時分析**: 每 5-10 分鐘分析一次當前對話片段，獲得即時洞見
+2. **重點片段標記**: 個案提到重要議題時，立即分析並標記關鍵字
+3. **主題追蹤**: 追蹤會談過程中反覆出現的關鍵字與類別
+4. **督導準備**: 會談後分析重要片段，準備督導討論材料
+5. **歷程回顧**: 查看完整分析歷程，了解議題演變
+
+**⚠️ 注意事項:**
+- 每次分析會自動儲存至 `analysis_logs`，無需手動儲存
+- `transcript_segment` 建議 50-500 字，過短分析效果差，過長影響效能
+- `confidence` < 0.5 時建議參考 `fallback` 欄位，可能使用了備援機制
+- 分析結果包含諮商師 ID (`counselor_id`)，用於多諮商師協作場景
+
+---
+
+### 19. 取得分析歷程記錄
+
+**Endpoint:** `GET /api/v1/sessions/{session_id}/analysis-logs`
+
+**描述:** 取得特定會談的所有關鍵字分析歷程記錄，依時間順序排列（由舊到新）。可用於回顧分析歷程、追蹤議題演變。
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200):**
+```json
+{
+  "session_id": "uuid",
+  "total_logs": 3,
+  "logs": [
+    {
+      "log_index": 0,
+      "analyzed_at": "2025-11-29T10:15:00Z",
+      "transcript_segment": "個案提到童年時期父母經常吵架...",
+      "keywords": ["童年創傷", "父母衝突", "不安全感"],
+      "categories": ["家庭議題", "童年經驗"],
+      "confidence": 0.88,
+      "counselor_insights": "探索童年依附模式對當前關係的影響",
+      "counselor_id": "uuid",
+      "fallback": false
+    },
+    {
+      "log_index": 1,
+      "analyzed_at": "2025-11-29T10:30:00Z",
+      "transcript_segment": "個案提到最近工作壓力很大...",
+      "keywords": ["工作壓力", "主管批評", "挫折感"],
+      "categories": ["職場議題", "情緒困擾"],
+      "confidence": 0.92,
+      "counselor_insights": "個案正經歷職場 PUA，需評估心理健康風險",
+      "counselor_id": "uuid",
+      "fallback": false
+    },
+    {
+      "log_index": 2,
+      "analyzed_at": "2025-11-29T10:45:00Z",
+      "transcript_segment": "個案表示想要嘗試轉職...",
+      "keywords": ["轉職", "生涯規劃", "自我探索"],
+      "categories": ["職涯發展", "決策議題"],
+      "confidence": 0.85,
+      "counselor_insights": "協助個案澄清轉職動機與生涯價值觀",
+      "counselor_id": "uuid",
+      "fallback": false
+    }
+  ]
+}
+```
+
+**Response (404):**
+```json
+{
+  "detail": "Session not found or access denied"
+}
+```
+
+**Swift 範例:**
+```swift
+struct AnalysisLogsResponse: Codable {
+    let session_id: UUID
+    let total_logs: Int
+    let logs: [AnalysisLogEntry]
+}
+
+struct AnalysisLogEntry: Codable, Identifiable {
+    let log_index: Int
+    let analyzed_at: String
+    let transcript_segment: String
+    let keywords: [String]
+    let categories: [String]
+    let confidence: Double
+    let counselor_insights: String
+    let counselor_id: UUID
+    let fallback: Bool
+
+    var id: Int { log_index }  // 用於 SwiftUI List
+
+    var analyzedDate: Date? {
+        ISO8601DateFormatter().date(from: analyzed_at)
+    }
+
+    var isHighConfidence: Bool {
+        confidence >= 0.8 && !fallback
+    }
+}
+
+func getAnalysisLogs(token: String, sessionId: UUID) async throws -> AnalysisLogsResponse {
+    let url = URL(string: "\(baseURL)/api/v1/sessions/\(sessionId.uuidString)/analysis-logs")!
+    var request = URLRequest(url: url)
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    return try JSONDecoder().decode(AnalysisLogsResponse.self, from: data)
+}
+```
+
+**SwiftUI 顯示範例:**
+```swift
+struct AnalysisLogsView: View {
+    let logs: [AnalysisLogEntry]
+
+    var body: some View {
+        List(logs) { log in
+            VStack(alignment: .leading, spacing: 8) {
+                // 時間與信心分數
+                HStack {
+                    Text(log.analyzedDate?.formatted() ?? "")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Image(systemName: log.fallback ? "exclamationmark.triangle" : "checkmark.circle")
+                            .foregroundColor(log.isHighConfidence ? .green : .orange)
+                        Text(String(format: "%.0f%%", log.confidence * 100))
+                            .font(.caption)
+                    }
+                }
+
+                // 關鍵字標籤
+                FlowLayout(spacing: 4) {
+                    ForEach(log.keywords, id: \.self) { keyword in
+                        Text(keyword)
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.blue.opacity(0.2))
+                            .cornerRadius(4)
+                    }
+                }
+
+                // 諮商師洞見
+                Text(log.counselor_insights)
+                    .font(.body)
+                    .foregroundColor(.primary)
+
+                // 類別
+                HStack {
+                    ForEach(log.categories, id: \.self) { category in
+                        Text(category)
+                            .font(.caption2)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.purple)
+                            .cornerRadius(3)
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+}
+```
+
+**💡 使用場景:**
+1. **歷程回顧**: 會談後回顧所有分析記錄，整理重點
+2. **議題追蹤**: 查看關鍵字演變，了解議題發展軌跡
+3. **報告準備**: 根據分析歷程撰寫會談報告
+4. **督導討論**: 展示分析歷程，與督導討論諮商策略
+5. **品質檢核**: 檢視 `confidence` 和 `fallback` 欄位，評估分析品質
+
+---
+
+### 20. 刪除分析記錄
+
+**Endpoint:** `DELETE /api/v1/sessions/{session_id}/analysis-logs/{log_index}`
+
+**描述:** 刪除特定的分析記錄。`log_index` 為 0-based 索引（從 0 開始）。刪除後，後續記錄的 `log_index` 會自動調整。
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Path Parameters:**
+- `session_id`: Session UUID
+- `log_index`: 記錄索引（0-based），可從 `GET /analysis-logs` 取得
+
+**Response (204 No Content):**
+```
+(空內容，狀態碼 204 表示刪除成功)
+```
+
+**Response (400 Bad Request):**
+```json
+{
+  "detail": "Invalid log index: 5. Valid range: 0-2"
+}
+```
+
+**Response (404 Not Found):**
+```json
+{
+  "detail": "Session not found or access denied"
+}
+```
+
+**Swift 範例:**
+```swift
+func deleteAnalysisLog(token: String, sessionId: UUID, logIndex: Int) async throws {
+    let url = URL(string: "\(baseURL)/api/v1/sessions/\(sessionId.uuidString)/analysis-logs/\(logIndex)")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "DELETE"
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (_, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw URLError(.badServerResponse)
+    }
+
+    if httpResponse.statusCode != 204 {
+        throw URLError(.badServerResponse)
+    }
+}
+```
+
+**SwiftUI 整合範例:**
+```swift
+struct AnalysisLogsManagementView: View {
+    @State private var logs: [AnalysisLogEntry] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    let sessionId: UUID
+    let token: String
+
+    var body: some View {
+        List {
+            ForEach(logs) { log in
+                AnalysisLogRow(log: log)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            Task {
+                                await deleteLog(at: log.log_index)
+                            }
+                        } label: {
+                            Label("刪除", systemImage: "trash")
+                        }
+                    }
+            }
+        }
+        .task {
+            await loadLogs()
+        }
+        .alert("錯誤", isPresented: .constant(errorMessage != nil)) {
+            Button("確定") {
+                errorMessage = nil
+            }
+        } message: {
+            if let error = errorMessage {
+                Text(error)
+            }
+        }
+    }
+
+    func loadLogs() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let response = try await getAnalysisLogs(token: token, sessionId: sessionId)
+            logs = response.logs
+        } catch {
+            errorMessage = "載入失敗: \(error.localizedDescription)"
+        }
+    }
+
+    func deleteLog(at index: Int) async {
+        do {
+            try await deleteAnalysisLog(token: token, sessionId: sessionId, logIndex: index)
+            // 重新載入列表
+            await loadLogs()
+        } catch {
+            errorMessage = "刪除失敗: \(error.localizedDescription)"
+        }
+    }
+}
+```
+
+**💡 使用場景:**
+1. **錯誤修正**: 刪除分析錯誤或不相關的記錄
+2. **隱私保護**: 刪除包含敏感資訊的分析記錄
+3. **測試清理**: 開發測試時清理測試資料
+4. **歷程整理**: 保留重要記錄，刪除冗餘分析
+
+**⚠️ 注意事項:**
+- 刪除操作**不可逆**，請謹慎使用
+- 刪除記錄後，`log_index` 會重新排序（例如刪除 index 1，原本的 index 2 會變成新的 index 1）
+- 建議在 UI 加上二次確認對話框
+- 只能刪除自己權限範圍內的 session 記錄
 
 ---
 

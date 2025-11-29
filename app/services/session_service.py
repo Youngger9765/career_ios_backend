@@ -157,6 +157,33 @@ class SessionService:
 
         return (session, client, case, has_report)
 
+    def get_session_with_context(
+        self,
+        session_id: UUID,
+        current_user: Counselor,
+        tenant_id: str,
+    ) -> Optional[Tuple[Session, Client, Case]]:
+        """
+        Get session with joined Client and Case for keyword analysis.
+
+        Returns: (Session, Client, Case) or None if not found
+        """
+        result = self.db.execute(
+            select(Session, Client, Case)
+            .join(Case, Session.case_id == Case.id)
+            .join(Client, Case.client_id == Client.id)
+            .where(
+                Session.id == session_id,
+                Client.counselor_id == current_user.id,
+                Client.tenant_id == tenant_id,
+                Session.deleted_at.is_(None),
+                Case.deleted_at.is_(None),
+                Client.deleted_at.is_(None),
+            )
+        )
+        row = result.first()
+        return row if row else None
+
     def list_sessions(
         self,
         counselor: Counselor,
