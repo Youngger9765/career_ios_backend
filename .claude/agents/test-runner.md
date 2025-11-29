@@ -5,7 +5,7 @@ description: |
   Runs tests, reports results, and auto-fixes failures while preserving test intent.
   Trigger keywords: test, pytest, run tests, check tests, 測試, 跑測試
 tools: Bash, Read, Edit, Grep
-model: sonnet
+model: haiku  # Fast model for test execution - simple, repetitive task
 ---
 
 # Test Runner - 自動測試執行與修復專家

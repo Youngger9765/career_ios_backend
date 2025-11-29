@@ -263,7 +263,15 @@ poetry run pytest tests/integration/ -v
 - `/review-pr` - PR 審查
 - `/deploy-check` - 部署前檢查
 
-詳細說明請參考 `.claude/commands/` 目錄。
+**Agent Model 智慧切換：**
+- **Haiku** → test-runner (3x 快，10x 便宜，固定)
+- **Sonnet** (預設) → 其他所有 agents
+- **Opus** → agent-manager **自動偵測**並切換（複雜任務）
+
+✅ **自動切換機制**：agent-manager 會偵測任務複雜度，自動執行 `/model opus` 升級
+觸發條件：critical、production、security、5+ 檔案、架構重構
+
+詳細說明請參考 `.claude/MODEL_STRATEGY.md` 和 `.claude/commands/` 目錄。
 
 ---
 
