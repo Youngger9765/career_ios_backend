@@ -43,6 +43,10 @@
   - 建立 app/schemas/rag_evaluation.py（151 行）放置 Pydantic 模型與輔助函數
   - 抽取所有請求/回應模型與輔助函數
   - 改善程式碼組織與可維護性
+- 重構 Reports API 抽取 schemas（328 → 307 行，-6%）
+  - 建立 app/schemas/reports.py（31 行）放置 Pydantic 請求/回應模型
+  - 抽取 GenerateReportRequest、ProcessingStatus、GenerateReportResponse
+  - 所有 10 個整合測試通過（符合 TDD 原則的重構）
 - 重構 console.html 模組化（程式碼量減少 75%：7245 → 1785 行）
   - 抽取 5479 行步驟定義至 console-steps.js
   - 改善可維護性與程式碼組織

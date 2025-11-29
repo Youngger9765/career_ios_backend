@@ -43,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created app/schemas/rag_evaluation.py (151 lines) for Pydantic models and helpers
   - Extracted all request/response models and helper functions
   - Improved code organization and maintainability
+- Refactored Reports API by extracting schemas (328 → 307 lines, -6%)
+  - Created app/schemas/reports.py (31 lines) for Pydantic request/response models
+  - Extracted GenerateReportRequest, ProcessingStatus, GenerateReportResponse
+  - All 10 integration tests pass (TDD-compliant refactoring)
 - Refactored console.html modularization (75% code reduction: 7245 → 1785 lines)
   - Extracted 5479 lines of step definitions to console-steps.js
   - Improved maintainability and code organization

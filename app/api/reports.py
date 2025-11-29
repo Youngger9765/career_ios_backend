@@ -4,7 +4,6 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -16,6 +15,11 @@ from app.schemas.report import (
     ReportResponse,
     ReportUpdateRequest,
     ReportUpdateResponse,
+)
+from app.schemas.reports import (
+    GenerateReportRequest,
+    GenerateReportResponse,
+    ProcessingStatus,
 )
 from app.services.report_operations_service import ReportOperationsService
 
@@ -123,31 +127,6 @@ async def _generate_report_background(
             db.commit()
     finally:
         db.close()
-
-
-# Request/Response Models
-class GenerateReportRequest(BaseModel):
-    """Request schema for generating report"""
-
-    session_id: UUID
-    report_type: str = "enhanced"  # enhanced | legacy
-    rag_system: str = "openai"  # openai | gemini
-
-
-class ProcessingStatus(BaseModel):
-    """Report processing status"""
-
-    status: str  # "processing"
-    message: str
-
-
-class GenerateReportResponse(BaseModel):
-    """Async report generation response (HTTP 202)"""
-
-    session_id: UUID
-    report_id: UUID
-    report: ProcessingStatus
-    quality_summary: None = None
 
 
 @router.get("", response_model=ReportListResponse)
