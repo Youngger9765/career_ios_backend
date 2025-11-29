@@ -32,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created response builder helpers to reduce duplication (_build_session_response)
   - Extracted complex session number recalculation logic to service layer
   - All 41 integration tests pass (TDD-compliant refactoring)
+- Refactored UI Client-Case List API to service layer pattern (962 → 452 lines, -53%)
+  - Created ClientCaseService (516 lines) for client-case business logic
+  - Extracted CRUD operations, statistics calculation, code generation logic
+  - All 18 integration tests pass (TDD-compliant refactoring)
 - Hidden counselor_id field in analysis logs display (privacy improvement)
 - Updated analyze-keywords UI text: "已自動儲存" instead of "不會儲存"
 - Analysis logs display with color-coded AI vs fallback analysis

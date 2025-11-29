@@ -32,6 +32,10 @@
   - 建立回應建構器輔助函數以減少重複代碼 (_build_session_response)
   - 複雜的會談編號重新計算邏輯已抽取至 service layer
   - 所有 41 個整合測試通過（符合 TDD 原則的重構）
+- 重構 UI Client-Case List API 至 Service Layer 模式（962 → 452 行，-53%）
+  - 建立 ClientCaseService（516 行）處理客戶個案業務邏輯
+  - 抽取 CRUD 操作、統計計算、代碼生成邏輯
+  - 所有 18 個整合測試通過（符合 TDD 原則的重構）
 - 隱藏分析記錄中的 counselor_id 欄位（隱私改善）
 - 更新 analyze-keywords UI 文字：「已自動儲存」而非「不會儲存」
 - 分析記錄顯示改用顏色區分 AI 分析與備援分析
