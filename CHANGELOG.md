@@ -24,11 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored console.html modularization (75% code reduction: 7245 → 1785 lines)
   - Extracted 5479 lines of step definitions to console-steps.js
   - Improved maintainability and code organization
-- Refactored Sessions API to service layer pattern (1,219 → 1,018 lines, -17%)
-  - Created KeywordAnalysisService (329 lines) for AI-powered keyword extraction
+- Refactored Sessions API to service layer pattern (1,219 → 756 lines, -38%)
+  - Created KeywordAnalysisService (288 lines) for AI-powered keyword extraction
   - Enhanced SessionService with get_session_with_details() and update_session() methods
   - Extracted complex session number recalculation logic to service layer
-  - All 22 integration tests pass (TDD-compliant refactoring)
+  - Refactored analyze_session_keywords endpoint to use KeywordAnalysisService
+  - All 34 integration tests pass (TDD-compliant refactoring)
 - Hidden counselor_id field in analysis logs display (privacy improvement)
 - Updated analyze-keywords UI text: "已自動儲存" instead of "不會儲存"
 - Analysis logs display with color-coded AI vs fallback analysis

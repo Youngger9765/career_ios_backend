@@ -58,17 +58,17 @@ class TestTranscriptKeywordsAPI:
                     }
                 )
 
-        # Patch at both import locations
+        # Patch at both import locations (analyze.py and keyword_analysis_service.py)
         with patch("app.api.analyze.GeminiService") as mock_analyze, patch(
-            "app.api.sessions.GeminiService"
-        ) as mock_sessions:
+            "app.services.keyword_analysis_service.GeminiService"
+        ) as mock_kw_service:
             mock_analyze_instance = mock_analyze.return_value
             mock_analyze_instance.generate_text = mock_generate_text
 
-            mock_sessions_instance = mock_sessions.return_value
-            mock_sessions_instance.generate_text = mock_generate_text
+            mock_kw_service_instance = mock_kw_service.return_value
+            mock_kw_service_instance.generate_text = mock_generate_text
 
-            yield mock_sessions_instance
+            yield mock_kw_service_instance
 
     @pytest.fixture
     def auth_headers(self, db_session: Session):

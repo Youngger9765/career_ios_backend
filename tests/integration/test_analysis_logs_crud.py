@@ -33,10 +33,12 @@ class TestAnalysisLogsCRUD:
                 }
             )
 
-        with patch("app.api.sessions.GeminiService") as mock_sessions:
-            mock_sessions_instance = mock_sessions.return_value
-            mock_sessions_instance.generate_text = mock_generate_text
-            yield mock_sessions_instance
+        with patch(
+            "app.services.keyword_analysis_service.GeminiService"
+        ) as mock_kw_service:
+            mock_kw_service_instance = mock_kw_service.return_value
+            mock_kw_service_instance.generate_text = mock_generate_text
+            yield mock_kw_service_instance
 
     @pytest.fixture
     def auth_headers(self, db_session: Session):

@@ -1,7 +1,6 @@
 """
 Sessions (逐字稿) API
 """
-import json
 import logging
 from typing import Optional
 from uuid import UUID
@@ -32,7 +31,7 @@ from app.schemas.session import (
     SessionTimelineResponse,
     SessionUpdateRequest,
 )
-from app.services.gemini_service import GeminiService
+from app.services.keyword_analysis_service import KeywordAnalysisService
 from app.services.recording_service import RecordingService
 from app.services.reflection_service import ReflectionService
 from app.services.session_service import SessionService
@@ -559,23 +558,9 @@ async def analyze_session_keywords(
     """
     Analyze transcript segment for keywords using session context (RESTful).
 
-    This endpoint automatically fetches session, case, and client information
-    to provide context-aware keyword analysis.
-
-    Args:
-        session_id: Session UUID
-        request: Keyword analysis request with transcript segment
-        db: Database session
-        current_user: Authenticated user
-        tenant_id: Tenant ID
-
-    Returns:
-        KeywordAnalysisResponse with keywords, categories, confidence, and counselor insights
-
-    Raises:
-        HTTPException: 404 if session not found
+    Refactored to use KeywordAnalysisService for business logic.
     """
-    # Fetch session with case and client through relationships
+    # Fetch session with case and client using join
     result = db.execute(
         select(Session, Client, Case)
         .join(Case, Session.case_id == Case.id)
@@ -599,267 +584,21 @@ async def analyze_session_keywords(
 
     session, client, case = row
 
-    # Use the RAG-based keyword analysis service for fast response
-    # keyword_service = get_keyword_analysis_service()  # Reserved for future RAG implementation
+    # Use KeywordAnalysisService for AI-powered analysis
+    keyword_service = KeywordAnalysisService(db)
+    result_data = await keyword_service.analyze_transcript_keywords(
+        session, client, case, request.transcript_segment, current_user.id
+    )
 
-    # Convert sync DB session to async for RAG operations
-    # Note: For now we'll use the synchronous Gemini service directly
-    # In production, we should use async database session throughout
-    try:
-        # For now, fall back to direct AI analysis without RAG
-        # (RAG requires async DB session which needs infrastructure changes)
-        # This still provides fast response by using optimized prompting
-
-        # Build AI prompt context from session -> case -> client
-        context_parts = []
-
-        # Add client information
-        client_info = f"案主資訊: {client.name}"
-        if client.current_status:
-            client_info += f", 當前狀況: {client.current_status}"
-        if client.notes:
-            client_info += f", 備註: {client.notes}"
-        context_parts.append(client_info)
-
-        # Add case information
-        case_info = f"案例目標: {case.goals or '未設定'}"
-        if case.problem_description:
-            case_info += f", 問題敘述: {case.problem_description}"
-        context_parts.append(case_info)
-
-        # Add session information
-        session_info = f"會談次數: 第 {session.session_number} 次"
-        if session.notes:
-            session_info += f", 會談備註: {session.notes}"
-        context_parts.append(session_info)
-
-        # Build complete prompt (optimized for speed)
-        context_str = "\n".join(context_parts)
-
-        # Use shorter, more focused prompt for faster response
-        prompt = f"""快速分析以下逐字稿，提取關鍵詞和洞見。
-
-背景：
-{context_str}
-
-逐字稿：
-{request.transcript_segment[:500]}  # Limit to 500 chars for speed
-
-JSON回應（精簡）：
-{{
-    "keywords": ["詞1", "詞2", "詞3", "詞4", "詞5"],
-    "categories": ["類別1", "類別2", "類別3"],
-    "confidence": 0.85,
-    "counselor_insights": "簡短洞見（50字內）"
-}}"""
-
-        # Call Gemini with lower temperature for consistency
-        gemini_service = GeminiService()
-        ai_response = await gemini_service.generate_text(
-            prompt, temperature=0.3, response_format={"type": "json_object"}
-        )
-
-        # Parse AI response
-        if isinstance(ai_response, str):
-            try:
-                json_start = ai_response.find("{")
-                json_end = ai_response.rfind("}") + 1
-                if json_start >= 0 and json_end > json_start:
-                    json_str = ai_response[json_start:json_end]
-                    result_data = json.loads(json_str)
-                else:
-                    # Quick fallback based on common patterns
-                    result_data = {
-                        "keywords": ["情緒", "壓力", "工作", "關係", "目標"],
-                        "categories": ["情緒管理", "職涯發展"],
-                        "confidence": 0.7,
-                        "counselor_insights": "關注案主情緒變化與職涯困擾。",
-                    }
-            except json.JSONDecodeError:
-                # Ultra-fast fallback
-                result_data = {
-                    "keywords": ["探索中", "情緒", "發展"],
-                    "categories": ["一般諮商"],
-                    "confidence": 0.5,
-                    "counselor_insights": "持續觀察案主狀態。",
-                }
-        else:
-            result_data = ai_response
-
-        # Build response
-        response = KeywordAnalysisResponse(
-            keywords=result_data.get("keywords", ["分析中"])[:10],  # Max 10 keywords
-            categories=result_data.get("categories", ["一般"])[:5],  # Max 5 categories
-            confidence=result_data.get("confidence", 0.5),
-            counselor_insights=result_data.get(
-                "counselor_insights", "請根據逐字稿內容判斷。"
-            )[:200],  # Max 200 chars
-        )
-
-        # Save analysis log to session
-        from datetime import datetime, timezone
-
-        analysis_log_entry = {
-            "analyzed_at": datetime.now(timezone.utc).isoformat(),
-            "transcript_segment": request.transcript_segment[
-                :200
-            ],  # Save first 200 chars
-            "keywords": response.keywords,
-            "categories": response.categories,
-            "confidence": response.confidence,
-            "counselor_insights": response.counselor_insights,
-            "counselor_id": str(current_user.id),
-        }
-
-        # Append to analysis_logs
-        if session.analysis_logs is None:
-            session.analysis_logs = []
-        session.analysis_logs.append(analysis_log_entry)
-
-        # Mark as modified for SQLAlchemy to detect changes
-        from sqlalchemy.orm.attributes import flag_modified
-
-        flag_modified(session, "analysis_logs")
-
-        # Commit to database
-        db.commit()
-        db.refresh(session)
-
-        return response
-
-    except Exception as e:
-        logger.error(f"Keyword extraction failed: {e}")
-        # Intelligent fallback: Extract keywords using simple rules
-        transcript = request.transcript_segment[:500]
-
-        # Common counseling keywords (情緒、關係、職涯、壓力等)
-        emotion_keywords = [
-            "焦慮",
-            "壓力",
-            "緊張",
-            "難過",
-            "開心",
-            "害怕",
-            "生氣",
-            "沮喪",
-            "無助",
-            "迷惘",
-            "困擾",
-            "擔心",
-            "自卑",
-        ]
-        work_keywords = [
-            "工作",
-            "主管",
-            "同事",
-            "公司",
-            "職涯",
-            "轉職",
-            "離職",
-            "上班",
-            "加班",
-            "業績",
-            "升遷",
-        ]
-        relationship_keywords = [
-            "家人",
-            "父母",
-            "伴侶",
-            "朋友",
-            "關係",
-            "溝通",
-            "衝突",
-            "相處",
-            "家庭",
-        ]
-        development_keywords = [
-            "目標",
-            "方向",
-            "成就",
-            "發展",
-            "規劃",
-            "未來",
-            "改變",
-            "學習",
-            "成長",
-        ]
-
-        # Extract keywords found in transcript
-        found_keywords = []
-        categories = set()
-
-        for word in emotion_keywords:
-            if word in transcript:
-                found_keywords.append(word)
-                categories.add("情緒管理")
-
-        for word in work_keywords:
-            if word in transcript:
-                found_keywords.append(word)
-                categories.add("職涯發展")
-
-        for word in relationship_keywords:
-            if word in transcript:
-                found_keywords.append(word)
-                categories.add("人際關係")
-
-        for word in development_keywords:
-            if word in transcript:
-                found_keywords.append(word)
-                categories.add("自我探索")
-
-        # If no keywords found, use general ones
-        if not found_keywords:
-            found_keywords = ["探索中", "諮商進行"]
-            categories = {"一般諮商"}
-
-        # Generate simple insights based on found keywords
-        if "焦慮" in found_keywords or "壓力" in found_keywords:
-            insights = "案主表達情緒困擾，建議關注壓力來源及因應策略。"
-        elif "工作" in found_keywords or "職涯" in found_keywords:
-            insights = "案主提及職涯議題，可探索工作價值觀與發展方向。"
-        elif any(k in found_keywords for k in relationship_keywords):
-            insights = "案主談及人際關係，建議探索互動模式與溝通方式。"
-        else:
-            insights = f"案主提及 {', '.join(found_keywords[:3])}，持續關注案主需求。"
-
-        # Build fallback response
-        response = KeywordAnalysisResponse(
-            keywords=found_keywords[:10],  # Max 10
-            categories=list(categories)[:5],  # Max 5
-            confidence=0.6,  # Rule-based has moderate confidence
-            counselor_insights=insights,
-        )
-
-        # Save analysis log to session (even for fallback)
-        from datetime import datetime, timezone
-
-        analysis_log_entry = {
-            "analyzed_at": datetime.now(timezone.utc).isoformat(),
-            "transcript_segment": request.transcript_segment[:200],
-            "keywords": response.keywords,
-            "categories": response.categories,
-            "confidence": response.confidence,
-            "counselor_insights": response.counselor_insights,
-            "counselor_id": str(current_user.id),
-            "fallback": True,  # Mark as fallback analysis
-        }
-
-        # Append to analysis_logs
-        if session.analysis_logs is None:
-            session.analysis_logs = []
-        session.analysis_logs.append(analysis_log_entry)
-
-        # Mark as modified for SQLAlchemy to detect changes
-        from sqlalchemy.orm.attributes import flag_modified
-
-        flag_modified(session, "analysis_logs")
-
-        # Commit to database
-        db.commit()
-        db.refresh(session)
-
-        return response
+    # Build response
+    return KeywordAnalysisResponse(
+        keywords=result_data.get("keywords", ["分析中"])[:10],
+        categories=result_data.get("categories", ["一般"])[:5],
+        confidence=result_data.get("confidence", 0.5),
+        counselor_insights=result_data.get(
+            "counselor_insights", "請根據逐字稿內容判斷。"
+        )[:200],
+    )
 
 
 @router.get(
