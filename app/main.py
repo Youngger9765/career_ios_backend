@@ -167,6 +167,12 @@ async def health_check() -> Dict[str, str]:
     return {"status": "healthy", "timestamp": "2024-01-01T00:00:00Z"}
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Return empty response for favicon to avoid 404"""
+    return Response(status_code=204)
+
+
 if __name__ == "__main__":
     import uvicorn
 

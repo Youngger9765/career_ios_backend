@@ -222,3 +222,27 @@ class KeywordAnalysisResponse(BaseModel):
     counselor_insights: str = Field(
         description="Insights and reminders for the counselor based on the analysis"
     )
+
+
+class AnalysisLogEntry(BaseModel):
+    """Single analysis log entry"""
+
+    log_index: int = Field(description="Index of this log in the array (0-based)")
+    analyzed_at: str = Field(description="ISO 8601 timestamp of analysis")
+    transcript_segment: str = Field(description="Analyzed transcript segment")
+    keywords: list[str] = Field(description="Extracted keywords")
+    categories: list[str] = Field(description="Categories")
+    confidence: float = Field(ge=0.0, le=1.0, description="Confidence score")
+    counselor_insights: str = Field(description="Counselor insights")
+    counselor_id: str = Field(description="ID of counselor who performed analysis")
+    fallback: Optional[bool] = Field(
+        default=False, description="Whether this was a fallback analysis"
+    )
+
+
+class AnalysisLogsResponse(BaseModel):
+    """Response for GET analysis logs"""
+
+    session_id: UUID
+    total_logs: int = Field(description="Total number of analysis logs")
+    logs: list[AnalysisLogEntry] = Field(description="List of analysis logs")

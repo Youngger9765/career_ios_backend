@@ -45,6 +45,20 @@ class Session(Base, BaseModel):
     # - transcript_sanitized: 脫敏後逐字稿
     recordings = Column(JSON, default=lambda: [])
 
+    # Analysis logs - 關鍵字分析歷史記錄（JSON list）
+    # 每次分析會追加一筆記錄，包含：
+    # - analyzed_at: 分析時間 (ISO 8601)
+    # - transcript_segment: 被分析的逐字稿片段
+    # - keywords: 提取的關鍵字列表
+    # - categories: 分類列表
+    # - confidence: 信心分數 (0.0-1.0)
+    # - counselor_insights: 諮商師洞見
+    # - risk_level: 風險等級 (low/medium/high)
+    # - risk_indicators: 風險指標列表
+    # - risk_alert: 風險警示訊息
+    # - counselor_id: 執行分析的諮商師 ID
+    analysis_logs = Column(JSON, default=lambda: [])
+
     # Relationships
     case = relationship("Case", back_populates="sessions")
     jobs = relationship("Job", back_populates="session")

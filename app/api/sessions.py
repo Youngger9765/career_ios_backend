@@ -20,6 +20,8 @@ from app.models.report import Report
 from app.models.session import Session
 from app.repositories.session_repository import SessionRepository
 from app.schemas.session import (
+    AnalysisLogEntry,
+    AnalysisLogsResponse,
     AppendRecordingRequest,
     AppendRecordingResponse,
     KeywordAnalysisRequest,
@@ -886,7 +888,8 @@ JSON回應（精簡）：
         else:
             result_data = ai_response
 
-        return KeywordAnalysisResponse(
+        # Build response
+        response = KeywordAnalysisResponse(
             keywords=result_data.get("keywords", ["分析中"])[:10],  # Max 10 keywords
             categories=result_data.get("categories", ["一般"])[:5],  # Max 5 categories
             confidence=result_data.get("confidence", 0.5),
@@ -895,12 +898,322 @@ JSON回應（精簡）：
             )[:200],  # Max 200 chars
         )
 
+        # Save analysis log to session
+        from datetime import datetime, timezone
+
+        analysis_log_entry = {
+            "analyzed_at": datetime.now(timezone.utc).isoformat(),
+            "transcript_segment": request.transcript_segment[
+                :200
+            ],  # Save first 200 chars
+            "keywords": response.keywords,
+            "categories": response.categories,
+            "confidence": response.confidence,
+            "counselor_insights": response.counselor_insights,
+            "counselor_id": str(current_user.id),
+        }
+
+        # Append to analysis_logs
+        if session.analysis_logs is None:
+            session.analysis_logs = []
+        session.analysis_logs.append(analysis_log_entry)
+
+        # Mark as modified for SQLAlchemy to detect changes
+        from sqlalchemy.orm.attributes import flag_modified
+
+        flag_modified(session, "analysis_logs")
+
+        # Commit to database
+        db.commit()
+        db.refresh(session)
+
+        return response
+
     except Exception as e:
         logger.error(f"Keyword extraction failed: {e}")
-        # Ultra-fast error response
-        return KeywordAnalysisResponse(
-            keywords=["待分析"],
-            categories=["待分類"],
-            confidence=0.0,
-            counselor_insights="系統分析中，請稍後再試。",
+        # Intelligent fallback: Extract keywords using simple rules
+        transcript = request.transcript_segment[:500]
+
+        # Common counseling keywords (情緒、關係、職涯、壓力等)
+        emotion_keywords = [
+            "焦慮",
+            "壓力",
+            "緊張",
+            "難過",
+            "開心",
+            "害怕",
+            "生氣",
+            "沮喪",
+            "無助",
+            "迷惘",
+            "困擾",
+            "擔心",
+            "自卑",
+        ]
+        work_keywords = [
+            "工作",
+            "主管",
+            "同事",
+            "公司",
+            "職涯",
+            "轉職",
+            "離職",
+            "上班",
+            "加班",
+            "業績",
+            "升遷",
+        ]
+        relationship_keywords = [
+            "家人",
+            "父母",
+            "伴侶",
+            "朋友",
+            "關係",
+            "溝通",
+            "衝突",
+            "相處",
+            "家庭",
+        ]
+        development_keywords = [
+            "目標",
+            "方向",
+            "成就",
+            "發展",
+            "規劃",
+            "未來",
+            "改變",
+            "學習",
+            "成長",
+        ]
+
+        # Extract keywords found in transcript
+        found_keywords = []
+        categories = set()
+
+        for word in emotion_keywords:
+            if word in transcript:
+                found_keywords.append(word)
+                categories.add("情緒管理")
+
+        for word in work_keywords:
+            if word in transcript:
+                found_keywords.append(word)
+                categories.add("職涯發展")
+
+        for word in relationship_keywords:
+            if word in transcript:
+                found_keywords.append(word)
+                categories.add("人際關係")
+
+        for word in development_keywords:
+            if word in transcript:
+                found_keywords.append(word)
+                categories.add("自我探索")
+
+        # If no keywords found, use general ones
+        if not found_keywords:
+            found_keywords = ["探索中", "諮商進行"]
+            categories = {"一般諮商"}
+
+        # Generate simple insights based on found keywords
+        if "焦慮" in found_keywords or "壓力" in found_keywords:
+            insights = "案主表達情緒困擾，建議關注壓力來源及因應策略。"
+        elif "工作" in found_keywords or "職涯" in found_keywords:
+            insights = "案主提及職涯議題，可探索工作價值觀與發展方向。"
+        elif any(k in found_keywords for k in relationship_keywords):
+            insights = "案主談及人際關係，建議探索互動模式與溝通方式。"
+        else:
+            insights = f"案主提及 {', '.join(found_keywords[:3])}，持續關注案主需求。"
+
+        # Build fallback response
+        response = KeywordAnalysisResponse(
+            keywords=found_keywords[:10],  # Max 10
+            categories=list(categories)[:5],  # Max 5
+            confidence=0.6,  # Rule-based has moderate confidence
+            counselor_insights=insights,
         )
+
+        # Save analysis log to session (even for fallback)
+        from datetime import datetime, timezone
+
+        analysis_log_entry = {
+            "analyzed_at": datetime.now(timezone.utc).isoformat(),
+            "transcript_segment": request.transcript_segment[:200],
+            "keywords": response.keywords,
+            "categories": response.categories,
+            "confidence": response.confidence,
+            "counselor_insights": response.counselor_insights,
+            "counselor_id": str(current_user.id),
+            "fallback": True,  # Mark as fallback analysis
+        }
+
+        # Append to analysis_logs
+        if session.analysis_logs is None:
+            session.analysis_logs = []
+        session.analysis_logs.append(analysis_log_entry)
+
+        # Mark as modified for SQLAlchemy to detect changes
+        from sqlalchemy.orm.attributes import flag_modified
+
+        flag_modified(session, "analysis_logs")
+
+        # Commit to database
+        db.commit()
+        db.refresh(session)
+
+        return response
+
+
+@router.get(
+    "/{session_id}/analysis-logs",
+    response_model=AnalysisLogsResponse,
+    summary="Get analysis logs for a session",
+    description="Retrieve all keyword analysis logs for a session, ordered from oldest to newest.",
+)
+def get_analysis_logs(
+    session_id: UUID,
+    db: DBSession = Depends(get_db),
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+) -> AnalysisLogsResponse:
+    """
+    Get all analysis logs for a session.
+
+    Returns analysis logs in chronological order (oldest first).
+
+    Args:
+        session_id: Session UUID
+        db: Database session
+        current_user: Authenticated user
+        tenant_id: Tenant ID
+
+    Returns:
+        AnalysisLogsResponse with all logs
+
+    Raises:
+        HTTPException: 404 if session not found
+    """
+    # Fetch session with authorization check
+    result = db.execute(
+        select(Session, Client, Case)
+        .join(Case, Session.case_id == Case.id)
+        .join(Client, Case.client_id == Client.id)
+        .where(
+            Session.id == session_id,
+            Client.counselor_id == current_user.id,
+            Client.tenant_id == tenant_id,
+            Session.deleted_at.is_(None),
+            Case.deleted_at.is_(None),
+            Client.deleted_at.is_(None),
+        )
+    )
+    row = result.first()
+
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found or access denied",
+        )
+
+    session = row[0]
+
+    # Get analysis_logs (defaults to empty list if None)
+    logs_data = session.analysis_logs or []
+
+    # Convert to response format with log indices
+    log_entries = [
+        AnalysisLogEntry(
+            log_index=idx,
+            analyzed_at=log.get("analyzed_at", ""),
+            transcript_segment=log.get("transcript_segment", ""),
+            keywords=log.get("keywords", []),
+            categories=log.get("categories", []),
+            confidence=log.get("confidence", 0.0),
+            counselor_insights=log.get("counselor_insights", ""),
+            counselor_id=log.get("counselor_id", ""),
+            fallback=log.get("fallback", False),
+        )
+        for idx, log in enumerate(logs_data)
+    ]
+
+    return AnalysisLogsResponse(
+        session_id=session.id,
+        total_logs=len(log_entries),
+        logs=log_entries,
+    )
+
+
+@router.delete(
+    "/{session_id}/analysis-logs/{log_index}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a specific analysis log entry",
+    description="Delete an analysis log entry by its index (0-based).",
+)
+def delete_analysis_log(
+    session_id: UUID,
+    log_index: int,
+    db: DBSession = Depends(get_db),
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+):
+    """
+    Delete a specific analysis log entry.
+
+    Args:
+        session_id: Session UUID
+        log_index: Index of log to delete (0-based)
+        db: Database session
+        current_user: Authenticated user
+        tenant_id: Tenant ID
+
+    Raises:
+        HTTPException: 404 if session or log not found, 400 if invalid index
+    """
+    # Fetch session with authorization check
+    result = db.execute(
+        select(Session, Client, Case)
+        .join(Case, Session.case_id == Case.id)
+        .join(Client, Case.client_id == Client.id)
+        .where(
+            Session.id == session_id,
+            Client.counselor_id == current_user.id,
+            Client.tenant_id == tenant_id,
+            Session.deleted_at.is_(None),
+            Case.deleted_at.is_(None),
+            Client.deleted_at.is_(None),
+        )
+    )
+    row = result.first()
+
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found or access denied",
+        )
+
+    session = row[0]
+
+    # Get analysis_logs
+    logs_data = session.analysis_logs or []
+
+    # Validate index
+    if log_index < 0 or log_index >= len(logs_data):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid log index: {log_index}. Valid range: 0-{len(logs_data)-1}",
+        )
+
+    # Remove the log entry
+    logs_data.pop(log_index)
+
+    # Update session
+    session.analysis_logs = logs_data
+
+    # Mark as modified for SQLAlchemy to detect changes
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(session, "analysis_logs")
+
+    db.commit()
+
+    return None  # 204 No Content
