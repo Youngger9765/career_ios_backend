@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Favicon handler to avoid 404 errors
 
 ### Changed
+- **Systematic service layer refactoring (10 files, avg -50% code reduction)**
+  - Extracted business logic from API endpoints to dedicated service classes
+  - Improved maintainability, testability, and code organization
+  - All integration tests pass (TDD-compliant refactoring)
 - Refactored console.html modularization (75% code reduction: 7245 → 1785 lines)
   - Extracted 5479 lines of step definitions to console-steps.js
   - Improved maintainability and code organization
