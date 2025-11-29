@@ -67,6 +67,31 @@
 - `PATCH /ui/client-case/{id}` - 更新客戶個案
 - `DELETE /ui/client-case/{id}` - 刪除個案
 
+#### 動態欄位 Schema 詳細說明
+
+Backend 支援以下欄位類型，iOS app 需根據 schema 動態生成表單：
+
+| Backend Type | iOS Swift Type | 說明 | UI Component |
+|--------------|----------------|------|--------------|
+| `text` | `String` | 單行文字 | TextField |
+| `textarea` | `String` | 多行文字 | TextEditor |
+| `number` | `Int`/`Double` | 數字 | NumberField |
+| `date` | `Date` | 日期 | DatePicker |
+| `datetime` | `Date` | 日期時間 | DatePicker (mode: dateAndTime) |
+| `email` | `String` | Email | TextField (keyboardType: .emailAddress) |
+| `phone` | `String` | 電話 | TextField (keyboardType: .phonePad) |
+| `single_select` | `String` | 單選下拉 | Picker |
+| `multi_select` | `[String]` | 多選 | MultiSelect |
+| `boolean` | `Bool` | 布林值 | Toggle |
+
+**Tenant 配置差異**：
+- 不同 tenant 的欄位配置完全獨立
+- **Career 租戶**: 著重職涯諮詢欄位（身分選項、職涯現況、現職資訊）
+- **Island 租戶**: 著重心理諮商欄位（身心狀態、精神醫療史、隱私保護）
+- iOS app 需動態適應不同 tenant 的配置
+
+> 📘 **完整 API 文件**: 請參考 [IOS_API_GUIDE.md Section 2.3](./IOS_API_GUIDE.md) 獲取完整的 API 端點、請求範例、Swift 程式碼範例、錯誤處理等技術細節。
+
 ### ✅ Web 測試控制台 (`/console`)
 - 整合式 API 測試介面（包含所有 API）
 - RWD 設計：支援手機 + 平板 + 桌面
