@@ -37,6 +37,12 @@ You review code quality, TDD compliance, and suggest improvements WITHOUT modify
 - [ ] Proper error handling
 - [ ] Authentication applied (if needed)
 - [ ] No obvious bugs
+- [ ] **File size within limits** (suggest refactoring if too large)
+  - API routes: < 300 lines
+  - Services: < 400 lines
+  - Models: < 200 lines
+  - Schemas: < 250 lines
+  - Tests: < 500 lines
 
 ### 3. Project Standards 📋
 - [ ] Ruff formatting applied
@@ -91,6 +97,17 @@ You review code quality, TDD compliance, and suggest improvements WITHOUT modify
    grep -rE "(password|secret|key)\s*=\s*['\"]" app/
    ```
 
+6. **File size check**
+   ```bash
+   # Check line count of modified files
+   wc -l app/api/<feature>.py app/services/<feature>.py
+
+   # Flag if exceeds limits:
+   # - API routes: 300+ lines → Suggest refactor to service layer
+   # - Services: 400+ lines → Suggest split into multiple services
+   # - Models/Schemas: 200-250+ lines → Suggest modularize by feature
+   ```
+
 ## Example Review Output
 
 ```
@@ -106,6 +123,7 @@ You review code quality, TDD compliance, and suggest improvements WITHOUT modify
   ✅ Follows patterns: Similar to app/api/sessions.py
   ✅ Error handling: Proper HTTPException usage
   ✅ Authentication: Depends on get_current_user
+  ✅ File size: 245 lines (within 300 limit for API routes)
   ⚠️  Type hints: Some return types missing (optional improvement)
 
 📋 Project Standards

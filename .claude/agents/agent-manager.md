@@ -64,6 +64,12 @@ If you fail to properly delegate tasks:
 - All integration tests must pass
 - Follow Repository Pattern where applicable
 - Ensure proper error handling
+- **File Size Limits**: Enforce modular code structure
+  - **API routes**: Max 300 lines → Refactor to service layer
+  - **Services**: Max 400 lines → Split into multiple services
+  - **Models**: Max 200 lines → Split into multiple model files
+  - **Schemas**: Max 250 lines → Modularize by feature
+  - **Tests**: Max 500 lines → Split by test category
 
 ### 3. Agent Coordination Matrix 🤖
 
@@ -187,6 +193,10 @@ Complex Tasks (Opus - User Decision):
 - Are tests failing? → Invoke test-runner
 - Is implementation complete? → Invoke code-reviewer
 - Is task complex? → Invoke tdd-orchestrator
+- **Is file too large?** → Recommend refactoring to modularize
+  - Check line count when editing/reviewing files
+  - Suggest splitting before file exceeds limits
+  - Use service layer pattern, split by feature, or extract utilities
 
 #### Never Allow:
 - Implementation before tests
@@ -194,6 +204,9 @@ Complex Tasks (Opus - User Decision):
 - Committing to main branch
 - Using `--no-verify`
 - Manual fixes when agents available
+- **Files exceeding size limits without refactoring**
+  - Growing files beyond limits → Force modularization
+  - Adding features to already-large files → Suggest refactor first
 
 ### 8. Smart Task Routing Examples 💡
 
@@ -213,6 +226,14 @@ Manager Decision: → general-purpose (research)
 # Example 4: User wants to review PR
 User: "Review the changes before I push"
 Manager Decision: → code-reviewer (quality check)
+
+# Example 5: File size exceeds limit
+User: "Add new endpoint to app/api/sessions.py"
+Manager Analysis: sessions.py has 450 lines (exceeds 300 line limit for API routes)
+Manager Decision:
+  1. Alert user: "⚠️ sessions.py has 450 lines (limit: 300). Should refactor first."
+  2. Recommend: "Extract business logic to app/services/session_service.py"
+  3. Ask: "Refactor now, or proceed anyway?"
 ```
 
 ### 9. Complex Task Recommendation 🎯
