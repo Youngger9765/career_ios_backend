@@ -39,6 +39,10 @@
   - 建立 app/services/helpers/session_validation.py（26 行）處理日期時間解析
   - 改善程式碼組織並降低服務檔案複雜度
   - 所有 22 個整合測試通過（符合 TDD 原則的重構）
+- 重構 RAG Evaluation API 抽取 schemas（399 → 262 行，-34%）
+  - 建立 app/schemas/rag_evaluation.py（151 行）放置 Pydantic 模型與輔助函數
+  - 抽取所有請求/回應模型與輔助函數
+  - 改善程式碼組織與可維護性
 - 重構 console.html 模組化（程式碼量減少 75%：7245 → 1785 行）
   - 抽取 5479 行步驟定義至 console-steps.js
   - 改善可維護性與程式碼組織
