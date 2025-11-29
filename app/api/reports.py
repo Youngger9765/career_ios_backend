@@ -26,7 +26,6 @@ from app.services.report_operations_service import ReportOperationsService
 router = APIRouter(prefix="/api/v1/reports", tags=["Reports"])
 
 
-# Background task logic
 async def _generate_report_background(
     report_id: UUID,
     session_id: UUID,
@@ -34,15 +33,7 @@ async def _generate_report_background(
     report_type: str,
     rag_system: str,
 ):
-    """Background task: Generate report content + session summary
-
-    Args:
-        report_id: Report UUID
-        session_id: Session UUID (for updating summary)
-        transcript: Transcript text
-        report_type: Report type (enhanced/legacy)
-        rag_system: RAG system (openai/gemini)
-    """
+    """Background task: Generate report content + session summary"""
     from sqlalchemy import select
 
     from app.api.rag_report import ReportRequest
@@ -55,14 +46,11 @@ async def _generate_report_background(
 
     db = SessionLocal()
     try:
-        # Get report
         result = db.execute(select(Report).where(Report.id == report_id))
         report = result.scalar_one_or_none()
-
         if not report:
             return
 
-        # Generate report via RAG
         rag_request = ReportRequest(
             transcript=transcript,
             num_participants=2,
@@ -72,10 +60,8 @@ async def _generate_report_background(
             output_format="json",
             mode=report_type,
         )
-
         report_data = await rag_generate(rag_request, db)
 
-        # Generate Markdown format
         markdown_formatter = create_formatter("markdown")
         content_markdown = markdown_formatter.format(unwrap_report(report_data))
 

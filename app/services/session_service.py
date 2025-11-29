@@ -41,46 +41,27 @@ class SessionService:
         current_user: Counselor,
         tenant_id: str,
     ) -> Session:
-        """
-        Create a new counseling session with automatic session numbering.
-
-        Business logic extracted from sessions.py lines 287-493.
-        """
-        # Validate case exists and belongs to tenant
+        """Create a new counseling session with automatic session numbering."""
         case = self.session_repo.get_case_by_id(request.case_id, tenant_id)
         if not case:
             raise ValueError("Case not found or access denied")
-
-        # Parse dates and times
         start_time = parse_datetime(request.start_time) if request.start_time else None
         end_time = parse_datetime(request.end_time) if request.end_time else None
         session_date = parse_date(request.session_date)
-
-        # Calculate session number based on chronological order
         session_number, needs_renumbering = self._calculate_session_number_for_new(
             case.id, start_time if start_time else session_date
         )
-
-        # Renumber existing sessions if inserting in the middle
         if needs_renumbering:
             self.session_repo.update_session_numbers(case.id, session_number)
-
-        # Get client info for response (reserved for future use)
         _client = self.session_repo.get_client_by_id(case.client_id)
-
-        # Process recordings and transcript
         full_transcript = process_transcript_data(request)
         recordings_data = process_recordings_data(request)
-
-        # Calculate time range from recordings if provided
         if recordings_data:
             calc_start, calc_end = calculate_timerange_from_recordings(recordings_data)
             if calc_start:
                 start_time = calc_start
             if calc_end:
                 end_time = calc_end
-
-        # Create the session
         session = self.session_repo.create(
             case_id=case.id,
             tenant_id=tenant_id,
@@ -108,19 +89,12 @@ class SessionService:
         current_user: Counselor,
         tenant_id: str,
     ) -> Optional[Session]:
-        """
-        Get a session with authorization check.
-
-        Business logic extracted from sessions.py lines 714-784.
-        """
+        """Get a session with authorization check."""
         session = self.session_repo.get_by_id(session_id)
         if not session:
             return None
-
-        # Check authorization
         if not self.session_repo.check_authorization(session, current_user, tenant_id):
             raise PermissionError("Not authorized to access this session")
-
         return session
 
     def get_session_with_details(
@@ -129,13 +103,7 @@ class SessionService:
         current_user: Counselor,
         tenant_id: str,
     ) -> Optional[Tuple[Session, Client, Case, bool]]:
-        """
-        Get session with joined Client, Case, and has_report flag.
-
-        Returns: (Session, Client, Case, has_report) or None if not found
-
-        Extracted from sessions.py lines 195-265 (get_session endpoint).
-        """
+        """Get session with joined Client, Case, and has_report flag."""
         result = self.db.execute(
             select(Session, Client, Case, Report.id.label("report_id"))
             .join(Case, Session.case_id == Case.id)
@@ -151,13 +119,10 @@ class SessionService:
             )
         )
         row = result.first()
-
         if not row:
             return None
-
         session, client, case, report_id = row
         has_report = report_id is not None
-
         return (session, client, case, has_report)
 
     def get_session_with_context(
@@ -166,11 +131,7 @@ class SessionService:
         current_user: Counselor,
         tenant_id: str,
     ) -> Optional[Tuple[Session, Client, Case]]:
-        """
-        Get session with joined Client and Case for keyword analysis.
-
-        Returns: (Session, Client, Case) or None if not found
-        """
+        """Get session with joined Client and Case for keyword analysis."""
         result = self.db.execute(
             select(Session, Client, Case)
             .join(Case, Session.case_id == Case.id)
@@ -196,13 +157,7 @@ class SessionService:
         skip: int = 0,
         limit: int = 20,
     ) -> Tuple[List[Tuple], int]:
-        """
-        List sessions with filtering and pagination.
-
-        Business logic extracted from sessions.py lines 495-597.
-
-        Returns: (list of (Session, Case, Client, has_report) tuples, total_count)
-        """
+        """List sessions with filtering and pagination."""
         return self.session_repo.list_sessions(
             counselor_id=counselor.id,
             tenant_id=tenant_id,
@@ -219,15 +174,7 @@ class SessionService:
         current_user: Counselor,
         tenant_id: str,
     ) -> Tuple[Session, Client, Case, bool]:
-        """
-        Update a session with authorization check and return full details.
-
-        Includes complex session number recalculation logic extracted from
-        sessions.py lines 268-494.
-
-        Returns: (Session, Client, Case, has_report)
-        """
-        # Get session with authorization check (includes Client, Case)
+        """Update a session with authorization check and return full details."""
         result = self.get_session_with_details(session_id, current_user, tenant_id)
         if not result:
             raise ValueError("Session not found")
@@ -315,11 +262,7 @@ class SessionService:
         current_user: Counselor,
         tenant_id: str,
     ) -> None:
-        """
-        Soft delete a session with authorization check.
-
-        Business logic extracted from sessions.py lines 1012-1089.
-        """
+        """Soft delete a session with authorization check."""
         session = self.get_session(session_id, current_user, tenant_id)
         if not session:
             raise ValueError("Session not found")
@@ -337,10 +280,7 @@ class SessionService:
     def _calculate_session_number_for_new(
         self, case_id: UUID, new_datetime: datetime
     ) -> Tuple[int, bool]:
-        """
-        Calculate session number for a new session.
-        Returns (session_number, needs_renumbering).
-        """
+        """Calculate session number for a new session."""
         existing_sessions = self.session_repo.get_sessions_by_case(case_id)
 
         if not existing_sessions:
@@ -365,10 +305,7 @@ class SessionService:
     def _calculate_session_number(
         self, new_datetime: datetime, existing_sessions: List[Session]
     ) -> Tuple[int, bool]:
-        """
-        Calculate session number for a session being inserted.
-        Used by tests and internal logic.
-        """
+        """Calculate session number for a session being inserted."""
         if not existing_sessions:
             return 1, False
 
@@ -390,14 +327,7 @@ class SessionService:
     def _renumber_session_on_time_change(
         self, session: Session, old_session_number: int, case_id: UUID
     ) -> None:
-        """
-        Renumber sessions when session time changes.
-
-        Complex logic extracted from sessions.py lines 409-451.
-
-        This handles the case where updating a session's time requires
-        reordering session numbers chronologically.
-        """
+        """Renumber sessions when session time changes."""
         from sqlalchemy import func
 
         # Determine new sort time (start_time takes precedence)

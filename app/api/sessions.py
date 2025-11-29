@@ -35,14 +35,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/sessions", tags=["Sessions"])
 
 
-# Helper functions for building responses and error handling
 def _build_session_response(
-    session: Session,
-    client: Client,
-    case: Case,
-    has_report: bool,
+    session: Session, client: Client, case: Case, has_report: bool
 ) -> SessionResponse:
-    """Build SessionResponse from session, client, case data"""
     return SessionResponse(
         id=session.id,
         client_id=client.id,
@@ -67,17 +62,14 @@ def _build_session_response(
 
 
 def _handle_value_error(e: ValueError):
-    """Convert ValueError to HTTPException with 404"""
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 def _handle_permission_error(e: PermissionError):
-    """Convert PermissionError to HTTPException with 403"""
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
 
 
 def _handle_generic_error(e: Exception, operation: str):
-    """Convert generic exception to HTTPException with 500"""
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail=f"Failed to {operation}: {str(e)}",
@@ -94,15 +86,10 @@ def create_session(
     """創建逐字稿記錄（不生成報告）"""
     service = SessionService(db)
     repo = SessionRepository(db)
-
     try:
-        # Create session using service layer
         session = service.create_session(request, current_user, tenant_id)
-
-        # Get related data for response
         case = repo.get_case_by_id(session.case_id, tenant_id)
         client = repo.get_client_by_id(case.client_id)
-
         return _build_session_response(session, client, case, has_report=False)
     except ValueError as e:
         _handle_value_error(e)
@@ -123,8 +110,6 @@ def list_sessions(
 ) -> SessionListResponse:
     """列出會談記錄"""
     service = SessionService(db)
-
-    # Get sessions using service layer - returns (Session, Case, Client, has_report) tuples
     session_data, total = service.list_sessions(
         counselor=current_user,
         tenant_id=tenant_id,
@@ -133,13 +118,10 @@ def list_sessions(
         skip=skip,
         limit=limit,
     )
-
-    # Build response items from joined data (no N+1 queries)
     items = [
         _build_session_response(session, client, case, has_report)
         for session, case, client, has_report in session_data
     ]
-
     return SessionListResponse(total=total, items=items)
 
 
@@ -152,12 +134,10 @@ def get_session_timeline(
 ) -> SessionTimelineResponse:
     """取得個案的會談歷程時間線"""
     service = TimelineService(db)
-
     try:
         client, timeline_items = service.get_session_timeline(
             client_id, current_user.id, tenant_id
         )
-
         return SessionTimelineResponse(
             client_id=client.id,
             client_name=client.name,
@@ -179,13 +159,10 @@ def get_session(
     """取得單一逐字稿"""
     service = SessionService(db)
     result = service.get_session_with_details(session_id, current_user, tenant_id)
-
     if not result:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
         )
-
     session, client, case, has_report = result
     return _build_session_response(session, client, case, has_report)
 
@@ -200,7 +177,6 @@ def update_session(
 ) -> SessionResponse:
     """更新逐字稿"""
     service = SessionService(db)
-
     try:
         session, client, case, has_report = service.update_session(
             session_id, request, current_user, tenant_id
