@@ -61,6 +61,10 @@
   - 建立 RAGReportService（499 行）處理報告生成業務邏輯
   - 抽取逐字稿解析、理論搜尋、提示詞建構、品質評估邏輯
   - 簡化 endpoint 至薄路由層並委派至 service
+- 重構 RAG Ingest API 至 Service Layer 模式（410 → 267 行，-35%）
+  - 建立 RAGIngestService（275 行）處理文件擷取業務邏輯
+  - 抽取 PDF 上傳/萃取、文字分塊、嵌入生成、儲存操作邏輯
+  - 簡化 endpoint 至薄路由層並委派至 service
 - 隱藏分析記錄中的 counselor_id 欄位（隱私改善）
 - 更新 analyze-keywords UI 文字：「已自動儲存」而非「不會儲存」
 - 分析記錄顯示改用顏色區分 AI 分析與備援分析

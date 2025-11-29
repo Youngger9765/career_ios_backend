@@ -1,19 +1,13 @@
 """API endpoints for RAG document ingestion and processing"""
 
-import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
-from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models.document import Chunk, Datasource, Document, Embedding
-from app.services.chunking import ChunkingService
-from app.services.openai_service import OpenAIService
-from app.services.pdf_service import PDFService
-from app.services.storage import StorageService
+from app.services.rag_ingest_service import RAGIngestService
 
 router = APIRouter(prefix="/api/rag/ingest", tags=["rag-ingest"])
 
@@ -51,94 +45,41 @@ async def ingest_file(
     Returns:
         IngestResponse with processing details
     """
-
     # Validate file type
     if not file.filename or not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
 
     try:
+        service = RAGIngestService(db)
+
         # Read file content
         file_content = await file.read()
 
         if not file_content:
             raise HTTPException(status_code=400, detail="Empty file uploaded")
 
-        # 1. Upload to Supabase Storage
-        storage_service = StorageService()
-        file_extension = file.filename.split(".")[-1] if "." in file.filename else "pdf"
-        safe_filename = f"{uuid.uuid4()}.{file_extension}"
-        file_path = f"documents/{safe_filename}"
-        storage_url = await storage_service.upload_file(
-            file_content, file_path, content_type="application/pdf"
+        # Upload and extract PDF
+        storage_url, text, metadata = await service.upload_and_extract_pdf(
+            file_content, file.filename
         )
 
-        # 2. Extract text from PDF
-        pdf_service = PDFService()
-        text = pdf_service.extract_text(file_content)
-        metadata = pdf_service.extract_metadata(file_content)
-
-        # Remove NUL characters that PostgreSQL cannot store
-        text = text.replace("\x00", "")
-
-        # 3. Create datasource and document records
-        datasource = Datasource(type="pdf", source_uri=storage_url)
-        db.add(datasource)
-        db.flush()
-
-        document = Document(
-            datasource_id=datasource.id,
-            title=file.filename,
-            bytes=len(file_content),
-            pages=metadata.get("pages", 0),
-            content=text,  # Save original extracted text
-            text_length=len(text),  # Save original text length
-            meta_json=metadata,
-        )
-        db.add(document)
-        db.flush()
-
-        # 4. Chunk the text
-        chunking_service = ChunkingService(chunk_size=chunk_size, overlap=overlap)
-        chunks = chunking_service.split_text(
-            text, split_by_sentence=True, preserve_words=True
+        # Create document records
+        datasource, document = service.create_document_records(
+            storage_url, file.filename, file_content, text, metadata
         )
 
-        # Generate strategy name if not provided
-        if not chunk_strategy:
-            chunk_strategy = f"rec_{chunk_size}_{overlap}"
-
-        # 5. Generate embeddings and store
-        openai_service = OpenAIService()
-
-        for idx, chunk_text in enumerate(chunks):
-            # Remove NUL characters from chunk text
-            clean_chunk_text = chunk_text.replace("\x00", "")
-
-            # Create chunk record with strategy tag
-            chunk = Chunk(
-                doc_id=document.id,
-                chunk_strategy=chunk_strategy,
-                ordinal=idx,
-                text=clean_chunk_text,
-                meta_json={},
-            )
-            db.add(chunk)
-            db.flush()
-
-            # Generate embedding
-            embedding_vector = await openai_service.create_embedding(clean_chunk_text)
-
-            # Create embedding record
-            embedding = Embedding(chunk_id=chunk.id, embedding=embedding_vector)
-            db.add(embedding)
+        # Generate chunks and embeddings
+        chunks_created = await service.generate_chunks_and_embeddings(
+            document.id, text, chunk_size, overlap, chunk_strategy
+        )
 
         db.commit()
 
         return IngestResponse(
             datasource_id=datasource.id,
             document_id=document.id,
-            chunks_created=len(chunks),
-            embeddings_created=len(chunks),
+            chunks_created=chunks_created,
+            embeddings_created=chunks_created,
             message=f"Successfully processed {file.filename}",
         )
 
@@ -190,100 +131,45 @@ async def reprocess_document(
         ReprocessResponse with reprocessing details
     """
     try:
-        # 1. Get document
-        result = db.execute(select(Document).where(Document.id == doc_id))
-        document = result.scalar_one_or_none()
+        service = RAGIngestService(db)
 
+        # Get document
+        document = service.get_document_by_id(doc_id)
         if not document:
             raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
 
         # Get datasource for storage URL
-        result = db.execute(
-            select(Datasource).where(Datasource.id == document.datasource_id)
-        )
-        datasource = result.scalar_one_or_none()
-
+        datasource = service.get_datasource_by_id(document.datasource_id)
         if not datasource or not datasource.source_uri:  # type: ignore[attr-defined]
             raise HTTPException(status_code=404, detail="Document source not found")
 
-        # 2. Download original PDF from storage
-        storage_service = StorageService()
-        import urllib.parse
-
-        parsed_url = urllib.parse.urlparse(datasource.source_uri)  # type: ignore[attr-defined]
-        # Extract path after bucket name
-        # URL format: .../storage/v1/object/public/{bucket}/{file_path}
-        path_parts = parsed_url.path.split("/")
-
-        # Find 'public' or bucket name and get everything after it
-        if "public" in path_parts:
-            idx = path_parts.index("public")
-            # Skip bucket name (next after 'public') and get the rest
-            file_path = "/".join(path_parts[idx + 2 :])
-        elif "documents" in path_parts:
-            # Find the last occurrence of 'documents' (the bucket name)
-            # and take everything after it
-            idx = path_parts.index("documents")
-            file_path = "/".join(path_parts[idx + 1 :])
-        else:
-            file_path = path_parts[-1]
-
-        file_content = await storage_service.download_file(file_path)
-
-        # 3. Count and delete old chunks
-        result = db.execute(select(Chunk).where(Chunk.doc_id == doc_id))
-        old_chunks = result.scalars().all()
-        old_chunks_count = len(old_chunks)
-
-        db.execute(delete(Chunk).where(Chunk.doc_id == doc_id))
-        db.flush()
-
-        # 4. Extract text from PDF
-        pdf_service = PDFService()
-        text = pdf_service.extract_text(file_content)
-
-        # Update document with content and text_length
-        document.content = text
-        document.text_length = len(text)
-        db.add(document)
-        db.flush()
-
-        # 5. Re-chunk with new parameters
-        chunking_service = ChunkingService(
-            chunk_size=request.chunk_size, overlap=request.overlap
-        )
-        chunks = chunking_service.split_text(
-            text, split_by_sentence=True, preserve_words=True
+        # Download original PDF from storage
+        file_content = await service.download_from_storage(
+            datasource.source_uri  # type: ignore[attr-defined]
         )
 
-        # 6. Generate new embeddings and store
-        openai_service = OpenAIService()
+        # Count and delete old chunks
+        old_chunks_count = service.delete_document_chunks(doc_id)
 
-        for idx, chunk_text in enumerate(chunks):
-            # Remove NUL characters from chunk text
-            clean_chunk_text = chunk_text.replace("\x00", "")
+        # Extract text from PDF
+        text = service.pdf_service.extract_text(file_content)
+        text = service.clean_text(text)
 
-            # Create chunk record
-            chunk = Chunk(
-                doc_id=document.id, ordinal=idx, text=clean_chunk_text, meta_json={}
-            )
-            db.add(chunk)
-            db.flush()
+        # Update document with content
+        service.update_document_content(document, text)
 
-            # Generate embedding
-            embedding_vector = await openai_service.create_embedding(clean_chunk_text)
-
-            # Create embedding record
-            embedding = Embedding(chunk_id=chunk.id, embedding=embedding_vector)
-            db.add(embedding)
+        # Generate new chunks and embeddings
+        chunks_created = await service.generate_chunks_and_embeddings(
+            document.id, text, request.chunk_size, request.overlap
+        )
 
         db.commit()
 
         return ReprocessResponse(
             document_id=doc_id,
             old_chunks_deleted=old_chunks_count,
-            new_chunks_created=len(chunks),
-            new_embeddings_created=len(chunks),
+            new_chunks_created=chunks_created,
+            new_embeddings_created=chunks_created,
             message=f"Successfully reprocessed {document.title} with chunk_size={request.chunk_size}",
         )
 
@@ -326,10 +212,10 @@ async def generate_strategy_for_document(
         GenerateStrategyResponse with generation details
     """
     try:
-        # 1. Get document
-        result = db.execute(select(Document).where(Document.id == doc_id))
-        document = result.scalar_one_or_none()
+        service = RAGIngestService(db)
 
+        # Get document
+        document = service.get_document_by_id(doc_id)
         if not document:
             raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
 
@@ -338,66 +224,38 @@ async def generate_strategy_for_document(
                 status_code=400, detail="Document has no content to chunk"
             )
 
-        # 2. Generate strategy name if not provided
+        # Generate strategy name if not provided
         strategy_name = request.chunk_strategy
         if not strategy_name:
-            strategy_name = f"rec_{request.chunk_size}_{request.overlap}"
-
-        # 3. Check if this strategy already exists for this document
-        result = db.execute(
-            select(Chunk).where(
-                Chunk.doc_id == doc_id, Chunk.chunk_strategy == strategy_name
+            strategy_name = service.generate_strategy_name(
+                request.chunk_size, request.overlap
             )
-        )
-        existing_chunks = result.scalars().all()
 
+        # Check if strategy already exists
+        existing_chunks = service.check_strategy_exists(doc_id, strategy_name)
         if existing_chunks:
             raise HTTPException(
                 status_code=400,
                 detail=f"Strategy '{strategy_name}' already exists for document {doc_id} with {len(existing_chunks)} chunks",
             )
 
-        # 4. Chunk the text
-        chunking_service = ChunkingService(
-            chunk_size=request.chunk_size, overlap=request.overlap
+        # Generate chunks and embeddings
+        chunks_created = await service.generate_chunks_and_embeddings(
+            document.id,
+            document.content,
+            request.chunk_size,
+            request.overlap,
+            strategy_name,
         )
-        chunks = chunking_service.split_text(
-            document.content, split_by_sentence=True, preserve_words=True
-        )
-
-        # 5. Generate embeddings and store
-        openai_service = OpenAIService()
-
-        for idx, chunk_text in enumerate(chunks):
-            # Remove NUL characters from chunk text
-            clean_chunk_text = chunk_text.replace("\x00", "")
-
-            # Create chunk record
-            chunk = Chunk(
-                doc_id=document.id,
-                chunk_strategy=strategy_name,
-                ordinal=idx,
-                text=clean_chunk_text,
-                meta_json={},
-            )
-            db.add(chunk)
-            db.flush()
-
-            # Generate embedding
-            embedding_vector = await openai_service.create_embedding(clean_chunk_text)
-
-            # Create embedding record
-            embedding = Embedding(chunk_id=chunk.id, embedding=embedding_vector)
-            db.add(embedding)
 
         db.commit()
 
         return GenerateStrategyResponse(
             document_id=doc_id,
             strategy_name=strategy_name,
-            chunks_created=len(chunks),
-            embeddings_created=len(chunks),
-            message=f"Successfully generated {len(chunks)} chunks for strategy '{strategy_name}'",
+            chunks_created=chunks_created,
+            embeddings_created=chunks_created,
+            message=f"Successfully generated {chunks_created} chunks for strategy '{strategy_name}'",
         )
 
     except HTTPException:
