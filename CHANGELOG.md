@@ -47,6 +47,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created app/schemas/reports.py (31 lines) for Pydantic request/response models
   - Extracted GenerateReportRequest, ProcessingStatus, GenerateReportResponse
   - All 10 integration tests pass (TDD-compliant refactoring)
+- Refactored ClientCaseService by extracting helpers and query builder (509 → 351 lines, -31%)
+  - Created app/services/helpers/client_case_helpers.py (91 lines) for code generation and formatting
+  - Created app/services/helpers/client_case_query_builder.py (130 lines) for complex query logic
+  - Extracted all helper methods and SQLAlchemy query building logic
+  - All 20 integration tests pass (TDD-compliant refactoring)
 - Refactored console.html modularization (75% code reduction: 7245 → 1785 lines)
   - Extracted 5479 lines of step definitions to console-steps.js
   - Improved maintainability and code organization

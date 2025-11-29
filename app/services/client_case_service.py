@@ -6,13 +6,22 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.case import Case, CaseStatus
 from app.models.client import Client
 from app.models.counselor import Counselor
-from app.models.session import Session as SessionModel
+from app.services.helpers.client_case_helpers import (
+    generate_case_number,
+    generate_client_code,
+    normalize_case_status,
+)
+from app.services.helpers.client_case_query_builder import (
+    build_client_case_list_query,
+    format_client_case_list_item,
+    sort_items_by_last_session_date,
+)
 
 
 class ClientCaseService:
@@ -20,88 +29,6 @@ class ClientCaseService:
 
     def __init__(self, db: DBSession):
         self.db = db
-
-    # ============================================================================
-    # Helper Methods
-    # ============================================================================
-
-    def _generate_client_code(self, tenant_id: str) -> str:
-        """Generate unique client code in format C0001, C0002, etc."""
-        result = self.db.execute(
-            select(Client.code)
-            .where(Client.tenant_id == tenant_id)
-            .where(Client.code.like("C%"))
-            .order_by(Client.code.desc())
-        )
-        codes = result.scalars().all()
-
-        max_num = 0
-        for code in codes:
-            if code.startswith("C") and code[1:].isdigit():
-                num = int(code[1:])
-                if num > max_num:
-                    max_num = num
-
-        next_num = max_num + 1
-        return f"C{next_num:04d}"
-
-    def _generate_case_number(self, tenant_id: str) -> str:
-        """Generate unique case number in format CASE0001, CASE0002, etc."""
-        result = self.db.execute(
-            select(Case.case_number)
-            .where(Case.tenant_id == tenant_id)
-            .where(Case.case_number.like("CASE%"))
-            .order_by(Case.case_number.desc())
-        )
-        numbers = result.scalars().all()
-
-        max_num = 0
-        for num_str in numbers:
-            if num_str.startswith("CASE") and num_str[4:].isdigit():
-                num = int(num_str[4:])
-                if num > max_num:
-                    max_num = num
-
-        next_num = max_num + 1
-        return f"CASE{next_num:04d}"
-
-    def _map_case_status_to_label(self, status: CaseStatus) -> str:
-        """Map case status to Chinese label"""
-        status_map = {
-            CaseStatus.NOT_STARTED: "未開始",
-            CaseStatus.IN_PROGRESS: "進行中",
-            CaseStatus.COMPLETED: "已完成",
-        }
-        return status_map.get(status, "未知")
-
-    def _format_session_date(self, dt: Optional[datetime]) -> Optional[str]:
-        """Format session date for display: 2026/01/22 19:30"""
-        if not dt:
-            return None
-        return dt.strftime("%Y/%m/%d %H:%M")
-
-    def _normalize_case_status(self, status: Any) -> Tuple[int, CaseStatus]:
-        """Normalize case status to (int_value, enum)"""
-        if isinstance(status, int):
-            return status, CaseStatus(status)
-        elif isinstance(status, CaseStatus):
-            return status.value, status
-        else:
-            # Legacy string data
-            status_map = {
-                "ACTIVE": CaseStatus.NOT_STARTED,
-                "IN_PROGRESS": CaseStatus.IN_PROGRESS,
-                "COMPLETED": CaseStatus.COMPLETED,
-                "SUSPENDED": CaseStatus.IN_PROGRESS,
-                "REFERRED": CaseStatus.COMPLETED,
-                "NOT_STARTED": CaseStatus.NOT_STARTED,
-            }
-            status_enum = status_map.get(str(status).upper(), CaseStatus.NOT_STARTED)
-            return status_enum.value, status_enum
-
-    # ============================================================================
-    # Core Business Methods
-    # ============================================================================
 
     def create_client_and_case(
         self,
@@ -126,7 +53,7 @@ class ClientCaseService:
             ValueError: If email already exists
         """
         # Generate client code
-        client_code = self._generate_client_code(tenant_id)
+        client_code = generate_client_code(self.db, tenant_id)
 
         # Check email uniqueness
         existing_client = self.db.execute(
@@ -153,7 +80,7 @@ class ClientCaseService:
         self.db.flush()
 
         # Generate case number
-        case_number = self._generate_case_number(tenant_id)
+        case_number = generate_case_number(self.db, tenant_id)
 
         # Create case
         case_fields = case_data or {}
@@ -187,111 +114,26 @@ class ClientCaseService:
         Returns:
             Tuple of (items, total_count)
         """
-        # Subquery: first case per client
-        case_subquery = (
-            select(
-                Case.client_id,
-                func.min(Case.created_at).label("first_case_created_at"),
-            )
-            .where(
-                Case.tenant_id == tenant_id,
-                Case.deleted_at.is_(None),
-            )
-            .group_by(Case.client_id)
-            .subquery()
-        )
+        # Build query using helper
+        query, count_query = build_client_case_list_query(tenant_id)
 
-        # Subquery: session stats per case
-        session_stats_subquery = (
-            select(
-                SessionModel.case_id,
-                func.count(SessionModel.id).label("total_sessions"),
-                func.max(SessionModel.session_date).label("last_session_date"),
-            )
-            .where(SessionModel.deleted_at.is_(None))
-            .group_by(SessionModel.case_id)
-            .subquery()
-        )
-
-        # Main query: join clients with first case and session stats
-        query = (
-            select(
-                Client,
-                Case,
-                session_stats_subquery.c.total_sessions,
-                session_stats_subquery.c.last_session_date,
-            )
-            .join(case_subquery, Client.id == case_subquery.c.client_id)
-            .join(
-                Case,
-                (Case.client_id == Client.id)
-                & (Case.created_at == case_subquery.c.first_case_created_at)
-                & (Case.deleted_at.is_(None)),
-            )
-            .outerjoin(
-                session_stats_subquery, Case.id == session_stats_subquery.c.case_id
-            )
-            .where(
-                Client.tenant_id == tenant_id,
-                Client.deleted_at.is_(None),
-            )
-        )
-
-        # Count total
-        count_query = select(func.count()).select_from(
-            select(Client.id)
-            .join(case_subquery, Client.id == case_subquery.c.client_id)
-            .where(
-                Client.tenant_id == tenant_id,
-                Client.deleted_at.is_(None),
-            )
-            .subquery()
-        )
+        # Get total count
         total = self.db.execute(count_query).scalar() or 0
 
         # Execute with pagination
         result = self.db.execute(query.offset(skip).limit(limit))
         rows = result.all()
 
-        # Build items
-        items = []
-        for client, case, total_sessions, last_session_date in rows:
-            status_value, status_enum = self._normalize_case_status(case.status)
+        # Build items using helper
+        items = [
+            format_client_case_list_item(
+                client, case, total_sessions, last_session_date
+            )
+            for client, case, total_sessions, last_session_date in rows
+        ]
 
-            item = {
-                "client_id": client.id,
-                "case_id": case.id,
-                "counselor_id": client.counselor_id,
-                "client_name": client.name,
-                "client_code": client.code,
-                "client_email": client.email,
-                "identity_option": client.identity_option,
-                "current_status": client.current_status,
-                "case_number": case.case_number,
-                "case_status": status_value,
-                "case_status_label": self._map_case_status_to_label(status_enum),
-                "last_session_date": last_session_date,
-                "last_session_date_display": self._format_session_date(
-                    last_session_date
-                ),
-                "total_sessions": total_sessions or 0,
-                "case_created_at": case.created_at,
-                "case_updated_at": case.updated_at,
-            }
-            items.append(item)
-
-        # Sort by last_session_date (newest first)
-        min_datetime = datetime.min.replace(tzinfo=timezone.utc)
-
-        def sort_key(item):
-            dt = item["last_session_date"]
-            if dt is None:
-                return min_datetime
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt
-
-        items.sort(key=sort_key, reverse=True)
+        # Sort items using helper
+        items = sort_items_by_last_session_date(items)
 
         return items, total
 
@@ -328,7 +170,7 @@ class ClientCaseService:
         if not client or client.deleted_at is not None:
             raise ValueError(f"Client for case {case_id} not found")
 
-        status_value, _ = self._normalize_case_status(case.status)
+        status_value, _ = normalize_case_status(case.status)
         status_labels = {
             0: "未開始",
             1: "進行中",

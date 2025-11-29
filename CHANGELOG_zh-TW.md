@@ -47,6 +47,11 @@
   - 建立 app/schemas/reports.py（31 行）放置 Pydantic 請求/回應模型
   - 抽取 GenerateReportRequest、ProcessingStatus、GenerateReportResponse
   - 所有 10 個整合測試通過（符合 TDD 原則的重構）
+- 重構 ClientCaseService 抽取輔助模組與查詢建構器（509 → 351 行，-31%）
+  - 建立 app/services/helpers/client_case_helpers.py（91 行）處理代碼生成與格式化
+  - 建立 app/services/helpers/client_case_query_builder.py（130 行）處理複雜查詢邏輯
+  - 抽取所有輔助方法與 SQLAlchemy 查詢建構邏輯
+  - 所有 20 個整合測試通過（符合 TDD 原則的重構）
 - 重構 console.html 模組化（程式碼量減少 75%：7245 → 1785 行）
   - 抽取 5479 行步驟定義至 console-steps.js
   - 改善可維護性與程式碼組織
