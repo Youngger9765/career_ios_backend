@@ -3,7 +3,6 @@ Sessions (逐字稿) API
 """
 import json
 import logging
-from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -16,7 +15,6 @@ from app.core.deps import get_current_user, get_tenant_id
 from app.models.case import Case
 from app.models.client import Client
 from app.models.counselor import Counselor
-from app.models.report import Report
 from app.models.session import Session
 from app.repositories.session_repository import SessionRepository
 from app.schemas.session import (
@@ -202,45 +200,18 @@ def get_session(
     """
     取得單一逐字稿
 
-    Args:
-        session_id: Session UUID
-        current_user: 當前諮商師
-        tenant_id: 租戶 ID
-        db: 數據庫 session
-
-    Returns:
-        逐字稿詳情
-
-    Raises:
-        HTTPException: 404 if not found
+    Refactored to use SessionService.get_session_with_details().
     """
-    # 使用 LEFT JOIN 避免 N+1 query
-    result = db.execute(
-        select(Session, Client, Case, Report.id.label("report_id"))
-        .join(Case, Session.case_id == Case.id)
-        .join(Client, Case.client_id == Client.id)
-        .outerjoin(Report, Report.session_id == Session.id)
-        .where(
-            Session.id == session_id,
-            Client.counselor_id == current_user.id,
-            Client.tenant_id == tenant_id,
-            Session.deleted_at.is_(None),
-            Case.deleted_at.is_(None),
-            Client.deleted_at.is_(None),
-        )
-    )
-    row = result.first()
+    service = SessionService(db)
+    result = service.get_session_with_details(session_id, current_user, tenant_id)
 
-    if not row:
+    if not result:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found",
         )
 
-    session, client, case, report_id = row
-
-    # 檢查是否有報告（從 JOIN 結果判斷，無需額外查詢）
-    has_report = report_id is not None
+    session, client, case, has_report = result
 
     return SessionResponse(
         id=session.id,
@@ -258,7 +229,7 @@ def get_session(
         duration_minutes=session.duration_minutes,
         notes=session.notes,
         reflection=session.reflection,
-        recordings=session.recordings,  # 包含錄音片段
+        recordings=session.recordings,
         has_report=has_report,
         created_at=session.created_at,
         updated_at=session.updated_at,
@@ -276,193 +247,15 @@ def update_session(
     """
     更新逐字稿
 
-    Args:
-        session_id: Session UUID
-        request: 更新請求
-        current_user: 當前諮商師
-        tenant_id: 租戶 ID
-        db: 數據庫 session
-
-    Returns:
-        更新後的逐字稿
-
-    Raises:
-        HTTPException: 404 if not found, 500 if update fails
+    Refactored to use SessionService.update_session() with complex
+    session number recalculation logic.
     """
-    result = db.execute(
-        select(Session, Client, Case)
-        .join(Case, Session.case_id == Case.id)
-        .join(Client, Case.client_id == Client.id)
-        .where(
-            Session.id == session_id,
-            Client.counselor_id == current_user.id,
-            Client.tenant_id == tenant_id,
-            Session.deleted_at.is_(None),
-            Case.deleted_at.is_(None),
-            Client.deleted_at.is_(None),
-        )
-    )
-    row = result.first()
-
-    if not row:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found",
-        )
-
-    session, client, case = row
+    service = SessionService(db)
 
     try:
-        # 記錄是否更新了會談時間，如果有則需要重新計算 session_number
-        time_changed = False
-        old_session_number = session.session_number
-
-        # 更新欄位
-        if request.session_date is not None:
-            new_session_date = datetime.fromisoformat(request.session_date)
-            if new_session_date.tzinfo is None:
-                new_session_date = new_session_date.replace(tzinfo=timezone.utc)
-            if new_session_date != session.session_date:
-                time_changed = True
-                session.session_date = new_session_date
-
-        if request.start_time is not None:
-            time_str = request.start_time.strip()
-            if " " in time_str or "T" in time_str or len(time_str) > 10:
-                new_start_time = datetime.fromisoformat(time_str.replace(" ", "T"))
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="start_time must include date (format: YYYY-MM-DD HH:MM)",
-                )
-            if new_start_time.tzinfo is None:
-                new_start_time = new_start_time.replace(tzinfo=timezone.utc)
-            if new_start_time != session.start_time:
-                time_changed = True
-            session.start_time = new_start_time
-
-        if request.end_time is not None:
-            time_str = request.end_time.strip()
-            if " " in time_str or "T" in time_str or len(time_str) > 10:
-                new_end_time = datetime.fromisoformat(time_str.replace(" ", "T"))
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="end_time must include date (format: YYYY-MM-DD HH:MM)",
-                )
-            if new_end_time.tzinfo is None:
-                new_end_time = new_end_time.replace(tzinfo=timezone.utc)
-            session.end_time = new_end_time
-
-        # 處理 transcript 和 recordings
-        # 優先使用 recordings 聚合，若無則使用直接提供的 transcript
-        if request.recordings is not None:
-            # 更新 recordings 並重新聚合逐字稿
-            session.recordings = request.recordings
-            if request.recordings:
-                # Use SessionService helper methods for transcript/time aggregation
-                helper_service = SessionService(db)
-                full_transcript = helper_service._aggregate_transcript_from_recordings(
-                    request.recordings
-                )
-                session.transcript_text = full_transcript
-                session.transcript_sanitized = full_transcript
-
-                # 重新計算 session 時間範圍（從更新後的 recordings）
-                (
-                    calculated_start,
-                    calculated_end,
-                ) = helper_service._calculate_timerange_from_recordings(
-                    request.recordings
-                )
-                if calculated_start:
-                    session.start_time = calculated_start
-                    time_changed = False  # 由 recordings 計算的時間不算是手動更改
-                if calculated_end:
-                    session.end_time = calculated_end
-                    time_changed = False  # 由 recordings 計算的時間不算是手動更改
-        elif request.transcript is not None:
-            # 直接更新 transcript（向下兼容）
-            session.transcript_text = request.transcript
-            session.transcript_sanitized = request.transcript
-
-        # Handle name field - Always update if provided in request (even if None)
-        # Use exclude_unset to check if field was explicitly provided
-        update_data = request.model_dump(exclude_unset=True)
-        if "name" in update_data:
-            session.name = update_data["name"]
-        if request.notes is not None:
-            session.notes = request.notes
-
-        if request.duration_minutes is not None:
-            session.duration_minutes = request.duration_minutes
-
-        if request.reflection is not None:
-            session.reflection = request.reflection
-
-        # 如果 session_date 或 start_time 改變，需要重新計算 session_number
-        # 決定新的排序時間：優先使用 start_time，若無則使用 session_date
-        new_sort_time = (
-            session.start_time if session.start_time else session.session_date
+        session, client, case, has_report = service.update_session(
+            session_id, request, current_user, tenant_id
         )
-
-        if time_changed:
-            # 1. 先將當前 session 的 session_number 設為 0（臨時值）
-            session.session_number = 0
-            db.flush()
-
-            # 2. 將原本 > old_session_number 的所有 sessions 編號 -1
-            db.execute(
-                Session.__table__.update()  # type: ignore[attr-defined]
-                .where(Session.case_id == session.case_id)
-                .where(Session.session_number > old_session_number)
-                .values(session_number=Session.session_number - 1)
-            )
-            db.flush()
-
-            # 3. 查詢該 case 所有其他 sessions，按 start_time 或 session_date 排序
-            result = db.execute(
-                select(Session.start_time, Session.session_date)
-                .where(Session.case_id == session.case_id)
-                .where(Session.id != session.id)
-                .order_by(func.coalesce(Session.start_time, Session.session_date).asc())
-            )
-            existing_times = [(row[0] if row[0] else row[1]) for row in result.all()]
-
-            # 4. 找出新 session_number
-            new_session_number = 1
-            for existing_time in existing_times:
-                if new_sort_time > existing_time:
-                    new_session_number += 1
-                else:
-                    break
-
-            # 5. 更新 >= new_session_number 的所有 sessions（不包括當前 session）編號 +1
-            db.execute(
-                Session.__table__.update()  # type: ignore[attr-defined]
-                .where(Session.case_id == session.case_id)
-                .where(Session.session_number >= new_session_number)
-                .where(Session.id != session.id)
-                .values(session_number=Session.session_number + 1)
-            )
-            db.flush()
-
-            # 6. 設定當前 session 的新 session_number
-            session.session_number = new_session_number
-
-        db.commit()
-        db.refresh(session)
-
-        # 檢查是否有報告
-        has_report_result = db.execute(
-            select(func.count()).select_from(
-                select(1)
-                .where(Session.id == session.id)
-                .where(Session.reports.any())
-                .subquery()
-            )
-        )
-        has_report = (has_report_result.scalar() or 0) > 0
 
         return SessionResponse(
             id=session.id,
@@ -480,12 +273,17 @@ def update_session(
             duration_minutes=session.duration_minutes,
             notes=session.notes,
             reflection=session.reflection,
-            recordings=session.recordings,  # 包含錄音片段
+            recordings=session.recordings,
             has_report=has_report,
             created_at=session.created_at,
             updated_at=session.updated_at,
         )
 
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
     except Exception as e:
         db.rollback()
         raise HTTPException(

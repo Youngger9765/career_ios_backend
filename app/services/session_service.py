@@ -6,9 +6,13 @@ from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session as DBSession
 
+from app.models.case import Case
+from app.models.client import Client
 from app.models.counselor import Counselor
+from app.models.report import Report
 from app.models.session import Session
 from app.repositories.session_repository import SessionRepository
 from app.schemas.session import (
@@ -116,6 +120,43 @@ class SessionService:
 
         return session
 
+    def get_session_with_details(
+        self,
+        session_id: UUID,
+        current_user: Counselor,
+        tenant_id: str,
+    ) -> Optional[Tuple[Session, Client, Case, bool]]:
+        """
+        Get session with joined Client, Case, and has_report flag.
+
+        Returns: (Session, Client, Case, has_report) or None if not found
+
+        Extracted from sessions.py lines 195-265 (get_session endpoint).
+        """
+        result = self.db.execute(
+            select(Session, Client, Case, Report.id.label("report_id"))
+            .join(Case, Session.case_id == Case.id)
+            .join(Client, Case.client_id == Client.id)
+            .outerjoin(Report, Report.session_id == Session.id)
+            .where(
+                Session.id == session_id,
+                Client.counselor_id == current_user.id,
+                Client.tenant_id == tenant_id,
+                Session.deleted_at.is_(None),
+                Case.deleted_at.is_(None),
+                Client.deleted_at.is_(None),
+            )
+        )
+        row = result.first()
+
+        if not row:
+            return None
+
+        session, client, case, report_id = row
+        has_report = report_id is not None
+
+        return (session, client, case, has_report)
+
     def list_sessions(
         self,
         counselor: Counselor,
@@ -147,77 +188,96 @@ class SessionService:
         request: SessionUpdateRequest,
         current_user: Counselor,
         tenant_id: str,
-    ) -> Session:
+    ) -> Tuple[Session, Client, Case, bool]:
         """
-        Update a session with authorization check.
+        Update a session with authorization check and return full details.
 
-        Business logic extracted from sessions.py lines 787-1009.
+        Includes complex session number recalculation logic extracted from
+        sessions.py lines 268-494.
+
+        Returns: (Session, Client, Case, has_report)
         """
-        session = self.get_session(session_id, current_user, tenant_id)
-        if not session:
+        # Get session with authorization check (includes Client, Case)
+        result = self.get_session_with_details(session_id, current_user, tenant_id)
+        if not result:
             raise ValueError("Session not found")
 
-        # Prepare update data
-        update_data = {}
+        session, client, case, _ = result
 
+        # Track if time changed (for session number recalculation)
+        time_changed = False
+        old_session_number = session.session_number
+
+        # Update session_date
         if request.session_date is not None:
-            update_data["session_date"] = self._parse_date(request.session_date)
+            new_session_date = self._parse_date(request.session_date)
+            if new_session_date != session.session_date:
+                time_changed = True
+                session.session_date = new_session_date
 
+        # Update start_time
         if request.start_time is not None:
-            update_data["start_time"] = self._parse_datetime(request.start_time)
+            new_start_time = self._parse_datetime(request.start_time)
+            if new_start_time != session.start_time:
+                time_changed = True
+            session.start_time = new_start_time
 
+        # Update end_time
         if request.end_time is not None:
-            update_data["end_time"] = self._parse_datetime(request.end_time)
+            new_end_time = self._parse_datetime(request.end_time)
+            session.end_time = new_end_time
 
-        # Handle name field - always update if provided
-        update_dict = request.model_dump(exclude_unset=True)
-        if "name" in update_dict:
-            update_data["name"] = update_dict["name"]
-
-        if request.notes is not None:
-            update_data["notes"] = request.notes
-
-        if request.duration_minutes is not None:
-            update_data["duration_minutes"] = request.duration_minutes
-
-        if request.reflection is not None:
-            update_data["reflection"] = request.reflection
-
-        # Process recordings and transcript updates
+        # Process recordings and transcript
         if request.recordings is not None:
-            recordings_data = [
-                r.model_dump() if hasattr(r, "model_dump") else r
-                for r in request.recordings
-            ]
-            update_data["recordings"] = recordings_data
-
-            if recordings_data:
+            session.recordings = request.recordings
+            if request.recordings:
                 # Aggregate transcript from recordings
                 full_transcript = self._aggregate_transcript_from_recordings(
-                    recordings_data
+                    request.recordings
                 )
-                update_data["transcript_text"] = full_transcript
-                update_data["transcript_sanitized"] = full_transcript
+                session.transcript_text = full_transcript
+                session.transcript_sanitized = full_transcript
 
-                # Recalculate time range
+                # Recalculate time range from recordings
                 calc_start, calc_end = self._calculate_timerange_from_recordings(
-                    recordings_data
+                    request.recordings
                 )
                 if calc_start:
-                    update_data["start_time"] = calc_start
+                    session.start_time = calc_start
+                    time_changed = False  # Recordings-calculated time doesn't count
                 if calc_end:
-                    update_data["end_time"] = calc_end
+                    session.end_time = calc_end
+                    time_changed = False  # Recordings-calculated time doesn't count
 
         elif request.transcript is not None:
-            update_data["transcript_text"] = request.transcript
-            update_data["transcript_sanitized"] = request.transcript
+            session.transcript_text = request.transcript
+            session.transcript_sanitized = request.transcript
 
-        # Update the session
-        updated_session = self.session_repo.update(session, **update_data)
+        # Handle name field
+        update_dict = request.model_dump(exclude_unset=True)
+        if "name" in update_dict:
+            session.name = update_dict["name"]
+
+        if request.notes is not None:
+            session.notes = request.notes
+
+        if request.duration_minutes is not None:
+            session.duration_minutes = request.duration_minutes
+
+        if request.reflection is not None:
+            session.reflection = request.reflection
+
+        # Recalculate session_number if time changed
+        if time_changed:
+            self._renumber_session_on_time_change(session, old_session_number, case.id)
+
         self.db.commit()
-        self.db.refresh(updated_session)
+        self.db.refresh(session)
 
-        return updated_session
+        # Check for reports
+        has_report = self.session_repo.has_reports(session.id)
+
+        return (session, client, case, has_report)
 
     def delete_session(
         self,
@@ -405,3 +465,64 @@ class SessionService:
         session_end = max(end_times) if end_times else None
 
         return session_start, session_end
+
+    def _renumber_session_on_time_change(
+        self, session: Session, old_session_number: int, case_id: UUID
+    ) -> None:
+        """
+        Renumber sessions when session time changes.
+
+        Complex logic extracted from sessions.py lines 409-451.
+
+        This handles the case where updating a session's time requires
+        reordering session numbers chronologically.
+        """
+        from sqlalchemy import func
+
+        # Determine new sort time (start_time takes precedence)
+        new_sort_time = (
+            session.start_time if session.start_time else session.session_date
+        )
+
+        # 1. Temporarily set current session number to 0
+        session.session_number = 0
+        self.db.flush()
+
+        # 2. Decrement session numbers > old_session_number
+        self.db.execute(
+            Session.__table__.update()  # type: ignore[attr-defined]
+            .where(Session.case_id == case_id)
+            .where(Session.session_number > old_session_number)
+            .values(session_number=Session.session_number - 1)
+        )
+        self.db.flush()
+
+        # 3. Query all other sessions in this case, ordered by time
+        result = self.db.execute(
+            select(Session.start_time, Session.session_date)
+            .where(Session.case_id == case_id)
+            .where(Session.id != session.id)
+            .order_by(func.coalesce(Session.start_time, Session.session_date).asc())
+        )
+        existing_times = [(row[0] if row[0] else row[1]) for row in result.all()]
+
+        # 4. Calculate new session number based on chronological position
+        new_session_number = 1
+        for existing_time in existing_times:
+            if new_sort_time > existing_time:
+                new_session_number += 1
+            else:
+                break
+
+        # 5. Increment session numbers >= new_session_number (exclude current)
+        self.db.execute(
+            Session.__table__.update()  # type: ignore[attr-defined]
+            .where(Session.case_id == case_id)
+            .where(Session.session_number >= new_session_number)
+            .where(Session.id != session.id)
+            .values(session_number=Session.session_number + 1)
+        )
+        self.db.flush()
+
+        # 6. Assign new session number to current session
+        session.session_number = new_session_number

@@ -1,152 +1,74 @@
 """
-Keyword Analysis Service with RAG Support
-
-This service provides fast keyword extraction from transcripts using:
-1. Vector similarity search to find similar past sessions
-2. AI-powered analysis with context from session -> case -> client
-3. Caching of analysis results for future reuse
+Keyword Analysis Service - AI-powered transcript keyword extraction
+Extracted from app/api/sessions.py analyze_session_keywords endpoint (320 lines)
 """
-
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Dict, List
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session as DBSession
 
 from app.models.case import Case
 from app.models.client import Client
 from app.models.session import Session
-from app.schemas.session import KeywordAnalysisResponse
 from app.services.gemini_service import GeminiService
-from app.services.openai_service import OpenAIService
-from app.services.rag_retriever import RAGRetriever
 
 logger = logging.getLogger(__name__)
 
 
 class KeywordAnalysisService:
-    """Service for analyzing transcript keywords with RAG acceleration"""
+    """Service for AI-powered keyword analysis of session transcripts"""
 
-    def __init__(self):
+    def __init__(self, db: DBSession):
+        self.db = db
         self.gemini_service = GeminiService()
-        self.openai_service = OpenAIService()
-        self.rag_retriever = RAGRetriever(self.openai_service)
 
-    async def analyze_with_rag(
+    async def analyze_transcript_keywords(
         self,
+        session: Session,
+        client: Client,
+        case: Case,
         transcript_segment: str,
-        session: Session,
-        case: Case,
-        client: Client,
-        db: AsyncSession,
-        use_rag: bool = True,
-    ) -> KeywordAnalysisResponse:
+        counselor_id: UUID,
+    ) -> Dict:
         """
-        Analyze transcript segment with RAG acceleration.
+        Analyze transcript segment for keywords using AI with session context.
 
-        Process:
-        1. Search for similar past sessions using vector similarity
-        2. Extract successful keyword patterns from similar sessions
-        3. Use AI to analyze current segment with context
-        4. Store results for future RAG queries
-
-        Args:
-            transcript_segment: The transcript text to analyze
-            session: Current session object
-            case: Associated case object
-            client: Associated client object
-            db: Database session (async)
-            use_rag: Whether to use RAG for acceleration (default: True)
-
-        Returns:
-            KeywordAnalysisResponse with keywords and insights
+        Returns: dict with keys: keywords, categories, confidence, counselor_insights
         """
-        similar_analyses = []
-
-        if use_rag:
-            try:
-                # Step 1: Find similar past sessions using RAG
-                similar_analyses = await self._find_similar_analyses(
-                    transcript_segment, db
-                )
-                logger.info(f"Found {len(similar_analyses)} similar past analyses")
-            except Exception as e:
-                logger.warning(f"RAG search failed, falling back to direct AI: {e}")
-                similar_analyses = []
-
-        # Step 2: Build context for AI analysis
-        context = self._build_context(session, case, client, similar_analyses)
-
-        # Step 3: Generate keywords and insights
-        response = await self._generate_analysis(transcript_segment, context)
-
-        # Step 4: Store embedding for future RAG queries (async, non-blocking)
-        # This happens in background to keep response fast
         try:
-            await self._store_analysis_embedding(
-                transcript_segment, response, session.id, db
-            )
-        except Exception as e:
-            logger.warning(f"Failed to store embedding: {e}")
+            # Build AI prompt context
+            context_str = self._build_context(session, client, case)
 
-        return response
+            # Build optimized prompt for fast response
+            prompt = self._build_prompt(context_str, transcript_segment)
 
-    async def _find_similar_analyses(
-        self, transcript_segment: str, db: AsyncSession, top_k: int = 3
-    ) -> List[Dict]:
-        """
-        Find similar past transcript analyses using vector search.
-
-        Args:
-            transcript_segment: Current transcript to find similarities for
-            db: Database session
-            top_k: Number of similar results to return
-
-        Returns:
-            List of similar analyses with their keywords and insights
-        """
-        # Use RAGRetriever to find similar content
-        # Note: We search for similar transcript segments that have been analyzed before
-        try:
-            similar_chunks = await self.rag_retriever.search(
-                query=transcript_segment,
-                top_k=top_k,
-                threshold=0.7,  # Higher threshold for more relevant matches
-                db=db,
+            # Call Gemini AI
+            ai_response = await self.gemini_service.generate_text(
+                prompt, temperature=0.3, response_format={"type": "json_object"}
             )
 
-            # Extract analysis metadata from similar chunks
-            analyses = []
-            for chunk in similar_chunks:
-                # Check if this chunk has associated keyword analysis
-                # (stored in meta_json of the chunk)
-                if "keywords" in chunk.get("meta_json", {}):
-                    analyses.append(
-                        {
-                            "keywords": chunk["meta_json"]["keywords"],
-                            "categories": chunk["meta_json"]["categories"],
-                            "insights": chunk["meta_json"].get(
-                                "counselor_insights", ""
-                            ),
-                            "similarity": chunk["score"],
-                        }
-                    )
+            # Parse AI response
+            result_data = self._parse_ai_response(ai_response)
 
-            return analyses
+            # Save analysis log to session
+            self._save_analysis_log(
+                session, transcript_segment, result_data, counselor_id
+            )
+
+            return result_data
 
         except Exception as e:
-            logger.error(f"RAG retrieval failed: {e}")
-            return []
+            logger.error(f"Keyword extraction failed: {e}")
+            # Fallback to rule-based analysis
+            return self._fallback_rule_based_analysis(
+                session, transcript_segment, counselor_id
+            )
 
-    def _build_context(
-        self,
-        session: Session,
-        case: Case,
-        client: Client,
-        similar_analyses: List[Dict],
-    ) -> str:
-        """Build context string for AI analysis"""
+    def _build_context(self, session: Session, client: Client, case: Case) -> str:
+        """Build context string from session, case, and client information"""
         context_parts = []
 
         # Add client information
@@ -169,137 +91,197 @@ class KeywordAnalysisService:
             session_info += f", 會談備註: {session.notes}"
         context_parts.append(session_info)
 
-        # Add similar analyses for reference (if available)
-        if similar_analyses:
-            similar_info = "參考相似案例分析："
-            for i, analysis in enumerate(similar_analyses[:3], 1):
-                similar_info += f"\n{i}. 關鍵詞: {', '.join(analysis['keywords'][:5])}"
-                if analysis.get("insights"):
-                    similar_info += f"\n   洞見: {analysis['insights'][:100]}..."
-            context_parts.append(similar_info)
-
         return "\n".join(context_parts)
 
-    async def _generate_analysis(
-        self, transcript_segment: str, context: str
-    ) -> KeywordAnalysisResponse:
-        """Generate keyword analysis using AI"""
-        prompt = f"""基於以下背景資訊，從逐字稿片段中提取關鍵詞和主題，並提供諮商師洞見。
+    def _build_prompt(self, context: str, transcript_segment: str) -> str:
+        """Build AI prompt for keyword extraction"""
+        return f"""快速分析以下逐字稿，提取關鍵詞和洞見。
 
+背景：
 {context}
 
-逐字稿片段:
-{transcript_segment}
+逐字稿：
+{transcript_segment[:500]}
 
-請提取:
-1. 關鍵詞 (keywords): 重要的詞彙或概念（5-10個）
-2. 類別 (categories): 這些關鍵詞所屬的主題分類（3-5個）
-3. 信心分數 (confidence): 0-1之間，表示提取的可信度
-4. 諮商師洞見 (counselor_insights): 根據案主背景、案例目標和逐字稿內容，提醒諮商師應該注意的重點
-
-以JSON格式回應:
+JSON回應（精簡）：
 {{
-    "keywords": ["關鍵詞1", "關鍵詞2", ...],
-    "categories": ["類別1", "類別2", ...],
+    "keywords": ["詞1", "詞2", "詞3", "詞4", "詞5"],
+    "categories": ["類別1", "類別2", "類別3"],
     "confidence": 0.85,
-    "counselor_insights": "諮商師應注意：..."
-}}
-"""
+    "counselor_insights": "簡短洞見（50字內）"
+}}"""
 
-        try:
-            # Use Gemini for analysis
-            ai_response = await self.gemini_service.generate_text(
-                prompt, temperature=0.5, response_format={"type": "json_object"}
-            )
+    def _parse_ai_response(self, ai_response) -> Dict:
+        """Parse AI response to extract keywords data"""
+        if isinstance(ai_response, str):
+            try:
+                json_start = ai_response.find("{")
+                json_end = ai_response.rfind("}") + 1
+                if json_start >= 0 and json_end > json_start:
+                    json_str = ai_response[json_start:json_end]
+                    return json.loads(json_str)
+                else:
+                    # Quick fallback
+                    return self._get_default_result()
+            except json.JSONDecodeError:
+                return self._get_default_result()
+        else:
+            return ai_response
 
-            # Parse response
-            if isinstance(ai_response, str):
-                try:
-                    json_start = ai_response.find("{")
-                    json_end = ai_response.rfind("}") + 1
-                    if json_start >= 0 and json_end > json_start:
-                        result_data = json.loads(ai_response[json_start:json_end])
-                    else:
-                        raise ValueError("No JSON found in response")
-                except (json.JSONDecodeError, ValueError) as e:
-                    logger.warning(f"Failed to parse AI response: {e}")
-                    result_data = self._get_fallback_response()
-            else:
-                result_data = ai_response
-
-            return KeywordAnalysisResponse(
-                keywords=result_data.get("keywords", ["無法提取"]),
-                categories=result_data.get("categories", ["一般"]),
-                confidence=result_data.get("confidence", 0.5),
-                counselor_insights=result_data.get(
-                    "counselor_insights", "無法生成洞見，請諮商師根據經驗判斷。"
-                ),
-            )
-
-        except Exception as e:
-            logger.error(f"AI analysis failed: {e}")
-            return KeywordAnalysisResponse(**self._get_fallback_response())
-
-    def _get_fallback_response(self) -> Dict:
-        """Get fallback response when AI fails"""
+    def _get_default_result(self) -> Dict:
+        """Get default keyword analysis result"""
         return {
-            "keywords": ["分析處理中"],
-            "categories": ["待分類"],
-            "confidence": 0.3,
-            "counselor_insights": "AI 分析暫時無法使用，請根據經驗判斷。",
+            "keywords": ["探索中", "情緒", "發展"],
+            "categories": ["一般諮商"],
+            "confidence": 0.5,
+            "counselor_insights": "持續觀察案主狀態。",
         }
 
-    async def _store_analysis_embedding(
+    def _save_analysis_log(
         self,
+        session: Session,
         transcript_segment: str,
-        analysis: KeywordAnalysisResponse,
-        session_id: UUID,
-        db: AsyncSession,
-    ):
-        """
-        Store the analysis result with embedding for future RAG queries.
+        result_data: Dict,
+        counselor_id: UUID,
+        is_fallback: bool = False,
+    ) -> None:
+        """Save analysis log to session"""
+        from sqlalchemy.orm.attributes import flag_modified
 
-        This creates a searchable chunk with the transcript and its analysis,
-        allowing future similar transcripts to benefit from this analysis.
+        analysis_log_entry = {
+            "analyzed_at": datetime.now(timezone.utc).isoformat(),
+            "transcript_segment": transcript_segment[:200],
+            "keywords": result_data.get("keywords", [])[:10],
+            "categories": result_data.get("categories", [])[:5],
+            "confidence": result_data.get("confidence", 0.5),
+            "counselor_insights": result_data.get("counselor_insights", "")[:200],
+            "counselor_id": str(counselor_id),
+        }
 
-        Args:
-            transcript_segment: The analyzed transcript text
-            analysis: The analysis results to store
-            session_id: The session this analysis belongs to
-            db: Database session
-        """
-        try:
-            # Create embedding for the transcript segment
-            _embedding = await self.openai_service.create_embedding(transcript_segment)
+        if is_fallback:
+            analysis_log_entry["fallback"] = True
 
-            # Store as a chunk with analysis metadata
-            # Note: We might need to create a new document type for session analyses
-            # or extend the existing document model to support session-based content
+        if session.analysis_logs is None:
+            session.analysis_logs = []
 
-            # For now, log that we would store this
-            logger.info(
-                f"Would store embedding for session {session_id} with "
-                f"{len(analysis.keywords)} keywords"
-            )
+        session.analysis_logs.append(analysis_log_entry)
+        flag_modified(session, "analysis_logs")
 
-            # TODO: Implement actual storage when database schema is extended
-            # This would involve:
-            # 1. Creating a Document entry for the session (if not exists)
-            # 2. Creating a Chunk for this transcript segment
-            # 3. Storing the Embedding with the chunk
-            # 4. Storing analysis results in chunk's meta_json
+        self.db.commit()
+        self.db.refresh(session)
 
-        except Exception as e:
-            logger.error(f"Failed to store analysis embedding: {e}")
+    def _fallback_rule_based_analysis(
+        self, session: Session, transcript: str, counselor_id: UUID
+    ) -> Dict:
+        """Fallback rule-based keyword extraction when AI fails"""
+        # Common counseling keywords
+        emotion_keywords = [
+            "焦慮",
+            "壓力",
+            "緊張",
+            "難過",
+            "開心",
+            "害怕",
+            "生氣",
+            "沮喪",
+            "無助",
+            "迷惘",
+            "困擾",
+            "擔心",
+            "自卑",
+        ]
+        work_keywords = [
+            "工作",
+            "主管",
+            "同事",
+            "公司",
+            "職涯",
+            "轉職",
+            "離職",
+            "上班",
+            "加班",
+            "業績",
+            "升遷",
+        ]
+        relationship_keywords = [
+            "家人",
+            "父母",
+            "伴侶",
+            "朋友",
+            "關係",
+            "溝通",
+            "衝突",
+            "相處",
+            "家庭",
+        ]
+        development_keywords = [
+            "目標",
+            "方向",
+            "成就",
+            "發展",
+            "規劃",
+            "未來",
+            "改變",
+            "學習",
+            "成長",
+        ]
 
+        # Extract keywords found in transcript
+        found_keywords = []
+        categories = set()
 
-# Singleton instance
-_keyword_service_instance = None
+        for word in emotion_keywords:
+            if word in transcript:
+                found_keywords.append(word)
+                categories.add("情緒管理")
 
+        for word in work_keywords:
+            if word in transcript:
+                found_keywords.append(word)
+                categories.add("職涯發展")
 
-def get_keyword_analysis_service() -> KeywordAnalysisService:
-    """Get singleton instance of keyword analysis service"""
-    global _keyword_service_instance
-    if _keyword_service_instance is None:
-        _keyword_service_instance = KeywordAnalysisService()
-    return _keyword_service_instance
+        for word in relationship_keywords:
+            if word in transcript:
+                found_keywords.append(word)
+                categories.add("人際關係")
+
+        for word in development_keywords:
+            if word in transcript:
+                found_keywords.append(word)
+                categories.add("自我探索")
+
+        # Default if no keywords found
+        if not found_keywords:
+            found_keywords = ["探索中", "諮商進行"]
+            categories = {"一般諮商"}
+
+        # Generate insights based on keywords
+        insights = self._generate_simple_insights(found_keywords, relationship_keywords)
+
+        result = {
+            "keywords": found_keywords[:10],
+            "categories": list(categories)[:5],
+            "confidence": 0.6,
+            "counselor_insights": insights,
+        }
+
+        # Save fallback analysis log
+        self._save_analysis_log(
+            session, transcript, result, counselor_id, is_fallback=True
+        )
+
+        return result
+
+    def _generate_simple_insights(
+        self, found_keywords: List[str], relationship_keywords: List[str]
+    ) -> str:
+        """Generate simple insights from found keywords"""
+        if "焦慮" in found_keywords or "壓力" in found_keywords:
+            return "案主表達情緒困擾，建議關注壓力來源及因應策略。"
+        elif "工作" in found_keywords or "職涯" in found_keywords:
+            return "案主提及職涯議題，可探索工作價值觀與發展方向。"
+        elif any(k in found_keywords for k in relationship_keywords):
+            return "案主談及人際關係，建議探索互動模式與溝通方式。"
+        else:
+            keywords_str = ", ".join(found_keywords[:3])
+            return f"案主提及 {keywords_str}，持續關注案主需求。"
