@@ -31,6 +31,7 @@ from app.schemas.session import (
     SessionTimelineResponse,
     SessionUpdateRequest,
 )
+from app.services.analysis_log_service import AnalysisLogService
 from app.services.keyword_analysis_service import KeywordAnalysisService
 from app.services.recording_service import RecordingService
 from app.services.reflection_service import ReflectionService
@@ -613,70 +614,20 @@ def get_analysis_logs(
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
 ) -> AnalysisLogsResponse:
-    """
-    Get all analysis logs for a session.
+    """Get all analysis logs for a session in chronological order."""
+    service = AnalysisLogService(db)
+    logs = service.get_session_analysis_logs(session_id, current_user, tenant_id)
 
-    Returns analysis logs in chronological order (oldest first).
-
-    Args:
-        session_id: Session UUID
-        db: Database session
-        current_user: Authenticated user
-        tenant_id: Tenant ID
-
-    Returns:
-        AnalysisLogsResponse with all logs
-
-    Raises:
-        HTTPException: 404 if session not found
-    """
-    # Fetch session with authorization check
-    result = db.execute(
-        select(Session, Client, Case)
-        .join(Case, Session.case_id == Case.id)
-        .join(Client, Case.client_id == Client.id)
-        .where(
-            Session.id == session_id,
-            Client.counselor_id == current_user.id,
-            Client.tenant_id == tenant_id,
-            Session.deleted_at.is_(None),
-            Case.deleted_at.is_(None),
-            Client.deleted_at.is_(None),
-        )
-    )
-    row = result.first()
-
-    if not row:
+    if logs is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found or access denied",
         )
 
-    session = row[0]
-
-    # Get analysis_logs (defaults to empty list if None)
-    logs_data = session.analysis_logs or []
-
-    # Convert to response format with log indices
-    log_entries = [
-        AnalysisLogEntry(
-            log_index=idx,
-            analyzed_at=log.get("analyzed_at", ""),
-            transcript_segment=log.get("transcript_segment", ""),
-            keywords=log.get("keywords", []),
-            categories=log.get("categories", []),
-            confidence=log.get("confidence", 0.0),
-            counselor_insights=log.get("counselor_insights", ""),
-            counselor_id=log.get("counselor_id", ""),
-            fallback=log.get("fallback", False),
-        )
-        for idx, log in enumerate(logs_data)
-    ]
-
     return AnalysisLogsResponse(
-        session_id=session.id,
-        total_logs=len(log_entries),
-        logs=log_entries,
+        session_id=session_id,
+        total_logs=len(logs),
+        logs=[AnalysisLogEntry(**log) for log in logs],
     )
 
 
@@ -693,64 +644,24 @@ def delete_analysis_log(
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
 ):
-    """
-    Delete a specific analysis log entry.
-
-    Args:
-        session_id: Session UUID
-        log_index: Index of log to delete (0-based)
-        db: Database session
-        current_user: Authenticated user
-        tenant_id: Tenant ID
-
-    Raises:
-        HTTPException: 404 if session or log not found, 400 if invalid index
-    """
-    # Fetch session with authorization check
-    result = db.execute(
-        select(Session, Client, Case)
-        .join(Case, Session.case_id == Case.id)
-        .join(Client, Case.client_id == Client.id)
-        .where(
-            Session.id == session_id,
-            Client.counselor_id == current_user.id,
-            Client.tenant_id == tenant_id,
-            Session.deleted_at.is_(None),
-            Case.deleted_at.is_(None),
-            Client.deleted_at.is_(None),
-        )
+    """Delete a specific analysis log entry by index."""
+    service = AnalysisLogService(db)
+    success, error = service.delete_analysis_log(
+        session_id, log_index, current_user, tenant_id
     )
-    row = result.first()
 
-    if not row:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found or access denied",
-        )
+    if not success:
+        if error == "not_found":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Session not found or access denied",
+            )
+        elif error and error.startswith("invalid_index"):
+            # Extract error message after "invalid_index: "
+            detail = error.split("invalid_index: ", 1)[1]
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=detail,
+            )
 
-    session = row[0]
-
-    # Get analysis_logs
-    logs_data = session.analysis_logs or []
-
-    # Validate index
-    if log_index < 0 or log_index >= len(logs_data):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid log index: {log_index}. Valid range: 0-{len(logs_data)-1}",
-        )
-
-    # Remove the log entry
-    logs_data.pop(log_index)
-
-    # Update session
-    session.analysis_logs = logs_data
-
-    # Mark as modified for SQLAlchemy to detect changes
-    from sqlalchemy.orm.attributes import flag_modified
-
-    flag_modified(session, "analysis_logs")
-
-    db.commit()
-
-    return None  # 204 No Content
+    return None
