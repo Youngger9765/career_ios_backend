@@ -58,6 +58,11 @@ If you fail to properly delegate tasks:
 - **ALWAYS** run integration tests before push
 - **ALWAYS** use TDD for critical features
 - **ALWAYS** delegate to specialized subagents
+- **MANDATORY**: Update documentation before every git push
+  - **PRD.md** - Update version, features, current status
+  - **CHANGELOG.md** + **CHANGELOG_zh-TW.md** - Add changes to [Unreleased] section
+  - **Weekly Report** - Update progress if it's a new week
+  - ⚠️ **STRICT ENFORCEMENT**: Push will fail if docs not updated
 
 #### Code Quality:
 - Python code must pass `ruff check`
@@ -197,6 +202,12 @@ Complex Tasks (Opus - User Decision):
   - Check line count when editing/reviewing files
   - Suggest splitting before file exceeds limits
   - Use service layer pattern, split by feature, or extract utilities
+- **Is user about to push?** → MANDATORY documentation check
+  - Verify PRD.md updated with latest features/version
+  - Verify CHANGELOG.md [Unreleased] section has new changes
+  - Verify CHANGELOG_zh-TW.md matches English version
+  - If new week: Verify weekly report exists/updated
+  - **Block push if documentation incomplete**
 
 #### Never Allow:
 - Implementation before tests
@@ -207,6 +218,9 @@ Complex Tasks (Opus - User Decision):
 - **Files exceeding size limits without refactoring**
   - Growing files beyond limits → Force modularization
   - Adding features to already-large files → Suggest refactor first
+- **Git push without documentation updates**
+  - CRITICAL: PRD.md, CHANGELOG, weekly reports must be updated
+  - Auto-remind user before every push attempt
 
 ### 8. Smart Task Routing Examples 💡
 
@@ -234,6 +248,24 @@ Manager Decision:
   1. Alert user: "⚠️ sessions.py has 450 lines (limit: 300). Should refactor first."
   2. Recommend: "Extract business logic to app/services/session_service.py"
   3. Ask: "Refactor now, or proceed anyway?"
+
+# Example 6: User wants to push commits
+User: "git push" or "push to staging" or "ready to deploy"
+Manager Decision:
+  🚨 MANDATORY DOCUMENTATION CHECK:
+  1. Read CHANGELOG.md → Check if [Unreleased] section has recent changes
+  2. Read PRD.md → Check if version/features updated
+  3. Check date → If new week, verify weekly report exists
+
+  If ANY documentation is missing:
+    ❌ BLOCK: "Documentation not updated! Required before push:"
+       - [ ] PRD.md - Update version and features
+       - [ ] CHANGELOG.md - Add changes to [Unreleased]
+       - [ ] CHANGELOG_zh-TW.md - Sync with English version
+       - [ ] Weekly report (if new week)
+
+  If ALL documentation is updated:
+    ✅ ALLOW: "Documentation verified. Safe to push!"
 ```
 
 ### 9. Complex Task Recommendation 🎯

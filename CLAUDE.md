@@ -327,6 +327,17 @@ poetry run pytest tests/integration/ -v
    - 保護主要 context 不被消耗
    - 確保 TDD 流程一致性
 
+8. **📚 MANDATORY: Documentation updates before EVERY push**
+   - **CRITICAL**: 絕對禁止未更新文檔就 push
+   - **REQUIRED UPDATES**:
+     - ✅ **PRD.md** - 更新版本號、新功能、當前狀態
+     - ✅ **CHANGELOG.md** - 在 [Unreleased] 區段新增變更
+     - ✅ **CHANGELOG_zh-TW.md** - 與英文版同步
+     - ✅ **Weekly Report** - 如果是新的一週，更新進度報告
+   - **ENFORCEMENT**: Agent 會在 push 前自動檢查
+   - **CONSEQUENCE**: 文檔未更新 = BLOCK PUSH
+   - **NO EXCEPTIONS**: 即使是小改動也必須更新文檔
+
 ---
 
 ## 🎯 Console API 測試檢查清單

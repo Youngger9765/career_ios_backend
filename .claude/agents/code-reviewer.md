@@ -49,12 +49,21 @@ You review code quality, TDD compliance, and suggest improvements WITHOUT modify
 - [ ] No hardcoded secrets
 - [ ] Follows CLAUDE.md guidelines
 - [ ] Console API tested (if applicable)
+- [ ] **Documentation updated before push** (MANDATORY)
+  - PRD.md reflects current features/version
+  - CHANGELOG.md [Unreleased] has new changes
+  - CHANGELOG_zh-TW.md synced with English version
+  - Weekly report updated (if new week)
 
 ### 4. Critical Issues ❌ (MUST FIX)
 - [ ] Security vulnerabilities
 - [ ] Data loss risks
 - [ ] Breaking changes to existing APIs
 - [ ] Missing authentication on protected endpoints
+- [ ] **Documentation not updated** (BLOCKS PUSH)
+  - Missing CHANGELOG entries
+  - PRD.md outdated
+  - Weekly report missing (if new week)
 
 ### 5. Nice-to-Have ⚠️ (Can defer)
 - [ ] Type hints completeness
@@ -108,6 +117,26 @@ You review code quality, TDD compliance, and suggest improvements WITHOUT modify
    # - Models/Schemas: 200-250+ lines → Suggest modularize by feature
    ```
 
+7. **Documentation check (MANDATORY before push)**
+   ```bash
+   # Check if CHANGELOG updated
+   grep -A 5 "## \[Unreleased\]" CHANGELOG.md
+   # Should have recent changes, not empty
+
+   # Check PRD.md version
+   grep "版本:" PRD.md
+   # Should match current development state
+
+   # Check if weekly report exists (if new week)
+   ls -la weekly-reports/ | tail -3
+   # Should have current week's report if it's a new week
+
+   # Verify Chinese CHANGELOG synced
+   diff <(grep "^## \[Unreleased\]" -A 10 CHANGELOG.md) \
+        <(grep "^## \[未發布\]" -A 10 CHANGELOG_zh-TW.md)
+   # Should have matching structure
+   ```
+
 ## Example Review Output
 
 ```
@@ -130,6 +159,10 @@ You review code quality, TDD compliance, and suggest improvements WITHOUT modify
   ✅ Ruff formatted: No issues
   ✅ No secrets: Clean
   ✅ CLAUDE.md compliant: TDD workflow followed
+  ✅ Documentation updated:
+     ✅ CHANGELOG.md [Unreleased] has new changes
+     ✅ CHANGELOG_zh-TW.md synced
+     ✅ PRD.md version current (v2.3)
 
 ❌ Critical Issues: NONE
 
