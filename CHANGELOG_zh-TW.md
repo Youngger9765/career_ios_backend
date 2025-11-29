@@ -57,6 +57,10 @@
   - 建立 RAGChatService（372 行）處理 RAG 聊天業務邏輯
   - 抽取意圖分類、向量搜尋、答案生成邏輯
   - 簡化 endpoint 至薄路由層並委派至 service
+- 重構 RAG Report API 至 Service Layer 模式（484 → 168 行，-65%）
+  - 建立 RAGReportService（499 行）處理報告生成業務邏輯
+  - 抽取逐字稿解析、理論搜尋、提示詞建構、品質評估邏輯
+  - 簡化 endpoint 至薄路由層並委派至 service
 - 隱藏分析記錄中的 counselor_id 欄位（隱私改善）
 - 更新 analyze-keywords UI 文字：「已自動儲存」而非「不會儲存」
 - 分析記錄顯示改用顏色區分 AI 分析與備援分析

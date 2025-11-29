@@ -57,6 +57,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created RAGChatService (372 lines) for RAG chat business logic
   - Extracted intent classification, vector search, and answer generation logic
   - Simplified endpoint to thin routing layer with service delegation
+- Refactored RAG Report API to service layer pattern (484 → 168 lines, -65%)
+  - Created RAGReportService (499 lines) for report generation business logic
+  - Extracted transcript parsing, theory search, prompt building, and quality assessment
+  - Simplified endpoint to thin routing layer with service delegation
 - Hidden counselor_id field in analysis logs display (privacy improvement)
 - Updated analyze-keywords UI text: "已自動儲存" instead of "不會儲存"
 - Analysis logs display with color-coded AI vs fallback analysis
