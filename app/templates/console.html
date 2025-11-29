@@ -2813,39 +2813,25 @@
                 init: async () => {
                     if (state.token) {
                         try {
-                            // Fetch clients and cases for selection
-                            const [clientsRes, casesRes] = await Promise.all([
-                                fetch(`${BASE_URL}/api/v1/clients`, {
-                                    headers: { 'Authorization': `Bearer ${state.token}` }
-                                }),
-                                fetch(`${BASE_URL}/api/v1/cases`, {
-                                    headers: { 'Authorization': `Bearer ${state.token}` }
-                                })
-                            ]);
+                            // Fetch sessions for selection
+                            const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
 
-                            if (clientsRes.ok) {
-                                const clientsData = await clientsRes.json();
-                                state.clients = clientsData.items;
-                            }
-
-                            if (casesRes.ok) {
-                                const casesData = await casesRes.json();
-                                state.cases = casesData.items;
+                            if (response.ok) {
+                                const data = await response.json();
+                                state.sessions = data.items;
                             }
 
                             document.getElementById('action-form').innerHTML = steps['analyze-keywords'].renderForm();
                         } catch (error) {
-                            console.error('Failed to load data:', error);
+                            console.error('Failed to load sessions:', error);
                         }
                     }
                 },
                 renderForm: () => {
-                    const clientOptions = state.clients.map(c =>
-                        `<option value="${c.id}">${c.name} (${c.code})</option>`
-                    ).join('');
-
-                    const caseOptions = state.cases.map(c =>
-                        `<option value="${c.id}">${c.goal || '未設定目標'}</option>`
+                    const sessionOptions = (state.sessions || []).map(s =>
+                        `<option value="${s.id}">${s.client_name || '未知'} - 第 ${s.session_number} 次 (${new Date(s.session_date).toLocaleDateString('zh-TW')})</option>`
                     ).join('');
 
                     return `
@@ -2853,43 +2839,24 @@
                             <h4 style="color: #5145cd; margin: 0 0 8px 0;">🔍 即時關鍵字分析</h4>
                             <p style="color: #6366f1; font-size: 13px; margin: 0;">
                                 從逐字稿片段即時提取關鍵字，不儲存任何資料<br/>
-                                可選擇性帶入案主背景和案例目標作為 AI 分析脈絡
+                                自動帶入選定會談的案主背景和案例目標作為 AI 分析脈絡
                             </p>
                         </div>
 
                         <div class="form-group">
-                            <label>選擇案主 *</label>
-                            <select id="analyze-client-id">
-                                ${clientOptions}
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>選擇案例 *</label>
-                            <select id="analyze-case-id">
-                                ${caseOptions}
+                            <label>選擇會談 *</label>
+                            <select id="analyze-session-id">
+                                ${sessionOptions}
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label>逐字稿片段 *</label>
-                            <textarea id="analyze-transcript" placeholder="輸入或貼上要分析的逐字稿片段..." rows="6"></textarea>
-                            <small style="color: #6b7280; font-size: 12px;">💡 iOS 可即時傳送部分錄音的逐字稿進行分析</small>
+                            <textarea id="analyze-transcript" placeholder="輸入或貼上要分析的逐字稿片段..." rows="8"></textarea>
+                            <small style="color: #6b7280; font-size: 12px;">💡 可即時傳送部分錄音的逐字稿進行分析</small>
                         </div>
 
-                        <div class="form-group">
-                            <h4 style="margin: 16px 0 8px 0; color: #374151;">分析選項</h4>
-                            <label style="display: flex; align-items: center; gap: 8px; margin: 8px 0;">
-                                <input type="checkbox" id="analyze-include-client" checked />
-                                <span>包含案主背景資料作為分析脈絡</span>
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 8px; margin: 8px 0;">
-                                <input type="checkbox" id="analyze-include-case" checked />
-                                <span>包含案例目標作為分析脈絡</span>
-                            </label>
-                        </div>
-
-                        <button class="btn btn-primary" onclick="executeAnalyzeKeywords()" ${!state.token ? 'disabled' : ''}>
+                        <button class="btn btn-primary" onclick="executeAnalyzeKeywords()" ${!state.token || !state.sessions?.length ? 'disabled' : ''}>
                             🔍 分析關鍵字
                         </button>
                         <button class="btn btn-secondary" onclick="quickFillAnalyzeKeywords()" ${!state.token ? 'disabled' : ''} style="background: #6366f1; margin-top: 8px;">
@@ -2898,20 +2865,12 @@
                     `;
                 },
                 execute: async () => {
-                    const clientId = document.getElementById('analyze-client-id').value;
-                    const caseId = document.getElementById('analyze-case-id').value;
+                    const sessionId = document.getElementById('analyze-session-id').value;
                     const transcript = document.getElementById('analyze-transcript').value;
-                    const includeClient = document.getElementById('analyze-include-client').checked;
-                    const includeCase = document.getElementById('analyze-include-case').checked;
 
                     const requestBody = {
-                        client_id: clientId,
-                        case_id: caseId,
-                        transcript_segment: transcript,
-                        context: {
-                            include_client_profile: includeClient,
-                            include_case_goals: includeCase
-                        }
+                        session_id: sessionId,
+                        transcript_segment: transcript
                     };
 
                     const response = await fetch(`${BASE_URL}/api/v1/analyze/transcript-keywords`, {
@@ -6919,10 +6878,6 @@ Cl: 謝謝，我會的。`
 
             document.getElementById('analyze-transcript').value =
                 sampleTranscripts[Math.floor(Math.random() * sampleTranscripts.length)];
-
-            // 隨機選擇是否包含背景資料
-            document.getElementById('analyze-include-client').checked = Math.random() > 0.3;
-            document.getElementById('analyze-include-case').checked = Math.random() > 0.3;
         };
 
         // Quick fill function for append recording
