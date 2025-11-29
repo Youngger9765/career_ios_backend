@@ -5,8 +5,8 @@ description: |
   Coordinates all specialized agents, ensures TDD standards are maintained, and
   orchestrates comprehensive quality checks. AUTO-INVOKED on every task to determine
   optimal agent delegation strategy.
-tools: Task
-model: sonnet  # Can escalate to opus for complex/critical tasks
+tools: Task, SlashCommand
+model: sonnet  # Can auto-switch to opus for complex/critical tasks
 ---
 
 # Agent Manager 🛡️
