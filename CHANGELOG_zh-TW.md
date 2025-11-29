@@ -65,6 +65,10 @@
   - 建立 RAGIngestService（275 行）處理文件擷取業務邏輯
   - 抽取 PDF 上傳/萃取、文字分塊、嵌入生成、儲存操作邏輯
   - 簡化 endpoint 至薄路由層並委派至 service
+- 重構 Evaluation Service 並抽取輔助函數（599 → 394 行，-34%）
+  - 建立 EvaluationHelpers（340 行）處理 RAG 評估邏輯
+  - 抽取文件 ID 查詢、RAG 答案生成、RAGAS 評估、指標計算邏輯
+  - 分離實驗比較邏輯至可重用輔助函數
 - 隱藏分析記錄中的 counselor_id 欄位（隱私改善）
 - 更新 analyze-keywords UI 文字：「已自動儲存」而非「不會儲存」
 - 分析記錄顯示改用顏色區分 AI 分析與備援分析

@@ -65,6 +65,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created RAGIngestService (275 lines) for document ingestion business logic
   - Extracted PDF upload/extraction, chunking, embedding generation, and storage operations
   - Simplified endpoint to thin routing layer with service delegation
+- Refactored Evaluation Service with helper extraction (599 → 394 lines, -34%)
+  - Created EvaluationHelpers (340 lines) for RAG evaluation logic
+  - Extracted document ID queries, RAG answer generation, RAGAS evaluation, metrics calculation
+  - Separated experiment comparison logic to reusable helpers
 - Hidden counselor_id field in analysis logs display (privacy improvement)
 - Updated analyze-keywords UI text: "已自動儲存" instead of "不會儲存"
 - Analysis logs display with color-coded AI vs fallback analysis
