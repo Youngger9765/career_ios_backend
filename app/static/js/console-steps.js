@@ -4598,10 +4598,6 @@
                                 <span class="info-label">諮商師洞見</span>
                                 <span class="info-value" style="font-size: 12px;">${log.counselor_insights}</span>
                             </div>
-                            <div class="info-row">
-                                <span class="info-label">分析者</span>
-                                <span class="info-value" style="font-size: 11px;">${log.counselor_id}</span>
-                            </div>
                         </div>
                     `).join('');
 
