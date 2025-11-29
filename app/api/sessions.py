@@ -16,12 +16,8 @@ from app.models.counselor import Counselor
 from app.models.session import Session
 from app.repositories.session_repository import SessionRepository
 from app.schemas.session import (
-    AnalysisLogEntry,
-    AnalysisLogsResponse,
     AppendRecordingRequest,
     AppendRecordingResponse,
-    KeywordAnalysisRequest,
-    KeywordAnalysisResponse,
     ReflectionRequest,
     ReflectionResponse,
     SessionCreateRequest,
@@ -30,8 +26,6 @@ from app.schemas.session import (
     SessionTimelineResponse,
     SessionUpdateRequest,
 )
-from app.services.analysis_log_service import AnalysisLogService
-from app.services.keyword_analysis_service import KeywordAnalysisService
 from app.services.recording_service import RecordingService
 from app.services.reflection_service import ReflectionService
 from app.services.session_service import SessionService
@@ -328,97 +322,3 @@ def append_recording(
         _handle_permission_error(e)
     except Exception as e:
         _handle_generic_error(e, "append recording")
-
-
-@router.post("/{session_id}/analyze-keywords", response_model=KeywordAnalysisResponse)
-async def analyze_session_keywords(
-    session_id: UUID,
-    request: KeywordAnalysisRequest,
-    db: DBSession = Depends(get_db),
-    current_user: Counselor = Depends(get_current_user),
-    tenant_id: str = Depends(get_tenant_id),
-) -> KeywordAnalysisResponse:
-    """使用AI分析逐字稿關鍵字（含個案情境）"""
-    service = SessionService(db)
-    result = service.get_session_with_context(session_id, current_user, tenant_id)
-
-    if not result:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found",
-        )
-
-    session, client, case = result
-
-    # Use KeywordAnalysisService for AI-powered analysis
-    keyword_service = KeywordAnalysisService(db)
-    result_data = await keyword_service.analyze_transcript_keywords(
-        session, client, case, request.transcript_segment, current_user.id
-    )
-
-    # Build response
-    return KeywordAnalysisResponse(
-        keywords=result_data.get("keywords", ["分析中"])[:10],
-        categories=result_data.get("categories", ["一般"])[:5],
-        confidence=result_data.get("confidence", 0.5),
-        counselor_insights=result_data.get(
-            "counselor_insights", "請根據逐字稿內容判斷。"
-        )[:200],
-    )
-
-
-@router.get("/{session_id}/analysis-logs", response_model=AnalysisLogsResponse)
-def get_analysis_logs(
-    session_id: UUID,
-    db: DBSession = Depends(get_db),
-    current_user: Counselor = Depends(get_current_user),
-    tenant_id: str = Depends(get_tenant_id),
-) -> AnalysisLogsResponse:
-    """Get all analysis logs for a session in chronological order."""
-    service = AnalysisLogService(db)
-    logs = service.get_session_analysis_logs(session_id, current_user, tenant_id)
-
-    if logs is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found or access denied",
-        )
-
-    return AnalysisLogsResponse(
-        session_id=session_id,
-        total_logs=len(logs),
-        logs=[AnalysisLogEntry(**log) for log in logs],
-    )
-
-
-@router.delete(
-    "/{session_id}/analysis-logs/{log_index}", status_code=status.HTTP_204_NO_CONTENT
-)
-def delete_analysis_log(
-    session_id: UUID,
-    log_index: int,
-    db: DBSession = Depends(get_db),
-    current_user: Counselor = Depends(get_current_user),
-    tenant_id: str = Depends(get_tenant_id),
-):
-    """Delete a specific analysis log entry by index."""
-    service = AnalysisLogService(db)
-    success, error = service.delete_analysis_log(
-        session_id, log_index, current_user, tenant_id
-    )
-
-    if not success:
-        if error == "not_found":
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Session not found or access denied",
-            )
-        elif error and error.startswith("invalid_index"):
-            # Extract error message after "invalid_index: "
-            detail = error.split("invalid_index: ", 1)[1]
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=detail,
-            )
-
-    return None

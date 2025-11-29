@@ -27,6 +27,8 @@ from app.api import (
     rag_stats,
     reports,
     sessions,
+    sessions_analysis,
+    sessions_keywords,
     ui_client_case_list,
 )
 from app.core.config import settings
@@ -69,6 +71,8 @@ app.include_router(reports.router)
 
 # Include sessions routes
 app.include_router(sessions.router)
+app.include_router(sessions_keywords.router)
+app.include_router(sessions_analysis.router)
 
 # Include analyze routes
 app.include_router(analyze.router)

@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Extracted business logic from API endpoints to dedicated service classes
   - Improved maintainability, testability, and code organization
   - All integration tests pass (TDD-compliant refactoring)
+- Refactored Sessions API by splitting into 3 routers (424 → 324 lines, -24%)
+  - Created sessions_keywords.py (53 lines) for keyword analysis endpoint
+  - Created sessions_analysis.py (72 lines) for analysis log endpoints
+  - Maintained sessions.py (324 lines) for core CRUD, reflection, and recording endpoints
+  - All 29 integration tests pass (22 sessions + 7 recordings)
 - Refactored console.html modularization (75% code reduction: 7245 → 1785 lines)
   - Extracted 5479 lines of step definitions to console-steps.js
   - Improved maintainability and code organization

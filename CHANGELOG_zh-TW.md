@@ -25,6 +25,11 @@
   - 將業務邏輯從 API 端點抽取至專用服務類別
   - 改善可維護性、可測試性與程式碼組織
   - 所有整合測試通過（符合 TDD 原則的重構）
+- 重構 Sessions API 拆分為 3 個路由器（424 → 324 行，-24%）
+  - 建立 sessions_keywords.py（53 行）處理關鍵字分析端點
+  - 建立 sessions_analysis.py（72 行）處理分析記錄端點
+  - 保留 sessions.py（324 行）處理核心 CRUD、反思與錄音端點
+  - 所有 29 個整合測試通過（22 個 sessions + 7 個 recordings）
 - 重構 console.html 模組化（程式碼量減少 75%：7245 → 1785 行）
   - 抽取 5479 行步驟定義至 console-steps.js
   - 改善可維護性與程式碼組織
