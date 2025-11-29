@@ -52,6 +52,11 @@
   - 建立 app/services/helpers/client_case_query_builder.py（130 行）處理複雜查詢邏輯
   - 抽取所有輔助方法與 SQLAlchemy 查詢建構邏輯
   - 所有 20 個整合測試通過（符合 TDD 原則的重構）
+- 重構 RAGReportService 抽取 schemas 與提示建構器（495 → 242 行，-51%）
+  - 建立 app/schemas/rag_report.py（51 行）放置 EnhancedReportSchema 與 LegacyReportSchema
+  - 建立 app/services/helpers/rag_report_prompt_builder.py（230 行）處理大型提示建構
+  - 抽取兩個提示建構方法與 Pydantic schemas
+  - 更新 app/api/rag_report.py 使用匯入的提示建構函數
 - 重構 console.html 模組化（程式碼量減少 75%：7245 → 1785 行）
   - 抽取 5479 行步驟定義至 console-steps.js
   - 改善可維護性與程式碼組織

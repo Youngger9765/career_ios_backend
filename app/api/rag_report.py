@@ -5,6 +5,10 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.services.helpers.rag_report_prompt_builder import (
+    build_enhanced_prompt,
+    build_legacy_prompt,
+)
 from app.services.openai_service import OpenAIService
 from app.services.rag_report_service import RAGReportService
 
@@ -108,11 +112,9 @@ async def generate_report(
         # Generate report content
         use_legacy = request.mode == "legacy"
         if use_legacy:
-            prompt = service.build_legacy_prompt(parsed_data, context, rag_instruction)
+            prompt = build_legacy_prompt(parsed_data, context, rag_instruction)
         else:
-            prompt = service.build_enhanced_prompt(
-                parsed_data, context, rag_instruction
-            )
+            prompt = build_enhanced_prompt(parsed_data, context, rag_instruction)
 
         report_content = await service.generate_report_content(prompt)
 

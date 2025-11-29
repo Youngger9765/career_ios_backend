@@ -52,6 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created app/services/helpers/client_case_query_builder.py (130 lines) for complex query logic
   - Extracted all helper methods and SQLAlchemy query building logic
   - All 20 integration tests pass (TDD-compliant refactoring)
+- Refactored RAGReportService by extracting schemas and prompt builders (495 → 242 lines, -51%)
+  - Created app/schemas/rag_report.py (51 lines) for EnhancedReportSchema and LegacyReportSchema
+  - Created app/services/helpers/rag_report_prompt_builder.py (230 lines) for large prompt construction
+  - Extracted both prompt builder methods and Pydantic schemas
+  - Updated app/api/rag_report.py to use imported prompt builders
 - Refactored console.html modularization (75% code reduction: 7245 → 1785 lines)
   - Extracted 5479 lines of step definitions to console-steps.js
   - Improved maintainability and code organization
