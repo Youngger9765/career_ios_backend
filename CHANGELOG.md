@@ -11,11 +11,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Analysis Logs CRUD API for session keyword analysis history tracking
+  - `GET /api/v1/sessions/{id}/analysis-logs` - Retrieve all analysis logs for a session
+  - `DELETE /api/v1/sessions/{id}/analysis-logs/{log_index}` - Delete specific log entry
+  - Auto-save analysis results when calling analyze-keywords endpoint
+  - Structured log schema: timestamp, transcript segment, keywords, categories, confidence, insights, counselor_id, fallback flag
 - File size monitoring rules in agent system (API: 300 lines, Services: 400 lines)
+- Database migration for analysis_logs JSON column in sessions table
+- Console UI steps for viewing and deleting analysis logs (Steps #19 & #20)
+- Favicon handler to avoid 404 errors
 
 ### Changed
-- Refactored console.html modularization (75% code reduction)
+- Refactored console.html modularization (75% code reduction: 7245 → 1785 lines)
+  - Extracted 5479 lines of step definitions to console-steps.js
+  - Improved maintainability and code organization
 - Hidden counselor_id field in analysis logs display (privacy improvement)
+- Updated analyze-keywords UI text: "已自動儲存" instead of "不會儲存"
+- Analysis logs display with color-coded AI vs fallback analysis
+
+### Fixed
+- SQLAlchemy JSON column change tracking with flag_modified() for analysis_logs
+- Vertex AI permissions in staging environment (added roles/aiplatform.user to service account)
+- Analysis logs now properly persist in database after keyword analysis
+
+### Infrastructure
+- Added roles/aiplatform.user to career-app-sa service account for Vertex AI access
+- Staging environment now uses AI-powered analysis instead of fallback
+- Mandatory documentation update rules in agent system (BLOCKS push if docs not updated)
+  - Auto-checks CHANGELOG, PRD.md, and weekly reports before every push
+  - Ensures project documentation stays current
 
 ---
 

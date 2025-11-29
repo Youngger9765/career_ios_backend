@@ -11,11 +11,34 @@
 
 ### 新增
 - Analysis Logs CRUD API，用於追蹤會談關鍵字分析歷程
+  - `GET /api/v1/sessions/{id}/analysis-logs` - 取得會談的所有分析記錄
+  - `DELETE /api/v1/sessions/{id}/analysis-logs/{log_index}` - 刪除特定分析記錄
+  - 呼叫 analyze-keywords 時自動儲存分析結果
+  - 結構化記錄格式：時間戳記、逐字稿片段、關鍵字、類別、信心分數、洞見、諮商師 ID、備援標記
 - Agent 系統文件大小監控規則（API: 300 行，Services: 400 行）
+- 資料庫遷移：在 sessions 表新增 analysis_logs JSON 欄位
+- Console UI 新增檢視與刪除分析記錄功能（步驟 #19 & #20）
+- Favicon 處理器，避免 404 錯誤
 
 ### 變更
-- 重構 console.html 模組化（程式碼量減少 75%）
+- 重構 console.html 模組化（程式碼量減少 75%：7245 → 1785 行）
+  - 抽取 5479 行步驟定義至 console-steps.js
+  - 改善可維護性與程式碼組織
 - 隱藏分析記錄中的 counselor_id 欄位（隱私改善）
+- 更新 analyze-keywords UI 文字：「已自動儲存」而非「不會儲存」
+- 分析記錄顯示改用顏色區分 AI 分析與備援分析
+
+### 修復
+- 修復 SQLAlchemy JSON 欄位變更追蹤（使用 flag_modified() 處理 analysis_logs）
+- 修復 Staging 環境 Vertex AI 權限（新增 roles/aiplatform.user 至 service account）
+- 分析記錄現已正確儲存至資料庫
+
+### 基礎設施
+- 新增 roles/aiplatform.user 至 career-app-sa service account，以存取 Vertex AI
+- Staging 環境現使用 AI 驅動分析，不再使用備援機制
+- Agent 系統強制文檔更新規則（文檔未更新則封鎖 push）
+  - 每次 push 前自動檢查 CHANGELOG、PRD.md、週報
+  - 確保專案文檔保持最新
 
 ---
 
