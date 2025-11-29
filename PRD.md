@@ -22,7 +22,7 @@
 
 ---
 
-## 當前可用功能 (2025-11-24)
+## 當前可用功能 (2025-11-29)
 
 ### ✅ 認證系統
 - `POST /api/auth/login` - JWT 登入（24h 有效期）
@@ -42,9 +42,12 @@
 - 關聯查詢：案件關聯客戶資訊
 
 ### ✅ 會談管理 (`/api/v1/sessions/*`)
-- 建立會談記錄：逐字稿 + 錄音片段列表
+- 建立會談記錄：逐字稿 + 錄音片段列表 + 會談名稱（name）
 - 會談歷程時間線：`GET /sessions/timeline?client_id={id}`
 - 諮商師反思：4 問題結構化反思（JSONB）
+- **🔍 即時關鍵字分析**: `POST /sessions/{id}/analyze-keywords` - AI 驅動的關鍵字提取
+- **📊 分析歷程記錄**: `GET /sessions/{id}/analysis-logs` - 查看所有分析記錄
+- **🗑️ 管理分析記錄**: `DELETE /sessions/{id}/analysis-logs/{log_index}` - 刪除特定記錄
 - **iOS 專用**: `POST /sessions/{id}/recordings/append` - 追加錄音片段
 
 ### ✅ 報告生成 (`/api/v1/reports/*`)
@@ -93,7 +96,7 @@
 - **counselors**: 諮商師（tenant_id, role, email, password_hash）
 - **clients**: 客戶（counselor_id, name, age, gender, code [自動生成]）
 - **cases**: 案件（client_id, case_number [自動], status [0/1/2]）
-- **sessions**: 會談（case_id, transcript_text, recordings [JSONB], reflection [JSONB]）
+- **sessions**: 會談（case_id, name, transcript_text, recordings [JSONB], reflection [JSONB], analysis_logs [JSONB]）
 - **reports**: 報告（session_id, content_json, content_markdown, status）
 - **jobs**: 異步任務（session_id, job_type, status, progress）
 - **reminders**: 提醒（client_id, remind_at, status）
@@ -145,6 +148,9 @@
 | GET | `/sessions/{id}/reflection` | 查看反思 |
 | PUT | `/sessions/{id}/reflection` | 更新反思 |
 | POST | `/sessions/{id}/recordings/append` | 🎙️ 追加錄音片段 (iOS) |
+| POST | `/sessions/{id}/analyze-keywords` | 🔍 即時關鍵字分析 |
+| GET | `/sessions/{id}/analysis-logs` | 📊 取得分析歷程 |
+| DELETE | `/sessions/{id}/analysis-logs/{log_index}` | 🗑️ 刪除分析記錄 |
 
 ### 報告 (`/api/v1/reports/*`)
 | Method | Endpoint | 用途 |
@@ -258,19 +264,31 @@
 
 ---
 
-## 近期更新（2025-11-24）
+## 近期更新（2025-11-29）
 
 ### 已完成
-1. ✅ 修復 SSL 連線問題（Supabase Pooler）
-2. ✅ 清理冗餘 HTML 路由（只保留 `/console`）
-3. ✅ 增強 OpenAPI 文檔（詳細 summary + description）
-4. ✅ 更新 TODO 註解（SanitizerService 已實作）
-5. ✅ CI/CD 優化（分離 unit/integration tests）
-6. ✅ Console RWD 改進（支援手機 + 平板）
+1. ✅ **Analysis Logs CRUD API** - 關鍵字分析歷程追蹤
+   - 自動儲存分析結果（AI + 備援）
+   - GET/DELETE 端點管理分析記錄
+   - 結構化記錄格式（時間、關鍵字、類別、信心分數、洞見）
+2. ✅ **Service Layer Refactoring** - Sessions API 大幅簡化
+   - Sessions API: 1,219 → 756 行（-38%）
+   - 抽取 KeywordAnalysisService（288 行）
+   - 抽取複雜會談編號重算邏輯至 SessionService
+   - 34 個整合測試全數通過
+3. ✅ **Console UI 模組化** - 程式碼減少 75%
+   - console.html: 7,245 → 1,785 行
+   - 抽取 5,479 行至 console-steps.js
+   - 新增分析記錄查看/刪除功能（Steps #19 & #20）
+4. ✅ **Vertex AI 權限修復** - Staging 環境現使用 AI 分析
+   - 新增 roles/aiplatform.user 至 service account
+   - 83% 分析成功率（5/6 logs 使用 AI）
+5. ✅ **Session Name 欄位** - 改善會談組織管理
+6. ✅ **強制文檔更新規則** - Agent 系統自動檢查
 
-### 本週進度（2025-11-23 ~ 2025-11-24）
-- 96 commits
-- 主要工作：SSL 修復、API 清理、文檔更新、測試優化
+### 本週進度（2025-11-24 ~ 2025-11-29）
+- 20+ commits
+- 主要工作：Service layer 重構、Analysis logs CRUD、Console 模組化、Vertex AI 權限
 
 ---
 
@@ -305,6 +323,6 @@
 
 ---
 
-**版本**: v2.3 (精簡版)
-**最後更新**: 2025-11-24
+**版本**: v2.4 (精簡版)
+**最後更新**: 2025-11-29
 **行數**: < 500 行
