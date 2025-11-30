@@ -17,8 +17,15 @@ class BillingAnalyzerService:
         self.project_id = os.getenv("GCS_PROJECT", "groovy-iris-473015-h3")
         self.dataset_id = os.getenv("BILLING_DATASET_ID", "billing_export")
         self.table_id = os.getenv("BILLING_TABLE_ID", "gcp_billing_export")
-        self.client = bigquery.Client(project=self.project_id)
+        self._client = None  # Lazy initialization
         self.ai_service = OpenAIService()
+
+    @property
+    def client(self) -> bigquery.Client:
+        """Lazy-load BigQuery client to avoid authentication errors in CI/testing"""
+        if self._client is None:
+            self._client = bigquery.Client(project=self.project_id)
+        return self._client
 
     async def get_7_day_cost_trend(self) -> List[Dict[str, Any]]:
         """Query BigQuery for last 7 days cost trend"""
