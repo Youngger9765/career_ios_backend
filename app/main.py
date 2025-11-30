@@ -6,10 +6,11 @@ from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-# RAG API routers
+# API routers
 from app.api import (
     analyze,
     auth,
+    billing_reports,
     cases,
     chunk_strategies,
     clients,
@@ -93,6 +94,9 @@ app.include_router(evaluation_testsets.router)
 app.include_router(rag_evaluation_testsets_ui.router)
 app.include_router(chunk_strategies.router)
 app.include_router(comparison.router, tags=["comparison"])
+
+# Include Billing API routes
+app.include_router(billing_reports.router)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

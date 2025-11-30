@@ -1,0 +1,401 @@
+"""
+Email Sender Service - Send HTML email reports
+"""
+import logging
+import os
+import smtplib
+from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import Any, Dict, List
+
+logger = logging.getLogger(__name__)
+
+
+class EmailSenderService:
+    """Send HTML email reports via Gmail SMTP or SendGrid"""
+
+    def __init__(self):
+        self.smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
+        self.smtp_user = os.getenv("SMTP_USER", "")
+        self.smtp_password = os.getenv("SMTP_PASSWORD", "")
+        self.from_email = os.getenv("FROM_EMAIL", self.smtp_user)
+        self.default_to_email = os.getenv("BILLING_REPORT_EMAIL", "dev02@example.com")
+
+    async def send_billing_report(
+        self,
+        report_data: Dict[str, Any],
+        to_email: str = None,
+    ) -> bool:
+        """
+        Send billing report email
+
+        Args:
+            report_data: Report data from billing_analyzer
+            to_email: Recipient email (defaults to configured email)
+
+        Returns:
+            True if sent successfully
+        """
+        to_email = to_email or self.default_to_email
+
+        # Generate HTML email
+        subject = self._generate_subject(report_data)
+        html_body = self._generate_html_body(report_data)
+
+        try:
+            return await self._send_email(to_email, subject, html_body)
+        except Exception as e:
+            logger.error(f"Failed to send billing report email: {e}")
+            raise
+
+    def _generate_subject(self, report_data: Dict[str, Any]) -> str:
+        """Generate email subject"""
+        report_date = datetime.fromisoformat(report_data["report_date"]).strftime(
+            "%Y-%m-%d"
+        )
+        summary = report_data.get("summary", {})
+        total_cost = summary.get("total_cost", 0)
+        currency = summary.get("currency", "USD")
+
+        return f"GCP Cost Report - Last 7 Days - {report_date} (${total_cost:.2f} {currency})"
+
+    def _generate_html_body(self, report_data: Dict[str, Any]) -> str:
+        """Generate HTML email body"""
+        summary = report_data.get("summary", {})
+        cost_data = report_data.get("cost_data", [])
+        ai_insights = report_data.get("ai_insights", {})
+
+        # Build top services table
+        top_services = self._get_top_services(cost_data, limit=10)
+        services_table = self._build_services_table(top_services)
+
+        # Build daily trend chart (ASCII art table)
+        daily_trend = self._get_daily_trend(cost_data)
+        trend_table = self._build_trend_table(daily_trend)
+
+        # Format AI insights
+        ai_analysis = ai_insights.get("analysis_text", "無分析資料")
+
+        html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCP Cost Report</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }}
+        .container {{
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        h1 {{
+            color: #1a73e8;
+            border-bottom: 3px solid #1a73e8;
+            padding-bottom: 10px;
+        }}
+        h2 {{
+            color: #1a73e8;
+            margin-top: 30px;
+        }}
+        .summary {{
+            background-color: #e8f0fe;
+            border-left: 4px solid #1a73e8;
+            padding: 15px;
+            margin: 20px 0;
+        }}
+        .summary-item {{
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+        }}
+        .summary-label {{
+            font-weight: 600;
+        }}
+        .summary-value {{
+            color: #1a73e8;
+            font-weight: bold;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }}
+        th {{
+            background-color: #1a73e8;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }}
+        td {{
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }}
+        tr:hover {{
+            background-color: #f5f5f5;
+        }}
+        .positive {{
+            color: #0f9d58;
+            font-weight: bold;
+        }}
+        .negative {{
+            color: #ea4335;
+            font-weight: bold;
+        }}
+        .ai-insights {{
+            background-color: #fef7e0;
+            border-left: 4px solid #f9ab00;
+            padding: 15px;
+            margin: 20px 0;
+            white-space: pre-wrap;
+            font-size: 14px;
+        }}
+        .footer {{
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }}
+        .trend-bar {{
+            background-color: #1a73e8;
+            height: 20px;
+            display: inline-block;
+            margin-right: 5px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GCP Cost Report - Last 7 Days</h1>
+
+        <div class="summary">
+            <h2>Summary</h2>
+            <div class="summary-item">
+                <span class="summary-label">Total Cost:</span>
+                <span class="summary-value">${summary.get('total_cost', 0):.2f} {summary.get('currency', 'USD')}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Daily Average:</span>
+                <span class="summary-value">${summary.get('avg_daily', 0):.2f} {summary.get('currency', 'USD')}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Services Count:</span>
+                <span class="summary-value">{summary.get('services_count', 0)}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Date Range:</span>
+                <span class="summary-value">{summary.get('date_range', {}).get('start', 'N/A')} to {summary.get('date_range', {}).get('end', 'N/A')}</span>
+            </div>
+        </div>
+
+        <h2>Top Services by Cost</h2>
+        {services_table}
+
+        <h2>Daily Cost Trend</h2>
+        {trend_table}
+
+        <h2>AI Insights & Recommendations</h2>
+        <div class="ai-insights">
+{ai_analysis}
+        </div>
+
+        <div class="footer">
+            <p>Report generated at: {datetime.fromisoformat(report_data['report_date']).strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
+            <p>GCP Billing Monitor | Powered by OpenAI</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+        return html
+
+    def _get_top_services(self, cost_data: List[Dict], limit: int = 10) -> List[Dict]:
+        """Aggregate costs by service and return top N"""
+        service_costs = {}
+
+        for item in cost_data:
+            service = item["service"]
+            cost = item["cost"]
+
+            if service not in service_costs:
+                service_costs[service] = {
+                    "service": service,
+                    "total_cost": 0,
+                    "currency": item["currency"],
+                    "data_points": [],
+                }
+
+            service_costs[service]["total_cost"] += cost
+            service_costs[service]["data_points"].append(item)
+
+        # Sort by total cost descending
+        sorted_services = sorted(
+            service_costs.values(), key=lambda x: x["total_cost"], reverse=True
+        )
+
+        return sorted_services[:limit]
+
+    def _build_services_table(self, top_services: List[Dict]) -> str:
+        """Build HTML table for top services"""
+        if not top_services:
+            return "<p>No data available</p>"
+
+        rows = []
+        for i, svc in enumerate(top_services, 1):
+            # Calculate average change
+            changes = [
+                d.get("change_pct")
+                for d in svc["data_points"]
+                if d.get("change_pct") is not None
+            ]
+            avg_change = sum(changes) / len(changes) if changes else 0
+            change_class = (
+                "positive" if avg_change < 0 else "negative" if avg_change > 0 else ""
+            )
+            change_sign = "+" if avg_change > 0 else ""
+
+            rows.append(
+                f"""
+                <tr>
+                    <td>{i}</td>
+                    <td>{svc['service']}</td>
+                    <td>${svc['total_cost']:.2f} {svc['currency']}</td>
+                    <td class="{change_class}">{change_sign}{avg_change:.1f}%</td>
+                </tr>
+            """
+            )
+
+        return f"""
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Service</th>
+                    <th>Total Cost</th>
+                    <th>Avg Change</th>
+                </tr>
+            </thead>
+            <tbody>
+                {"".join(rows)}
+            </tbody>
+        </table>
+        """
+
+    def _get_daily_trend(self, cost_data: List[Dict]) -> List[Dict]:
+        """Aggregate costs by date"""
+        daily_costs = {}
+
+        for item in cost_data:
+            date = item["date"]
+            cost = item["cost"]
+
+            if date not in daily_costs:
+                daily_costs[date] = {
+                    "date": date,
+                    "total_cost": 0,
+                    "currency": item["currency"],
+                }
+
+            daily_costs[date]["total_cost"] += cost
+
+        # Sort by date
+        sorted_daily = sorted(daily_costs.values(), key=lambda x: x["date"])
+
+        return sorted_daily
+
+    def _build_trend_table(self, daily_trend: List[Dict]) -> str:
+        """Build HTML table for daily trend"""
+        if not daily_trend:
+            return "<p>No data available</p>"
+
+        # Calculate max cost for bar chart scaling
+        max_cost = max(d["total_cost"] for d in daily_trend) if daily_trend else 1
+
+        rows = []
+        for day in daily_trend:
+            bar_width = int((day["total_cost"] / max_cost) * 300)  # Max 300px
+            rows.append(
+                f"""
+                <tr>
+                    <td>{day['date']}</td>
+                    <td>${day['total_cost']:.2f} {day['currency']}</td>
+                    <td>
+                        <div class="trend-bar" style="width: {bar_width}px;"></div>
+                    </td>
+                </tr>
+            """
+            )
+
+        return f"""
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Total Cost</th>
+                    <th>Trend</th>
+                </tr>
+            </thead>
+            <tbody>
+                {"".join(rows)}
+            </tbody>
+        </table>
+        """
+
+    async def _send_email(self, to_email: str, subject: str, html_body: str) -> bool:
+        """
+        Send email via SMTP
+
+        Args:
+            to_email: Recipient email
+            subject: Email subject
+            html_body: HTML email body
+
+        Returns:
+            True if sent successfully
+        """
+        if not self.smtp_user or not self.smtp_password:
+            logger.warning("SMTP credentials not configured, skipping email send")
+            return False
+
+        # Create message
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = self.from_email
+        msg["To"] = to_email
+
+        # Attach HTML body
+        html_part = MIMEText(html_body, "html", "utf-8")
+        msg.attach(html_part)
+
+        # Send via SMTP
+        try:
+            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.smtp_user, self.smtp_password)
+                server.send_message(msg)
+
+            logger.info(f"Billing report email sent to {to_email}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to send email: {e}")
+            raise
+
+
+# Singleton instance
+email_sender = EmailSenderService()
