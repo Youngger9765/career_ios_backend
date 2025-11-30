@@ -7,6 +7,8 @@ from app.core.config import settings
 from app.api import router as api_router
 # RAG API routers
 from app.api import rag_ingest, rag_search, rag_chat, rag_agents, rag_stats, rag_report
+# Billing API router
+from app.api import billing_reports
 
 # Templates
 templates = Jinja2Templates(directory="app/templates")
@@ -39,6 +41,9 @@ app.include_router(rag_chat.router)
 app.include_router(rag_agents.router)
 app.include_router(rag_stats.router)
 app.include_router(rag_report.router)
+
+# Include Billing API routes
+app.include_router(billing_reports.router)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
