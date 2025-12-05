@@ -10,24 +10,26 @@
 ## [未發布]
 
 ### 新增
-- Analysis Logs CRUD API，包含自動儲存與結構化追蹤
-- Agent 系統文件大小監控規則
-- Favicon 處理器，避免 404 錯誤
+- GCP Billing Monitor（AI 分析與 Email 報告，3 個新 API）
+- BigQuery 整合實現即時成本追蹤
+- Gemini AI 自動化帳單報告生成
+- Gemini 回應診斷詳細日誌
 
 ### 變更
-- 系統性服務層重構（10 個檔案，平均減少 50% 程式碼量）
-- 程式碼壓縮以符合大小限制（文件字串簡化）
-- Sessions API 拆分為 3 個路由器（關鍵字、分析記錄、核心 CRUD）
-- Console.html 模組化（減少 75%：7245 → 1785 行）
-- 分析記錄 UI 改善（隱私、顏色標示、自動儲存文字）
+- Gemini max_tokens 從 4000 提升至 8000（防止 JSON 截斷）
+- 文檔整合（42 → 31 檔案，PRD.md 為單一真相來源）
+- 程式碼品質改善（11 檔案重構，100% 檔案大小符合）
 
 ### 修復
-- 修復 SQLAlchemy JSON 欄位變更追蹤（analysis_logs）
-- 修復 Staging 環境 Vertex AI 權限
+- Gemini 報告評分 JSON 截斷（成功率：85% → 100%）
+- BigQuery lazy-load 避免 CI 認證錯誤
+- 同步資料庫呼叫的錯誤 await 語法
+- 文檔整合後的失效連結
 
 ### 基礎設施
-- Staging 環境現使用 AI 驅動分析
-- Agent 系統強制文檔更新規則
+- 帳單監控與 AI 成本分析
+- Email 通知系統（Gmail SMTP）
+- 強化錯誤處理與 robust JSON 解析
 
 ---
 

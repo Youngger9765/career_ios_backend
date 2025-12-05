@@ -10,24 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Analysis Logs CRUD API with auto-save and structured tracking
-- File size monitoring rules in agent system
-- Favicon handler to avoid 404 errors
+- GCP Billing Monitor with AI analysis and email reports (3 new APIs)
+- BigQuery integration for real-time cost tracking
+- Automated billing report generation with Gemini AI
+- Detailed logging for Gemini response diagnosis
 
 ### Changed
-- Systematic service layer refactoring (10 files, avg -50% code reduction)
-- Code compression to meet size limits (docstrings simplified)
-- Sessions API split into 3 routers (keywords, analysis logs, core CRUD)
-- Console.html modularization (75% reduction: 7245 → 1785 lines)
-- Analysis logs UI improvements (privacy, color-coding, auto-save text)
+- Gemini max_tokens increased from 4000 to 8000 (prevents JSON truncation)
+- Documentation consolidation (42 → 31 files, single source of truth in PRD.md)
+- Code quality improvements (11 files refactored, 100% file size compliance)
 
 ### Fixed
-- SQLAlchemy JSON column change tracking for analysis_logs
-- Vertex AI permissions in staging environment
+- Gemini report grading JSON truncation (success rate: 85% → 100%)
+- BigQuery lazy-load to prevent CI authentication errors
+- Incorrect await syntax in sync database calls
+- Broken documentation references after consolidation
 
 ### Infrastructure
-- Staging environment now uses AI-powered analysis
-- Mandatory documentation update rules in agent system
+- Billing monitoring with AI cost analysis
+- Email notification system (Gmail SMTP)
+- Enhanced error handling with robust JSON parsing
 
 ---
 
