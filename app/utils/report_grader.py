@@ -4,12 +4,15 @@ Uses LLM (OpenAI or Gemini) to evaluate report quality like a real supervisor wo
 """
 
 import json
+import logging
 from typing import Any, Dict, Optional
 
 from openai import AsyncOpenAI
 
 from app.core.config import settings
 from app.services.gemini_service import gemini_service
+
+logger = logging.getLogger(__name__)
 
 
 async def grade_report_with_llm(
@@ -152,7 +155,7 @@ async def grade_report_with_llm(
 
 {grading_prompt}
 
-重要：請確保回應是有效的 JSON 格式。"""
+重要：請確保回應是有效的 JSON 格式，不要包含任何 markdown 標記（如 ```json 或 ```）。直接返回 JSON 物件。"""
 
             response_text = await gemini_service.chat_completion(
                 prompt=full_prompt,
@@ -160,7 +163,58 @@ async def grade_report_with_llm(
                 max_tokens=4000,
                 response_format={"type": "json_object"},
             )
-            result = json.loads(response_text)
+
+            # Log first 500 characters of response for debugging
+            logger.debug(
+                f"Gemini raw response (first 500 chars): {response_text[:500]}"
+            )
+
+            # Try to parse JSON
+            try:
+                result = json.loads(response_text)
+            except json.JSONDecodeError as json_error:
+                # Log full response for debugging
+                logger.error(
+                    f"Failed to parse Gemini JSON response. Error: {json_error}"
+                )
+                logger.error(
+                    f"Error position: line {json_error.lineno}, column {json_error.colno}"
+                )
+                logger.error(f"Raw response (full): {response_text}")
+
+                # Try to clean and re-parse
+                logger.info("Attempting to clean and re-parse response...")
+                cleaned_text = response_text.strip()
+
+                # Remove markdown code block markers
+                if cleaned_text.startswith("```json"):
+                    cleaned_text = cleaned_text[7:]
+                    logger.debug("Removed ```json prefix")
+                elif cleaned_text.startswith("```"):
+                    cleaned_text = cleaned_text[3:]
+                    logger.debug("Removed ``` prefix")
+
+                if cleaned_text.endswith("```"):
+                    cleaned_text = cleaned_text[:-3]
+                    logger.debug("Removed ``` suffix")
+
+                cleaned_text = cleaned_text.strip()
+
+                try:
+                    result = json.loads(cleaned_text)
+                    logger.info("Successfully parsed after cleaning response")
+                except json.JSONDecodeError as retry_error:
+                    logger.error(
+                        f"Failed to parse even after cleaning. Retry error: {retry_error}"
+                    )
+                    logger.error(
+                        f"Cleaned text (first 500 chars): {cleaned_text[:500]}"
+                    )
+                    raise ValueError(
+                        f"Failed to parse LLM response as JSON after cleaning. "
+                        f"Original error: {json_error}. "
+                        f"Please check logs for full response."
+                    ) from json_error
         else:
             # OpenAI path
             if client is None:
@@ -243,9 +297,15 @@ async def grade_report_with_llm(
         return result
 
     except json.JSONDecodeError as e:
-        raise ValueError(f"Failed to parse LLM response as JSON: {e}")
+        # This should be caught by inner try-catch, but just in case
+        logger.error(f"Uncaught JSON decode error: {e}")
+        raise ValueError(f"Failed to parse LLM response as JSON: {e}") from e
+    except ValueError:
+        # Re-raise ValueError (including JSON parsing errors)
+        raise
     except Exception as e:
-        raise RuntimeError(f"Error grading report with LLM: {e}")
+        logger.exception(f"Unexpected error grading report with LLM: {e}")
+        raise RuntimeError(f"Error grading report with LLM: {e}") from e
 
 
 def get_quality_grade(score: float) -> str:
