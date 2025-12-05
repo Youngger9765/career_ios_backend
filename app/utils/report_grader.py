@@ -160,7 +160,7 @@ async def grade_report_with_llm(
             response_text = await gemini_service.chat_completion(
                 prompt=full_prompt,
                 temperature=0.3,
-                max_tokens=4000,
+                max_tokens=8000,  # Increased from 4000 to prevent JSON truncation
                 response_format={"type": "json_object"},
             )
 
