@@ -8,6 +8,7 @@ import json
 import re
 from typing import Dict, List
 
+from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
 
 
@@ -38,10 +39,17 @@ class DialogueExtractor:
         excerpt_prompt = self._build_excerpt_prompt(transcript, num_participants)
 
         # Call LLM to extract dialogues
-        response = await self.openai_service.chat_completion(
-            messages=[{"role": "user", "content": excerpt_prompt}],
-            temperature=0.3,  # Low temperature for consistency
-        )
+        # Check if using GeminiService and use appropriate method
+        if isinstance(self.openai_service, GeminiService):
+            response = await self.openai_service.chat_completion_with_messages(
+                messages=[{"role": "user", "content": excerpt_prompt}],
+                temperature=0.3,  # Low temperature for consistency
+            )
+        else:
+            response = await self.openai_service.chat_completion(
+                messages=[{"role": "user", "content": excerpt_prompt}],
+                temperature=0.3,  # Low temperature for consistency
+            )
 
         # Parse JSON from response
         dialogues = self._extract_dialogues_from_response(response)

@@ -8,6 +8,7 @@ import json
 import re
 from typing import Dict
 
+from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
 
 
@@ -47,9 +48,15 @@ class TranscriptParser:
         parse_prompt = self._build_parse_prompt(transcript)
 
         # Call LLM to parse transcript
-        response = await self.openai_service.chat_completion(
-            messages=[{"role": "user", "content": parse_prompt}], temperature=0.3
-        )
+        # Check if using GeminiService and use appropriate method
+        if isinstance(self.openai_service, GeminiService):
+            response = await self.openai_service.chat_completion_with_messages(
+                messages=[{"role": "user", "content": parse_prompt}], temperature=0.3
+            )
+        else:
+            response = await self.openai_service.chat_completion(
+                messages=[{"role": "user", "content": parse_prompt}], temperature=0.3
+            )
 
         # Parse JSON from response
         parsed_data = self._extract_json_from_response(response)
