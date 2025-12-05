@@ -1,5 +1,6 @@
 """Gemini service for chat completions using Vertex AI"""
 
+import logging
 import os
 from typing import Any, Dict, List, Optional
 
@@ -76,6 +77,23 @@ class GeminiService:
 
         config = GenerationConfig(**generation_config)
         response = self.chat_model.generate_content(prompt, generation_config=config)
+
+        # Log response details
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"Gemini generate_content completed. Response text length: {len(response.text)}"
+        )
+
+        # Check for finish_reason to detect truncation
+        if hasattr(response, "candidates") and response.candidates:
+            candidate = response.candidates[0]
+            if hasattr(candidate, "finish_reason"):
+                logger.info(f"Finish reason: {candidate.finish_reason}")
+                if candidate.finish_reason != 1:  # 1 = STOP (normal completion)
+                    logger.warning(
+                        f"Response may be incomplete. Finish reason: {candidate.finish_reason}"
+                    )
+
         return response.text
 
     async def chat_completion(

@@ -160,14 +160,23 @@ async def grade_report_with_llm(
             response_text = await gemini_service.chat_completion(
                 prompt=full_prompt,
                 temperature=0.3,
-                max_tokens=8000,  # Increased from 4000 to prevent JSON truncation
+                max_tokens=8192,  # Gemini 2.5 Flash maximum
                 response_format={"type": "json_object"},
             )
 
-            # Log first 500 characters of response for debugging
+            # Log response length and full content for debugging
+            logger.info(f"Gemini response length: {len(response_text)} characters")
             logger.debug(
                 f"Gemini raw response (first 500 chars): {response_text[:500]}"
             )
+            logger.debug(
+                f"Gemini raw response (last 500 chars): {response_text[-500:]}"
+            )
+
+            # Log if response appears truncated
+            if not response_text.strip().endswith("}"):
+                logger.warning("Response may be truncated - doesn't end with }")
+                logger.warning(f"Response ends with: {response_text[-100:]}")
 
             # Try to parse JSON
             try:
