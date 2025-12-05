@@ -26,14 +26,15 @@ class TestRAGRetriever:
     def mock_openai_service(self):
         """Mock OpenAI service for embedding generation"""
         service = MagicMock()
-        service.create_embedding = AsyncMock(return_value=[0.1, 0.2, 0.3] * 512)  # 1536-dim vector
+        service.create_embedding = AsyncMock(
+            return_value=[0.1, 0.2, 0.3] * 512
+        )  # 1536-dim vector
         return service
 
     @pytest.fixture
     def mock_db(self):
         """Mock database session"""
         db = MagicMock()
-        db.execute = AsyncMock()  # Make execute async
         return db
 
     @pytest.fixture
@@ -68,15 +69,15 @@ class TestRAGRetriever:
         mock_db.execute.return_value = mock_result
 
         theories = await retriever.search(
-            query="職涯轉換困擾",
-            top_k=5,
-            threshold=0.25,
-            db=mock_db
+            query="職涯轉換困擾", top_k=5, threshold=0.25, db=mock_db
         )
 
         # Assertions
         assert len(theories) == 2
-        assert theories[0]["text"] == "Super 生涯發展理論指出，個體在不同階段有不同的生涯任務..."
+        assert (
+            theories[0]["text"]
+            == "Super 生涯發展理論指出，個體在不同階段有不同的生涯任務..."
+        )
         assert theories[0]["document"] == "生涯發展理論精選"
         assert theories[0]["score"] == 0.85
         assert "text" in theories[0]
@@ -102,7 +103,7 @@ class TestRAGRetriever:
                 query="無關查詢",
                 top_k=5,
                 threshold=0.9,  # Very high threshold
-                db=mock_db
+                db=mock_db,
             )
 
         assert exc_info.value.status_code == 400
@@ -131,10 +132,7 @@ class TestRAGRetriever:
         mock_db.execute.return_value = mock_result
 
         theories = await retriever.search(
-            query="test",
-            top_k=3,
-            threshold=0.25,
-            db=mock_db
+            query="test", top_k=3, threshold=0.25, db=mock_db
         )
 
         # Should return all 10 (SQL handles LIMIT, but we get back all from mock)
@@ -166,10 +164,7 @@ class TestRAGRetriever:
         mock_db.execute.return_value = mock_result
 
         theories = await retriever.search(
-            query="test",
-            top_k=5,
-            threshold=0.5,
-            db=mock_db
+            query="test", top_k=5, threshold=0.5, db=mock_db
         )
 
         # Both should be returned (SQL WHERE clause handles filtering)
@@ -177,7 +172,9 @@ class TestRAGRetriever:
         assert all(t["score"] >= 0.5 for t in theories)
 
     @pytest.mark.asyncio
-    async def test_search_creates_embedding_from_query(self, retriever, mock_openai_service, mock_db):
+    async def test_search_creates_embedding_from_query(
+        self, retriever, mock_openai_service, mock_db
+    ):
         """
         Test: RAG search generates embedding from query
 
@@ -191,12 +188,7 @@ class TestRAGRetriever:
         ]
         mock_db.execute.return_value = mock_result
 
-        await retriever.search(
-            query="職涯困擾",
-            top_k=5,
-            threshold=0.25,
-            db=mock_db
-        )
+        await retriever.search(query="職涯困擾", top_k=5, threshold=0.25, db=mock_db)
 
         # Verify embedding was created
         mock_openai_service.create_embedding.assert_called_once_with("職涯困擾")
@@ -215,12 +207,7 @@ class TestRAGRetriever:
         mock_db.execute.return_value = mock_result
 
         try:
-            await retriever.search(
-                query="test",
-                top_k=7,
-                threshold=0.3,
-                db=mock_db
-            )
+            await retriever.search(query="test", top_k=7, threshold=0.3, db=mock_db)
         except HTTPException:
             pass  # Expected when no results
 
@@ -255,10 +242,7 @@ class TestRAGRetriever:
         mock_db.execute.return_value = mock_result
 
         theories = await retriever.search(
-            query="test",
-            top_k=5,
-            threshold=0.25,
-            db=mock_db
+            query="test", top_k=5, threshold=0.25, db=mock_db
         )
 
         # Verify order

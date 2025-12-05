@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 
 from pydantic import BaseModel
 from sqlalchemy import Float, Integer, String, bindparam, select, text
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.models.document import Document
 from app.services.openai_service import OpenAIService
@@ -28,7 +28,7 @@ class IntentResult(BaseModel):
 class RAGChatService:
     """Service for RAG chat operations"""
 
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: Session):
         self.db = db
         self.openai_service = OpenAIService()
 
@@ -38,7 +38,7 @@ class RAGChatService:
         Returns:
             List of unique document titles sorted alphabetically
         """
-        result = await self.db.execute(select(Document.title).distinct())
+        result = self.db.execute(select(Document.title).distinct())
         doc_titles = [row[0] for row in result.fetchall()]
         return sorted(set(doc_titles))
 
@@ -257,7 +257,7 @@ Examples:
                 bindparam("top_k", type_=Integer),
             )
 
-        result = await self.db.execute(query_sql, params)
+        result = self.db.execute(query_sql, params)
         return result.fetchall()
 
     def build_citations(self, rows: List[Tuple]) -> List[Citation]:

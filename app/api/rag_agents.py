@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.agent import Agent, AgentVersion
@@ -43,11 +43,11 @@ class AgentVersionResponse(BaseModel):
 
 
 @router.get("/", response_model=List[AgentResponse])
-async def list_agents(db: AsyncSession = Depends(get_db)):
+async def list_agents(db: Session = Depends(get_db)):
     """List all agents"""
 
     try:
-        result = await db.execute(select(Agent))
+        result = db.execute(select(Agent))
         agents = result.scalars().all()
 
         return [
@@ -69,7 +69,7 @@ async def list_agents(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/", response_model=AgentResponse)
-async def create_agent(agent_data: AgentCreate, db: AsyncSession = Depends(get_db)):
+async def create_agent(agent_data: AgentCreate, db: Session = Depends(get_db)):
     """Create a new agent"""
 
     try:
@@ -81,8 +81,8 @@ async def create_agent(agent_data: AgentCreate, db: AsyncSession = Depends(get_d
         )
 
         db.add(agent)
-        await db.commit()
-        await db.refresh(agent)
+        db.commit()
+        db.refresh(agent)
 
         return AgentResponse(
             id=agent.id,
@@ -94,18 +94,18 @@ async def create_agent(agent_data: AgentCreate, db: AsyncSession = Depends(get_d
         )
 
     except Exception as e:
-        await db.rollback()
+        db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Failed to create agent: {str(e)}"
         ) from e
 
 
 @router.get("/{agent_id}", response_model=AgentResponse)
-async def get_agent(agent_id: int, db: AsyncSession = Depends(get_db)):
+async def get_agent(agent_id: int, db: Session = Depends(get_db)):
     """Get agent by ID"""
 
     try:
-        result = await db.execute(select(Agent).where(Agent.id == agent_id))
+        result = db.execute(select(Agent).where(Agent.id == agent_id))
         agent = result.scalar_one_or_none()
 
         if not agent:
@@ -129,11 +129,11 @@ async def get_agent(agent_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{agent_id}/versions", response_model=List[AgentVersionResponse])
-async def list_agent_versions(agent_id: int, db: AsyncSession = Depends(get_db)):
+async def list_agent_versions(agent_id: int, db: Session = Depends(get_db)):
     """List all versions for an agent"""
 
     try:
-        result = await db.execute(
+        result = db.execute(
             select(AgentVersion).where(AgentVersion.agent_id == agent_id)
         )
         versions = result.scalars().all()

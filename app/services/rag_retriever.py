@@ -8,7 +8,7 @@ from typing import Dict, List
 
 from fastapi import HTTPException
 from sqlalchemy import Float, Integer, String, bindparam, text
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.services.openai_service import OpenAIService
 
@@ -20,7 +20,7 @@ class RAGRetriever:
         self.openai_service = openai_service
 
     async def search(
-        self, query: str, top_k: int, threshold: float, db: AsyncSession
+        self, query: str, top_k: int, threshold: float, db: Session
     ) -> List[Dict]:
         """
         Search for relevant theories using vector similarity (RAG)
@@ -70,7 +70,7 @@ class RAGRetriever:
             bindparam("top_k", type_=Integer),
         )
 
-        result = await db.execute(
+        result = db.execute(
             query_sql,
             {
                 "query_embedding": embedding_str,
