@@ -170,12 +170,8 @@
             justify-content: center;
             gap: 4px;
             height: 60px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .waveform-container.active {
             opacity: 1;
+            transition: opacity 0.3s ease;
         }
 
         .waveform-bar {
@@ -202,6 +198,18 @@
             }
             50% {
                 height: 50px;
+                background: linear-gradient(180deg, #14b8a6 0%, #06b6d4 100%);
+            }
+        }
+
+        /* REQUIREMENT 5: Compact waveform for mobile */
+        @keyframes waveform-compact {
+            0%, 100% {
+                height: 8px;
+                background: linear-gradient(180deg, #10b981 0%, #14b8a6 100%);
+            }
+            50% {
+                height: 20px;
                 background: linear-gradient(180deg, #14b8a6 0%, #06b6d4 100%);
             }
         }
@@ -246,11 +254,13 @@
         .haptic-feedback:active {
             animation: haptic-tap 0.15s ease-out;
         }
+
+        /* Header is now controlled via Tailwind classes (hidden md:block) */
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
-    <!-- Header - Commercial Grade with Gradient -->
-    <nav class="sticky top-0 z-50 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 shadow-lg gradient-animate">
+    <!-- Header - Commercial Grade with Gradient - Hidden on mobile, visible on desktop -->
+    <nav id="mainHeader" class="hidden md:block sticky top-0 z-50 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 shadow-lg gradient-animate">
         <div class="container mx-auto max-w-7xl px-4 py-3">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
@@ -270,9 +280,125 @@
         </div>
     </nav>
 
-    <div class="container mx-auto px-4 md:px-6 py-4 md:py-6 max-w-7xl md:pb-6">
-        <!-- TOP SPACER BLOCK - Creates physical space for fixed top bar on mobile -->
-        <div class="md:hidden" style="height: 280px;"></div>
+    <!-- MOBILE-ONLY: Non-scrollable Block Layout (100vh, no position: fixed) -->
+    <div class="md:hidden h-screen flex flex-col overflow-hidden">
+        <!-- TOP BLOCK: Recording Controls (fixed height) -->
+        <div class="bg-white/95 ios-frosted border-b border-gray-200/50 ios-card-shadow safe-area-inset-top">
+            <div class="px-4 py-3">
+                <!-- Start/Stop Buttons -->
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <button id="startBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-green-500 to-emerald-600 active:from-green-600 active:to-emerald-700 text-white py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2">
+                        <span class="text-xl">▶️</span>
+                        <span class="text-base">開始</span>
+                    </button>
+                    <button id="stopBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-red-500 to-rose-600 active:from-red-600 active:to-rose-700 text-white py-3 px-4 rounded-2xl font-bold opacity-50 cursor-not-allowed ios-card-shadow flex items-center justify-center gap-2" disabled>
+                        <span class="text-xl">⏹️</span>
+                        <span class="text-base">結束</span>
+                    </button>
+                </div>
+
+                <!-- REQUIREMENT 5: Waveform + Timer on same line, compact -->
+                <div id="recordingTimerDisplayMobile" class="bg-gradient-to-r from-teal-50/90 to-cyan-50/90 rounded-2xl p-2 border border-teal-200/50" style="display: none;">
+                    <div class="flex items-center justify-between gap-3">
+                        <!-- Compact Waveform -->
+                        <div id="waveformContainerMobile" class="flex items-center justify-center gap-1 flex-1" style="height: 24px;">
+                            <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0s;"></div>
+                            <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.1s;"></div>
+                            <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.2s;"></div>
+                            <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.3s;"></div>
+                            <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.2s;"></div>
+                            <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.1s;"></div>
+                        </div>
+                        <!-- Compact Timer -->
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                            <div class="recording-timer text-base font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600" id="recordingTimerMobile">00:00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MIDDLE BLOCK: Content Area (flex-1, fills remaining space) -->
+        <div class="flex-1 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+            <!-- REQUIREMENT 3: Instruction Card (visible when NOT recording) -->
+            <div id="instructionCard" class="h-full bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 rounded-2xl p-6 ios-card-shadow border border-indigo-100 flex flex-col justify-center">
+                <div class="flex items-start gap-4 mb-4">
+                    <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
+                        <span class="text-2xl">💡</span>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-gray-800 mb-2">如何使用</h3>
+                        <div class="space-y-2 text-sm text-gray-700 leading-relaxed">
+                            <p class="flex items-start gap-2">
+                                <span class="text-green-600 font-bold mt-0.5">1.</span>
+                                <span>點擊上方「開始」按鈕開始錄音</span>
+                            </p>
+                            <p class="flex items-start gap-2">
+                                <span class="text-green-600 font-bold mt-0.5">2.</span>
+                                <span>對話過程中，AI 每 60 秒自動分析</span>
+                            </p>
+                            <p class="flex items-start gap-2">
+                                <span class="text-green-600 font-bold mt-0.5">3.</span>
+                                <span>或點擊下方「即時分析」立即取得建議</span>
+                            </p>
+                            <p class="flex items-start gap-2">
+                                <span class="text-purple-600 font-bold mt-0.5">💡</span>
+                                <span class="font-semibold">測試模式：按 <kbd class="bg-white px-2 py-0.5 rounded border shadow-sm font-mono text-xs">T</kbd> 鍵可模擬對話</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REQUIREMENT 6: Carousel Container (hidden initially, shown when analysis cards appear) -->
+            <div id="mobileCarousel" class="hidden h-full flex flex-col">
+                <!-- Carousel Header with Navigation -->
+                <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                    <h3 class="text-base font-bold text-gray-800 flex items-center gap-2">
+                        <span class="text-lg">🤖</span>
+                        <span>AI 分析</span>
+                    </h3>
+                    <div class="flex items-center gap-2">
+                        <span id="carouselCounter" class="text-xs text-gray-500 font-medium">1 / 1</span>
+                    </div>
+                </div>
+
+                <!-- Carousel Navigation Buttons -->
+                <div class="relative flex-1 min-h-0">
+                    <!-- Previous Button -->
+                    <button id="carouselPrev" class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 z-10 w-10 h-10 bg-white/95 ios-frosted rounded-full ios-card-shadow flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-smooth disabled:opacity-30 disabled:cursor-not-allowed" disabled>
+                        <span class="text-xl">←</span>
+                    </button>
+
+                    <!-- Card Container -->
+                    <div class="overflow-hidden rounded-2xl h-full">
+                        <div id="mobileCarouselTrack" class="flex transition-transform duration-300 ease-out h-full">
+                            <!-- Cards will be inserted here via JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Next Button -->
+                    <button id="carouselNext" class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 z-10 w-10 h-10 bg-white/95 ios-frosted rounded-full ios-card-shadow flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-smooth disabled:opacity-30 disabled:cursor-not-allowed" disabled>
+                        <span class="text-xl">→</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM BLOCK: Analysis Button (fixed height) -->
+        <div class="bg-white/95 ios-frosted border-t border-gray-200/50 ios-card-shadow safe-area-inset-bottom">
+            <div class="px-4 py-4">
+                <button id="fabAnalyze" class="haptic-feedback w-full h-16 bg-gradient-to-r from-purple-500 via-indigo-600 to-purple-600 text-white rounded-2xl font-bold ios-card-shadow flex items-center justify-center gap-3 transition-smooth active:scale-95 opacity-50 cursor-not-allowed" aria-label="Instant Analysis" disabled>
+                    <span class="text-3xl">⚡</span>
+                    <span class="text-lg tracking-wide">即時分析</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DESKTOP LAYOUT (unchanged) -->
+    <div class="container mx-auto px-4 md:px-6 py-4 md:py-6 max-w-7xl md:pb-6 hidden md:block">
 
         <!-- Demo Mode Instructions - Collapsible on Mobile -->
         <div class="bg-gradient-to-r from-yellow-50 to-amber-50 border-l-4 border-yellow-400 p-4 mb-4 md:mb-6 rounded-xl shadow-md card-hover" style="display: none">
@@ -480,54 +606,6 @@
             </div>
         </div>
 
-        <!-- iOS-Style Mobile Top Fixed Bar (Recording Controls) -->
-        <div class="md:hidden fixed top-16 left-0 right-0 bg-white/80 ios-frosted border-b border-gray-200/50 ios-card-shadow safe-area-inset-top z-40">
-            <div class="px-4 py-3">
-                <!-- Recording Status Indicator -->
-                <div id="recordingTimerDisplayMobile" class="text-center mb-3 bg-gradient-to-r from-teal-50/90 to-cyan-50/90 rounded-2xl p-3 border border-teal-200/50" style="display: none;">
-                    <div class="flex items-center justify-center gap-2">
-                        <div class="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></div>
-                        <span class="text-xs font-semibold text-gray-700 tracking-wide">錄音中</span>
-                        <div class="recording-timer text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600" id="recordingTimerMobile">00:00</div>
-                    </div>
-                </div>
-
-                <!-- Start/Stop Buttons -->
-                <div class="grid grid-cols-2 gap-3">
-                    <button id="startBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-green-500 to-emerald-600 active:from-green-600 active:to-emerald-700 text-white py-4 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2">
-                        <span class="text-xl">▶️</span>
-                        <span class="text-base">開始</span>
-                    </button>
-                    <button id="stopBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-red-500 to-rose-600 active:from-red-600 active:to-rose-700 text-white py-4 px-4 rounded-2xl font-bold opacity-50 cursor-not-allowed ios-card-shadow flex items-center justify-center gap-2" disabled>
-                        <span class="text-xl">⏹️</span>
-                        <span class="text-base">結束</span>
-                    </button>
-                </div>
-
-                <!-- Audio Waveform Animation - Mobile (Compact) -->
-                <div id="waveformContainerMobile" class="waveform-container mt-3" style="height: 40px;">
-                    <div class="waveform-bar"></div>
-                    <div class="waveform-bar"></div>
-                    <div class="waveform-bar"></div>
-                    <div class="waveform-bar"></div>
-                    <div class="waveform-bar"></div>
-                    <div class="waveform-bar"></div>
-                    <div class="waveform-bar"></div>
-                    <div class="waveform-bar"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- iOS-Style Mobile Bottom Fixed Button (Instant Analysis) -->
-        <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 ios-frosted border-t border-gray-200/50 ios-card-shadow safe-area-inset-bottom z-40">
-            <div class="px-4 py-4">
-                <button id="fabAnalyze" class="haptic-feedback w-full h-16 bg-gradient-to-r from-purple-500 via-indigo-600 to-purple-600 text-white rounded-2xl font-bold ios-card-shadow flex items-center justify-center gap-3 transition-smooth active:scale-95 hidden" aria-label="Instant Analysis">
-                    <span class="text-3xl">⚡</span>
-                    <span class="text-lg tracking-wide">即時分析</span>
-                </button>
-            </div>
-        </div>
-
         <!-- History Section (Collapsed by default) - Enhanced -->
         <div id="historyContainer" class="mt-6 bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
             <h2 class="text-lg md:text-xl font-bold mb-4 cursor-pointer flex justify-between items-center transition-smooth hover:text-indigo-600" onclick="toggleHistory()">
@@ -547,9 +625,6 @@
                 <div id="historyList" class="space-y-3"></div>
             </div>
         </div>
-
-        <!-- BOTTOM SPACER BLOCK - Creates physical space for fixed bottom button on mobile -->
-        <div class="md:hidden" style="height: 130px;"></div>
     </div>
 
     <script>
@@ -590,6 +665,19 @@
         const recordingTimer = document.getElementById('recordingTimer');
         const recordingTimerMobile = document.getElementById('recordingTimerMobile');
 
+        // NEW: Mobile-specific elements for requirements 3, 4, 6
+        const mainHeader = document.getElementById('mainHeader');
+        const instructionCard = document.getElementById('instructionCard');
+        const mobileCarousel = document.getElementById('mobileCarousel');
+        const mobileCarouselTrack = document.getElementById('mobileCarouselTrack');
+        const carouselPrev = document.getElementById('carouselPrev');
+        const carouselNext = document.getElementById('carouselNext');
+        const carouselCounter = document.getElementById('carouselCounter');
+
+        // Carousel state
+        let mobileAnalysisCards = [];
+        let currentCarouselIndex = 0;
+
         // === Event Listeners ===
         startBtn.addEventListener('click', startSession);
         stopBtn.addEventListener('click', stopSession);
@@ -600,6 +688,10 @@
         triggerAnalysisBtn.addEventListener('click', manuallyTriggerAnalysis);
         generateMultipleBtn.addEventListener('click', generateMultipleAnalyses);
         fabAnalyze.addEventListener('click', manuallyTriggerAnalysis);
+
+        // NEW: Carousel navigation
+        if (carouselPrev) carouselPrev.addEventListener('click', () => navigateCarousel(-1));
+        if (carouselNext) carouselNext.addEventListener('click', () => navigateCarousel(1));
 
         // === Core Functions ===
         function startSession() {
@@ -627,11 +719,22 @@
             // Show/hide indicators
             liveIndicator.classList.remove('hidden');
             transcriptEmpty.style.display = 'none';
-            fabAnalyze.classList.remove('hidden');
+
+            // REQUIREMENT 1: Enable bottom analyze button (remove disabled state)
+            fabAnalyze.disabled = false;
+            fabAnalyze.classList.remove('opacity-50', 'cursor-not-allowed');
+            fabAnalyze.classList.add('hover:shadow-xl');
+
+            // REQUIREMENT 3: Hide instruction card when recording starts
+            if (instructionCard) {
+                instructionCard.style.display = 'none';
+            }
+
+            // Header is now hidden on mobile via CSS (hidden md:block)
+            // No need for JavaScript header manipulation on mobile
 
             // Show waveform and recording timer
             waveformContainer.classList.add('active');
-            waveformContainerMobile.classList.add('active');
             recordingTimerDisplay.style.display = 'block';
             recordingTimerDisplayMobile.style.display = 'block';
 
@@ -682,11 +785,22 @@
 
             // Hide indicators
             liveIndicator.classList.add('hidden');
-            fabAnalyze.classList.add('hidden');
+
+            // REQUIREMENT 1: Disable bottom analyze button again
+            fabAnalyze.disabled = true;
+            fabAnalyze.classList.add('opacity-50', 'cursor-not-allowed');
+            fabAnalyze.classList.remove('hover:shadow-xl');
+
+            // REQUIREMENT 3: Show instruction card when recording stops
+            if (instructionCard && mobileAnalysisCards.length === 0) {
+                instructionCard.style.display = 'block';
+            }
+
+            // Header is now hidden on mobile via CSS (hidden md:block)
+            // No need for JavaScript header manipulation on mobile
 
             // Hide waveform and recording timer
             waveformContainer.classList.remove('active');
-            waveformContainerMobile.classList.remove('active');
             recordingTimerDisplay.style.display = 'none';
             recordingTimerDisplayMobile.style.display = 'none';
 
@@ -796,17 +910,19 @@
                 `${s.speaker === 'counselor' ? '諮商師' : '案主'}：${s.text}`
             ).join('\n');
 
-            // Calculate time range
+            // Calculate time range and capture recording timestamp
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
             const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
             const timeRange = `${Math.max(0, minutes - 1)}:00-${minutes}:00`;
+            const recordingTimestamp = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
             // === 使用假資料模式（Demo） ===
             const useMockData = true; // 設為 false 使用真實 API
 
             if (useMockData) {
                 // 智慧生成假資料
-                const mockAnalysis = generateMockAnalysis(transcriptText, timeRange);
+                const mockAnalysis = generateMockAnalysis(transcriptText, timeRange, recordingTimestamp);
                 displayAnalysisCard(mockAnalysis);
                 return;
             }
@@ -819,25 +935,30 @@
                     body: JSON.stringify({
                         transcript: transcriptText,
                         speakers: transcriptSegments,
-                        time_range: timeRange
+                        time_range: timeRange,
+                        recording_timestamp: recordingTimestamp
                     })
                 });
 
                 if (!response.ok) throw new Error('分析失敗');
 
                 const analysis = await response.json();
+                // Add recording timestamp if not provided by API
+                if (!analysis.recording_timestamp) {
+                    analysis.recording_timestamp = recordingTimestamp;
+                }
                 displayAnalysisCard(analysis);
 
             } catch (error) {
                 console.error('Analysis error:', error);
                 // Fallback to mock data
-                const mockAnalysis = generateMockAnalysis(transcriptText, timeRange);
+                const mockAnalysis = generateMockAnalysis(transcriptText, timeRange, recordingTimestamp);
                 displayAnalysisCard(mockAnalysis);
             }
         }
 
         // === Mock Data Generator ===
-        function generateMockAnalysis(transcriptText, timeRange) {
+        function generateMockAnalysis(transcriptText, timeRange, recordingTimestamp) {
             const lowerText = transcriptText.toLowerCase();
 
             // 偵測關鍵議題
@@ -914,6 +1035,7 @@
                 alerts: alerts.slice(0, 3), // 最多3個警示
                 suggestions: suggestions.slice(0, 3), // 最多3個建議
                 time_range: timeRange,
+                recording_timestamp: recordingTimestamp,
                 timestamp: new Date().toISOString()
             };
         }
@@ -931,9 +1053,17 @@
 
             card.innerHTML = `
                 <div class="flex items-start justify-between mb-3">
-                    <span class="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
-                        ${analysis.time_range}
-                    </span>
+                    <div class="flex items-center gap-2">
+                        <span class="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                            ${analysis.time_range}
+                        </span>
+                        ${analysis.recording_timestamp ? `
+                            <span class="inline-flex items-center gap-1 px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium">
+                                <span>⏱</span>
+                                <span>${analysis.recording_timestamp}</span>
+                            </span>
+                        ` : ''}
+                    </div>
                     <span class="text-xs text-gray-400">${new Date(analysis.timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
@@ -997,7 +1127,7 @@
                 ` : ''}
             `;
 
-            // Animate card entrance
+            // Desktop: Animate card entrance
             card.style.opacity = '0';
             card.style.transform = 'translateY(20px)';
             analysisCards.insertBefore(card, analysisCards.firstChild);
@@ -1007,6 +1137,32 @@
                 card.style.opacity = '1';
                 card.style.transform = 'translateY(0)';
             }, 10);
+
+            // REQUIREMENT 6: Mobile carousel implementation
+            if (mobileCarouselTrack && window.innerWidth < 768) {
+                // Hide instruction card when first analysis appears
+                if (instructionCard && mobileAnalysisCards.length === 0) {
+                    instructionCard.style.display = 'none';
+                }
+
+                // Show carousel container
+                if (mobileCarousel) {
+                    mobileCarousel.classList.remove('hidden');
+                }
+
+                // Create mobile card (full width and height for carousel)
+                const mobileCard = document.createElement('div');
+                mobileCard.className = 'flex-shrink-0 w-full h-full bg-white rounded-2xl shadow-md p-5 border-l-4 border-purple-500 overflow-y-auto';
+                mobileCard.innerHTML = card.innerHTML;
+
+                // Add to carousel track (prepend to show newest first)
+                mobileCarouselTrack.insertBefore(mobileCard, mobileCarouselTrack.firstChild);
+                mobileAnalysisCards.unshift(analysis);
+
+                // Reset to show newest card
+                currentCarouselIndex = 0;
+                updateCarousel();
+            }
 
             // Save to history
             analysisHistory.push(analysis);
@@ -1053,6 +1209,14 @@
             // Clear existing cards and show loading
             analysisCards.innerHTML = '';
             if (analysisEmpty) analysisEmpty.style.display = 'none';
+
+            // Clear mobile carousel
+            if (mobileCarouselTrack) {
+                mobileCarouselTrack.innerHTML = '';
+                mobileAnalysisCards = [];
+                currentCarouselIndex = 0;
+                if (mobileCarousel) mobileCarousel.classList.add('hidden');
+            }
 
             // Show loading skeleton
             for (let i = 0; i < 3; i++) {
@@ -1156,11 +1320,17 @@
                 suggestions.push('💡 評估因應：「你平常怎麼處理這些壓力？」');
             }
 
+            // Generate recording timestamp for auto-analysis (at the end of each minute)
+            const recordingMinutes = minute;
+            const recordingSeconds = 0;
+            const recordingTimestamp = `${String(recordingMinutes).padStart(2, '0')}:${String(recordingSeconds).padStart(2, '0')}`;
+
             return {
                 summary: summary,
                 alerts: alerts.slice(0, 3),
                 suggestions: suggestions.slice(0, 3),
                 time_range: timeRange,
+                recording_timestamp: recordingTimestamp,
                 timestamp: new Date(Date.now() + minute * 60000).toISOString()
             };
         }
@@ -1250,6 +1420,77 @@
             if (confirm('確定要清除所有歷史記錄嗎？')) {
                 localStorage.removeItem('realtimeCounselingHistory');
                 loadHistory();
+            }
+        }
+
+        // === REQUIREMENT 6: Carousel Navigation Functions ===
+        function navigateCarousel(direction) {
+            if (mobileAnalysisCards.length === 0) return;
+
+            currentCarouselIndex += direction;
+
+            // Wrap around
+            if (currentCarouselIndex < 0) {
+                currentCarouselIndex = mobileAnalysisCards.length - 1;
+            } else if (currentCarouselIndex >= mobileAnalysisCards.length) {
+                currentCarouselIndex = 0;
+            }
+
+            updateCarousel();
+        }
+
+        function updateCarousel() {
+            if (!mobileCarouselTrack || mobileAnalysisCards.length === 0) return;
+
+            // Update transform to show current card
+            const offset = -currentCarouselIndex * 100;
+            mobileCarouselTrack.style.transform = `translateX(${offset}%)`;
+
+            // Update counter
+            if (carouselCounter) {
+                carouselCounter.textContent = `${currentCarouselIndex + 1} / ${mobileAnalysisCards.length}`;
+            }
+
+            // Update button states
+            if (carouselPrev && carouselNext) {
+                // Enable/disable buttons based on position
+                if (mobileAnalysisCards.length <= 1) {
+                    carouselPrev.disabled = true;
+                    carouselNext.disabled = true;
+                } else {
+                    carouselPrev.disabled = false;
+                    carouselNext.disabled = false;
+                }
+            }
+        }
+
+        // Add swipe gesture support for carousel
+        if (mobileCarouselTrack) {
+            let touchStartX = 0;
+            let touchEndX = 0;
+
+            mobileCarouselTrack.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+
+            mobileCarouselTrack.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }, { passive: true });
+
+            function handleSwipe() {
+                const swipeThreshold = 50; // minimum distance for swipe
+                const diff = touchStartX - touchEndX;
+
+                if (Math.abs(diff) < swipeThreshold) return;
+
+                if (diff > 0) {
+                    // Swipe left - next card
+                    navigateCarousel(1);
+                } else {
+                    // Swipe right - previous card
+                    navigateCarousel(-1);
+                }
             }
         }
 
