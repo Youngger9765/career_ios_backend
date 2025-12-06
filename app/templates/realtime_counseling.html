@@ -234,13 +234,7 @@
             box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
         }
 
-        /* Mobile Content Padding for Fixed Bars */
-        @media (max-width: 768px) {
-            .mobile-content-safe {
-                padding-top: 180px; /* Space for header + fixed top bar */
-                padding-bottom: 110px; /* Space for fixed bottom button */
-            }
-        }
+        /* Mobile Content Padding for Fixed Bars - REMOVED, using spacer blocks instead */
 
         /* Haptic Feedback Animation */
         @keyframes haptic-tap {
@@ -276,7 +270,10 @@
         </div>
     </nav>
 
-    <div class="container mx-auto px-4 md:px-6 py-4 md:py-6 max-w-7xl mobile-content-safe md:pb-6">
+    <div class="container mx-auto px-4 md:px-6 py-4 md:py-6 max-w-7xl md:pb-6">
+        <!-- TOP SPACER BLOCK - Creates physical space for fixed top bar on mobile -->
+        <div class="md:hidden" style="height: 280px;"></div>
+
         <!-- Demo Mode Instructions - Collapsible on Mobile -->
         <div class="bg-gradient-to-r from-yellow-50 to-amber-50 border-l-4 border-yellow-400 p-4 mb-4 md:mb-6 rounded-xl shadow-md card-hover" style="display: none">
             <div class="flex items-start">
@@ -550,6 +547,9 @@
                 <div id="historyList" class="space-y-3"></div>
             </div>
         </div>
+
+        <!-- BOTTOM SPACER BLOCK - Creates physical space for fixed bottom button on mobile -->
+        <div class="md:hidden" style="height: 130px;"></div>
     </div>
 
     <script>
