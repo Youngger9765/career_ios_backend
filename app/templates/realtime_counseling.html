@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>即時諮商輔助系統 - Realtime Counseling</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <nav class="bg-indigo-600 text-white p-4">
+        <div class="container mx-auto max-w-7xl flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">🎤 即時諮商輔助系統</h1>
+                <p class="text-sm opacity-90">AI-Powered Realtime Counseling Assistant</p>
+            </div>
+            <a href="/console" class="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+                ← 返回控制台
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-6 max-w-7xl">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Left Panel: Recording & Transcript -->
+            <div class="space-y-4">
+                <!-- Recording Controls -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold mb-4">🎙️ 錄音控制</h2>
+
+                    <!-- Timer Display -->
+                    <div class="text-center mb-4">
+                        <div class="text-4xl font-mono" id="timer">00:00</div>
+                        <div class="text-sm text-gray-500">會談時間</div>
+                    </div>
+
+                    <!-- Start/Stop Buttons -->
+                    <div class="flex gap-4">
+                        <button id="startBtn" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-lg font-bold transition">
+                            ▶️ 開始會談
+                        </button>
+                        <button id="stopBtn" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-6 rounded-lg font-bold opacity-50 cursor-not-allowed" disabled>
+                            ⏹️ 結束會談
+                        </button>
+                    </div>
+
+                    <!-- Speaker Toggle (Manual) -->
+                    <div class="mt-6">
+                        <label class="block text-sm font-medium mb-2">當前說話者</label>
+                        <div class="flex gap-2">
+                            <button id="speakerCounselor" class="flex-1 py-3 px-4 rounded-lg font-bold bg-blue-500 text-white transition">
+                                👨‍⚕️ 諮商師
+                            </button>
+                            <button id="speakerClient" class="flex-1 py-3 px-4 rounded-lg font-bold bg-gray-300 text-gray-700 transition">
+                                🧑 案主
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Status Indicator -->
+                    <div class="mt-4 p-3 bg-gray-100 rounded-lg">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="font-medium">狀態：</span>
+                            <span id="status" class="text-gray-600">待機中</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm mt-2">
+                            <span class="font-medium">下次分析：</span>
+                            <span id="nextAnalysis" class="text-gray-600">未開始</span>
+                        </div>
+                    </div>
+
+                    <!-- Demo Mode Hint -->
+                    <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p class="text-sm text-blue-700">
+                            💡 <strong>測試模式</strong>：按 <kbd class="bg-blue-200 px-2 py-1 rounded">T</kbd> 鍵可模擬輸入對話文字
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Live Transcript -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold mb-4">📝 即時逐字稿</h2>
+                    <div id="transcript" class="h-96 overflow-y-auto bg-gray-50 rounded-lg p-4 font-mono text-sm space-y-2">
+                        <p class="text-gray-400 italic">等待會談開始...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: AI Analysis Cards -->
+            <div class="space-y-4">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold mb-4">🤖 AI 即時分析</h2>
+
+                    <!-- Analysis Cards Container -->
+                    <div id="analysisCards" class="space-y-4 max-h-[800px] overflow-y-auto">
+                        <p class="text-gray-400 italic">分析將每 60 秒自動產生...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Section (Collapsed by default) -->
+        <div class="mt-6 bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-bold mb-4 cursor-pointer flex justify-between items-center" onclick="toggleHistory()">
+                <span>📊 歷史記錄</span>
+                <span id="historyToggle">▼</span>
+            </h2>
+            <div id="historySection" class="hidden">
+                <button onclick="clearHistory()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded mb-4 transition">
+                    🗑️ 清除歷史
+                </button>
+                <div id="historyList" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === State Management ===
+        let isRecording = false;
+        let currentSpeaker = 'counselor';
+        let startTime = null;
+        let timerInterval = null;
+        let analysisInterval = null;
+        let transcriptSegments = [];
+        let analysisHistory = [];
+
+        // === DOM Elements ===
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const timer = document.getElementById('timer');
+        const status = document.getElementById('status');
+        const nextAnalysis = document.getElementById('nextAnalysis');
+        const transcript = document.getElementById('transcript');
+        const analysisCards = document.getElementById('analysisCards');
+        const speakerCounselorBtn = document.getElementById('speakerCounselor');
+        const speakerClientBtn = document.getElementById('speakerClient');
+
+        // === Event Listeners ===
+        startBtn.addEventListener('click', startSession);
+        stopBtn.addEventListener('click', stopSession);
+        speakerCounselorBtn.addEventListener('click', () => switchSpeaker('counselor'));
+        speakerClientBtn.addEventListener('click', () => switchSpeaker('client'));
+
+        // === Core Functions ===
+        function startSession() {
+            isRecording = true;
+            startTime = Date.now();
+            transcriptSegments = [];
+            analysisHistory = [];
+
+            // UI Updates
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            stopBtn.disabled = false;
+            stopBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            status.textContent = '🔴 錄音中';
+            transcript.innerHTML = '';
+            analysisCards.innerHTML = '<p class="text-gray-400 italic">等待第一次分析（60秒後）...</p>';
+
+            // Start Timer
+            timerInterval = setInterval(updateTimer, 1000);
+
+            // Start Analysis Interval (every 60 seconds)
+            analysisInterval = setInterval(analyzeTranscript, 60000);
+
+            // Show next analysis countdown
+            updateNextAnalysisCountdown();
+        }
+
+        function stopSession() {
+            isRecording = false;
+
+            // Final analysis
+            analyzeTranscript();
+
+            // Cleanup
+            clearInterval(timerInterval);
+            clearInterval(analysisInterval);
+
+            // UI Updates
+            startBtn.disabled = false;
+            startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            stopBtn.disabled = true;
+            stopBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            status.textContent = '⏹️ 已結束';
+            nextAnalysis.textContent = '-';
+
+            // Save to localStorage
+            saveToHistory();
+        }
+
+        function switchSpeaker(speaker) {
+            currentSpeaker = speaker;
+
+            if (speaker === 'counselor') {
+                speakerCounselorBtn.classList.remove('bg-gray-300', 'text-gray-700');
+                speakerCounselorBtn.classList.add('bg-blue-500', 'text-white');
+                speakerClientBtn.classList.remove('bg-blue-500', 'text-white');
+                speakerClientBtn.classList.add('bg-gray-300', 'text-gray-700');
+            } else {
+                speakerClientBtn.classList.remove('bg-gray-300', 'text-gray-700');
+                speakerClientBtn.classList.add('bg-blue-500', 'text-white');
+                speakerCounselorBtn.classList.remove('bg-blue-500', 'text-white');
+                speakerCounselorBtn.classList.add('bg-gray-300', 'text-gray-700');
+            }
+        }
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            timer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function updateNextAnalysisCountdown() {
+            if (!isRecording) return;
+
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const remaining = 60 - (elapsed % 60);
+            nextAnalysis.textContent = `${remaining} 秒`;
+
+            setTimeout(() => updateNextAnalysisCountdown(), 1000);
+        }
+
+        // === Transcript Management ===
+        function addTranscriptLine(speaker, text) {
+            const line = document.createElement('div');
+            line.className = speaker === 'counselor' ? 'text-blue-700' : 'text-green-700';
+            line.innerHTML = `<strong>${speaker === 'counselor' ? '👨‍⚕️ 諮商師' : '🧑 案主'}：</strong>${text}`;
+            transcript.appendChild(line);
+            transcript.scrollTop = transcript.scrollHeight;
+
+            // Save to segments
+            transcriptSegments.push({ speaker, text });
+        }
+
+        // === AI Analysis ===
+        async function analyzeTranscript() {
+            if (transcriptSegments.length === 0) return;
+
+            // Build transcript text
+            const transcriptText = transcriptSegments.map(s =>
+                `${s.speaker === 'counselor' ? '諮商師' : '案主'}：${s.text}`
+            ).join('\n');
+
+            // Calculate time range
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const timeRange = `${Math.max(0, minutes - 1)}:00-${minutes}:00`;
+
+            try {
+                const response = await fetch('/api/v1/realtime/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        transcript: transcriptText,
+                        speakers: transcriptSegments,
+                        time_range: timeRange
+                    })
+                });
+
+                if (!response.ok) throw new Error('分析失敗');
+
+                const analysis = await response.json();
+                displayAnalysisCard(analysis);
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                showError('AI 分析失敗，請稍後再試');
+            }
+        }
+
+        function displayAnalysisCard(analysis) {
+            // Clear placeholder
+            if (analysisCards.querySelector('.text-gray-400')) {
+                analysisCards.innerHTML = '';
+            }
+
+            const card = document.createElement('div');
+            card.className = 'bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 border-l-4 border-purple-500';
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs text-gray-500">${analysis.time_range}</span>
+                    <span class="text-xs text-gray-500">${new Date(analysis.timestamp).toLocaleTimeString('zh-TW')}</span>
+                </div>
+
+                <div class="mb-3">
+                    <h3 class="font-bold text-sm text-gray-700 mb-1">📋 摘要</h3>
+                    <p class="text-sm">${analysis.summary}</p>
+                </div>
+
+                ${analysis.alerts.length > 0 ? `
+                    <div class="mb-3">
+                        <h3 class="font-bold text-sm text-gray-700 mb-1">⚠️ 警示</h3>
+                        <ul class="text-sm space-y-1">
+                            ${analysis.alerts.map(alert => `<li class="text-red-600">• ${alert}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+
+                ${analysis.suggestions.length > 0 ? `
+                    <div>
+                        <h3 class="font-bold text-sm text-gray-700 mb-1">💡 建議</h3>
+                        <ul class="text-sm space-y-1">
+                            ${analysis.suggestions.map(sug => `<li class="text-green-600">• ${sug}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+            `;
+
+            // Insert at top
+            analysisCards.insertBefore(card, analysisCards.firstChild);
+
+            // Save to history
+            analysisHistory.push(analysis);
+        }
+
+        function showError(message) {
+            const card = document.createElement('div');
+            card.className = 'bg-red-50 rounded-lg p-4 border-l-4 border-red-500';
+            card.innerHTML = `<p class="text-sm text-red-700">❌ ${message}</p>`;
+            analysisCards.insertBefore(card, analysisCards.firstChild);
+        }
+
+        // === localStorage Management ===
+        function saveToHistory() {
+            const session = {
+                timestamp: new Date().toISOString(),
+                duration: timer.textContent,
+                transcript: transcriptSegments,
+                analyses: analysisHistory
+            };
+
+            const history = JSON.parse(localStorage.getItem('realtimeCounselingHistory') || '[]');
+            history.unshift(session);
+
+            // Keep last 10 sessions
+            localStorage.setItem('realtimeCounselingHistory', JSON.stringify(history.slice(0, 10)));
+        }
+
+        function toggleHistory() {
+            const section = document.getElementById('historySection');
+            const toggle = document.getElementById('historyToggle');
+
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                toggle.textContent = '▲';
+                loadHistory();
+            } else {
+                section.classList.add('hidden');
+                toggle.textContent = '▼';
+            }
+        }
+
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('realtimeCounselingHistory') || '[]');
+            const list = document.getElementById('historyList');
+
+            if (history.length === 0) {
+                list.innerHTML = '<p class="text-gray-400 italic">尚無歷史記錄</p>';
+                return;
+            }
+
+            list.innerHTML = history.map((session, index) => `
+                <div class="bg-gray-50 rounded p-3">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold">#${index + 1} - ${new Date(session.timestamp).toLocaleString('zh-TW')}</span>
+                        <span class="text-sm text-gray-600">時長：${session.duration}</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">分析次數：${session.analyses.length} 次</p>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            if (confirm('確定要清除所有歷史記錄嗎？')) {
+                localStorage.removeItem('realtimeCounselingHistory');
+                document.getElementById('historyList').innerHTML = '<p class="text-gray-400 italic">尚無歷史記錄</p>';
+            }
+        }
+
+        // === Demo Mode (Simulate transcript input) ===
+        // TODO: Replace with actual ElevenLabs WebSocket integration when API key is ready
+        function simulateTranscriptInput() {
+            if (!isRecording) return;
+
+            const demoTexts = [
+                '你好，今天想聊什麼呢？',
+                '我最近工作壓力很大...',
+                '能多說一些嗎？',
+                '我覺得我做什麼都不對。',
+                '聽起來你感受到很大的壓力。',
+                '是的，我覺得很無助。',
+                '這種感覺從什麼時候開始的？',
+                '大概從上個月開始。',
+                '那個時候發生了什麼事嗎？',
+                '我被調到新的部門...'
+            ];
+
+            const randomText = demoTexts[Math.floor(Math.random() * demoTexts.length)];
+            addTranscriptLine(currentSpeaker, randomText);
+        }
+
+        // Demo: Press 'T' to add random transcript line (for testing without microphone)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 't' || e.key === 'T') {
+                simulateTranscriptInput();
+            }
+        });
+
+        // === Initialize ===
+        console.log('🎤 Realtime Counseling System Ready');
+        console.log('💡 Press "T" to simulate transcript input (demo mode)');
+    </script>
+</body>
+</html>

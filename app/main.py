@@ -173,6 +173,12 @@ async def console_page(request: Request) -> Response:
     return templates.TemplateResponse("console.html", {"request": request})
 
 
+@app.get("/realtime-counseling", response_class=HTMLResponse)
+async def realtime_counseling_page(request: Request) -> Response:
+    """Realtime STT Counseling page - AI-powered live counseling assistant"""
+    return templates.TemplateResponse("realtime_counseling.html", {"request": request})
+
+
 @app.get("/health")
 async def health_check() -> Dict[str, str]:
     """Health check endpoint"""
