@@ -11,9 +11,15 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         /* Safe area for mobile notches */
@@ -71,6 +77,22 @@
             to {
                 opacity: 1;
                 transform: translateY(0);
+            }
+        }
+
+        /* Slide in from right animation */
+        .animate-slide-in-right {
+            animation: slideInRight 0.4s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
             }
         }
 
@@ -140,6 +162,96 @@
         .badge-success {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         }
+
+        /* Audio waveform animation */
+        .waveform-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 60px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .waveform-container.active {
+            opacity: 1;
+        }
+
+        .waveform-bar {
+            width: 6px;
+            background: linear-gradient(180deg, #10b981 0%, #14b8a6 100%);
+            border-radius: 3px;
+            animation: waveform 1.2s ease-in-out infinite;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+        }
+
+        .waveform-bar:nth-child(1) { animation-delay: 0s; }
+        .waveform-bar:nth-child(2) { animation-delay: 0.1s; }
+        .waveform-bar:nth-child(3) { animation-delay: 0.2s; }
+        .waveform-bar:nth-child(4) { animation-delay: 0.3s; }
+        .waveform-bar:nth-child(5) { animation-delay: 0.4s; }
+        .waveform-bar:nth-child(6) { animation-delay: 0.3s; }
+        .waveform-bar:nth-child(7) { animation-delay: 0.2s; }
+        .waveform-bar:nth-child(8) { animation-delay: 0.1s; }
+
+        @keyframes waveform {
+            0%, 100% {
+                height: 20px;
+                background: linear-gradient(180deg, #10b981 0%, #14b8a6 100%);
+            }
+            50% {
+                height: 50px;
+                background: linear-gradient(180deg, #14b8a6 0%, #06b6d4 100%);
+            }
+        }
+
+        /* Recording timer */
+        .recording-timer {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Courier New', monospace;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.05em;
+        }
+
+        /* iOS-Style Frosted Glass Effect */
+        .ios-frosted {
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+        }
+
+        /* iOS Safe Area - Top */
+        .safe-area-inset-top {
+            padding-top: max(1rem, env(safe-area-inset-top));
+        }
+
+        /* iOS Button Active State */
+        .ios-button-active {
+            transform: scale(0.96);
+        }
+
+        /* iOS Card Shadow */
+        .ios-card-shadow {
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        /* Mobile Content Padding for Fixed Bars */
+        @media (max-width: 768px) {
+            .mobile-content-safe {
+                padding-top: 180px; /* Space for header + fixed top bar */
+                padding-bottom: 110px; /* Space for fixed bottom button */
+            }
+        }
+
+        /* Haptic Feedback Animation */
+        @keyframes haptic-tap {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.96); }
+            100% { transform: scale(1); }
+        }
+
+        .haptic-feedback:active {
+            animation: haptic-tap 0.15s ease-out;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
@@ -164,7 +276,7 @@
         </div>
     </nav>
 
-    <div class="container mx-auto px-4 md:px-6 py-4 md:py-6 max-w-7xl pb-24 md:pb-6">
+    <div class="container mx-auto px-4 md:px-6 py-4 md:py-6 max-w-7xl mobile-content-safe md:pb-6">
         <!-- Demo Mode Instructions - Collapsible on Mobile -->
         <div class="bg-gradient-to-r from-yellow-50 to-amber-50 border-l-4 border-yellow-400 p-4 mb-4 md:mb-6 rounded-xl shadow-md card-hover" style="display: none">
             <div class="flex items-start">
@@ -209,7 +321,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             <!-- Left Panel: Recording Controls -->
-            <div class="space-y-4">
+            <div class="space-y-4 hidden md:block">
                 <!-- Recording Controls - Enhanced -->
                 <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
                     <div class="flex items-center gap-2 mb-4">
@@ -235,6 +347,29 @@
                             <span class="text-xl">⏹️</span>
                             <span>結束會談</span>
                         </button>
+                    </div>
+
+                    <!-- Audio Waveform Animation -->
+                    <div id="waveformContainer" class="waveform-container mb-4">
+                        <div class="waveform-bar"></div>
+                        <div class="waveform-bar"></div>
+                        <div class="waveform-bar"></div>
+                        <div class="waveform-bar"></div>
+                        <div class="waveform-bar"></div>
+                        <div class="waveform-bar"></div>
+                        <div class="waveform-bar"></div>
+                        <div class="waveform-bar"></div>
+                    </div>
+
+                    <!-- Recording Timer Display -->
+                    <div id="recordingTimerDisplay" class="text-center mb-6 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-200" style="display: none;">
+                        <div class="flex items-center justify-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                <span class="text-sm font-medium text-gray-700">錄音中</span>
+                            </div>
+                            <div class="recording-timer text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600" id="recordingTimer">00:00</div>
+                        </div>
                     </div>
 
                     <!-- Speaker Toggle (Manual) - Enhanced -->
@@ -316,7 +451,7 @@
         </div>
 
         <!-- Live Transcript Section - Collapsible (Moved to Bottom) -->
-        <div class="mt-6 bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
+        <div class="mt-6 bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100 hidden md:block">
             <h2 class="text-lg md:text-xl font-bold mb-4 cursor-pointer flex justify-between items-center transition-smooth hover:text-teal-600" onclick="toggleTranscript()">
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center">
@@ -348,26 +483,53 @@
             </div>
         </div>
 
-        <!-- Mobile Bottom Fixed Bar -->
-        <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-2xl safe-area-inset-bottom z-40">
+        <!-- iOS-Style Mobile Top Fixed Bar (Recording Controls) -->
+        <div class="md:hidden fixed top-16 left-0 right-0 bg-white/80 ios-frosted border-b border-gray-200/50 ios-card-shadow safe-area-inset-top z-40">
             <div class="px-4 py-3">
+                <!-- Recording Status Indicator -->
+                <div id="recordingTimerDisplayMobile" class="text-center mb-3 bg-gradient-to-r from-teal-50/90 to-cyan-50/90 rounded-2xl p-3 border border-teal-200/50" style="display: none;">
+                    <div class="flex items-center justify-center gap-2">
+                        <div class="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></div>
+                        <span class="text-xs font-semibold text-gray-700 tracking-wide">錄音中</span>
+                        <div class="recording-timer text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600" id="recordingTimerMobile">00:00</div>
+                    </div>
+                </div>
+
+                <!-- Start/Stop Buttons -->
                 <div class="grid grid-cols-2 gap-3">
-                    <button id="startBtnMobile" class="btn-touch bg-gradient-to-r from-green-500 to-emerald-600 active:from-green-600 active:to-emerald-700 text-white py-3 px-4 rounded-xl font-bold transition-smooth shadow-lg flex items-center justify-center gap-2">
-                        <span class="text-lg">▶️</span>
-                        <span class="text-sm">開始</span>
+                    <button id="startBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-green-500 to-emerald-600 active:from-green-600 active:to-emerald-700 text-white py-4 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2">
+                        <span class="text-xl">▶️</span>
+                        <span class="text-base">開始</span>
                     </button>
-                    <button id="stopBtnMobile" class="btn-touch bg-gradient-to-r from-red-500 to-rose-600 text-white py-3 px-4 rounded-xl font-bold opacity-50 cursor-not-allowed shadow-lg flex items-center justify-center gap-2" disabled>
-                        <span class="text-lg">⏹️</span>
-                        <span class="text-sm">結束</span>
+                    <button id="stopBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-red-500 to-rose-600 active:from-red-600 active:to-rose-700 text-white py-4 px-4 rounded-2xl font-bold opacity-50 cursor-not-allowed ios-card-shadow flex items-center justify-center gap-2" disabled>
+                        <span class="text-xl">⏹️</span>
+                        <span class="text-base">結束</span>
                     </button>
+                </div>
+
+                <!-- Audio Waveform Animation - Mobile (Compact) -->
+                <div id="waveformContainerMobile" class="waveform-container mt-3" style="height: 40px;">
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
+                    <div class="waveform-bar"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Floating Action Button (Mobile) - Trigger Analysis -->
-        <button id="fabAnalyze" class="md:hidden fixed bottom-24 right-4 w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center z-40 hover:scale-110 active:scale-95 transition-smooth hidden" aria-label="Trigger Analysis">
-            <span class="text-2xl">⚡</span>
-        </button>
+        <!-- iOS-Style Mobile Bottom Fixed Button (Instant Analysis) -->
+        <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 ios-frosted border-t border-gray-200/50 ios-card-shadow safe-area-inset-bottom z-40">
+            <div class="px-4 py-4">
+                <button id="fabAnalyze" class="haptic-feedback w-full h-16 bg-gradient-to-r from-purple-500 via-indigo-600 to-purple-600 text-white rounded-2xl font-bold ios-card-shadow flex items-center justify-center gap-3 transition-smooth active:scale-95 hidden" aria-label="Instant Analysis">
+                    <span class="text-3xl">⚡</span>
+                    <span class="text-lg tracking-wide">即時分析</span>
+                </button>
+            </div>
+        </div>
 
         <!-- History Section (Collapsed by default) - Enhanced -->
         <div id="historyContainer" class="mt-6 bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
@@ -398,6 +560,7 @@
         let timerInterval = null;
         let analysisInterval = null;
         let transcriptSegments = [];
+        let lastAutoAnalysisTime = 0; // Track last auto-analysis to prevent duplicates
         let analysisHistory = [];
         let isDemoMode = true; // Always in demo mode (no real recording)
 
@@ -420,6 +583,12 @@
         const transcriptEmpty = document.getElementById('transcriptEmpty');
         const analysisEmpty = document.getElementById('analysisEmpty');
         const fabAnalyze = document.getElementById('fabAnalyze');
+        const waveformContainer = document.getElementById('waveformContainer');
+        const waveformContainerMobile = document.getElementById('waveformContainerMobile');
+        const recordingTimerDisplay = document.getElementById('recordingTimerDisplay');
+        const recordingTimerDisplayMobile = document.getElementById('recordingTimerDisplayMobile');
+        const recordingTimer = document.getElementById('recordingTimer');
+        const recordingTimerMobile = document.getElementById('recordingTimerMobile');
 
         // === Event Listeners ===
         startBtn.addEventListener('click', startSession);
@@ -460,6 +629,12 @@
             transcriptEmpty.style.display = 'none';
             fabAnalyze.classList.remove('hidden');
 
+            // Show waveform and recording timer
+            waveformContainer.classList.add('active');
+            waveformContainerMobile.classList.add('active');
+            recordingTimerDisplay.style.display = 'block';
+            recordingTimerDisplayMobile.style.display = 'block';
+
             // Auto-expand transcript section when recording starts
             const transcriptSection = document.getElementById('transcriptSection');
             const transcriptToggle = document.getElementById('transcriptToggle');
@@ -491,6 +666,7 @@
             // Cleanup
             clearInterval(timerInterval);
             clearInterval(analysisInterval);
+            lastAutoAnalysisTime = 0; // Reset auto-analysis tracker
 
             // UI Updates - Desktop
             startBtn.disabled = false;
@@ -507,6 +683,12 @@
             // Hide indicators
             liveIndicator.classList.add('hidden');
             fabAnalyze.classList.add('hidden');
+
+            // Hide waveform and recording timer
+            waveformContainer.classList.remove('active');
+            waveformContainerMobile.classList.remove('active');
+            recordingTimerDisplay.style.display = 'none';
+            recordingTimerDisplayMobile.style.display = 'none';
 
             status.textContent = '⏹️ 已結束';
             status.classList.remove('pulse-recording');
@@ -536,7 +718,28 @@
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
             const minutes = Math.floor(elapsed / 60);
             const seconds = elapsed % 60;
-            timer.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+            // Update main timer
+            timer.textContent = timeString;
+
+            // Update recording timer displays
+            if (recordingTimer) recordingTimer.textContent = timeString;
+            if (recordingTimerMobile) recordingTimerMobile.textContent = timeString;
+
+            // Auto-analysis every 60 seconds
+            if (elapsed > 0 && elapsed % 60 === 0 && elapsed !== lastAutoAnalysisTime) {
+                lastAutoAnalysisTime = elapsed;
+
+                // Only trigger if we have transcript content
+                if (transcriptSegments.length > 0) {
+                    // Show auto-analysis notification
+                    showAutoAnalysisNotification();
+
+                    // Trigger analysis automatically
+                    analyzeTranscript();
+                }
+            }
         }
 
         function updateNextAnalysisCountdown() {
@@ -816,6 +1019,27 @@
             analysisCards.insertBefore(card, analysisCards.firstChild);
         }
 
+        // === Auto-Analysis Notification ===
+        function showAutoAnalysisNotification() {
+            // Create toast notification
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-20 right-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 animate-slide-in-right';
+            toast.innerHTML = `
+                <span class="text-lg">⚡</span>
+                <span class="font-medium">自動分析中...</span>
+            `;
+
+            document.body.appendChild(toast);
+
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         // === Manual Analysis Triggers ===
         function manuallyTriggerAnalysis() {
             if (transcriptSegments.length === 0) {
@@ -1032,30 +1256,242 @@
         // === Demo Mode (Simulate transcript input) ===
         let demoScriptIndex = 0;
         const demoScripts = {
-            // 劇本 1: 工作壓力與焦慮
+            // 劇本 1: 工作壓力與焦慮（含自殺風險評估）- 30分鐘完整版
             workStress: [
+                // Phase 1: 開場與建立關係 (0-5分鐘)
                 { speaker: 'counselor', text: '你好，今天想聊什麼呢？' },
                 { speaker: 'client', text: '我最近工作壓力很大，常常焦慮到睡不著...' },
-                { speaker: 'counselor', text: '聽起來壓力真的很大，能跟我多說一些嗎？' },
-                { speaker: 'client', text: '我覺得不管怎麼做，主管都不滿意。' },
-                { speaker: 'counselor', text: '這讓你感到很挫折，是嗎？' },
-                { speaker: 'client', text: '對，而且我開始懷疑自己的能力...' },
+                { speaker: 'counselor', text: '聽起來壓力真的很大。能跟我多說一些，你都幾點睡覺？' },
+                { speaker: 'client', text: '我常常躺在床上翻來覆去到凌晨兩、三點。' },
+                { speaker: 'counselor', text: '失眠對你的影響一定很大。你躺在床上的時候，腦袋都在想什麼？' },
+                { speaker: 'client', text: '就想著明天的工作，想著我又要面對主管...' },
+                { speaker: 'counselor', text: '主管是你壓力的主要來源嗎？' },
+                { speaker: 'client', text: '對，我覺得不管怎麼做，他都不滿意。' },
+                { speaker: 'counselor', text: '這讓你感到很挫折，是嗎？能舉個最近的例子嗎？' },
+                { speaker: 'client', text: '上禮拜我熬夜趕出來的企劃案，他只看了兩分鐘就說要重做。' },
+                { speaker: 'counselor', text: '你那時候的感受是什麼？' },
+                { speaker: 'client', text: '我當下真的很生氣，但又不敢說什麼，就吞下來了。' },
+                { speaker: 'counselor', text: '生氣但又不能表達，這種感覺一定很難受。' },
+                { speaker: 'client', text: '對...我回到座位上眼淚就掉下來了，還好沒人看到。' },
+
+                // Phase 2: 探索工作壓力與情緒 (5-12分鐘)
+                { speaker: 'counselor', text: '這種情況持續多久了？' },
+                { speaker: 'client', text: '大概半年吧，從他調來當我們主管之後。' },
+                { speaker: 'counselor', text: '這半年來，你的工作和生活有什麼改變嗎？' },
+                { speaker: 'client', text: '我變得很沒自信，常常懷疑自己的能力...' },
                 { speaker: 'counselor', text: '當你說「懷疑自己」，具體是指什麼呢？' },
-                { speaker: 'client', text: '我覺得自己什麼都做不好，活著好像沒什麼意義。' },
+                { speaker: 'client', text: '我覺得自己什麼都做不好，可能根本不適合這份工作。' },
+                { speaker: 'counselor', text: '在這個主管來之前，你對自己的工作表現有這樣的感覺嗎？' },
+                { speaker: 'client', text: '沒有...以前我做得還不錯，前一個主管還滿肯定我的。' },
+                { speaker: 'counselor', text: '所以這個懷疑，主要是最近這半年才開始的。' },
+                { speaker: 'client', text: '對，我現在連簡單的事情都會害怕做錯。' },
+                { speaker: 'counselor', text: '這種害怕，除了在工作上，會不會影響到你的生活其他部分？' },
+                { speaker: 'client', text: '會...我現在不太想跟朋友出去，也不想跟家人聊天。' },
+                { speaker: 'counselor', text: '聽起來你有點把自己孤立起來了。' },
+                { speaker: 'client', text: '我只是覺得很累，不想讓別人看到我這個樣子。' },
+                { speaker: 'counselor', text: '你擔心別人怎麼看你？' },
+                { speaker: 'client', text: '怕他們覺得我很弱，連工作都做不好。' },
+                { speaker: 'counselor', text: '除了疲累和害怕，你還有其他身體的感覺嗎？' },
+                { speaker: 'client', text: '我常常胸悶，有時候會突然喘不過氣。' },
+                { speaker: 'counselor', text: '這聽起來像是焦慮發作。發作的時候你會怎麼做？' },
+                { speaker: 'client', text: '我就...躲到廁所深呼吸，等它過去。' },
+                { speaker: 'counselor', text: '你有試過其他方法嗎？或是有跟誰談過這件事？' },
+                { speaker: 'client', text: '沒有...我不知道要跟誰說。' },
+
+                // Phase 3: 憂鬱症狀浮現 (12-17分鐘)
+                { speaker: 'counselor', text: '除了睡眠問題和焦慮，你的胃口有改變嗎？' },
+                { speaker: 'client', text: '我最近都不太想吃東西，體重掉了五、六公斤。' },
+                { speaker: 'counselor', text: '那你平常有沒有什麼事情是讓你開心的？' },
+                { speaker: 'client', text: '以前我很喜歡畫畫，但現在完全提不起勁。' },
+                { speaker: 'counselor', text: '連原本喜歡的事情都失去興趣了...這種情況持續多久了？' },
+                { speaker: 'client', text: '大概兩、三個月吧，我覺得做什麼都沒意思。' },
+                { speaker: 'counselor', text: '聽起來你現在的狀態真的很辛苦。' },
+                { speaker: 'client', text: '嗯...' },
+                { speaker: 'counselor', text: '你早上起床的時候，會不會特別難熬？' },
+                { speaker: 'client', text: '會，我每天睜開眼睛第一個想法就是「又要面對新的一天」。' },
+                { speaker: 'counselor', text: '這聽起來像是一種負擔。' },
+                { speaker: 'client', text: '對，我覺得活著好像只是在應付，沒什麼意義。' },
+
+                // Phase 4: 自殺意念評估 (17-22分鐘)
                 { speaker: 'counselor', text: '你剛才說「活著沒意義」，這是最近才有的想法嗎？' },
-                { speaker: 'client', text: '嗯...最近特別強烈。' }
+                { speaker: 'client', text: '嗯...最近特別強烈。' },
+                { speaker: 'counselor', text: '我想直接問你，當你說活著沒意義，你有沒有想過要結束生命？' },
+                { speaker: 'client', text: '...' },
+                { speaker: 'counselor', text: '我知道這個問題很直接，但這對我了解你的狀況很重要。' },
+                { speaker: 'client', text: '有...有想過。' },
+                { speaker: 'counselor', text: '謝謝你願意跟我說。你能跟我多說一點嗎？這個想法多常出現？' },
+                { speaker: 'client', text: '最近幾乎每天都會想到。' },
+                { speaker: 'counselor', text: '當這個想法出現的時候，它有多強烈？從0到10，10是非常強烈。' },
+                { speaker: 'client', text: '大概...7、8吧。' },
+                { speaker: 'counselor', text: '這確實是很強的程度。你有想過具體的方法嗎？' },
+                { speaker: 'client', text: '有想過...但我不確定會不會真的去做。' },
+                { speaker: 'counselor', text: '你想過什麼方法？' },
+                { speaker: 'client', text: '就...吃安眠藥。我家裡有一些。' },
+                { speaker: 'counselor', text: '你有想過什麼時候做這件事嗎？' },
+                { speaker: 'client', text: '沒有明確的時間，但有時候真的很想就這樣結束。' },
+                { speaker: 'counselor', text: '那有什麼事情或人，讓你到現在還願意活著？' },
+                { speaker: 'client', text: '我媽...她身體不好，如果我出事，她一定受不了。' },
+                { speaker: 'counselor', text: '你媽媽對你來說很重要。' },
+                { speaker: 'client', text: '對，她是我唯一的牽掛。' },
+
+                // Phase 5: 風險評估深入 (22-27分鐘)
+                { speaker: 'counselor', text: '除了媽媽，還有其他讓你覺得值得活下去的事情嗎？' },
+                { speaker: 'client', text: '我想不到了...可能就只有她。' },
+                { speaker: 'counselor', text: '當你想到要結束生命的時候，有沒有什麼事情可以讓你停下來？' },
+                { speaker: 'client', text: '就想到我媽，還有...我也有點害怕死亡。' },
+                { speaker: 'counselor', text: '你說的害怕是什麼樣的害怕？' },
+                { speaker: 'client', text: '不知道死了之後會怎樣，而且我也不想讓家人傷心。' },
+                { speaker: 'counselor', text: '這些都是很重要的保護因子。你有跟任何人談過這些想法嗎？' },
+                { speaker: 'client', text: '沒有...這是我第一次說出來。' },
+                { speaker: 'counselor', text: '我很慶幸你今天願意來這裡，也願意跟我說這些。' },
+                { speaker: 'client', text: '嗯...其實我也不知道該怎麼辦了。' },
+                { speaker: 'counselor', text: '你過去有試圖傷害自己或自殺的經驗嗎？' },
+                { speaker: 'client', text: '沒有，這是第一次這麼嚴重。' },
+                { speaker: 'counselor', text: '那現在此刻，如果從0到10來評估，你覺得自己在接下來一週內會真的執行的可能性有多高？' },
+                { speaker: 'client', text: '可能...3、4吧。我不確定。' },
+                { speaker: 'counselor', text: '我聽到你說不確定，這代表你內心還在掙扎。' },
+                { speaker: 'client', text: '對，有時候很想結束，但又覺得不能這樣做。' },
+
+                // Phase 6: 安全計畫與資源 (27-30分鐘)
+                { speaker: 'counselor', text: '我想跟你一起制定一個安全計畫，當你有強烈的自殺念頭時可以怎麼做。' },
+                { speaker: 'client', text: '好...' },
+                { speaker: 'counselor', text: '首先，當這個念頭出現時，你可以做什麼事情來轉移注意力？' },
+                { speaker: 'client', text: '我可能...去散步？或是聽音樂？' },
+                { speaker: 'counselor', text: '這些都是好方法。接下來，你有可以打電話求助的人嗎？' },
+                { speaker: 'client', text: '我有一個大學同學，我們關係還不錯。' },
+                { speaker: 'counselor', text: '很好。如果情況更緊急，你知道可以打1925安心專線嗎？' },
+                { speaker: 'client', text: '聽過，但沒打過。' },
+                { speaker: 'counselor', text: '這是24小時的心理諮詢專線，隨時都可以打。還有，關於家裡的安眠藥...' },
+                { speaker: 'client', text: '嗯？' },
+                { speaker: 'counselor', text: '為了你的安全，我建議你把它們交給信任的人保管，你覺得可以嗎？' },
+                { speaker: 'client', text: '可以...我可以給我媽保管。' },
+                { speaker: 'counselor', text: '好的，這很重要。我也建議你考慮去身心科評估，看是否需要藥物協助。' },
+                { speaker: 'client', text: '你覺得我需要吃藥嗎？' },
+                { speaker: 'counselor', text: '這需要醫生評估，但從你的症狀來看，藥物可能可以幫助你穩定情緒和睡眠。' },
+                { speaker: 'client', text: '好...我會考慮的。' },
+                { speaker: 'counselor', text: '我希望我們能密集地見面，每週至少兩次，你覺得可以嗎？' },
+                { speaker: 'client', text: '可以，我需要有人幫我。' },
+                { speaker: 'counselor', text: '我會陪著你度過這段時間。在下次見面之前，如果你有強烈的自殺念頭，請一定要打1925或聯絡我。' },
+                { speaker: 'client', text: '好，謝謝你。' },
+                { speaker: 'counselor', text: '不客氣。我們約下週二同一時間，你覺得可以嗎？' },
+                { speaker: 'client', text: '可以。' },
+                { speaker: 'counselor', text: '那今天就到這裡。記得，你不是一個人，我們會一起面對這個困難。' },
+                { speaker: 'client', text: '謝謝...' }
             ],
 
-            // 劇本 2: 一般諮詢
+            // 劇本 2: 一般諮詢（關係、家庭、生涯探索）- 30分鐘完整版
             general: [
+                // Phase 1: 開場與近況 (0-5分鐘)
                 { speaker: 'counselor', text: '今天過得如何？' },
                 { speaker: 'client', text: '還好，就是有點累。' },
                 { speaker: 'counselor', text: '什麼讓你感到累呢？' },
                 { speaker: 'client', text: '工作的事情，還有家裡的事。' },
-                { speaker: 'counselor', text: '能具體說說是什麼事嗎？' },
-                { speaker: 'client', text: '主管最近一直盯我，讓我壓力很大。' },
+                { speaker: 'counselor', text: '能具體說說是什麼事嗎？我們先從哪一個開始聊？' },
+                { speaker: 'client', text: '先說工作好了，主管最近一直盯我，讓我壓力很大。' },
                 { speaker: 'counselor', text: '主管盯著你的感覺，能描述一下嗎？' },
-                { speaker: 'client', text: '就是覺得被監視，什麼都要報告。' }
+                { speaker: 'client', text: '就是覺得被監視，什麼都要報告，讓我很不舒服。' },
+                { speaker: 'counselor', text: '聽起來這讓你覺得不被信任。' },
+                { speaker: 'client', text: '對，明明我工作都有做好，但他還是一直問東問西。' },
+                { speaker: 'counselor', text: '這種狀況持續多久了？' },
+                { speaker: 'client', text: '大概一個月吧，從上次專案出了點小問題之後。' },
+                { speaker: 'counselor', text: '那次的小問題，對你影響很大嗎？' },
+                { speaker: 'client', text: '其實還好，但主管好像從那之後就開始特別注意我。' },
+
+                // Phase 2: 工作壓力與因應 (5-10分鐘)
+                { speaker: 'counselor', text: '你有試著跟主管溝通過嗎？' },
+                { speaker: 'client', text: '沒有...我不太敢，怕他覺得我在抱怨。' },
+                { speaker: 'counselor', text: '你擔心表達自己的感受會帶來負面後果。' },
+                { speaker: 'client', text: '對，而且我也不知道該怎麼說。' },
+                { speaker: 'counselor', text: '如果有機會跟他說，你最想讓他知道什麼？' },
+                { speaker: 'client', text: '我希望他知道我是有能力的，不需要一直被監督。' },
+                { speaker: 'counselor', text: '這是很合理的需求。你覺得什麼阻礙了你表達這個需求？' },
+                { speaker: 'client', text: '可能是...我不想惹麻煩，也怕破壞關係。' },
+                { speaker: 'counselor', text: '保持和平對你來說很重要。這種模式在你生活的其他部分也會出現嗎？' },
+                { speaker: 'client', text: '會...我跟家人也是這樣。' },
+                { speaker: 'counselor', text: '能多說一點嗎？' },
+                { speaker: 'client', text: '我媽常常念我該結婚了，但我不想聽，就都不回應。' },
+
+                // Phase 3: 家庭關係探索 (10-17分鐘)
+                { speaker: 'counselor', text: '你不想回應的原因是什麼？' },
+                { speaker: 'client', text: '因為我還沒準備好，但說了她也不會懂。' },
+                { speaker: 'counselor', text: '你覺得媽媽不理解你的想法。' },
+                { speaker: 'client', text: '對，她那個年代的人，覺得到了年紀就該結婚。' },
+                { speaker: 'counselor', text: '那你自己對婚姻的想法是什麼？' },
+                { speaker: 'client', text: '我覺得...如果遇到對的人當然好，但不想為了結婚而結婚。' },
+                { speaker: 'counselor', text: '這是很成熟的想法。你跟媽媽的關係，除了這個話題，其他方面如何？' },
+                { speaker: 'client', text: '其實還不錯，她對我很好，就是有時候會碎念。' },
+                { speaker: 'counselor', text: '聽起來你們關係的基礎是好的，只是在某些議題上有不同看法。' },
+                { speaker: 'client', text: '對，但每次她一講到結婚，我就會很煩躁。' },
+                { speaker: 'counselor', text: '這個煩躁背後，除了不想被催婚，還有其他感受嗎？' },
+                { speaker: 'client', text: '可能有一點...壓力吧，覺得好像我不符合期待。' },
+                { speaker: 'counselor', text: '你在意媽媽怎麼看你。' },
+                { speaker: 'client', text: '嗯...我不想讓她失望。' },
+                { speaker: 'counselor', text: '那如果媽媽知道你的想法，你覺得她會失望嗎？' },
+                { speaker: 'client', text: '可能會吧...但我也不確定。' },
+                { speaker: 'counselor', text: '所以你還沒有真正試著讓她理解你的想法。' },
+                { speaker: 'client', text: '對，因為我覺得說了也沒用。' },
+                { speaker: 'counselor', text: '這聽起來有點像自我設限，在還沒試之前就假設結果了。' },
+                { speaker: 'client', text: '嗯...你這樣說好像有道理。' },
+
+                // Phase 4: 人際關係模式 (17-22分鐘)
+                { speaker: 'counselor', text: '我注意到，不管是主管還是媽媽，你都傾向不表達自己的感受。' },
+                { speaker: 'client', text: '好像是...我從小就這樣。' },
+                { speaker: 'counselor', text: '你記得是從什麼時候開始的嗎？' },
+                { speaker: 'client', text: '小時候我爸脾氣很不好，我學會不要惹他生氣。' },
+                { speaker: 'counselor', text: '所以你學會了保護自己的方式是不表達、不引發衝突。' },
+                { speaker: 'client', text: '對...但這樣好像也讓我很累。' },
+                { speaker: 'counselor', text: '因為你的需求和感受沒有被看見。' },
+                { speaker: 'client', text: '嗯，有時候我也不知道自己要什麼了。' },
+                { speaker: 'counselor', text: '這是長期壓抑的結果。那在朋友關係中呢？你會表達自己嗎？' },
+                { speaker: 'client', text: '跟朋友比較自在一點，但也不是完全放鬆。' },
+                { speaker: 'counselor', text: '什麼樣的情況下你會比較放鬆？' },
+                { speaker: 'client', text: '如果對方先分享他的煩惱，我就會覺得比較安全。' },
+                { speaker: 'counselor', text: '所以你需要先確認這是一個安全的環境。' },
+                { speaker: 'client', text: '對，我怕自己說太多會造成別人的負擔。' },
+                { speaker: 'counselor', text: '你很在意別人的感受，但相對來說，比較忽略自己的需求。' },
+                { speaker: 'client', text: '好像是這樣...我該怎麼改變？' },
+
+                // Phase 5: 自我探索與價值觀 (22-27分鐘)
+                { speaker: 'counselor', text: '改變是一個過程。我們可以先從覺察開始，你願意試試看嗎？' },
+                { speaker: 'client', text: '願意，但要怎麼做？' },
+                { speaker: 'counselor', text: '下次當你又想壓抑自己的感受時，先停下來，問自己：我現在真正的感受是什麼？' },
+                { speaker: 'client', text: '好，我試試看。' },
+                { speaker: 'counselor', text: '還有，我想問你，在你的生活中，什麼事情是真正重要的？' },
+                { speaker: 'client', text: '重要的...家人、工作...還有自己的健康吧。' },
+                { speaker: 'counselor', text: '這些都很重要。那你現在的生活，有符合這些價值嗎？' },
+                { speaker: 'client', text: '好像沒有...我為了工作犧牲健康，為了家人壓抑自己。' },
+                { speaker: 'counselor', text: '你看到這個失衡了。' },
+                { speaker: 'client', text: '對，但我不知道要怎麼平衡。' },
+                { speaker: 'counselor', text: '如果可以重新安排，你希望你的生活是什麼樣子？' },
+                { speaker: 'client', text: '我希望...可以做自己喜歡的事，也能好好照顧身體。' },
+                { speaker: 'counselor', text: '那你喜歡做什麼事？' },
+                { speaker: 'client', text: '我喜歡登山，還有攝影，但已經很久沒做了。' },
+                { speaker: 'counselor', text: '是什麼阻止你做這些事？' },
+                { speaker: 'client', text: '總覺得沒時間，工作太忙了。' },
+                { speaker: 'counselor', text: '如果把這些事情也排進你的行程，你覺得可行嗎？' },
+                { speaker: 'client', text: '可能...週末可以試試看。' },
+
+                // Phase 6: 目標設定與總結 (27-30分鐘)
+                { speaker: 'counselor', text: '這是個很好的開始。那我們來設定一些小目標，這週你想試著做什麼？' },
+                { speaker: 'client', text: '這週末我想去爬個小山，帶著相機。' },
+                { speaker: 'counselor', text: '聽起來是個很棒的計畫。那關於跟媽媽溝通的部分呢？' },
+                { speaker: 'client', text: '我想...找個時間好好跟她聊聊我的想法。' },
+                { speaker: 'counselor', text: '很好。你想怎麼開始這個對話？' },
+                { speaker: 'client', text: '可能從謝謝她的關心開始，然後說我有自己的規劃。' },
+                { speaker: 'counselor', text: '這個開場很溫和。記得，表達自己不代表衝突，而是讓對方更了解你。' },
+                { speaker: 'client', text: '嗯，我會試試看。' },
+                { speaker: 'counselor', text: '那工作的部分，你覺得需要跟主管談嗎？' },
+                { speaker: 'client', text: '我想再觀察看看，如果情況沒改善，我再找機會跟他說。' },
+                { speaker: 'counselor', text: '好的，這是你的決定。我們下次見面時可以再討論進展。' },
+                { speaker: 'client', text: '好。' },
+                { speaker: 'counselor', text: '今天我們聊了很多，你對工作、家庭、還有自己的需求都有了更多覺察。' },
+                { speaker: 'client', text: '對，我覺得釐清了一些事情。' },
+                { speaker: 'counselor', text: '這很好。記得，改變需要時間，對自己有耐心一點。' },
+                { speaker: 'client', text: '我會的，謝謝你。' },
+                { speaker: 'counselor', text: '不客氣。我們下週同一時間見，你覺得可以嗎？' },
+                { speaker: 'client', text: '可以，下週見。' },
+                { speaker: 'counselor', text: '好的，那就下週見。記得照顧好自己。' },
+                { speaker: 'client', text: '好，你也是。' }
             ]
         };
 
