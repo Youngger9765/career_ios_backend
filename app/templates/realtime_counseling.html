@@ -2,44 +2,205 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>即時諮商輔助系統 - Realtime Counseling</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS for commercial-grade UI */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+        }
+
+        /* Safe area for mobile notches */
+        .safe-area-inset-bottom {
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        }
+
+        /* Smooth transitions */
+        .transition-smooth {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Card hover effects */
+        .card-hover {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Animated gradient backgrounds */
+        .gradient-animate {
+            background-size: 200% 200%;
+            animation: gradientShift 8s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Pulse animation for recording */
+        .pulse-recording {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Fade in animation */
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Chat bubble styles */
+        .chat-bubble {
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+
+        @media (min-width: 768px) {
+            .chat-bubble {
+                max-width: 75%;
+            }
+        }
+
+        /* Touch-friendly button sizes */
+        .btn-touch {
+            min-height: 44px;
+            min-width: 44px;
+        }
+
+        /* Badge severity colors */
+        .badge-critical {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .badge-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .badge-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+    </style>
 </head>
-<body class="bg-gray-100">
-    <!-- Header -->
-    <nav class="bg-indigo-600 text-white p-4">
-        <div class="container mx-auto max-w-7xl flex justify-between items-center">
-            <div>
-                <h1 class="text-2xl font-bold">🎤 即時諮商輔助系統</h1>
-                <p class="text-sm opacity-90">AI-Powered Realtime Counseling Assistant</p>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Header - Commercial Grade with Gradient -->
+    <nav class="sticky top-0 z-50 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 shadow-lg gradient-animate">
+        <div class="container mx-auto max-w-7xl px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-md">
+                        <span class="text-2xl">🎤</span>
+                    </div>
+                    <div>
+                        <h1 class="text-white font-bold text-lg md:text-xl">即時諮商輔助</h1>
+                        <p class="text-indigo-200 text-xs hidden md:block">AI-Powered Counseling Assistant</p>
+                    </div>
+                </div>
+                <a href="/console" class="text-white hover:bg-white/20 px-3 md:px-4 py-2 rounded-lg transition-smooth text-sm font-medium backdrop-blur-sm bg-white/10">
+                    <span class="hidden md:inline">← 返回控制台</span>
+                    <span class="md:hidden">← 返回</span>
+                </a>
             </div>
-            <a href="/console" class="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
-                ← 返回控制台
-            </a>
         </div>
     </nav>
 
-    <div class="container mx-auto p-6 max-w-7xl">
-        <!-- Demo Mode Instructions -->
-        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-lg">
+    <div class="container mx-auto px-4 md:px-6 py-4 md:py-6 max-w-7xl pb-24 md:pb-6">
+        <!-- Demo Mode Instructions - Collapsible on Mobile -->
+        <div class="bg-gradient-to-r from-yellow-50 to-amber-50 border-l-4 border-yellow-400 p-4 mb-4 md:mb-6 rounded-xl shadow-md card-hover">
             <div class="flex items-start">
                 <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                    </svg>
+                    <div class="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center">
+                        <svg class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
                 </div>
-                <div class="ml-3">
-                    <h3 class="text-sm font-bold text-yellow-800">🎭 Demo 模式說明（無需 API Key）</h3>
-                    <div class="mt-2 text-sm text-yellow-700">
+                <div class="ml-3 flex-1">
+                    <h3 class="text-sm md:text-base font-bold text-yellow-800 flex items-center gap-2">
+                        <span>🎭 Demo 模式說明</span>
+                        <span class="text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full">無需 API Key</span>
+                    </h3>
+                    <div class="mt-2 text-sm text-yellow-700 leading-relaxed">
                         <p class="mb-2">此為展示模式，使用智慧假資料模擬完整功能：</p>
-                        <ul class="list-disc list-inside space-y-1 ml-2">
-                            <li><kbd class="px-2 py-1 bg-white rounded border">T</kbd> - 播放下一句對話（自動切換說話者）</li>
-                            <li><kbd class="px-2 py-1 bg-white rounded border">R</kbd> - 重置劇本從頭開始</li>
-                            <li><kbd class="px-2 py-1 bg-white rounded border">1</kbd> - 切換到「工作壓力」劇本（含自殺風險偵測）</li>
-                            <li><kbd class="px-2 py-1 bg-white rounded border">2</kbd> - 切換到「一般諮詢」劇本</li>
+                        <ul class="space-y-1 ml-2">
+                            <li class="flex items-center gap-2">
+                                <kbd class="px-2 py-1 bg-white rounded border shadow-sm font-mono text-xs">T</kbd>
+                                <span>播放下一句對話（自動切換說話者）</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <kbd class="px-2 py-1 bg-white rounded border shadow-sm font-mono text-xs">R</kbd>
+                                <span>重置劇本從頭開始</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <kbd class="px-2 py-1 bg-white rounded border shadow-sm font-mono text-xs">1</kbd>
+                                <span>切換到「工作壓力」劇本（含自殺風險偵測）</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <kbd class="px-2 py-1 bg-white rounded border shadow-sm font-mono text-xs">2</kbd>
+                                <span>切換到「一般諮詢」劇本</span>
+                            </li>
                         </ul>
-                        <p class="mt-2 font-bold">💡 AI 分析每 60 秒自動觸發，根據逐字稿內容智慧生成摘要、警示、建議。</p>
+                        <p class="mt-3 font-bold bg-yellow-100 p-2 rounded-lg">💡 AI 分析每 60 秒自動觸發，根據逐字稿內容智慧生成摘要、警示、建議。</p>
                     </div>
                 </div>
             </div>
@@ -49,92 +210,179 @@
 
             <!-- Left Panel: Recording & Transcript -->
             <div class="space-y-4">
-                <!-- Recording Controls -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-bold mb-4">🎙️ 錄音控制</h2>
-
-                    <!-- Timer Display -->
-                    <div class="text-center mb-4">
-                        <div class="text-4xl font-mono" id="timer">00:00</div>
-                        <div class="text-sm text-gray-500">會談時間</div>
+                <!-- Recording Controls - Enhanced -->
+                <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-8 h-8 bg-gradient-to-br from-red-500 to-pink-500 rounded-lg flex items-center justify-center">
+                            <span class="text-white text-lg">🎙️</span>
+                        </div>
+                        <h2 class="text-lg md:text-xl font-bold text-gray-800">錄音控制</h2>
                     </div>
 
-                    <!-- Start/Stop Buttons -->
-                    <div class="flex gap-4">
-                        <button id="startBtn" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-lg font-bold transition">
-                            ▶️ 開始會談
+                    <!-- Timer Display - More Prominent -->
+                    <div class="text-center mb-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 md:p-6">
+                        <div class="text-4xl md:text-5xl font-mono font-bold text-gray-800" id="timer">00:00</div>
+                        <div class="text-xs md:text-sm text-gray-500 mt-2 font-medium">會談時間</div>
+                    </div>
+
+                    <!-- Start/Stop Buttons - Desktop -->
+                    <div class="hidden md:grid md:grid-cols-2 gap-4 mb-6">
+                        <button id="startBtn" class="btn-touch bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-4 px-6 rounded-xl font-bold transition-smooth shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+                            <span class="text-xl">▶️</span>
+                            <span>開始會談</span>
                         </button>
-                        <button id="stopBtn" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-6 rounded-lg font-bold opacity-50 cursor-not-allowed" disabled>
-                            ⏹️ 結束會談
+                        <button id="stopBtn" class="btn-touch bg-gradient-to-r from-red-500 to-rose-600 text-white py-4 px-6 rounded-xl font-bold opacity-50 cursor-not-allowed shadow-md flex items-center justify-center gap-2" disabled>
+                            <span class="text-xl">⏹️</span>
+                            <span>結束會談</span>
                         </button>
                     </div>
 
-                    <!-- Speaker Toggle (Manual) -->
-                    <div class="mt-6">
-                        <label class="block text-sm font-medium mb-2">當前說話者</label>
-                        <div class="flex gap-2">
-                            <button id="speakerCounselor" class="flex-1 py-3 px-4 rounded-lg font-bold bg-blue-500 text-white transition">
-                                👨‍⚕️ 諮商師
+                    <!-- Speaker Toggle (Manual) - Enhanced -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-3 text-gray-700">當前說話者</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="speakerCounselor" class="btn-touch py-3 px-4 rounded-xl font-bold bg-gradient-to-br from-blue-500 to-indigo-600 text-white transition-smooth shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+                                <span class="text-lg">👨‍⚕️</span>
+                                <span class="text-sm md:text-base">諮商師</span>
                             </button>
-                            <button id="speakerClient" class="flex-1 py-3 px-4 rounded-lg font-bold bg-gray-300 text-gray-700 transition">
-                                🧑 案主
+                            <button id="speakerClient" class="btn-touch py-3 px-4 rounded-xl font-bold bg-gray-200 text-gray-700 transition-smooth hover:bg-gray-300 shadow-sm flex items-center justify-center gap-2">
+                                <span class="text-lg">🧑</span>
+                                <span class="text-sm md:text-base">案主</span>
                             </button>
                         </div>
                     </div>
 
-                    <!-- Status Indicator -->
-                    <div class="mt-4 p-3 bg-gray-100 rounded-lg">
+                    <!-- Status Indicator - Enhanced -->
+                    <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+                        <div class="flex items-center justify-between text-sm mb-2">
+                            <span class="font-bold text-gray-700">狀態：</span>
+                            <span id="status" class="text-gray-600 font-medium">待機中</span>
+                        </div>
                         <div class="flex items-center justify-between text-sm">
-                            <span class="font-medium">狀態：</span>
-                            <span id="status" class="text-gray-600">待機中</span>
-                        </div>
-                        <div class="flex items-center justify-between text-sm mt-2">
-                            <span class="font-medium">下次分析：</span>
-                            <span id="nextAnalysis" class="text-gray-600">未開始</span>
+                            <span class="font-bold text-gray-700">下次分析：</span>
+                            <span id="nextAnalysis" class="text-gray-600 font-medium">未開始</span>
                         </div>
                     </div>
 
-                    <!-- Demo Mode Hint -->
-                    <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p class="text-sm text-blue-700">
-                            💡 <strong>測試模式</strong>：按 <kbd class="bg-blue-200 px-2 py-1 rounded">T</kbd> 鍵可模擬輸入對話文字
+                    <!-- Demo Mode Hint - Enhanced -->
+                    <div class="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                        <p class="text-xs md:text-sm text-blue-700 leading-relaxed">
+                            💡 <strong>測試模式</strong>：按 <kbd class="bg-blue-200 px-2 py-1 rounded font-mono text-xs">T</kbd> 鍵可模擬輸入對話文字
                         </p>
                     </div>
                 </div>
 
-                <!-- Live Transcript -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-bold mb-4">📝 即時逐字稿</h2>
-                    <div id="transcript" class="h-96 overflow-y-auto bg-gray-50 rounded-lg p-4 font-mono text-sm space-y-2">
-                        <p class="text-gray-400 italic">等待會談開始...</p>
+                <!-- Live Transcript - Chat-Style -->
+                <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                                <span class="text-white text-lg">📝</span>
+                            </div>
+                            <h2 class="text-lg md:text-xl font-bold text-gray-800">即時逐字稿</h2>
+                        </div>
+                        <!-- Live Indicator -->
+                        <div class="hidden" id="liveIndicator">
+                            <span class="flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-xs rounded-full animate-pulse">
+                                <span class="w-2 h-2 bg-white rounded-full"></span>
+                                <span class="font-bold">LIVE</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Transcript Container - Chat-like -->
+                    <div id="transcript" class="h-[400px] md:h-[500px] overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-3 md:p-4 custom-scrollbar">
+                        <!-- Empty State -->
+                        <div class="flex flex-col items-center justify-center h-full text-center" id="transcriptEmpty">
+                            <div class="w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                                <span class="text-3xl md:text-4xl">💬</span>
+                            </div>
+                            <h3 class="text-base md:text-lg font-bold text-gray-800 mb-2">開始新會談</h3>
+                            <p class="text-gray-600 text-xs md:text-sm">點擊「開始會談」，開始記錄對話</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Right Panel: AI Analysis Cards -->
             <div class="space-y-4">
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-bold mb-4">🤖 AI 即時分析</h2>
+                <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                                <span class="text-white text-lg">🤖</span>
+                            </div>
+                            <h2 class="text-lg md:text-xl font-bold text-gray-800">AI 即時分析</h2>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button id="triggerAnalysisBtn" class="btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-smooth shadow-md opacity-50 cursor-not-allowed flex items-center gap-1" disabled>
+                                <span>⚡</span>
+                                <span class="hidden sm:inline">立即分析</span>
+                                <span class="sm:hidden">分析</span>
+                            </button>
+                            <button id="generateMultipleBtn" class="btn-touch bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-smooth shadow-md hover:shadow-lg flex items-center gap-1">
+                                <span>🎬</span>
+                                <span class="hidden sm:inline">生成連續分析</span>
+                                <span class="sm:hidden">Demo</span>
+                            </button>
+                        </div>
+                    </div>
 
                     <!-- Analysis Cards Container -->
-                    <div id="analysisCards" class="space-y-4 max-h-[800px] overflow-y-auto">
-                        <p class="text-gray-400 italic">分析將每 60 秒自動產生...</p>
+                    <div id="analysisCards" class="space-y-4 max-h-[600px] md:max-h-[800px] overflow-y-auto custom-scrollbar">
+                        <!-- Empty State -->
+                        <div class="flex flex-col items-center justify-center py-12 text-center" id="analysisEmpty">
+                            <div class="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center mb-4">
+                                <span class="text-3xl md:text-4xl">💡</span>
+                            </div>
+                            <h3 class="text-base md:text-lg font-bold text-gray-800 mb-2">等待分析</h3>
+                            <p class="text-gray-600 text-xs md:text-sm max-w-xs">
+                                點擊「立即分析」或「生成連續分析」查看 AI 督導建議
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- History Section (Collapsed by default) -->
-        <div class="mt-6 bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl font-bold mb-4 cursor-pointer flex justify-between items-center" onclick="toggleHistory()">
-                <span>📊 歷史記錄</span>
-                <span id="historyToggle">▼</span>
+        <!-- Mobile Bottom Fixed Bar -->
+        <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-2xl safe-area-inset-bottom z-40">
+            <div class="px-4 py-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="startBtnMobile" class="btn-touch bg-gradient-to-r from-green-500 to-emerald-600 active:from-green-600 active:to-emerald-700 text-white py-3 px-4 rounded-xl font-bold transition-smooth shadow-lg flex items-center justify-center gap-2">
+                        <span class="text-lg">▶️</span>
+                        <span class="text-sm">開始</span>
+                    </button>
+                    <button id="stopBtnMobile" class="btn-touch bg-gradient-to-r from-red-500 to-rose-600 text-white py-3 px-4 rounded-xl font-bold opacity-50 cursor-not-allowed shadow-lg flex items-center justify-center gap-2" disabled>
+                        <span class="text-lg">⏹️</span>
+                        <span class="text-sm">結束</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Action Button (Mobile) - Trigger Analysis -->
+        <button id="fabAnalyze" class="md:hidden fixed bottom-24 right-4 w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center z-40 hover:scale-110 active:scale-95 transition-smooth hidden" aria-label="Trigger Analysis">
+            <span class="text-2xl">⚡</span>
+        </button>
+
+        <!-- History Section (Collapsed by default) - Enhanced -->
+        <div class="mt-6 bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
+            <h2 class="text-lg md:text-xl font-bold mb-4 cursor-pointer flex justify-between items-center transition-smooth hover:text-indigo-600" onclick="toggleHistory()">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-gradient-to-br from-gray-500 to-gray-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white text-lg">📊</span>
+                    </div>
+                    <span>歷史記錄</span>
+                </div>
+                <span id="historyToggle" class="text-gray-400 transition-transform duration-300">▼</span>
             </h2>
             <div id="historySection" class="hidden">
-                <button onclick="clearHistory()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded mb-4 transition">
-                    🗑️ 清除歷史
+                <button onclick="clearHistory()" class="btn-touch bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white px-4 py-2 rounded-lg mb-4 transition-smooth shadow-md hover:shadow-lg flex items-center gap-2">
+                    <span>🗑️</span>
+                    <span>清除歷史</span>
                 </button>
-                <div id="historyList" class="space-y-2"></div>
+                <div id="historyList" class="space-y-3"></div>
             </div>
         </div>
     </div>
@@ -152,6 +400,8 @@
         // === DOM Elements ===
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
+        const startBtnMobile = document.getElementById('startBtnMobile');
+        const stopBtnMobile = document.getElementById('stopBtnMobile');
         const timer = document.getElementById('timer');
         const status = document.getElementById('status');
         const nextAnalysis = document.getElementById('nextAnalysis');
@@ -159,12 +409,23 @@
         const analysisCards = document.getElementById('analysisCards');
         const speakerCounselorBtn = document.getElementById('speakerCounselor');
         const speakerClientBtn = document.getElementById('speakerClient');
+        const triggerAnalysisBtn = document.getElementById('triggerAnalysisBtn');
+        const generateMultipleBtn = document.getElementById('generateMultipleBtn');
+        const liveIndicator = document.getElementById('liveIndicator');
+        const transcriptEmpty = document.getElementById('transcriptEmpty');
+        const analysisEmpty = document.getElementById('analysisEmpty');
+        const fabAnalyze = document.getElementById('fabAnalyze');
 
         // === Event Listeners ===
         startBtn.addEventListener('click', startSession);
         stopBtn.addEventListener('click', stopSession);
+        startBtnMobile.addEventListener('click', startSession);
+        stopBtnMobile.addEventListener('click', stopSession);
         speakerCounselorBtn.addEventListener('click', () => switchSpeaker('counselor'));
         speakerClientBtn.addEventListener('click', () => switchSpeaker('client'));
+        triggerAnalysisBtn.addEventListener('click', manuallyTriggerAnalysis);
+        generateMultipleBtn.addEventListener('click', generateMultipleAnalyses);
+        fabAnalyze.addEventListener('click', manuallyTriggerAnalysis);
 
         // === Core Functions ===
         function startSession() {
@@ -173,20 +434,35 @@
             transcriptSegments = [];
             analysisHistory = [];
 
-            // UI Updates
+            // UI Updates - Desktop
             startBtn.disabled = true;
             startBtn.classList.add('opacity-50', 'cursor-not-allowed');
             stopBtn.disabled = false;
             stopBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            // UI Updates - Mobile
+            startBtnMobile.disabled = true;
+            startBtnMobile.classList.add('opacity-50', 'cursor-not-allowed');
+            stopBtnMobile.disabled = false;
+            stopBtnMobile.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            // Analysis buttons
+            triggerAnalysisBtn.disabled = false;
+            triggerAnalysisBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            // Show/hide indicators
+            liveIndicator.classList.remove('hidden');
+            transcriptEmpty.style.display = 'none';
+            fabAnalyze.classList.remove('hidden');
+
             status.textContent = '🔴 錄音中';
+            status.classList.add('pulse-recording');
             transcript.innerHTML = '';
-            analysisCards.innerHTML = '<p class="text-gray-400 italic">等待第一次分析（60秒後）...</p>';
+            analysisCards.innerHTML = '';
+            if (analysisEmpty) analysisEmpty.style.display = 'none';
 
             // Start Timer
             timerInterval = setInterval(updateTimer, 1000);
-
-            // Start Analysis Interval (every 60 seconds)
-            analysisInterval = setInterval(analyzeTranscript, 60000);
 
             // Show next analysis countdown
             updateNextAnalysisCountdown();
@@ -202,12 +478,24 @@
             clearInterval(timerInterval);
             clearInterval(analysisInterval);
 
-            // UI Updates
+            // UI Updates - Desktop
             startBtn.disabled = false;
             startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             stopBtn.disabled = true;
             stopBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // UI Updates - Mobile
+            startBtnMobile.disabled = false;
+            startBtnMobile.classList.remove('opacity-50', 'cursor-not-allowed');
+            stopBtnMobile.disabled = true;
+            stopBtnMobile.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // Hide indicators
+            liveIndicator.classList.add('hidden');
+            fabAnalyze.classList.add('hidden');
+
             status.textContent = '⏹️ 已結束';
+            status.classList.remove('pulse-recording');
             nextAnalysis.textContent = '-';
 
             // Save to localStorage
@@ -218,15 +506,15 @@
             currentSpeaker = speaker;
 
             if (speaker === 'counselor') {
-                speakerCounselorBtn.classList.remove('bg-gray-300', 'text-gray-700');
-                speakerCounselorBtn.classList.add('bg-blue-500', 'text-white');
-                speakerClientBtn.classList.remove('bg-blue-500', 'text-white');
-                speakerClientBtn.classList.add('bg-gray-300', 'text-gray-700');
+                speakerCounselorBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300', 'shadow-sm');
+                speakerCounselorBtn.classList.add('bg-gradient-to-br', 'from-blue-500', 'to-indigo-600', 'text-white', 'shadow-md', 'hover:shadow-lg');
+                speakerClientBtn.classList.remove('bg-gradient-to-br', 'from-blue-500', 'to-indigo-600', 'text-white', 'shadow-md', 'hover:shadow-lg');
+                speakerClientBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300', 'shadow-sm');
             } else {
-                speakerClientBtn.classList.remove('bg-gray-300', 'text-gray-700');
-                speakerClientBtn.classList.add('bg-blue-500', 'text-white');
-                speakerCounselorBtn.classList.remove('bg-blue-500', 'text-white');
-                speakerCounselorBtn.classList.add('bg-gray-300', 'text-gray-700');
+                speakerClientBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300', 'shadow-sm');
+                speakerClientBtn.classList.add('bg-gradient-to-br', 'from-blue-500', 'to-indigo-600', 'text-white', 'shadow-md', 'hover:shadow-lg');
+                speakerCounselorBtn.classList.remove('bg-gradient-to-br', 'from-blue-500', 'to-indigo-600', 'text-white', 'shadow-md', 'hover:shadow-lg');
+                speakerCounselorBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300', 'shadow-sm');
             }
         }
 
@@ -249,10 +537,33 @@
 
         // === Transcript Management ===
         function addTranscriptLine(speaker, text) {
-            const line = document.createElement('div');
-            line.className = speaker === 'counselor' ? 'text-blue-700' : 'text-green-700';
-            line.innerHTML = `<strong>${speaker === 'counselor' ? '👨‍⚕️ 諮商師' : '🧑 案主'}：</strong>${text}`;
-            transcript.appendChild(line);
+            // Chat-style bubble
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex items-start gap-2 mb-3 fade-in ${speaker === 'client' ? 'flex-row-reverse' : ''}`;
+
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = `w-8 h-8 ${speaker === 'counselor' ? 'bg-blue-500' : 'bg-green-500'} rounded-full flex items-center justify-center flex-shrink-0 shadow-md`;
+            avatarDiv.innerHTML = `<span class="text-white text-sm">${speaker === 'counselor' ? '👨‍⚕️' : '🧑'}</span>`;
+
+            const bubbleWrapper = document.createElement('div');
+            bubbleWrapper.className = `flex-1 flex flex-col ${speaker === 'client' ? 'items-end' : 'items-start'}`;
+
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${speaker === 'counselor' ? 'bg-blue-50 rounded-2xl rounded-tl-none' : 'bg-green-50 rounded-2xl rounded-tr-none'} px-4 py-2 shadow-sm`;
+            bubble.innerHTML = `<p class="text-sm text-gray-800 leading-relaxed">${text}</p>`;
+
+            const timestamp = document.createElement('span');
+            timestamp.className = `text-xs text-gray-400 ${speaker === 'client' ? 'mr-2' : 'ml-2'} mt-1`;
+            const now = new Date();
+            timestamp.textContent = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+
+            bubbleWrapper.appendChild(bubble);
+            bubbleWrapper.appendChild(timestamp);
+
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(bubbleWrapper);
+
+            transcript.appendChild(messageDiv);
             transcript.scrollTop = transcript.scrollHeight;
 
             // Save to segments
@@ -391,45 +702,94 @@
         }
 
         function displayAnalysisCard(analysis) {
-            // Clear placeholder
-            if (analysisCards.querySelector('.text-gray-400')) {
-                analysisCards.innerHTML = '';
-            }
+            // Clear placeholder/empty state
+            if (analysisEmpty) analysisEmpty.style.display = 'none';
 
             const card = document.createElement('div');
-            card.className = 'bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 border-l-4 border-purple-500';
+            card.className = 'bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-4 md:p-5 border-l-4 border-purple-500 fade-in card-hover';
+
+            // Determine severity for alerts
+            const hasCritical = analysis.alerts.some(a => a.includes('🔴') || a.includes('高風險'));
+            const hasWarning = analysis.alerts.some(a => a.includes('⚠️'));
+
             card.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs text-gray-500">${analysis.time_range}</span>
-                    <span class="text-xs text-gray-500">${new Date(analysis.timestamp).toLocaleTimeString('zh-TW')}</span>
+                <div class="flex items-start justify-between mb-3">
+                    <span class="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                        ${analysis.time_range}
+                    </span>
+                    <span class="text-xs text-gray-400">${new Date(analysis.timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
-                <div class="mb-3">
-                    <h3 class="font-bold text-sm text-gray-700 mb-1">📋 摘要</h3>
-                    <p class="text-sm">${analysis.summary}</p>
+                <!-- Summary Section -->
+                <div class="mb-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+                            📋
+                        </div>
+                        <h3 class="font-bold text-sm md:text-base text-gray-800">摘要</h3>
+                    </div>
+                    <p class="text-sm text-gray-700 leading-relaxed pl-8">${analysis.summary}</p>
                 </div>
 
+                <!-- Alerts Section -->
                 ${analysis.alerts.length > 0 ? `
-                    <div class="mb-3">
-                        <h3 class="font-bold text-sm text-gray-700 mb-1">⚠️ 警示</h3>
-                        <ul class="text-sm space-y-1">
-                            ${analysis.alerts.map(alert => `<li class="text-red-600">• ${alert}</li>`).join('')}
-                        </ul>
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-6 h-6 ${hasCritical ? 'bg-red-100' : 'bg-yellow-100'} rounded flex items-center justify-center">
+                                ${hasCritical ? '🔴' : '⚠️'}
+                            </div>
+                            <h3 class="font-bold text-sm md:text-base text-gray-800">警示</h3>
+                        </div>
+                        <div class="space-y-2 pl-8">
+                            ${analysis.alerts.map(alert => {
+                                const isCritical = alert.includes('🔴') || alert.includes('高風險');
+                                const isWarning = alert.includes('⚠️');
+                                const bgColor = isCritical ? 'bg-red-50 border-red-200' : isWarning ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200';
+                                const textColor = isCritical ? 'text-red-700' : isWarning ? 'text-yellow-700' : 'text-blue-700';
+                                const badgeClass = isCritical ? 'badge-critical' : isWarning ? 'badge-warning' : 'badge-info';
+                                const severity = isCritical ? '高' : isWarning ? '中' : '低';
+
+                                return `
+                                    <div class="flex items-start gap-2 p-2 ${bgColor} rounded-lg border transition-smooth hover:shadow-sm">
+                                        <span class="px-2 py-0.5 ${badgeClass} text-white text-xs rounded font-bold shadow-sm">${severity}</span>
+                                        <p class="text-xs md:text-sm ${textColor} flex-1 leading-relaxed">${alert}</p>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
                     </div>
                 ` : ''}
 
+                <!-- Suggestions Section -->
                 ${analysis.suggestions.length > 0 ? `
                     <div>
-                        <h3 class="font-bold text-sm text-gray-700 mb-1">💡 建議</h3>
-                        <ul class="text-sm space-y-1">
-                            ${analysis.suggestions.map(sug => `<li class="text-green-600">• ${sug}</li>`).join('')}
-                        </ul>
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
+                                💡
+                            </div>
+                            <h3 class="font-bold text-sm md:text-base text-gray-800">建議</h3>
+                        </div>
+                        <div class="space-y-2 pl-8">
+                            ${analysis.suggestions.map(sug => `
+                                <div class="p-2 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-smooth cursor-pointer">
+                                    <p class="text-xs md:text-sm text-green-700 leading-relaxed">${sug}</p>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 ` : ''}
             `;
 
-            // Insert at top
+            // Animate card entrance
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
             analysisCards.insertBefore(card, analysisCards.firstChild);
+
+            setTimeout(() => {
+                card.style.transition = 'all 0.3s ease-out';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 10);
 
             // Save to history
             analysisHistory.push(analysis);
@@ -440,6 +800,131 @@
             card.className = 'bg-red-50 rounded-lg p-4 border-l-4 border-red-500';
             card.innerHTML = `<p class="text-sm text-red-700">❌ ${message}</p>`;
             analysisCards.insertBefore(card, analysisCards.firstChild);
+        }
+
+        // === Manual Analysis Triggers ===
+        function manuallyTriggerAnalysis() {
+            if (transcriptSegments.length === 0) {
+                alert('請先按 T 鍵新增對話內容');
+                return;
+            }
+            analyzeTranscript();
+        }
+
+        function generateMultipleAnalyses() {
+            // Clear existing cards and show loading
+            analysisCards.innerHTML = '';
+            if (analysisEmpty) analysisEmpty.style.display = 'none';
+
+            // Show loading skeleton
+            for (let i = 0; i < 3; i++) {
+                const skeleton = document.createElement('div');
+                skeleton.className = 'bg-white rounded-xl p-5 border border-gray-200 animate-pulse';
+                skeleton.innerHTML = `
+                    <div class="flex justify-between mb-3">
+                        <div class="h-6 bg-gray-200 rounded-full w-20"></div>
+                        <div class="h-4 bg-gray-200 rounded w-12"></div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                `;
+                analysisCards.appendChild(skeleton);
+            }
+
+            // Clear skeletons after 1 second
+            setTimeout(() => {
+                analysisCards.innerHTML = '';
+            }, 1000);
+
+            // Generate 5 progressive analyses (simulating 5 minutes of conversation)
+            const mockProgressiveData = [
+                {
+                    timeRange: '0:00-1:00',
+                    transcript: '諮商師：你好，今天想聊什麼呢？\n案主：我最近工作壓力很大...',
+                    hasIssue: { anxiety: true }
+                },
+                {
+                    timeRange: '1:00-2:00',
+                    transcript: '諮商師：聽起來壓力真的很大，能跟我多說一些嗎？\n案主：我覺得不管怎麼做，主管都不滿意。\n諮商師：這讓你感到很挫折，是嗎？',
+                    hasIssue: { anxiety: true, work: true }
+                },
+                {
+                    timeRange: '2:00-3:00',
+                    transcript: '案主：對，而且我開始懷疑自己的能力...\n諮商師：當你說「懷疑自己」，具體是指什麼呢？\n案主：我覺得自己什麼都做不好。',
+                    hasIssue: { anxiety: true, work: true, depression: true }
+                },
+                {
+                    timeRange: '3:00-4:00',
+                    transcript: '案主：有時候覺得活著好像沒什麼意義。\n諮商師：你剛才說「活著沒意義」，這是最近才有的想法嗎？\n案主：嗯...最近特別強烈。',
+                    hasIssue: { anxiety: true, work: true, depression: true, suicideRisk: true }
+                },
+                {
+                    timeRange: '4:00-5:00',
+                    transcript: '諮商師：當你說「活著沒意義」，有想過要結束生命嗎？\n案主：有想過...但我不確定會不會真的去做。\n諮商師：有什麼事情或人，讓你到現在還願意活著？',
+                    hasIssue: { suicideRisk: true, assessment: true }
+                }
+            ];
+
+            // Generate analyses for each segment with staggered animation
+            mockProgressiveData.forEach((data, index) => {
+                const mockAnalysis = generateProgressiveAnalysis(data, index + 1);
+                setTimeout(() => {
+                    displayAnalysisCard(mockAnalysis);
+                }, 1000 + (index * 400)); // Start after skeleton clears, stagger by 400ms
+            });
+        }
+
+        function generateProgressiveAnalysis(data, minute) {
+            const { timeRange, transcript, hasIssue } = data;
+
+            let summary = '';
+            const alerts = [];
+            const suggestions = [];
+
+            // Progressive summary
+            if (hasIssue.suicideRisk && hasIssue.assessment) {
+                summary = '⚠️ 諮商師正進行自殺風險評估，案主表達有自殺意念但尚未有具體計畫。正在探索保護因子。';
+                alerts.push('🔴 立即行動：案主確認有自殺意念，需完整評估計畫、方法、時間');
+                alerts.push('⚠️ 安全計畫：建立危機處理聯絡人、移除危險物品');
+                alerts.push('⚠️ 後續追蹤：安排密集會談（每週2-3次），考慮精神科會診');
+                suggestions.push('💡 繼續評估：「你是否有想過具體的方法？」「什麼時候這個想法最強烈？」');
+                suggestions.push('💡 強化保護因子：深入探索支持系統、生活目標、重要關係');
+                suggestions.push('💡 建立安全契約：與案主共同制定危機時的因應計畫');
+            } else if (hasIssue.suicideRisk) {
+                summary = '⚠️ 案主首次提及「活著沒意義」，諮商師警覺並開始評估自殺風險程度。';
+                alerts.push('🔴 高風險警示：案主提及「活著沒意義」，需立即評估自殺意念');
+                alerts.push('⚠️ 下一步：直接詢問是否有自殺想法或計畫');
+                suggestions.push('💡 直接評估：「當你說活著沒意義，是否曾想過要結束生命？」');
+                suggestions.push('💡 澄清嚴重度：「這個想法有多強烈？多常出現？」');
+            } else if (hasIssue.depression) {
+                summary = `案主表達憂鬱症狀（自我懷疑、無價值感），諮商師探索具體感受與想法。`;
+                alerts.push('⚠️ 注意憂鬱指標：自我否定、無價值感，需評估持續時間與嚴重度');
+                alerts.push('💡 建議評估：詢問睡眠、食慾、興趣、精力等其他憂鬱症狀');
+                suggestions.push('💡 探索認知模式：「什麼讓你覺得自己什麼都做不好？」');
+                suggestions.push('💡 尋找例外：「有沒有做得還不錯的時候？」');
+            } else if (hasIssue.work) {
+                summary = `案主談論工作壓力與挫折感，諮商師使用反映技巧建立同理連結。`;
+                alerts.push('✅ 諮商師使用反映技巧適當（「這讓你感到很挫折」）');
+                alerts.push('💡 可深入探索：主管的具體行為、案主的因應方式');
+                suggestions.push('💡 具體化：「主管哪些行為讓你覺得不被滿意？」');
+                suggestions.push('💡 評估影響：「這種狀況持續多久了？對你的影響有多大？」');
+            } else {
+                summary = `會談開始，諮商師引導案主談論近況，案主提及工作壓力議題。`;
+                alerts.push('✅ 良好的開放式提問');
+                alerts.push('💡 建議方向：持續探索壓力來源與影響');
+                suggestions.push('💡 深入了解：「壓力大的時候，你會有什麼感覺或反應？」');
+                suggestions.push('💡 評估因應：「你平常怎麼處理這些壓力？」');
+            }
+
+            return {
+                summary: summary,
+                alerts: alerts.slice(0, 3),
+                suggestions: suggestions.slice(0, 3),
+                time_range: timeRange,
+                timestamp: new Date(Date.now() + minute * 60000).toISOString()
+            };
         }
 
         // === localStorage Management ===
@@ -465,10 +950,12 @@
             if (section.classList.contains('hidden')) {
                 section.classList.remove('hidden');
                 toggle.textContent = '▲';
+                toggle.style.transform = 'rotate(180deg)';
                 loadHistory();
             } else {
                 section.classList.add('hidden');
                 toggle.textContent = '▼';
+                toggle.style.transform = 'rotate(0deg)';
             }
         }
 
@@ -477,17 +964,31 @@
             const list = document.getElementById('historyList');
 
             if (history.length === 0) {
-                list.innerHTML = '<p class="text-gray-400 italic">尚無歷史記錄</p>';
+                list.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-3xl">📂</span>
+                        </div>
+                        <p class="text-gray-400 font-medium">尚無歷史記錄</p>
+                    </div>
+                `;
                 return;
             }
 
             list.innerHTML = history.map((session, index) => `
-                <div class="bg-gray-50 rounded p-3">
-                    <div class="flex justify-between items-center">
-                        <span class="font-bold">#${index + 1} - ${new Date(session.timestamp).toLocaleString('zh-TW')}</span>
-                        <span class="text-sm text-gray-600">時長：${session.duration}</span>
+                <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-smooth">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-8 h-8 bg-indigo-500 text-white rounded-lg flex items-center justify-center text-sm font-bold">#${index + 1}</span>
+                            <div>
+                                <p class="font-bold text-gray-800 text-sm">${new Date(session.timestamp).toLocaleString('zh-TW', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                                <p class="text-xs text-gray-500">會談時長：${session.duration}</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-bold">
+                            ${session.analyses.length} 次分析
+                        </span>
                     </div>
-                    <p class="text-sm text-gray-600 mt-1">分析次數：${session.analyses.length} 次</p>
                 </div>
             `).join('');
         }
@@ -495,7 +996,7 @@
         function clearHistory() {
             if (confirm('確定要清除所有歷史記錄嗎？')) {
                 localStorage.removeItem('realtimeCounselingHistory');
-                document.getElementById('historyList').innerHTML = '<p class="text-gray-400 italic">尚無歷史記錄</p>';
+                loadHistory();
             }
         }
 

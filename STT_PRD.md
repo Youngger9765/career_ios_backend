@@ -1024,20 +1024,24 @@ navigator.mediaDevices.getUserMedia({ audio: true })
 
 | 版本 | 日期 | 變更說明 | 作者 |
 |------|------|----------|------|
-| v1.0 | 2025-12-06 | 初版建立 | Claude |
+| v1.0 | 2025-12-06 | 初版建立（技術選型：AssemblyAI） | Claude |
+| v1.1 | 2025-12-06 | 改用 ElevenLabs Scribe v2 + 手動說話者切換 | Claude |
+| v1.2 | 2025-12-06 | Phase 1: Backend API 完成（TDD 方法，11 tests） | Claude |
+| v2.0 | 2025-12-06 | Phase 2: 商用級 UI 完成（Mobile RWD + Demo 模式） | Claude |
 
 ---
 
 ## 文檔狀態
 
-**當前狀態**: ✅ Approved（已核准，可開始開發）
+**當前狀態**: ✅ Phase 2 Frontend Completed（前端完成，等待 ElevenLabs API Key）
 
 **審核流程**:
-- [ ] Draft（草稿）
+- [x] Draft（草稿）
 - [x] Review（審核中）
 - [x] Approved（已核准）
-- [ ] Development（開發中）
-- [ ] Completed（已完成）
+- [x] Development（開發中）
+- [x] Frontend Completed（前端已完成）
+- [ ] Full Integration（完整整合 - 需 API Key）
 
 ---
 
