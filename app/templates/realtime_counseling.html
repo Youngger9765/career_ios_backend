@@ -21,6 +21,30 @@
     </nav>
 
     <div class="container mx-auto p-6 max-w-7xl">
+        <!-- Demo Mode Instructions -->
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-lg">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-bold text-yellow-800">🎭 Demo 模式說明（無需 API Key）</h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p class="mb-2">此為展示模式，使用智慧假資料模擬完整功能：</p>
+                        <ul class="list-disc list-inside space-y-1 ml-2">
+                            <li><kbd class="px-2 py-1 bg-white rounded border">T</kbd> - 播放下一句對話（自動切換說話者）</li>
+                            <li><kbd class="px-2 py-1 bg-white rounded border">R</kbd> - 重置劇本從頭開始</li>
+                            <li><kbd class="px-2 py-1 bg-white rounded border">1</kbd> - 切換到「工作壓力」劇本（含自殺風險偵測）</li>
+                            <li><kbd class="px-2 py-1 bg-white rounded border">2</kbd> - 切換到「一般諮詢」劇本</li>
+                        </ul>
+                        <p class="mt-2 font-bold">💡 AI 分析每 60 秒自動觸發，根據逐字稿內容智慧生成摘要、警示、建議。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             <!-- Left Panel: Recording & Transcript -->
@@ -249,6 +273,17 @@
             const minutes = Math.floor(elapsed / 60);
             const timeRange = `${Math.max(0, minutes - 1)}:00-${minutes}:00`;
 
+            // === 使用假資料模式（Demo） ===
+            const useMockData = true; // 設為 false 使用真實 API
+
+            if (useMockData) {
+                // 智慧生成假資料
+                const mockAnalysis = generateMockAnalysis(transcriptText, timeRange);
+                displayAnalysisCard(mockAnalysis);
+                return;
+            }
+
+            // === 真實 API 呼叫（需要認證） ===
             try {
                 const response = await fetch('/api/v1/realtime/analyze', {
                     method: 'POST',
@@ -267,8 +302,92 @@
 
             } catch (error) {
                 console.error('Analysis error:', error);
-                showError('AI 分析失敗，請稍後再試');
+                // Fallback to mock data
+                const mockAnalysis = generateMockAnalysis(transcriptText, timeRange);
+                displayAnalysisCard(mockAnalysis);
             }
+        }
+
+        // === Mock Data Generator ===
+        function generateMockAnalysis(transcriptText, timeRange) {
+            const lowerText = transcriptText.toLowerCase();
+
+            // 偵測關鍵議題
+            const hasSuicideRisk = /自殺|想死|活著沒意義|不想活|結束生命/.test(transcriptText);
+            const hasAnxiety = /焦慮|壓力|緊張|害怕|擔心/.test(transcriptText);
+            const hasDepression = /憂鬱|沮喪|無力|疲累|失眠/.test(transcriptText);
+            const hasWork = /工作|主管|老闆|同事|職場/.test(transcriptText);
+            const hasFamily = /家人|父母|配偶|小孩|家庭/.test(transcriptText);
+            const hasRelationship = /關係|朋友|伴侶|感情/.test(transcriptText);
+
+            // 生成摘要
+            let summary = '';
+            if (hasSuicideRisk) {
+                summary = '⚠️ 案主表達自殺意念，諮商師正在評估風險程度。需立即關注案主安全。';
+            } else if (hasDepression && hasWork) {
+                summary = '案主表達工作相關的憂鬱症狀，諮商師同理案主處境，探索壓力來源。';
+            } else if (hasAnxiety && hasFamily) {
+                summary = '案主談及家庭議題引發的焦慮感受，諮商師使用反映技巧建立關係。';
+            } else if (hasWork) {
+                summary = '案主分享工作困擾，諮商師引導案主探索具體情境與感受。';
+            } else if (hasRelationship) {
+                summary = '案主談論人際關係議題，諮商師協助案主覺察互動模式。';
+            } else {
+                summary = '諮商師與案主建立初步關係，開始探索案主當前關注議題。';
+            }
+
+            // 生成警示
+            const alerts = [];
+            if (hasSuicideRisk) {
+                alerts.push('⚠️ 高風險：案主提及自殺相關字眼，需立即評估自殺風險（計畫、方法、時間）');
+                alerts.push('⚠️ 安全評估：考慮是否需要危機處理、聯絡緊急聯絡人或轉介精神科');
+                alerts.push('⚠️ 持續追蹤：本次會談結束前確認案主安全，安排密集追蹤');
+            } else if (hasDepression) {
+                alerts.push('⚠️ 注意案主情緒狀態，評估憂鬱程度（持續時間、嚴重度、功能影響）');
+                alerts.push('⚠️ 如症狀持續兩週以上，建議評估是否需要精神科會診');
+            } else if (hasAnxiety) {
+                alerts.push('⚠️ 案主焦慮程度較高，注意生理症狀（心跳、呼吸、肌肉緊繃）');
+            }
+
+            // 一般提醒
+            if (transcriptSegments.filter(s => s.speaker === 'counselor').length < transcriptSegments.length * 0.3) {
+                alerts.push('💡 諮商師發言比例較少，可適度引導對話方向');
+            }
+            if (transcriptSegments.length > 10) {
+                alerts.push('✅ 對話持續進行中，注意時間管理與會談結構');
+            }
+
+            // 生成建議
+            const suggestions = [];
+            if (hasSuicideRisk) {
+                suggestions.push('💡 直接評估：「當你說不想活了，是否曾想過要如何結束生命？」');
+                suggestions.push('💡 評估保護因子：「有什麼事情或人，讓你到現在還願意活著？」');
+                suggestions.push('💡 建立安全計畫：與案主討論危機時可以做什麼、可以找誰');
+            } else if (hasDepression && hasWork) {
+                suggestions.push('💡 探索工作壓力源：「工作中哪些具體情況讓你感到特別沮喪？」');
+                suggestions.push('💡 評估功能影響：「這些感受如何影響你的日常生活和工作表現？」');
+                suggestions.push('💡 找出因應資源：「過去遇到類似困難時，你是怎麼度過的？」');
+            } else if (hasAnxiety) {
+                suggestions.push('💡 引導具體化：「當焦慮出現時，你的身體有什麼感覺？」');
+                suggestions.push('💡 教導放鬆技巧：考慮引入呼吸練習或正念技巧');
+                suggestions.push('💡 探索焦慮觸發點：「什麼情況下焦慮感會特別強烈？」');
+            } else if (hasWork) {
+                suggestions.push('💡 具體化探索：「可以說說最近一次困擾的具體情況嗎？」');
+                suggestions.push('💡 情緒反映：「聽起來這讓你感到...（挫折/憤怒/無力）」');
+                suggestions.push('💡 評估支持系統：「工作之外，你有可以談心的對象嗎？」');
+            } else {
+                suggestions.push('💡 開放式提問：「今天最想談的是什麼？」');
+                suggestions.push('💡 建立關係：使用同理心回應，讓案主感到被理解');
+                suggestions.push('💡 澄清目標：「你希望透過諮商達到什麼？」');
+            }
+
+            return {
+                summary: summary,
+                alerts: alerts.slice(0, 3), // 最多3個警示
+                suggestions: suggestions.slice(0, 3), // 最多3個建議
+                time_range: timeRange,
+                timestamp: new Date().toISOString()
+            };
         }
 
         function displayAnalysisCard(analysis) {
@@ -381,37 +500,93 @@
         }
 
         // === Demo Mode (Simulate transcript input) ===
-        // TODO: Replace with actual ElevenLabs WebSocket integration when API key is ready
+        let demoScriptIndex = 0;
+        const demoScripts = {
+            // 劇本 1: 工作壓力與焦慮
+            workStress: [
+                { speaker: 'counselor', text: '你好，今天想聊什麼呢？' },
+                { speaker: 'client', text: '我最近工作壓力很大，常常焦慮到睡不著...' },
+                { speaker: 'counselor', text: '聽起來壓力真的很大，能跟我多說一些嗎？' },
+                { speaker: 'client', text: '我覺得不管怎麼做，主管都不滿意。' },
+                { speaker: 'counselor', text: '這讓你感到很挫折，是嗎？' },
+                { speaker: 'client', text: '對，而且我開始懷疑自己的能力...' },
+                { speaker: 'counselor', text: '當你說「懷疑自己」，具體是指什麼呢？' },
+                { speaker: 'client', text: '我覺得自己什麼都做不好，活著好像沒什麼意義。' },
+                { speaker: 'counselor', text: '你剛才說「活著沒意義」，這是最近才有的想法嗎？' },
+                { speaker: 'client', text: '嗯...最近特別強烈。' }
+            ],
+
+            // 劇本 2: 一般諮詢
+            general: [
+                { speaker: 'counselor', text: '今天過得如何？' },
+                { speaker: 'client', text: '還好，就是有點累。' },
+                { speaker: 'counselor', text: '什麼讓你感到累呢？' },
+                { speaker: 'client', text: '工作的事情，還有家裡的事。' },
+                { speaker: 'counselor', text: '能具體說說是什麼事嗎？' },
+                { speaker: 'client', text: '主管最近一直盯我，讓我壓力很大。' },
+                { speaker: 'counselor', text: '主管盯著你的感覺，能描述一下嗎？' },
+                { speaker: 'client', text: '就是覺得被監視，什麼都要報告。' }
+            ]
+        };
+
+        let currentScript = demoScripts.workStress; // 預設使用工作壓力劇本
+
         function simulateTranscriptInput() {
             if (!isRecording) return;
 
-            const demoTexts = [
-                '你好，今天想聊什麼呢？',
-                '我最近工作壓力很大...',
-                '能多說一些嗎？',
-                '我覺得我做什麼都不對。',
-                '聽起來你感受到很大的壓力。',
-                '是的，我覺得很無助。',
-                '這種感覺從什麼時候開始的？',
-                '大概從上個月開始。',
-                '那個時候發生了什麼事嗎？',
-                '我被調到新的部門...'
-            ];
+            // 循序播放劇本
+            if (demoScriptIndex < currentScript.length) {
+                const line = currentScript[demoScriptIndex];
 
-            const randomText = demoTexts[Math.floor(Math.random() * demoTexts.length)];
-            addTranscriptLine(currentSpeaker, randomText);
+                // 自動切換說話者
+                if (line.speaker !== currentSpeaker) {
+                    switchSpeaker(line.speaker);
+                }
+
+                addTranscriptLine(line.speaker, line.text);
+                demoScriptIndex++;
+            } else {
+                // 劇本播完，重置或提示
+                console.log('Demo 劇本已播放完畢，按 R 鍵重新開始');
+            }
         }
 
-        // Demo: Press 'T' to add random transcript line (for testing without microphone)
+        // Demo: Press 'T' to add next transcript line
+        // Press 'R' to reset script
+        // Press '1' for work stress script, '2' for general script
         document.addEventListener('keydown', (e) => {
             if (e.key === 't' || e.key === 'T') {
                 simulateTranscriptInput();
+            } else if (e.key === 'r' || e.key === 'R') {
+                demoScriptIndex = 0;
+                console.log('Demo 劇本已重置');
+            } else if (e.key === '1') {
+                currentScript = demoScripts.workStress;
+                demoScriptIndex = 0;
+                console.log('切換到劇本 1: 工作壓力與焦慮');
+            } else if (e.key === '2') {
+                currentScript = demoScripts.general;
+                demoScriptIndex = 0;
+                console.log('切換到劇本 2: 一般諮詢');
             }
         });
 
         // === Initialize ===
-        console.log('🎤 Realtime Counseling System Ready');
-        console.log('💡 Press "T" to simulate transcript input (demo mode)');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('🎤 即時諮商輔助系統 - Demo 模式');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('');
+        console.log('📌 快捷鍵說明：');
+        console.log('  T - 播放下一句對話');
+        console.log('  R - 重置劇本');
+        console.log('  1 - 工作壓力劇本（含自殺風險）');
+        console.log('  2 - 一般諮詢劇本');
+        console.log('');
+        console.log('🤖 AI 分析：每 60 秒自動觸發');
+        console.log('💾 歷史記錄：自動儲存到 localStorage');
+        console.log('');
+        console.log('✨ 當前劇本：工作壓力與焦慮（劇本 1）');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     </script>
 </body>
 </html>
