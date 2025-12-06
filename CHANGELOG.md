@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BigQuery integration for real-time cost tracking
 - Automated billing report generation with Gemini AI
 - Detailed logging for Gemini response diagnosis
+- **Realtime STT Counseling** (In Progress): AI-powered realtime counseling analysis
+  - TDD approach with 11 integration tests (Red phase complete)
+  - ElevenLabs Scribe v2 Realtime API integration (Chinese support)
+  - Manual speaker toggle (counselor/client) for demo simplicity
+  - Every 60-second transcript analysis with Gemini 2.5 Flash
+  - Analysis cards: summary, alerts, suggestions
 
 ### Changed
 - Gemini max_tokens increased from 4000 to 8000 (prevents JSON truncation)

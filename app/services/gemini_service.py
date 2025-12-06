@@ -164,6 +164,89 @@ class GeminiService:
             response_format=response_format,
         )
 
+    async def analyze_realtime_transcript(
+        self,
+        transcript: str,
+        speakers: List[Dict[str, str]],
+    ) -> Dict[str, Any]:
+        """Analyze realtime counseling transcript for AI supervision.
+
+        Args:
+            transcript: Full transcript text
+            speakers: List of speaker segments with speaker role and text
+
+        Returns:
+            Dict with: summary, alerts, suggestions
+        """
+        # Build speaker context
+        speaker_context = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
+
+        # Detect suicide risk keywords for alerts
+        suicide_keywords = ["自殺", "想死", "活著沒意義", "不想活", "結束生命"]
+        has_suicide_risk = any(keyword in transcript for keyword in suicide_keywords)
+
+        prompt = f"""你是專業諮商督導，分析即時諮商對話。
+
+對話內容：
+{speaker_context}
+
+請提供：
+1. summary: 簡短摘要（1-2 句，歸納對話重點）
+2. alerts: 提醒事項（列表，3-5 點，標注重要關注點）
+3. suggestions: 給諮商師的建議（列表，2-3 點，具體可執行的回應建議）
+
+{
+    "如果發現自殺風險（關鍵字：自殺、想死、活著沒意義等）" if has_suicide_risk else ""
+}
+
+回傳純 JSON 格式（不要 markdown code block）：
+{{"summary": "...", "alerts": ["...", "..."], "suggestions": ["...", "..."]}}
+"""
+
+        response = await self.generate_text(
+            prompt=prompt,
+            temperature=0.3,
+            max_tokens=2000,
+            response_format={"type": "json_object"},
+        )
+
+        # Parse JSON from response
+        import json
+
+        try:
+            result = json.loads(response)
+
+            # Ensure lists are present
+            if "alerts" not in result:
+                result["alerts"] = []
+            if "suggestions" not in result:
+                result["suggestions"] = []
+            if "summary" not in result:
+                result["summary"] = "分析中..."
+
+            return result
+        except json.JSONDecodeError as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to parse Gemini JSON response: {e}")
+            logger.error(f"Response text: {response}")
+
+            # Fallback: try to extract JSON from text
+            import re
+
+            json_match = re.search(r"\{.*\}", response, re.DOTALL)
+            if json_match:
+                try:
+                    return json.loads(json_match.group())
+                except json.JSONDecodeError:
+                    pass
+
+            # Final fallback
+            return {
+                "summary": "分析失敗，請稍後再試",
+                "alerts": ["無法解析 AI 回應"],
+                "suggestions": ["請檢查輸入內容"],
+            }
+
 
 # Create singleton instance
 gemini_service = GeminiService()

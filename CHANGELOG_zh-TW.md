@@ -14,6 +14,12 @@
 - BigQuery 整合實現即時成本追蹤
 - Gemini AI 自動化帳單報告生成
 - Gemini 回應診斷詳細日誌
+- **即時 STT 諮商系統**（開發中）：AI 驅動的即時諮商分析
+  - TDD 方法論，11 個整合測試（Red 階段完成）
+  - ElevenLabs Scribe v2 Realtime API 整合（支援中文）
+  - 手動說話者切換（諮商師/案主）適用 Demo 場景
+  - 每 60 秒逐字稿分析，使用 Gemini 2.5 Flash
+  - 分析卡片：摘要、警示、建議
 
 ### 變更
 - Gemini max_tokens 從 4000 提升至 8000（防止 JSON 截斷）

@@ -26,6 +26,7 @@ from app.api import (
     rag_report,
     rag_search,
     rag_stats,
+    realtime,
     reports,
     sessions,
     sessions_analysis,
@@ -77,6 +78,9 @@ app.include_router(sessions_analysis.router)
 
 # Include analyze routes
 app.include_router(analyze.router)
+
+# Include realtime STT counseling routes (Demo Feature)
+app.include_router(realtime.router)
 
 # Include UI API routes
 app.include_router(ui_client_case_list.router)
