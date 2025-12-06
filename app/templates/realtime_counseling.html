@@ -166,7 +166,7 @@
 
     <div class="container mx-auto px-4 md:px-6 py-4 md:py-6 max-w-7xl pb-24 md:pb-6">
         <!-- Demo Mode Instructions - Collapsible on Mobile -->
-        <div class="bg-gradient-to-r from-yellow-50 to-amber-50 border-l-4 border-yellow-400 p-4 mb-4 md:mb-6 rounded-xl shadow-md card-hover">
+        <div class="bg-gradient-to-r from-yellow-50 to-amber-50 border-l-4 border-yellow-400 p-4 mb-4 md:mb-6 rounded-xl shadow-md card-hover" style="display: none">
             <div class="flex items-start">
                 <div class="flex-shrink-0">
                     <div class="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center">
@@ -208,7 +208,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-            <!-- Left Panel: Recording & Transcript -->
+            <!-- Left Panel: Recording Controls -->
             <div class="space-y-4">
                 <!-- Recording Controls - Enhanced -->
                 <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
@@ -238,7 +238,8 @@
                     </div>
 
                     <!-- Speaker Toggle (Manual) - Enhanced -->
-                    <div class="mb-4">
+                    <!-- Hidden in Demo mode since scripted conversations include speaker info -->
+                    <div class="mb-4" id="speakerToggleSection">
                         <label class="block text-sm font-bold mb-3 text-gray-700">當前說話者</label>
                         <div class="grid grid-cols-2 gap-3">
                             <button id="speakerCounselor" class="btn-touch py-3 px-4 rounded-xl font-bold bg-gradient-to-br from-blue-500 to-indigo-600 text-white transition-smooth shadow-md hover:shadow-lg flex items-center justify-center gap-2">
@@ -269,37 +270,6 @@
                         <p class="text-xs md:text-sm text-blue-700 leading-relaxed">
                             💡 <strong>測試模式</strong>：按 <kbd class="bg-blue-200 px-2 py-1 rounded font-mono text-xs">T</kbd> 鍵可模擬輸入對話文字
                         </p>
-                    </div>
-                </div>
-
-                <!-- Live Transcript - Chat-Style -->
-                <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                                <span class="text-white text-lg">📝</span>
-                            </div>
-                            <h2 class="text-lg md:text-xl font-bold text-gray-800">即時逐字稿</h2>
-                        </div>
-                        <!-- Live Indicator -->
-                        <div class="hidden" id="liveIndicator">
-                            <span class="flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-xs rounded-full animate-pulse">
-                                <span class="w-2 h-2 bg-white rounded-full"></span>
-                                <span class="font-bold">LIVE</span>
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Transcript Container - Chat-like -->
-                    <div id="transcript" class="h-[400px] md:h-[500px] overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-3 md:p-4 custom-scrollbar">
-                        <!-- Empty State -->
-                        <div class="flex flex-col items-center justify-center h-full text-center" id="transcriptEmpty">
-                            <div class="w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                                <span class="text-3xl md:text-4xl">💬</span>
-                            </div>
-                            <h3 class="text-base md:text-lg font-bold text-gray-800 mb-2">開始新會談</h3>
-                            <p class="text-gray-600 text-xs md:text-sm">點擊「開始會談」，開始記錄對話</p>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -345,6 +315,39 @@
             </div>
         </div>
 
+        <!-- Live Transcript Section - Collapsible (Moved to Bottom) -->
+        <div class="mt-6 bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
+            <h2 class="text-lg md:text-xl font-bold mb-4 cursor-pointer flex justify-between items-center transition-smooth hover:text-teal-600" onclick="toggleTranscript()">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                        <span class="text-white text-lg">📝</span>
+                    </div>
+                    <span>即時逐字稿</span>
+                    <!-- Live Indicator -->
+                    <div class="hidden" id="liveIndicator">
+                        <span class="flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-xs rounded-full animate-pulse">
+                            <span class="w-2 h-2 bg-white rounded-full"></span>
+                            <span class="font-bold">LIVE</span>
+                        </span>
+                    </div>
+                </div>
+                <span id="transcriptToggle" class="text-gray-400 transition-transform duration-300">▼</span>
+            </h2>
+            <div id="transcriptSection" class="hidden">
+                <!-- Transcript Container - Chat-like -->
+                <div id="transcript" class="h-[400px] md:h-[500px] overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-3 md:p-4 custom-scrollbar">
+                    <!-- Empty State -->
+                    <div class="flex flex-col items-center justify-center h-full text-center" id="transcriptEmpty">
+                        <div class="w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                            <span class="text-3xl md:text-4xl">💬</span>
+                        </div>
+                        <h3 class="text-base md:text-lg font-bold text-gray-800 mb-2">開始新會談</h3>
+                        <p class="text-gray-600 text-xs md:text-sm">點擊「開始會談」，開始記錄對話</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Mobile Bottom Fixed Bar -->
         <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-2xl safe-area-inset-bottom z-40">
             <div class="px-4 py-3">
@@ -367,7 +370,7 @@
         </button>
 
         <!-- History Section (Collapsed by default) - Enhanced -->
-        <div class="mt-6 bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
+        <div id="historyContainer" class="mt-6 bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
             <h2 class="text-lg md:text-xl font-bold mb-4 cursor-pointer flex justify-between items-center transition-smooth hover:text-indigo-600" onclick="toggleHistory()">
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 bg-gradient-to-br from-gray-500 to-gray-600 rounded-lg flex items-center justify-center">
@@ -396,6 +399,7 @@
         let analysisInterval = null;
         let transcriptSegments = [];
         let analysisHistory = [];
+        let isDemoMode = true; // Always in demo mode (no real recording)
 
         // === DOM Elements ===
         const startBtn = document.getElementById('startBtn');
@@ -409,6 +413,7 @@
         const analysisCards = document.getElementById('analysisCards');
         const speakerCounselorBtn = document.getElementById('speakerCounselor');
         const speakerClientBtn = document.getElementById('speakerClient');
+        const speakerToggleSection = document.getElementById('speakerToggleSection');
         const triggerAnalysisBtn = document.getElementById('triggerAnalysisBtn');
         const generateMultipleBtn = document.getElementById('generateMultipleBtn');
         const liveIndicator = document.getElementById('liveIndicator');
@@ -454,6 +459,15 @@
             liveIndicator.classList.remove('hidden');
             transcriptEmpty.style.display = 'none';
             fabAnalyze.classList.remove('hidden');
+
+            // Auto-expand transcript section when recording starts
+            const transcriptSection = document.getElementById('transcriptSection');
+            const transcriptToggle = document.getElementById('transcriptToggle');
+            if (transcriptSection.classList.contains('hidden')) {
+                transcriptSection.classList.remove('hidden');
+                transcriptToggle.textContent = '▲';
+                transcriptToggle.style.transform = 'rotate(180deg)';
+            }
 
             status.textContent = '🔴 錄音中';
             status.classList.add('pulse-recording');
@@ -959,6 +973,21 @@
             }
         }
 
+        function toggleTranscript() {
+            const section = document.getElementById('transcriptSection');
+            const toggle = document.getElementById('transcriptToggle');
+
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                toggle.textContent = '▲';
+                toggle.style.transform = 'rotate(180deg)';
+            } else {
+                section.classList.add('hidden');
+                toggle.textContent = '▼';
+                toggle.style.transform = 'rotate(0deg)';
+            }
+        }
+
         function loadHistory() {
             const history = JSON.parse(localStorage.getItem('realtimeCounselingHistory') || '[]');
             const list = document.getElementById('historyList');
@@ -1073,6 +1102,17 @@
         });
 
         // === Initialize ===
+        // Hide speaker toggle in demo mode (scripted conversations auto-switch speaker)
+        if (isDemoMode && speakerToggleSection) {
+            speakerToggleSection.style.display = 'none';
+        }
+
+        // Hide history section in demo mode
+        const historyContainer = document.getElementById('historyContainer');
+        if (isDemoMode && historyContainer) {
+            historyContainer.style.display = 'none';
+        }
+
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log('🎤 即時諮商輔助系統 - Demo 模式');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -1087,6 +1127,7 @@
         console.log('💾 歷史記錄：自動儲存到 localStorage');
         console.log('');
         console.log('✨ 當前劇本：工作壓力與焦慮（劇本 1）');
+        console.log('💡 Demo 模式：說話者自動切換，無需手動選擇');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     </script>
 </body>
