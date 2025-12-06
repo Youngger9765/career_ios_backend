@@ -2,14 +2,46 @@
 Integration tests for Realtime STT Counseling API
 TDD - Write tests first (RED Phase), then implement (GREEN Phase)
 """
+
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 
 
+# Skip these tests if Google Cloud credentials are not available or invalid
+# This happens in CI without GCP secrets configured or when credentials expire locally
+def _check_gcp_credentials():
+    """Check if valid GCP credentials are available"""
+    try:
+        from google.auth import default
+        from google.auth.exceptions import DefaultCredentialsError, RefreshError
+
+        try:
+            credentials, project = default()
+            # Try to refresh to check if credentials are valid
+            from google.auth.transport.requests import Request
+
+            credentials.refresh(Request())
+            return True
+        except (DefaultCredentialsError, RefreshError, Exception):
+            return False
+    except ImportError:
+        return False
+
+
+HAS_VALID_GCP_CREDENTIALS = _check_gcp_credentials()
+
+skip_without_gcp = pytest.mark.skipif(
+    not HAS_VALID_GCP_CREDENTIALS,
+    reason="Valid Google Cloud credentials not available (run: gcloud auth application-default login)",
+)
+
+
 class TestRealtimeAnalysisAPI:
     """Test Realtime Analysis API endpoints (No Auth Required - Demo Feature)"""
 
+    @skip_without_gcp
     def test_analyze_transcript_success(self):
         """Test POST /api/v1/realtime/analyze - Success case with valid input"""
         with TestClient(app) as client:
@@ -47,6 +79,7 @@ class TestRealtimeAnalysisAPI:
             assert len(data["alerts"]) >= 1
             assert len(data["suggestions"]) >= 1
 
+    @skip_without_gcp
     def test_analyze_transcript_minimal_input(self):
         """Test with minimal valid input"""
         with TestClient(app) as client:
@@ -66,6 +99,7 @@ class TestRealtimeAnalysisAPI:
             data = response.json()
             assert "summary" in data
 
+    @skip_without_gcp
     def test_analyze_transcript_suicide_risk_detection(self):
         """Test that suicide-related keywords trigger alerts"""
         with TestClient(app) as client:
@@ -123,6 +157,7 @@ class TestRealtimeAnalysisAPI:
             # Should return 422 for invalid speaker role
             assert response.status_code == 422
 
+    @skip_without_gcp
     def test_analyze_transcript_long_content(self):
         """Test with longer transcript (simulate 1 minute of conversation)"""
         with TestClient(app) as client:
@@ -171,6 +206,7 @@ class TestRealtimeAnalysisAPI:
             assert len(data["alerts"]) >= 2
             assert len(data["suggestions"]) >= 2
 
+    @skip_without_gcp
     def test_analyze_transcript_different_time_ranges(self):
         """Test with different time ranges"""
         with TestClient(app) as client:
@@ -191,6 +227,7 @@ class TestRealtimeAnalysisAPI:
                 data = response.json()
                 assert data["time_range"] == time_range
 
+    @skip_without_gcp
     def test_analyze_transcript_performance(self):
         """Test that API responds within acceptable time (< 5 seconds)"""
         import time
@@ -216,6 +253,7 @@ class TestRealtimeAnalysisAPI:
             # Should respond within 5 seconds (Gemini Flash is fast)
             assert elapsed_time < 5.0
 
+    @skip_without_gcp
     def test_analyze_transcript_response_format(self):
         """Test that response follows expected JSON format"""
         with TestClient(app) as client:
