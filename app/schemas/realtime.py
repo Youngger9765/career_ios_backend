@@ -2,7 +2,7 @@
 Realtime STT Counseling Schemas
 用於即時語音轉文字諮商輔助功能
 """
-from typing import List
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -59,6 +59,14 @@ class RealtimeAnalyzeRequest(BaseModel):
     }
 
 
+class RAGSource(BaseModel):
+    """RAG 知識庫來源"""
+
+    title: str = Field(..., description="文件標題")
+    content: str = Field(..., description="相關內容片段")
+    score: float = Field(..., ge=0.0, le=1.0, description="相似度分數（0-1）")
+
+
 class RealtimeAnalyzeResponse(BaseModel):
     """即時分析回應（AI 督導建議）"""
 
@@ -67,6 +75,9 @@ class RealtimeAnalyzeResponse(BaseModel):
     suggestions: List[str] = Field(..., description="建議回應（2-3 點）")
     time_range: str = Field(..., description="時間範圍")
     timestamp: str = Field(..., description="分析時間戳（ISO 8601 格式）")
+    rag_sources: Optional[List[Dict[str, Any]]] = Field(
+        default=[], description="RAG 知識庫來源（可選）"
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -84,6 +95,13 @@ class RealtimeAnalyzeResponse(BaseModel):
                     ],
                     "time_range": "0:00-1:00",
                     "timestamp": "2025-12-06T10:01:00Z",
+                    "rag_sources": [
+                        {
+                            "title": "職涯諮詢概論",
+                            "content": "探索工作價值觀的方法...",
+                            "score": 0.85,
+                        }
+                    ],
                 }
             ]
         }

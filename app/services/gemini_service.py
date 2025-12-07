@@ -168,12 +168,14 @@ class GeminiService:
         self,
         transcript: str,
         speakers: List[Dict[str, str]],
+        rag_context: str = "",
     ) -> Dict[str, Any]:
         """Analyze realtime counseling transcript for AI supervision.
 
         Args:
             transcript: Full transcript text
             speakers: List of speaker segments with speaker role and text
+            rag_context: Optional RAG knowledge base context
 
         Returns:
             Dict with: summary, alerts, suggestions
@@ -189,11 +191,13 @@ class GeminiService:
 
 對話內容：
 {speaker_context}
+{rag_context}
 
 請提供：
 1. summary: 簡短摘要（1-2 句，歸納對話重點）
 2. alerts: 提醒事項（列表，3-5 點，標注重要關注點）
 3. suggestions: 給諮商師的建議（列表，2-3 點，具體可執行的回應建議）
+{"   - 如果有職涯知識庫內容，請在建議中適當引用相關知識" if rag_context else ""}
 
 {
     "如果發現自殺風險（關鍵字：自殺、想死、活著沒意義等）" if has_suicide_risk else ""
