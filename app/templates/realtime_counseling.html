@@ -297,22 +297,36 @@
                     </button>
                 </div>
 
-                <!-- REQUIREMENT 5: Waveform + Timer on same line, compact -->
-                <div id="recordingTimerDisplayMobile" class="bg-gradient-to-r from-teal-50/90 to-cyan-50/90 rounded-2xl p-2 border border-teal-200/50" style="display: none;">
-                    <div class="flex items-center justify-between gap-3">
-                        <!-- Compact Waveform -->
-                        <div id="waveformContainerMobile" class="flex items-center justify-center gap-1 flex-1" style="height: 24px;">
-                            <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0s;"></div>
-                            <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.1s;"></div>
-                            <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.2s;"></div>
-                            <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.3s;"></div>
-                            <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.2s;"></div>
-                            <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.1s;"></div>
-                        </div>
-                        <!-- Compact Timer -->
-                        <div class="flex items-center gap-2 flex-shrink-0">
-                            <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                            <div class="recording-timer text-base font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600" id="recordingTimerMobile">00:00</div>
+                <!-- Voice Simulation Toggle + Recording Waveform & Timer -->
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <!-- Left: Voice Simulation Toggle -->
+                    <div class="flex flex-col items-start gap-1.5 bg-gray-50/90 rounded-xl p-2.5 border border-gray-200/50">
+                        <label class="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                            <span class="text-base">🎭</span>
+                            <span>模擬人聲</span>
+                        </label>
+                        <button id="voiceSimToggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1" role="switch" aria-checked="false">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform translate-x-1"></span>
+                        </button>
+                    </div>
+
+                    <!-- Right: Recording Waveform + Timer (only shows when recording) -->
+                    <div id="recordingTimerDisplayMobile" class="flex flex-col items-center justify-center bg-gradient-to-r from-teal-50/90 to-cyan-50/90 rounded-xl p-2.5 border border-teal-200/50" style="display: none;">
+                        <div class="flex items-center justify-between gap-2 w-full">
+                            <!-- Compact Waveform -->
+                            <div id="waveformContainerMobile" class="flex items-center justify-center gap-1 flex-1" style="height: 20px;">
+                                <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0s;"></div>
+                                <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.1s;"></div>
+                                <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.2s;"></div>
+                                <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.3s;"></div>
+                                <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.2s;"></div>
+                                <div class="waveform-bar" style="width: 3px; animation: waveform-compact 1.2s ease-in-out infinite; animation-delay: 0.1s;"></div>
+                            </div>
+                            <!-- Compact Timer -->
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <div class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                                <span id="recordingTimerMobile" class="text-xs font-mono font-bold text-gray-700">00:00</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -495,6 +509,41 @@
                         </div>
                     </div>
 
+                    <!-- Audio Playback Controls (Demo Mode) -->
+                    <div id="audioPlayerSection" class="mb-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200" style="display: none;">
+                        <div class="flex flex-col gap-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg">🎵</span>
+                                    <span class="text-sm font-bold text-gray-700">模擬音訊播放</span>
+                                </div>
+                                <span id="audioStatus" class="text-xs text-purple-600 font-medium">準備中</span>
+                            </div>
+
+                            <!-- Audio Progress Bar -->
+                            <div class="w-full bg-purple-200 rounded-full h-2 cursor-pointer" id="audioProgressContainer">
+                                <div id="audioProgress" class="bg-gradient-to-r from-purple-500 to-indigo-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+
+                            <!-- Playback Controls -->
+                            <div class="flex items-center justify-between gap-2">
+                                <button id="audioPlayBtn" class="btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md flex items-center gap-2">
+                                    <span id="audioPlayIcon">▶️</span>
+                                    <span id="audioPlayText">播放對話</span>
+                                </button>
+                                <div class="flex items-center gap-2 text-xs font-mono text-gray-600">
+                                    <span id="audioCurrentTime">0:00</span>
+                                    <span>/</span>
+                                    <span id="audioDuration">0:00</span>
+                                </div>
+                            </div>
+
+                            <p class="text-xs text-purple-700">
+                                💡 音訊播放時，逐字稿會同步顯示。點擊「即時分析」可分析當前已顯示的對話內容。
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Speaker Toggle (Manual) - Enhanced -->
                     <!-- Hidden in Demo mode since scripted conversations include speaker info -->
                     <div class="mb-4" id="speakerToggleSection">
@@ -507,6 +556,19 @@
                             <button id="speakerClient" class="btn-touch py-3 px-4 rounded-xl font-bold bg-gray-200 text-gray-700 transition-smooth hover:bg-gray-300 shadow-sm flex items-center justify-center gap-2">
                                 <span class="text-lg">🧑</span>
                                 <span class="text-sm md:text-base">案主</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Voice Simulation Toggle - Desktop -->
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between bg-gray-50 rounded-xl p-4 border border-gray-200">
+                            <label class="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                <span class="text-lg">🎭</span>
+                                <span>模擬人聲</span>
+                            </label>
+                            <button id="voiceSimToggleDesktop" class="relative inline-flex h-7 w-12 items-center rounded-full bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" role="switch" aria-checked="false">
+                                <span class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform translate-x-1"></span>
                             </button>
                         </div>
                     </div>
@@ -526,7 +588,7 @@
                     <!-- Demo Mode Hint - Enhanced -->
                     <div class="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
                         <p class="text-xs md:text-sm text-blue-700 leading-relaxed">
-                            💡 <strong>測試模式</strong>：按 <kbd class="bg-blue-200 px-2 py-1 rounded font-mono text-xs">T</kbd> 鍵可模擬輸入對話文字
+                            💡 <strong>測試模式</strong>：點擊上方「播放對話」按鈕，或按 <kbd class="bg-blue-200 px-2 py-1 rounded font-mono text-xs">T</kbd> 鍵手動播放下一句
                         </p>
                     </div>
                 </div>
@@ -634,10 +696,30 @@
         let startTime = null;
         let timerInterval = null;
         let analysisInterval = null;
-        let transcriptSegments = [];
+        let transcriptSegments = []; // Only stores DISPLAYED transcript segments
         let lastAutoAnalysisTime = 0; // Track last auto-analysis to prevent duplicates
         let analysisHistory = [];
         let isDemoMode = true; // Always in demo mode (no real recording)
+        let isVoiceSimEnabled = false; // Voice simulation toggle state
+
+        // === Audio Simulation State ===
+        let audioSimulation = {
+            isPlaying: false,
+            currentTime: 0,
+            duration: 0,
+            lastDisplayedIndex: 0, // Track which script lines have been displayed
+            animationFrame: null,
+            startTimeMs: 0 // When playback started (performance.now())
+        };
+
+        // === Web Speech API (TTS) State ===
+        let ttsState = {
+            voices: [],
+            counselorVoice: null,
+            clientVoice: null,
+            isSupported: 'speechSynthesis' in window,
+            currentUtterance: null
+        };
 
         // === DOM Elements ===
         const startBtn = document.getElementById('startBtn');
@@ -664,6 +746,8 @@
         const recordingTimerDisplayMobile = document.getElementById('recordingTimerDisplayMobile');
         const recordingTimer = document.getElementById('recordingTimer');
         const recordingTimerMobile = document.getElementById('recordingTimerMobile');
+        const voiceSimToggle = document.getElementById('voiceSimToggle');
+        const voiceSimToggleDesktop = document.getElementById('voiceSimToggleDesktop');
 
         // NEW: Mobile-specific elements for requirements 3, 4, 6
         const mainHeader = document.getElementById('mainHeader');
@@ -673,6 +757,17 @@
         const carouselPrev = document.getElementById('carouselPrev');
         const carouselNext = document.getElementById('carouselNext');
         const carouselCounter = document.getElementById('carouselCounter');
+
+        // Audio Player Elements
+        const audioPlayerSection = document.getElementById('audioPlayerSection');
+        const audioPlayBtn = document.getElementById('audioPlayBtn');
+        const audioPlayIcon = document.getElementById('audioPlayIcon');
+        const audioPlayText = document.getElementById('audioPlayText');
+        const audioProgress = document.getElementById('audioProgress');
+        const audioProgressContainer = document.getElementById('audioProgressContainer');
+        const audioCurrentTime = document.getElementById('audioCurrentTime');
+        const audioDuration = document.getElementById('audioDuration');
+        const audioStatus = document.getElementById('audioStatus');
 
         // Carousel state
         let mobileAnalysisCards = [];
@@ -693,12 +788,40 @@
         if (carouselPrev) carouselPrev.addEventListener('click', () => navigateCarousel(-1));
         if (carouselNext) carouselNext.addEventListener('click', () => navigateCarousel(1));
 
+        // Voice Simulation Toggle
+        voiceSimToggle.addEventListener('click', toggleVoiceSimulation);
+        if (voiceSimToggleDesktop) voiceSimToggleDesktop.addEventListener('click', toggleVoiceSimulation);
+
+        // Audio Player Controls
+        if (audioPlayBtn) audioPlayBtn.addEventListener('click', toggleAudioPlayback);
+        if (audioProgressContainer) {
+            audioProgressContainer.addEventListener('click', (e) => {
+                const rect = audioProgressContainer.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const percentage = clickX / rect.width;
+                seekAudio(percentage);
+            });
+        }
+
+        // === Initialization ===
+        // Initialize Web Speech API (TTS)
+        initializeSpeechSynthesis();
+
         // === Core Functions ===
         function startSession() {
             isRecording = true;
             startTime = Date.now();
             transcriptSegments = [];
             analysisHistory = [];
+
+            // Initialize audio simulation
+            initializeAudioSimulation();
+
+            // Auto-play audio if voice simulation is enabled
+            if (isVoiceSimEnabled) {
+                playAudioSimulation();
+                console.log('🎵 自動開始播放音訊（模擬人聲已啟用）');
+            }
 
             // UI Updates - Desktop
             startBtn.disabled = true;
@@ -738,6 +861,9 @@
             recordingTimerDisplay.style.display = 'block';
             recordingTimerDisplayMobile.style.display = 'block';
 
+            // Start waveform animations
+            updateWaveformAnimations();
+
             // Auto-expand transcript section when recording starts
             const transcriptSection = document.getElementById('transcriptSection');
             const transcriptToggle = document.getElementById('transcriptToggle');
@@ -765,6 +891,17 @@
 
             // Final analysis
             analyzeTranscript();
+
+            // Stop audio playback and speech
+            if (audioSimulation.isPlaying) {
+                pauseAudioSimulation();
+            }
+            stopSpeech();
+
+            // Hide audio player
+            if (audioPlayerSection) {
+                audioPlayerSection.style.display = 'none';
+            }
 
             // Cleanup
             clearInterval(timerInterval);
@@ -804,6 +941,9 @@
             recordingTimerDisplay.style.display = 'none';
             recordingTimerDisplayMobile.style.display = 'none';
 
+            // Stop waveform animations
+            updateWaveformAnimations();
+
             status.textContent = '⏹️ 已結束';
             status.classList.remove('pulse-recording');
             nextAnalysis.textContent = '-';
@@ -826,6 +966,75 @@
                 speakerCounselorBtn.classList.remove('bg-gradient-to-br', 'from-blue-500', 'to-indigo-600', 'text-white', 'shadow-md', 'hover:shadow-lg');
                 speakerCounselorBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300', 'shadow-sm');
             }
+        }
+
+        function toggleVoiceSimulation() {
+            isVoiceSimEnabled = !isVoiceSimEnabled;
+
+            // Update both mobile and desktop toggles
+            const toggles = [voiceSimToggle, voiceSimToggleDesktop].filter(t => t);
+
+            toggles.forEach(toggleBtn => {
+                const toggleCircle = toggleBtn.querySelector('span');
+
+                if (isVoiceSimEnabled) {
+                    // Enabled state: indigo background, circle moved to right
+                    toggleBtn.classList.remove('bg-gray-300');
+                    toggleBtn.classList.add('bg-indigo-600');
+                    toggleBtn.setAttribute('aria-checked', 'true');
+                    toggleCircle.classList.remove('translate-x-1');
+                    toggleCircle.classList.add('translate-x-6');
+                } else {
+                    // Disabled state: gray background, circle moved to left
+                    toggleBtn.classList.remove('bg-indigo-600');
+                    toggleBtn.classList.add('bg-gray-300');
+                    toggleBtn.setAttribute('aria-checked', 'false');
+                    toggleCircle.classList.remove('translate-x-6');
+                    toggleCircle.classList.add('translate-x-1');
+                }
+            });
+
+            if (isVoiceSimEnabled) {
+                console.log('🎭 Voice Simulation: ENABLED');
+
+                // If recording, show audio player and start playback
+                if (isRecording && audioPlayerSection) {
+                    audioPlayerSection.style.display = 'block';
+                    if (!audioSimulation.isPlaying) {
+                        playAudioSimulation();
+                        console.log('🎵 自動開始播放音訊（切換至模擬人聲）');
+                    }
+                }
+            } else {
+                console.log('🎭 Voice Simulation: DISABLED');
+
+                // If recording, hide audio player and stop playback
+                if (isRecording) {
+                    if (audioSimulation.isPlaying) {
+                        pauseAudioSimulation();
+                        console.log('⏸️ 停止播放音訊（切換至關閉模擬人聲）');
+                    }
+                    if (audioPlayerSection) {
+                        audioPlayerSection.style.display = 'none';
+                    }
+                }
+            }
+        }
+
+        function updateWaveformAnimations() {
+            const containers = [waveformContainer, waveformContainerMobile];
+            containers.forEach(container => {
+                if (!container) return;
+                const bars = container.querySelectorAll('.waveform-bar');
+                bars.forEach(bar => {
+                    // Animation enabled when recording
+                    if (isRecording) {
+                        bar.style.animationPlayState = 'running';
+                    } else {
+                        bar.style.animationPlayState = 'paused';
+                    }
+                });
+            });
         }
 
         function updateTimer() {
@@ -1155,12 +1364,13 @@
                 mobileCard.className = 'flex-shrink-0 w-full h-full bg-white rounded-2xl shadow-md p-5 border-l-4 border-purple-500 overflow-y-auto';
                 mobileCard.innerHTML = card.innerHTML;
 
-                // Add to carousel track (prepend to show newest first)
-                mobileCarouselTrack.insertBefore(mobileCard, mobileCarouselTrack.firstChild);
-                mobileAnalysisCards.unshift(analysis);
+                // Add to carousel track (append to maintain chronological order)
+                // Index 0 = oldest (1/4), Index length-1 = newest (4/4)
+                mobileCarouselTrack.appendChild(mobileCard);
+                mobileAnalysisCards.push(analysis);
 
-                // Reset to show newest card
-                currentCarouselIndex = 0;
+                // Jump to newest card (last index)
+                currentCarouselIndex = mobileAnalysisCards.length - 1;
                 updateCarousel();
             }
 
@@ -1485,11 +1695,11 @@
                 if (Math.abs(diff) < swipeThreshold) return;
 
                 if (diff > 0) {
-                    // Swipe left - next card
-                    navigateCarousel(1);
-                } else {
-                    // Swipe right - previous card
+                    // Swipe left → earlier time (lower index)
                     navigateCarousel(-1);
+                } else {
+                    // Swipe right → later time (higher index)
+                    navigateCarousel(1);
                 }
             }
         }
@@ -1498,86 +1708,87 @@
         let demoScriptIndex = 0;
         const demoScripts = {
             // 劇本 1: 工作壓力與焦慮（含自殺風險評估）- 30分鐘完整版
+            // 每句話都有時間戳（秒），用於同步音訊播放
             workStress: [
                 // Phase 1: 開場與建立關係 (0-5分鐘)
-                { speaker: 'counselor', text: '你好，今天想聊什麼呢？' },
-                { speaker: 'client', text: '我最近工作壓力很大，常常焦慮到睡不著...' },
-                { speaker: 'counselor', text: '聽起來壓力真的很大。能跟我多說一些，你都幾點睡覺？' },
-                { speaker: 'client', text: '我常常躺在床上翻來覆去到凌晨兩、三點。' },
-                { speaker: 'counselor', text: '失眠對你的影響一定很大。你躺在床上的時候，腦袋都在想什麼？' },
-                { speaker: 'client', text: '就想著明天的工作，想著我又要面對主管...' },
-                { speaker: 'counselor', text: '主管是你壓力的主要來源嗎？' },
-                { speaker: 'client', text: '對，我覺得不管怎麼做，他都不滿意。' },
-                { speaker: 'counselor', text: '這讓你感到很挫折，是嗎？能舉個最近的例子嗎？' },
-                { speaker: 'client', text: '上禮拜我熬夜趕出來的企劃案，他只看了兩分鐘就說要重做。' },
-                { speaker: 'counselor', text: '你那時候的感受是什麼？' },
-                { speaker: 'client', text: '我當下真的很生氣，但又不敢說什麼，就吞下來了。' },
-                { speaker: 'counselor', text: '生氣但又不能表達，這種感覺一定很難受。' },
-                { speaker: 'client', text: '對...我回到座位上眼淚就掉下來了，還好沒人看到。' },
+                { speaker: 'counselor', text: '你好，今天想聊什麼呢？', time: 2 },
+                { speaker: 'client', text: '我最近工作壓力很大，常常焦慮到睡不著...', time: 6 },
+                { speaker: 'counselor', text: '聽起來壓力真的很大。能跟我多說一些，你都幾點睡覺？', time: 12 },
+                { speaker: 'client', text: '我常常躺在床上翻來覆去到凌晨兩、三點。', time: 18 },
+                { speaker: 'counselor', text: '失眠對你的影響一定很大。你躺在床上的時候，腦袋都在想什麼？', time: 24 },
+                { speaker: 'client', text: '就想著明天的工作，想著我又要面對主管...', time: 31 },
+                { speaker: 'counselor', text: '主管是你壓力的主要來源嗎？', time: 37 },
+                { speaker: 'client', text: '對，我覺得不管怎麼做，他都不滿意。', time: 41 },
+                { speaker: 'counselor', text: '這讓你感到很挫折，是嗎？能舉個最近的例子嗎？', time: 47 },
+                { speaker: 'client', text: '上禮拜我熬夜趕出來的企劃案，他只看了兩分鐘就說要重做。', time: 54 },
+                { speaker: 'counselor', text: '你那時候的感受是什麼？', time: 62 },
+                { speaker: 'client', text: '我當下真的很生氣，但又不敢說什麼，就吞下來了。', time: 66 },
+                { speaker: 'counselor', text: '生氣但又不能表達，這種感覺一定很難受。', time: 73 },
+                { speaker: 'client', text: '對...我回到座位上眼淚就掉下來了，還好沒人看到。', time: 79 },
 
                 // Phase 2: 探索工作壓力與情緒 (5-12分鐘)
-                { speaker: 'counselor', text: '這種情況持續多久了？' },
-                { speaker: 'client', text: '大概半年吧，從他調來當我們主管之後。' },
-                { speaker: 'counselor', text: '這半年來，你的工作和生活有什麼改變嗎？' },
-                { speaker: 'client', text: '我變得很沒自信，常常懷疑自己的能力...' },
-                { speaker: 'counselor', text: '當你說「懷疑自己」，具體是指什麼呢？' },
-                { speaker: 'client', text: '我覺得自己什麼都做不好，可能根本不適合這份工作。' },
-                { speaker: 'counselor', text: '在這個主管來之前，你對自己的工作表現有這樣的感覺嗎？' },
-                { speaker: 'client', text: '沒有...以前我做得還不錯，前一個主管還滿肯定我的。' },
-                { speaker: 'counselor', text: '所以這個懷疑，主要是最近這半年才開始的。' },
-                { speaker: 'client', text: '對，我現在連簡單的事情都會害怕做錯。' },
-                { speaker: 'counselor', text: '這種害怕，除了在工作上，會不會影響到你的生活其他部分？' },
-                { speaker: 'client', text: '會...我現在不太想跟朋友出去，也不想跟家人聊天。' },
-                { speaker: 'counselor', text: '聽起來你有點把自己孤立起來了。' },
-                { speaker: 'client', text: '我只是覺得很累，不想讓別人看到我這個樣子。' },
-                { speaker: 'counselor', text: '你擔心別人怎麼看你？' },
-                { speaker: 'client', text: '怕他們覺得我很弱，連工作都做不好。' },
-                { speaker: 'counselor', text: '除了疲累和害怕，你還有其他身體的感覺嗎？' },
-                { speaker: 'client', text: '我常常胸悶，有時候會突然喘不過氣。' },
-                { speaker: 'counselor', text: '這聽起來像是焦慮發作。發作的時候你會怎麼做？' },
-                { speaker: 'client', text: '我就...躲到廁所深呼吸，等它過去。' },
-                { speaker: 'counselor', text: '你有試過其他方法嗎？或是有跟誰談過這件事？' },
-                { speaker: 'client', text: '沒有...我不知道要跟誰說。' },
+                { speaker: 'counselor', text: '這種情況持續多久了？', time: 86 },
+                { speaker: 'client', text: '大概半年吧，從他調來當我們主管之後。', time: 90 },
+                { speaker: 'counselor', text: '這半年來，你的工作和生活有什麼改變嗎？', time: 96 },
+                { speaker: 'client', text: '我變得很沒自信，常常懷疑自己的能力...', time: 102 },
+                { speaker: 'counselor', text: '當你說「懷疑自己」，具體是指什麼呢？', time: 108 },
+                { speaker: 'client', text: '我覺得自己什麼都做不好，可能根本不適合這份工作。', time: 114 },
+                { speaker: 'counselor', text: '在這個主管來之前，你對自己的工作表現有這樣的感覺嗎？', time: 121 },
+                { speaker: 'client', text: '沒有...以前我做得還不錯，前一個主管還滿肯定我的。', time: 128 },
+                { speaker: 'counselor', text: '所以這個懷疑，主要是最近這半年才開始的。', time: 135 },
+                { speaker: 'client', text: '對，我現在連簡單的事情都會害怕做錯。', time: 141 },
+                { speaker: 'counselor', text: '這種害怕，除了在工作上，會不會影響到你的生活其他部分？', time: 147 },
+                { speaker: 'client', text: '會...我現在不太想跟朋友出去，也不想跟家人聊天。', time: 154 },
+                { speaker: 'counselor', text: '聽起來你有點把自己孤立起來了。', time: 161 },
+                { speaker: 'client', text: '我只是覺得很累，不想讓別人看到我這個樣子。', time: 166 },
+                { speaker: 'counselor', text: '你擔心別人怎麼看你？', time: 172 },
+                { speaker: 'client', text: '怕他們覺得我很弱，連工作都做不好。', time: 176 },
+                { speaker: 'counselor', text: '除了疲累和害怕，你還有其他身體的感覺嗎？', time: 182 },
+                { speaker: 'client', text: '我常常胸悶，有時候會突然喘不過氣。', time: 188 },
+                { speaker: 'counselor', text: '這聽起來像是焦慮發作。發作的時候你會怎麼做？', time: 194 },
+                { speaker: 'client', text: '我就...躲到廁所深呼吸，等它過去。', time: 200 },
+                { speaker: 'counselor', text: '你有試過其他方法嗎？或是有跟誰談過這件事？', time: 206 },
+                { speaker: 'client', text: '沒有...我不知道要跟誰說。', time: 212 },
 
                 // Phase 3: 憂鬱症狀浮現 (12-17分鐘)
-                { speaker: 'counselor', text: '除了睡眠問題和焦慮，你的胃口有改變嗎？' },
-                { speaker: 'client', text: '我最近都不太想吃東西，體重掉了五、六公斤。' },
-                { speaker: 'counselor', text: '那你平常有沒有什麼事情是讓你開心的？' },
-                { speaker: 'client', text: '以前我很喜歡畫畫，但現在完全提不起勁。' },
-                { speaker: 'counselor', text: '連原本喜歡的事情都失去興趣了...這種情況持續多久了？' },
-                { speaker: 'client', text: '大概兩、三個月吧，我覺得做什麼都沒意思。' },
-                { speaker: 'counselor', text: '聽起來你現在的狀態真的很辛苦。' },
-                { speaker: 'client', text: '嗯...' },
-                { speaker: 'counselor', text: '你早上起床的時候，會不會特別難熬？' },
-                { speaker: 'client', text: '會，我每天睜開眼睛第一個想法就是「又要面對新的一天」。' },
-                { speaker: 'counselor', text: '這聽起來像是一種負擔。' },
-                { speaker: 'client', text: '對，我覺得活著好像只是在應付，沒什麼意義。' },
+                { speaker: 'counselor', text: '除了睡眠問題和焦慮，你的胃口有改變嗎？', time: 218 },
+                { speaker: 'client', text: '我最近都不太想吃東西，體重掉了五、六公斤。', time: 224 },
+                { speaker: 'counselor', text: '那你平常有沒有什麼事情是讓你開心的？', time: 231 },
+                { speaker: 'client', text: '以前我很喜歡畫畫，但現在完全提不起勁。', time: 236 },
+                { speaker: 'counselor', text: '連原本喜歡的事情都失去興趣了...這種情況持續多久了？', time: 242 },
+                { speaker: 'client', text: '大概兩、三個月吧，我覺得做什麼都沒意思。', time: 249 },
+                { speaker: 'counselor', text: '聽起來你現在的狀態真的很辛苦。', time: 255 },
+                { speaker: 'client', text: '嗯...', time: 260 },
+                { speaker: 'counselor', text: '你早上起床的時候，會不會特別難熬？', time: 263 },
+                { speaker: 'client', text: '會，我每天睜開眼睛第一個想法就是「又要面對新的一天」。', time: 269 },
+                { speaker: 'counselor', text: '這聽起來像是一種負擔。', time: 276 },
+                { speaker: 'client', text: '對，我覺得活著好像只是在應付，沒什麼意義。', time: 280 },
 
-                // Phase 4: 自殺意念評估 (17-22分鐘)
-                { speaker: 'counselor', text: '你剛才說「活著沒意義」，這是最近才有的想法嗎？' },
-                { speaker: 'client', text: '嗯...最近特別強烈。' },
-                { speaker: 'counselor', text: '我想直接問你，當你說活著沒意義，你有沒有想過要結束生命？' },
-                { speaker: 'client', text: '...' },
-                { speaker: 'counselor', text: '我知道這個問題很直接，但這對我了解你的狀況很重要。' },
-                { speaker: 'client', text: '有...有想過。' },
-                { speaker: 'counselor', text: '謝謝你願意跟我說。你能跟我多說一點嗎？這個想法多常出現？' },
-                { speaker: 'client', text: '最近幾乎每天都會想到。' },
-                { speaker: 'counselor', text: '當這個想法出現的時候，它有多強烈？從0到10，10是非常強烈。' },
-                { speaker: 'client', text: '大概...7、8吧。' },
-                { speaker: 'counselor', text: '這確實是很強的程度。你有想過具體的方法嗎？' },
-                { speaker: 'client', text: '有想過...但我不確定會不會真的去做。' },
-                { speaker: 'counselor', text: '你想過什麼方法？' },
-                { speaker: 'client', text: '就...吃安眠藥。我家裡有一些。' },
-                { speaker: 'counselor', text: '你有想過什麼時候做這件事嗎？' },
-                { speaker: 'client', text: '沒有明確的時間，但有時候真的很想就這樣結束。' },
-                { speaker: 'counselor', text: '那有什麼事情或人，讓你到現在還願意活著？' },
-                { speaker: 'client', text: '我媽...她身體不好，如果我出事，她一定受不了。' },
-                { speaker: 'counselor', text: '你媽媽對你來說很重要。' },
-                { speaker: 'client', text: '對，她是我唯一的牽掛。' },
+                // Phase 4: 自殺意念評估 (17-22分鐘) - CRITICAL SECTION
+                { speaker: 'counselor', text: '你剛才說「活著沒意義」，這是最近才有的想法嗎？', time: 287 },
+                { speaker: 'client', text: '嗯...最近特別強烈。', time: 293 },
+                { speaker: 'counselor', text: '我想直接問你，當你說活著沒意義，你有沒有想過要結束生命？', time: 297 },
+                { speaker: 'client', text: '...', time: 305 },
+                { speaker: 'counselor', text: '我知道這個問題很直接，但這對我了解你的狀況很重要。', time: 308 },
+                { speaker: 'client', text: '有...有想過。', time: 315 },
+                { speaker: 'counselor', text: '謝謝你願意跟我說。你能跟我多說一點嗎？這個想法多常出現？', time: 319 },
+                { speaker: 'client', text: '最近幾乎每天都會想到。', time: 326 },
+                { speaker: 'counselor', text: '當這個想法出現的時候，它有多強烈？從0到10，10是非常強烈。', time: 331 },
+                { speaker: 'client', text: '大概...7、8吧。', time: 339 },
+                { speaker: 'counselor', text: '這確實是很強的程度。你有想過具體的方法嗎？', time: 343 },
+                { speaker: 'client', text: '有想過...但我不確定會不會真的去做。', time: 349 },
+                { speaker: 'counselor', text: '你想過什麼方法？', time: 355 },
+                { speaker: 'client', text: '就...吃安眠藥。我家裡有一些。', time: 358 },
+                { speaker: 'counselor', text: '你有想過什麼時候做這件事嗎？', time: 364 },
+                { speaker: 'client', text: '沒有明確的時間，但有時候真的很想就這樣結束。', time: 369 },
+                { speaker: 'counselor', text: '那有什麼事情或人，讓你到現在還願意活著？', time: 376 },
+                { speaker: 'client', text: '我媽...她身體不好，如果我出事，她一定受不了。', time: 382 },
+                { speaker: 'counselor', text: '你媽媽對你來說很重要。', time: 389 },
+                { speaker: 'client', text: '對，她是我唯一的牽掛。', time: 393 },
 
                 // Phase 5: 風險評估深入 (22-27分鐘)
-                { speaker: 'counselor', text: '除了媽媽，還有其他讓你覺得值得活下去的事情嗎？' },
-                { speaker: 'client', text: '我想不到了...可能就只有她。' },
+                { speaker: 'counselor', text: '除了媽媽，還有其他讓你覺得值得活下去的事情嗎？', time: 400 },
+                { speaker: 'client', text: '我想不到了...可能就只有她。', time: 407 },
                 { speaker: 'counselor', text: '當你想到要結束生命的時候，有沒有什麼事情可以讓你停下來？' },
                 { speaker: 'client', text: '就想到我媽，還有...我也有點害怕死亡。' },
                 { speaker: 'counselor', text: '你說的害怕是什麼樣的害怕？' },
@@ -1758,6 +1969,280 @@
             }
         }
 
+        // === Audio Simulation Functions ===
+        function initializeAudioSimulation() {
+            // Calculate total duration from script timestamps
+            const lastLine = currentScript[currentScript.length - 1];
+            audioSimulation.duration = lastLine.time || 400; // Default 400 seconds (~6.7 minutes)
+
+            // Reset state
+            audioSimulation.currentTime = 0;
+            audioSimulation.lastDisplayedIndex = 0;
+            audioSimulation.isPlaying = false;
+
+            // Update UI - only show player if voice simulation is enabled
+            if (audioPlayerSection) {
+                audioPlayerSection.style.display = isVoiceSimEnabled ? 'block' : 'none';
+                audioStatus.textContent = '準備就緒';
+                audioDuration.textContent = formatTime(audioSimulation.duration);
+                audioCurrentTime.textContent = '0:00';
+                audioProgress.style.width = '0%';
+            }
+
+            console.log(`🎵 音訊模擬已初始化，總時長: ${formatTime(audioSimulation.duration)}`);
+        }
+
+        // === Web Speech API (TTS) Functions ===
+        function initializeSpeechSynthesis() {
+            if (!ttsState.isSupported) {
+                console.warn('⚠️ 此瀏覽器不支援 Web Speech API (TTS)');
+                return;
+            }
+
+            // Wait for voices to be loaded
+            function loadVoices() {
+                ttsState.voices = speechSynthesis.getVoices();
+                selectVoices();
+            }
+
+            // Voices may load asynchronously
+            speechSynthesis.onvoiceschanged = loadVoices;
+
+            // Try loading immediately (some browsers have voices ready)
+            loadVoices();
+
+            console.log('🔊 Web Speech API (TTS) 已初始化');
+        }
+
+        function selectVoices() {
+            if (ttsState.voices.length === 0) {
+                console.warn('⚠️ 尚未載入語音列表');
+                return;
+            }
+
+            // Try to find Traditional Chinese (zh-TW) voices
+            const zhTWVoices = ttsState.voices.filter(v => v.lang.includes('zh-TW'));
+            const zhVoices = ttsState.voices.filter(v => v.lang.includes('zh'));
+
+            // Select counselor voice (prefer female voice for Traditional Chinese)
+            ttsState.counselorVoice = zhTWVoices.find(v => v.name.includes('Female') || v.name.includes('女')) ||
+                                     zhTWVoices.find(v => v.name.includes('Meijia') || v.name.includes('美佳')) ||
+                                     zhVoices.find(v => v.name.includes('Female') || v.name.includes('女')) ||
+                                     zhTWVoices[0] ||
+                                     zhVoices[0] ||
+                                     ttsState.voices[0]; // Fallback to any voice
+
+            // Select client voice (prefer male voice for Traditional Chinese)
+            ttsState.clientVoice = zhTWVoices.find(v => v.name.includes('Male') || v.name.includes('男')) ||
+                                  zhTWVoices.find(v => v.name.includes('Zhiwei') || v.name.includes('志威')) ||
+                                  zhVoices.find(v => v.name.includes('Male') || v.name.includes('男')) ||
+                                  zhTWVoices[1] || // Try different voice from counselor
+                                  zhVoices[1] ||
+                                  ttsState.voices[1] || // Fallback to different voice
+                                  ttsState.voices[0]; // Last resort
+
+            console.log(`🎙️ 諮商師語音: ${ttsState.counselorVoice?.name || '未選擇'} (${ttsState.counselorVoice?.lang || 'N/A'})`);
+            console.log(`🎙️ 案主語音: ${ttsState.clientVoice?.name || '未選擇'} (${ttsState.clientVoice?.lang || 'N/A'})`);
+            console.log(`📋 可用語音數量: ${ttsState.voices.length}`);
+        }
+
+        function speakText(text, speaker) {
+            if (!ttsState.isSupported) return;
+            if (!isVoiceSimEnabled) return; // Only speak if voice simulation is enabled
+            if (!audioSimulation.isPlaying) return; // Only speak if audio is playing
+
+            // Cancel any ongoing speech
+            if (speechSynthesis.speaking) {
+                speechSynthesis.cancel();
+            }
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-TW'; // Traditional Chinese
+
+            // Select voice and adjust pitch based on speaker
+            if (speaker === 'counselor') {
+                utterance.voice = ttsState.counselorVoice;
+                utterance.pitch = 1.1; // Slightly higher pitch for counselor
+            } else {
+                utterance.voice = ttsState.clientVoice;
+                utterance.pitch = 0.9; // Slightly lower pitch for client
+            }
+
+            // Speech settings
+            utterance.rate = 1.0; // Normal speed
+            utterance.volume = 1.0; // Full volume
+
+            // Error handling
+            utterance.onerror = (event) => {
+                console.error('🔇 TTS 錯誤:', event.error);
+            };
+
+            // Store reference and speak
+            ttsState.currentUtterance = utterance;
+            speechSynthesis.speak(utterance);
+
+            console.log(`🗣️ TTS: ${speaker === 'counselor' ? '諮商師' : '案主'} - "${text.substring(0, 20)}${text.length > 20 ? '...' : ''}"`);
+        }
+
+        function stopSpeech() {
+            if (ttsState.isSupported && speechSynthesis.speaking) {
+                speechSynthesis.cancel();
+                console.log('🔇 TTS 已停止');
+            }
+        }
+
+        function toggleAudioPlayback() {
+            if (!isRecording) {
+                alert('請先點擊「開始會談」');
+                return;
+            }
+
+            if (audioSimulation.isPlaying) {
+                pauseAudioSimulation();
+            } else {
+                playAudioSimulation();
+            }
+        }
+
+        function playAudioSimulation() {
+            // If finished, restart from beginning
+            if (audioSimulation.currentTime >= audioSimulation.duration) {
+                audioSimulation.currentTime = 0;
+                audioSimulation.lastDisplayedIndex = 0;
+                transcriptSegments = [];
+                transcript.innerHTML = '';
+                console.log('↺ 重新開始播放');
+            }
+
+            audioSimulation.isPlaying = true;
+            audioSimulation.startTimeMs = performance.now() - (audioSimulation.currentTime * 1000);
+
+            // Update UI
+            audioPlayIcon.textContent = '⏸️';
+            audioPlayText.textContent = '暫停';
+            audioStatus.textContent = '播放中';
+
+            // Start animation loop
+            updateAudioProgress();
+
+            console.log('▶️ 開始播放模擬音訊');
+        }
+
+        function pauseAudioSimulation() {
+            audioSimulation.isPlaying = false;
+
+            if (audioSimulation.animationFrame) {
+                cancelAnimationFrame(audioSimulation.animationFrame);
+                audioSimulation.animationFrame = null;
+            }
+
+            // Stop speech synthesis
+            stopSpeech();
+
+            // Update UI
+            audioPlayIcon.textContent = '▶️';
+            audioPlayText.textContent = '繼續播放';
+            audioStatus.textContent = '已暫停';
+
+            console.log('⏸️ 暫停播放');
+        }
+
+        function seekAudio(percentage) {
+            const newTime = audioSimulation.duration * percentage;
+            audioSimulation.currentTime = newTime;
+            audioSimulation.startTimeMs = performance.now() - (newTime * 1000);
+
+            // Stop any ongoing speech when seeking
+            stopSpeech();
+
+            // Update which lines should be displayed
+            audioSimulation.lastDisplayedIndex = 0;
+            transcriptSegments = [];
+            transcript.innerHTML = '';
+
+            // Display all lines up to current time
+            for (let i = 0; i < currentScript.length; i++) {
+                const line = currentScript[i];
+                if (line.time && line.time <= newTime) {
+                    if (line.speaker !== currentSpeaker) {
+                        switchSpeaker(line.speaker);
+                    }
+                    addTranscriptLine(line.speaker, line.text);
+                    audioSimulation.lastDisplayedIndex = i + 1;
+                } else {
+                    break;
+                }
+            }
+
+            updateAudioUI();
+            console.log(`⏩ 跳轉到 ${formatTime(newTime)}`);
+        }
+
+        function updateAudioProgress() {
+            if (!audioSimulation.isPlaying) return;
+
+            const elapsed = performance.now() - audioSimulation.startTimeMs;
+            audioSimulation.currentTime = Math.min(elapsed / 1000, audioSimulation.duration);
+
+            // Display new transcript lines based on timestamp
+            displayTranscriptAtTime(audioSimulation.currentTime);
+
+            // Update UI
+            updateAudioUI();
+
+            // Check if finished
+            if (audioSimulation.currentTime >= audioSimulation.duration) {
+                audioSimulation.isPlaying = false;
+                audioStatus.textContent = '播放完畢';
+                audioPlayIcon.textContent = '↺';
+                audioPlayText.textContent = '重新播放';
+                console.log('✅ 音訊播放完畢');
+                return;
+            }
+
+            // Continue loop
+            audioSimulation.animationFrame = requestAnimationFrame(updateAudioProgress);
+        }
+
+        function displayTranscriptAtTime(currentTime) {
+            // Display all lines that should appear by current time
+            for (let i = audioSimulation.lastDisplayedIndex; i < currentScript.length; i++) {
+                const line = currentScript[i];
+
+                if (line.time && line.time <= currentTime) {
+                    // Switch speaker if needed
+                    if (line.speaker !== currentSpeaker) {
+                        switchSpeaker(line.speaker);
+                    }
+
+                    // Add transcript line
+                    addTranscriptLine(line.speaker, line.text);
+
+                    // Speak the text using TTS if voice simulation is enabled
+                    if (isVoiceSimEnabled && audioSimulation.isPlaying) {
+                        speakText(line.text, line.speaker);
+                    }
+
+                    audioSimulation.lastDisplayedIndex = i + 1;
+                } else {
+                    // Not yet time for this line
+                    break;
+                }
+            }
+        }
+
+        function updateAudioUI() {
+            const progress = (audioSimulation.currentTime / audioSimulation.duration) * 100;
+            audioProgress.style.width = `${progress}%`;
+            audioCurrentTime.textContent = formatTime(audioSimulation.currentTime);
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${String(secs).padStart(2, '0')}`;
+        }
+
         // Demo: Press 'T' to add next transcript line
         // Press 'R' to reset script
         // Press '1' for work stress script, '2' for general script
@@ -1779,6 +2264,9 @@
         });
 
         // === Initialize ===
+        // Initialize waveform animations as paused on page load
+        updateWaveformAnimations();
+
         // Hide speaker toggle in demo mode (scripted conversations auto-switch speaker)
         if (isDemoMode && speakerToggleSection) {
             speakerToggleSection.style.display = 'none';
@@ -1791,20 +2279,28 @@
         }
 
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('🎤 即時諮商輔助系統 - Demo 模式');
+        console.log('🎤 即時諮商輔助系統 - Demo 模式（音訊同步版）');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log('');
-        console.log('📌 快捷鍵說明：');
-        console.log('  T - 播放下一句對話');
+        console.log('🎵 音訊播放模式：');
+        console.log('  1. 點擊「開始會談」');
+        console.log('  2. 點擊「播放對話」按鈕');
+        console.log('  3. 逐字稿會根據音訊時間戳自動顯示');
+        console.log('  4. 隨時點擊「即時分析」分析當前已顯示的對話');
+        console.log('');
+        console.log('📌 快捷鍵說明（備用手動模式）：');
+        console.log('  T - 手動播放下一句對話');
         console.log('  R - 重置劇本');
         console.log('  1 - 工作壓力劇本（含自殺風險）');
         console.log('  2 - 一般諮詢劇本');
         console.log('');
-        console.log('🤖 AI 分析：每 60 秒自動觸發');
-        console.log('💾 歷史記錄：自動儲存到 localStorage');
+        console.log('🤖 AI 分析：');
+        console.log('  • 自動模式：每 60 秒自動觸發');
+        console.log('  • 手動模式：隨時點擊「即時分析」按鈕');
+        console.log('  • 分析範圍：僅分析當前已顯示的逐字稿');
         console.log('');
         console.log('✨ 當前劇本：工作壓力與焦慮（劇本 1）');
-        console.log('💡 Demo 模式：說話者自動切換，無需手動選擇');
+        console.log('💡 Demo 模式：模擬即時對話，說話者自動切換');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     </script>
 </body>
