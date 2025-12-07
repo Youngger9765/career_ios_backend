@@ -179,6 +179,12 @@ async def realtime_counseling_page(request: Request) -> Response:
     return templates.TemplateResponse("realtime_counseling.html", {"request": request})
 
 
+@app.get("/test-elevenlabs", response_class=HTMLResponse)
+async def test_elevenlabs_page(request: Request) -> Response:
+    """ElevenLabs WebSocket connection test page"""
+    return templates.TemplateResponse("test_elevenlabs_ws.html", {"request": request})
+
+
 @app.get("/health")
 async def health_check() -> Dict[str, str]:
     """Health check endpoint"""

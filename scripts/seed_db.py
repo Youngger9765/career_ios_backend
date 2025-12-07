@@ -2,13 +2,14 @@
 """
 Seed database with initial test data
 """
-from datetime import date, datetime, timezone
+from datetime import date
+
 from sqlalchemy.orm import Session
 
 from app.core.database import engine
 from app.core.security import hash_password
-from app.models.counselor import Counselor, CounselorRole
 from app.models.client import Client
+from app.models.counselor import Counselor, CounselorRole
 
 
 def seed_database():
@@ -61,8 +62,12 @@ def seed_database():
         print("✅ Created 4 test counselors")
 
         # Get counselor IDs for client creation
-        career_counselor = db.query(Counselor).filter_by(email="counselor@career.com").first()
-        island_counselor = db.query(Counselor).filter_by(email="counselor@island.com").first()
+        career_counselor = (
+            db.query(Counselor).filter_by(email="counselor@career.com").first()
+        )
+        island_counselor = (
+            db.query(Counselor).filter_by(email="counselor@island.com").first()
+        )
 
         # Create test clients
         clients = [
@@ -118,9 +123,9 @@ def seed_database():
         db.commit()
         print("✅ Created 3 test clients")
 
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("Database seeded successfully!")
-        print("="*50)
+        print("=" * 50)
         print("\nTest Accounts:")
         print("\nCareer Tenant:")
         print("  Admin: admin@career.com / password123")
@@ -128,7 +133,7 @@ def seed_database():
         print("\nIsland Tenant:")
         print("  Admin: admin@island.com / password123")
         print("  Counselor: counselor@island.com / password123")
-        print("="*50)
+        print("=" * 50)
 
 
 if __name__ == "__main__":

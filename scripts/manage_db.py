@@ -10,16 +10,17 @@ Usage:
     python scripts/manage_db.py auto        # 自動：生成 + 執行
 """
 
-import sys
 import os
 import subprocess
-from sqlalchemy import create_engine, text
+import sys
 from pathlib import Path
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.core.config import settings
+from sqlalchemy import create_engine, text  # noqa: E402
+
+from app.core.config import settings  # noqa: E402
 
 
 def get_database_url():
@@ -31,15 +32,19 @@ def check_alembic_table():
     """檢查 Alembic 版本表"""
     engine = create_engine(get_database_url())
     with engine.connect() as conn:
-        result = conn.execute(text(
-            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alembic_version')"
-        ))
+        result = conn.execute(
+            text(
+                "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alembic_version')"
+            )
+        )
         exists = result.scalar()
 
         if exists:
-            version_result = conn.execute(text("SELECT version_num FROM alembic_version"))
+            version_result = conn.execute(
+                text("SELECT version_num FROM alembic_version")
+            )
             version = version_result.scalar()
-            print(f"✅ Alembic 版本表存在")
+            print("✅ Alembic 版本表存在")
             print(f"   當前版本: {version or '無'}")
             return version
         else:
@@ -52,18 +57,6 @@ def check_models():
     from app.core.database import Base
 
     # Import all models
-    from app.models.user import User
-    from app.models.visitor import Visitor
-    from app.models.case import Case
-    from app.models.session import Session
-    from app.models.report import Report
-    from app.models.job import Job
-    from app.models.reminder import Reminder
-    from app.models.agent import Agent, AgentVersion
-    from app.models.document import Document, Chunk, Embedding, Datasource
-    from app.models.collection import Collection, CollectionItem
-    from app.models.chat import ChatLog
-    from app.models.pipeline import PipelineRun
 
     tables = Base.metadata.tables.keys()
     print(f"\n📋 偵測到 {len(tables)} 個 Model 表格:")
@@ -86,15 +79,17 @@ def check_existing_tables():
     """檢查資料庫中已存在的表"""
     engine = create_engine(get_database_url())
     with engine.connect() as conn:
-        result = conn.execute(text(
-            """
+        result = conn.execute(
+            text(
+                """
             SELECT table_name
             FROM information_schema.tables
             WHERE table_schema = 'public'
             AND table_type = 'BASE TABLE'
             ORDER BY table_name
             """
-        ))
+            )
+        )
         tables = [row[0] for row in result]
 
         if tables:
@@ -113,7 +108,7 @@ def generate_migration(message="auto generated"):
     result = subprocess.run(
         ["alembic", "revision", "--autogenerate", "-m", message],
         capture_output=True,
-        text=True
+        text=True,
     )
 
     if result.returncode == 0:
@@ -130,9 +125,7 @@ def run_upgrade():
     """執行 migration"""
     print("\n⬆️  執行 migration upgrade")
     result = subprocess.run(
-        ["alembic", "upgrade", "head"],
-        capture_output=True,
-        text=True
+        ["alembic", "upgrade", "head"], capture_output=True, text=True
     )
 
     if result.returncode == 0:
@@ -149,9 +142,7 @@ def stamp_head():
     """標記當前資料庫為最新版本（不執行 migration）"""
     print("\n📌 標記資料庫為最新版本")
     result = subprocess.run(
-        ["alembic", "stamp", "head"],
-        capture_output=True,
-        text=True
+        ["alembic", "stamp", "head"], capture_output=True, text=True
     )
 
     if result.returncode == 0:
@@ -182,9 +173,11 @@ def reset():
     print("=" * 60)
 
     confirm = input("⚠️  確定要重置 Alembic 版本表嗎？（保留資料表）[y/N]: ")
-    if confirm.lower() == 'y':
+    if confirm.lower() == "y":
         reset_alembic()
-        print("\n💡 提示：現在可以執行 'python scripts/manage_db.py generate' 生成新的 migration")
+        print(
+            "\n💡 提示：現在可以執行 'python scripts/manage_db.py generate' 生成新的 migration"
+        )
     else:
         print("❌ 取消重置")
 
@@ -195,7 +188,10 @@ def generate():
     print("🔨 生成 Migration")
     print("=" * 60)
 
-    message = input("Migration 訊息（按 Enter 使用預設）: ").strip() or "auto generated from models"
+    message = (
+        input("Migration 訊息（按 Enter 使用預設）: ").strip()
+        or "auto generated from models"
+    )
     generate_migration(message)
 
 
@@ -226,11 +222,11 @@ def auto():
         print("  2. 執行 'stamp head' 標記當前狀態為最新版本")
 
         choice = input("\n選擇 [1/2/skip]: ").strip()
-        if choice == '1':
+        if choice == "1":
             reset_alembic()
             if generate_migration("initial schema from models"):
                 run_upgrade()
-        elif choice == '2':
+        elif choice == "2":
             stamp_head()
         else:
             print("❌ 跳過")

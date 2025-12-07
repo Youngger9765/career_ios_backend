@@ -8,15 +8,12 @@
 3. 對比品質分數
 """
 
-import asyncio
-import json
-from app.utils.report_validators import (
-    validate_report_structure,
-    validate_citations,
-    calculate_quality_score
-)
 from app.utils.report_quality import generate_quality_summary
-
+from app.utils.report_validators import (
+    calculate_quality_score,
+    validate_citations,
+    validate_report_structure,
+)
 
 # 測試用逐字稿
 TEST_TRANSCRIPT = """
@@ -51,23 +48,25 @@ def analyze_old_version_report(report_text: str):
 
     print(f"\n結構完整性: {structure['coverage']}%")
     print(f"缺少段落: {len(structure['missing_sections'])} 個")
-    if structure['missing_sections']:
-        for section in structure['missing_sections'][:3]:
+    if structure["missing_sections"]:
+        for section in structure["missing_sections"][:3]:
             print(f"  - {section}")
 
-    print(f"\n理論引用:")
+    print("\n理論引用:")
     print(f"  總引用數: {citation['total_citations']}")
-    print(f"  核心段落完整: {'✅' if citation['all_critical_sections_cited'] else '❌'}")
+    print(
+        f"  核心段落完整: {'✅' if citation['all_critical_sections_cited'] else '❌'}"
+    )
     print(f"  有理由說明: {'✅' if citation['has_rationale'] else '❌'}")
 
     print(f"\n品質分數: {score:.1f}/100")
     print(f"等級: {get_grade(score)}")
 
     return {
-        "structure_coverage": structure['coverage'],
-        "citation_count": citation['total_citations'],
-        "has_rationale": citation['has_rationale'],
-        "score": score
+        "structure_coverage": structure["coverage"],
+        "citation_count": citation["total_citations"],
+        "has_rationale": citation["has_rationale"],
+        "score": score,
     }
 
 
@@ -77,23 +76,24 @@ def analyze_new_version_report(report_text: str, theories: list):
     print("📊 新版報告分析（feature 分支）")
     print("=" * 60)
 
-    report = {
-        "client_name": "小美",
-        "conceptualization": report_text
-    }
+    report = {"client_name": "小美", "conceptualization": report_text}
 
     summary = generate_quality_summary(report, report_text, theories)
 
     print(f"\n結構完整性: {summary['structure_quality']['completeness']}%")
     print(f"狀態: {summary['structure_quality']['status']}")
 
-    print(f"\n理論引用:")
+    print("\n理論引用:")
     print(f"  總引用數: {summary['citation_quality']['total_citations']}")
-    print(f"  核心段落完整: {'✅' if summary['citation_quality']['critical_sections_cited'] else '❌'}")
-    print(f"  有理由說明: {'✅' if summary['citation_quality']['has_rationale'] else '❌'}")
+    print(
+        f"  核心段落完整: {'✅' if summary['citation_quality']['critical_sections_cited'] else '❌'}"
+    )
+    print(
+        f"  有理由說明: {'✅' if summary['citation_quality']['has_rationale'] else '❌'}"
+    )
     print(f"  狀態: {summary['citation_quality']['status']}")
 
-    print(f"\n內容指標:")
+    print("\n內容指標:")
     print(f"  總字數: {summary['content_metrics']['total_length']}")
     print(f"  理論數量: {summary['content_metrics']['theory_count']}")
     print(f"  有反思: {'✅' if summary['content_metrics']['has_reflection'] else '❌'}")
@@ -102,10 +102,10 @@ def analyze_new_version_report(report_text: str, theories: list):
     print(f"等級: {summary['grade']}")
 
     return {
-        "structure_coverage": summary['structure_quality']['completeness'],
-        "citation_count": summary['citation_quality']['total_citations'],
-        "has_rationale": summary['citation_quality']['has_rationale'],
-        "score": summary['overall_score']
+        "structure_coverage": summary["structure_quality"]["completeness"],
+        "citation_count": summary["citation_quality"]["total_citations"],
+        "has_rationale": summary["citation_quality"]["has_rationale"],
+        "score": summary["overall_score"],
     }
 
 
@@ -118,8 +118,13 @@ def compare_versions(old_metrics: dict, new_metrics: dict):
     improvements = []
 
     # 結構完整性
-    structure_diff = new_metrics['structure_coverage'] - old_metrics['structure_coverage']
-    print(f"\n結構完整性: {old_metrics['structure_coverage']:.0f}% → {new_metrics['structure_coverage']:.0f}% ", end="")
+    structure_diff = (
+        new_metrics["structure_coverage"] - old_metrics["structure_coverage"]
+    )
+    print(
+        f"\n結構完整性: {old_metrics['structure_coverage']:.0f}% → {new_metrics['structure_coverage']:.0f}% ",
+        end="",
+    )
     if structure_diff > 0:
         print(f"(+{structure_diff:.0f}% ✅)")
         improvements.append(f"結構完整性提升 {structure_diff:.0f}%")
@@ -127,8 +132,11 @@ def compare_versions(old_metrics: dict, new_metrics: dict):
         print("(無變化)")
 
     # 引用數量
-    citation_diff = new_metrics['citation_count'] - old_metrics['citation_count']
-    print(f"引用數量: {old_metrics['citation_count']} → {new_metrics['citation_count']} ", end="")
+    citation_diff = new_metrics["citation_count"] - old_metrics["citation_count"]
+    print(
+        f"引用數量: {old_metrics['citation_count']} → {new_metrics['citation_count']} ",
+        end="",
+    )
     if citation_diff > 0:
         print(f"(+{citation_diff} ✅)")
         improvements.append(f"引用數量增加 {citation_diff} 個")
@@ -136,25 +144,29 @@ def compare_versions(old_metrics: dict, new_metrics: dict):
         print("(無變化)")
 
     # 理由說明
-    old_rationale = "✅" if old_metrics['has_rationale'] else "❌"
-    new_rationale = "✅" if new_metrics['has_rationale'] else "❌"
+    old_rationale = "✅" if old_metrics["has_rationale"] else "❌"
+    new_rationale = "✅" if new_metrics["has_rationale"] else "❌"
     print(f"理由說明: {old_rationale} → {new_rationale} ", end="")
-    if new_metrics['has_rationale'] and not old_metrics['has_rationale']:
+    if new_metrics["has_rationale"] and not old_metrics["has_rationale"]:
         print("(新增 ✅)")
         improvements.append("新增理由說明")
     else:
         print()
 
     # 品質分數
-    score_diff = new_metrics['score'] - old_metrics['score']
-    print(f"\n品質分數: {old_metrics['score']:.1f} → {new_metrics['score']:.1f} ", end="")
+    score_diff = new_metrics["score"] - old_metrics["score"]
+    print(
+        f"\n品質分數: {old_metrics['score']:.1f} → {new_metrics['score']:.1f} ", end=""
+    )
     if score_diff > 0:
         print(f"(+{score_diff:.1f} ✅)")
         improvements.append(f"品質分數提升 {score_diff:.1f} 分")
     else:
         print("(無變化)")
 
-    print(f"\n等級變化: {get_grade(old_metrics['score'])} → {get_grade(new_metrics['score'])}")
+    print(
+        f"\n等級變化: {get_grade(old_metrics['score'])} → {get_grade(new_metrics['score'])}"
+    )
 
     if improvements:
         print("\n✅ 改善項目:")
@@ -162,8 +174,8 @@ def compare_versions(old_metrics: dict, new_metrics: dict):
             print(f"  {i}. {improvement}")
 
     # 計算改善百分比
-    if old_metrics['score'] > 0:
-        improvement_pct = (score_diff / old_metrics['score']) * 100
+    if old_metrics["score"] > 0:
+        improvement_pct = (score_diff / old_metrics["score"]) * 100
         print(f"\n📊 整體改善: {improvement_pct:.1f}%")
 
 

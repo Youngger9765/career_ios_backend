@@ -15,17 +15,16 @@ import sys
 from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession
-
 # Add app to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.core.config import Settings
-from app.core.security import hash_password
-from app.models.counselor import Counselor
+from sqlalchemy import select  # noqa: E402
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+
+from app.core.config import Settings  # noqa: E402
+from app.core.security import hash_password  # noqa: E402
+from app.models.counselor import Counselor  # noqa: E402
 
 
 async def import_counselors_from_csv(csv_path: str):
@@ -38,7 +37,9 @@ async def import_counselors_from_csv(csv_path: str):
     settings = Settings()
 
     # Create async engine
-    db_url = str(settings.DATABASE_URL).replace("postgresql://", "postgresql+asyncpg://")
+    db_url = str(settings.DATABASE_URL).replace(
+        "postgresql://", "postgresql+asyncpg://"
+    )
     engine = create_async_engine(db_url, echo=True)
 
     # Create session
@@ -79,7 +80,7 @@ async def import_counselors_from_csv(csv_path: str):
                 print(f"✅ Added {email}")
 
             await session.commit()
-            print(f"\n🎉 Import completed!")
+            print("\n🎉 Import completed!")
 
     await engine.dispose()
 

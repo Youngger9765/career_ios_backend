@@ -5,13 +5,12 @@
 使用模擬的「典型舊版報告」vs「新版改善後報告」
 """
 
+from app.utils.report_quality import get_quality_grade
 from app.utils.report_validators import (
-    validate_report_structure,
+    calculate_quality_score,
     validate_citations,
-    calculate_quality_score
+    validate_report_structure,
 )
-from app.utils.report_quality import generate_quality_summary, get_quality_grade
-
 
 # 模擬舊版報告（staging）- 典型問題
 OLD_REPORT = """
@@ -136,47 +135,51 @@ def analyze_report(report_text: str, title: str, theories_count: int = 6):
     score = calculate_quality_score(structure, citation)
 
     print(f"\n📋 結構完整性: {structure['coverage']:.0f}%")
-    if structure['missing_sections']:
+    if structure["missing_sections"]:
         print(f"   ❌ 缺少 {len(structure['missing_sections'])} 個段落:")
-        for section in structure['missing_sections']:
+        for section in structure["missing_sections"]:
             print(f"      - {section}")
     else:
         print("   ✅ 所有段落完整")
 
-    print(f"\n📚 理論引用:")
+    print("\n📚 理論引用:")
     print(f"   總引用數: {citation['total_citations']} 個")
-    print(f"   核心段落完整: {'✅ 是' if citation['all_critical_sections_cited'] else '❌ 否'}")
+    print(
+        f"   核心段落完整: {'✅ 是' if citation['all_critical_sections_cited'] else '❌ 否'}"
+    )
     print(f"   有理由說明: {'✅ 是' if citation['has_rationale'] else '❌ 否'}")
 
-    print(f"\n   段落詳情:")
-    for section, detail in citation['section_details'].items():
-        status = detail['status']
-        count = detail['citation_count']
+    print("\n   段落詳情:")
+    for section, detail in citation["section_details"].items():
+        status = detail["status"]
+        count = detail["citation_count"]
         print(f"   {status} {section}: {count} 個引用")
 
     print(f"\n🎯 品質分數: {score:.1f}/100 ({get_quality_grade(score)})")
 
     # 詳細計分
-    print(f"\n   計分細節:")
+    print("\n   計分細節:")
     print(f"   - 結構 (40%): {structure['coverage'] * 0.4:.1f}")
 
-    if citation['all_critical_sections_cited']:
-        print(f"   - 引用覆蓋 (40%): 40.0")
+    if citation["all_critical_sections_cited"]:
+        print("   - 引用覆蓋 (40%): 40.0")
     else:
-        cited = sum(1 for d in citation['section_details'].values() if d['has_citations'])
+        cited = sum(
+            1 for d in citation["section_details"].values() if d["has_citations"]
+        )
         print(f"   - 引用覆蓋 (40%): {(cited / 3) * 40:.1f}")
 
     print(f"   - 理由說明 (10%): {10.0 if citation['has_rationale'] else 0.0}")
     print(f"   - 引用數量 (10%): {min(citation['total_citations'] / 7, 1.0) * 10:.1f}")
 
     return {
-        "structure_coverage": structure['coverage'],
-        "missing_sections": len(structure['missing_sections']),
-        "citation_count": citation['total_citations'],
-        "critical_cited": citation['all_critical_sections_cited'],
-        "has_rationale": citation['has_rationale'],
+        "structure_coverage": structure["coverage"],
+        "missing_sections": len(structure["missing_sections"]),
+        "citation_count": citation["total_citations"],
+        "critical_cited": citation["all_critical_sections_cited"],
+        "has_rationale": citation["has_rationale"],
         "score": score,
-        "grade": get_quality_grade(score)
+        "grade": get_quality_grade(score),
     }
 
 
@@ -236,7 +239,9 @@ def compare_metrics(old: dict, new: dict):
                 if key == "score":
                     improvements.append(f"{label}提升 {new_val - old_val:.1f} 分")
                 else:
-                    improvements.append(f"{label}從 {old_val:.0f}% 提升到 {new_val:.0f}%")
+                    improvements.append(
+                        f"{label}從 {old_val:.0f}% 提升到 {new_val:.0f}%"
+                    )
             elif isinstance(old_val, bool):
                 improvements.append(f"新增{label}")
             else:
@@ -251,8 +256,8 @@ def compare_metrics(old: dict, new: dict):
 
     print(f"\n等級變化: {old['grade']} ➜ {new['grade']}")
 
-    if old['score'] > 0:
-        improvement_pct = ((new['score'] - old['score']) / old['score']) * 100
+    if old["score"] > 0:
+        improvement_pct = ((new["score"] - old["score"]) / old["score"]) * 100
         print(f"整體改善: {improvement_pct:+.1f}%")
 
     if improvements:
@@ -264,24 +269,24 @@ def compare_metrics(old: dict, new: dict):
     print("\n" + "=" * 70)
     print("🎯 量化證明")
     print("=" * 70)
-    print(f"\n舊版問題:")
-    if old['missing_sections'] > 0:
+    print("\n舊版問題:")
+    if old["missing_sections"] > 0:
         print(f"  • 結構不完整，缺少 {old['missing_sections']} 個段落")
-    if not old['critical_cited']:
-        print(f"  • 核心段落引用不足")
-    if not old['has_rationale']:
-        print(f"  • 缺乏理論應用說明，只有引用編號")
-    if old['citation_count'] < 5:
+    if not old["critical_cited"]:
+        print("  • 核心段落引用不足")
+    if not old["has_rationale"]:
+        print("  • 缺乏理論應用說明，只有引用編號")
+    if old["citation_count"] < 5:
         print(f"  • 引用數量過少（{old['citation_count']} < 5）")
 
-    print(f"\n新版改善:")
-    if new['structure_coverage'] == 100:
-        print(f"  ✅ 結構 100% 完整（10/10 段落）")
-    if new['critical_cited']:
-        print(f"  ✅ 核心段落 100% 引用")
-    if new['has_rationale']:
-        print(f"  ✅ 所有引用都有理論說明")
-    if new['citation_count'] >= 6:
+    print("\n新版改善:")
+    if new["structure_coverage"] == 100:
+        print("  ✅ 結構 100% 完整（10/10 段落）")
+    if new["critical_cited"]:
+        print("  ✅ 核心段落 100% 引用")
+    if new["has_rationale"]:
+        print("  ✅ 所有引用都有理論說明")
+    if new["citation_count"] >= 6:
         print(f"  ✅ 引用數量充足（{new['citation_count']} ≥ 6）")
 
 

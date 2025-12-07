@@ -2,7 +2,7 @@
 Realtime STT Counseling Schemas
 用於即時語音轉文字諮商輔助功能
 """
-from typing import Any, Dict, List, Optional
+from typing import List
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -75,7 +75,7 @@ class RealtimeAnalyzeResponse(BaseModel):
     suggestions: List[str] = Field(..., description="建議回應（2-3 點）")
     time_range: str = Field(..., description="時間範圍")
     timestamp: str = Field(..., description="分析時間戳（ISO 8601 格式）")
-    rag_sources: Optional[List[Dict[str, Any]]] = Field(
+    rag_sources: List[RAGSource] = Field(
         default=[], description="RAG 知識庫來源（可選）"
     )
 

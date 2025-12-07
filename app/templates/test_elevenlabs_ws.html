@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElevenLabs WebSocket 測試</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        #log {
+            background: #252526;
+            padding: 15px;
+            border-radius: 5px;
+            height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .success { color: #4EC9B0; }
+        .error { color: #F48771; }
+        .info { color: #9CDCFE; }
+        .warning { color: #CE9178; }
+    </style>
+</head>
+<body>
+    <h1>🎤 ElevenLabs Speech-to-Text WebSocket 測試</h1>
+    <div>
+        <button onclick="testConnection()">測試連線</button>
+        <button onclick="testWithAudio()">測試音訊傳輸</button>
+        <button onclick="disconnect()">中斷連線</button>
+        <button onclick="clearLog()">清除 Log</button>
+    </div>
+    <div id="log"></div>
+
+    <script>
+        let ws = null;
+        let audioContext = null;
+        let audioStream = null;
+        let elevenlabsToken = null;  // Store token from backend
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+            const logDiv = document.getElementById('log');
+            const line = document.createElement('div');
+            line.className = type;
+            line.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(line);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        async function testConnection() {
+            log('🔌 開始測試 WebSocket 連線...', 'info');
+
+            try {
+                // Step 1: Get token from backend
+                log('📞 呼叫後端取得 token...', 'info');
+                const tokenResponse = await fetch('/api/v1/realtime/elevenlabs-token', {
+                    method: 'POST'
+                });
+
+                if (!tokenResponse.ok) {
+                    throw new Error(`Token 生成失敗: ${tokenResponse.status}`);
+                }
+
+                const { token } = await tokenResponse.json();
+                elevenlabsToken = token;
+                log(`✅ Token 取得成功: ${token.substring(0, 20)}...`, 'success');
+
+                // Step 2: 建立 WebSocket 連線（只測試連線，不傳音訊）
+                // 使用 token parameter 而非 xi-api-key header (瀏覽器 WebSocket 不支援自訂 header)
+                const wsUrl = `wss://api.elevenlabs.io/v1/speech-to-text/realtime?` +
+                    `token=${elevenlabsToken}` +
+                    `&audio_format=pcm_16000` +
+                    `&language=zh` +
+                    `&commit_strategy=vad`;
+
+                log('📡 WebSocket URL: ' + wsUrl.replace(elevenlabsToken, 'HIDDEN_TOKEN'), 'info');
+
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {
+                    log('✅ WebSocket 連線成功！', 'success');
+                };
+
+                ws.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    log('📨 收到訊息:', 'info');
+                    log(JSON.stringify(message, null, 2), 'info');
+
+                    // 檢查訊息類型
+                    if (message.status === 'started') {
+                        log('✅ Session 已啟動！', 'success');
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    log('❌ WebSocket 錯誤: ' + error, 'error');
+                };
+
+                ws.onclose = (event) => {
+                    log(`🔌 WebSocket 關閉 (code: ${event.code}, reason: ${event.reason})`, 'warning');
+                    if (!event.wasClean) {
+                        log('⚠️ 連線異常關閉', 'warning');
+                    }
+                };
+
+            } catch (error) {
+                log('❌ 錯誤: ' + error.message, 'error');
+            }
+        }
+
+        async function testWithAudio() {
+            log('🎤 開始測試音訊傳輸...', 'info');
+
+            try {
+                // 先建立 WebSocket
+                await testConnection();
+
+                // 等待 1 秒確保連線建立
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 請求麥克風權限
+                log('🎙️ 請求麥克風權限...', 'info');
+                audioStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 16000,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+                log('✅ 麥克風存取成功', 'success');
+
+                // 建立 AudioContext
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const source = audioContext.createMediaStreamSource(audioStream);
+
+                // 建立音訊處理節點
+                const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+                let chunkCount = 0;
+                processor.onaudioprocess = (e) => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        const inputData = e.inputBuffer.getChannelData(0);
+
+                        // 轉換為 Int16 PCM
+                        const pcmData = new Int16Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            const s = Math.max(-1, Math.min(1, inputData[i]));
+                            pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                        }
+
+                        // 轉換為 Base64
+                        const base64Audio = arrayBufferToBase64(pcmData.buffer);
+
+                        // 發送到 ElevenLabs（正確的 JSON 格式）
+                        const message = {
+                            message_type: 'input_audio_chunk',
+                            audio_base_64: base64Audio,
+                            commit: false,  // Auto-commit 由 VAD 處理
+                            sample_rate: 16000
+                        };
+                        ws.send(JSON.stringify(message));
+
+                        chunkCount++;
+                        if (chunkCount % 10 === 0) {
+                            log(`📤 已發送 ${chunkCount} 個音訊片段`, 'info');
+                        }
+                    }
+                };
+
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+
+                log('✅ 音訊串流已啟動，請對麥克風說話...', 'success');
+                log('⏱️ 將持續 10 秒後自動停止', 'warning');
+
+                // 10 秒後自動停止
+                setTimeout(() => {
+                    disconnect();
+                    log('⏹️ 測試完成', 'info');
+                }, 10000);
+
+            } catch (error) {
+                log('❌ 錯誤: ' + error.message, 'error');
+            }
+        }
+
+        function disconnect() {
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+                log('⏹️ AudioContext 已關閉', 'info');
+            }
+
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+                audioStream = null;
+                log('🎤 麥克風已釋放', 'info');
+            }
+
+            if (ws) {
+                ws.close();
+                ws = null;
+                log('🔌 WebSocket 已關閉', 'info');
+            }
+        }
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        // 頁面卸載時清理資源
+        window.addEventListener('beforeunload', disconnect);
+    </script>
+</body>
+</html>

@@ -251,6 +251,17 @@
             100% { transform: scale(1); }
         }
 
+        /* Spinner Animation for Loading State */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+
         .haptic-feedback:active {
             animation: haptic-tap 0.15s ease-out;
         }
@@ -297,17 +308,18 @@
                     </button>
                 </div>
 
-                <!-- Voice Simulation Toggle + Recording Waveform & Timer -->
+                <!-- Mode Toggle + Recording Waveform & Timer -->
                 <div class="grid grid-cols-2 gap-3 mb-3">
-                    <!-- Left: Voice Simulation Toggle -->
+                    <!-- Left: Demo/Real Mode Toggle -->
                     <div class="flex flex-col items-start gap-1.5 bg-gray-50/90 rounded-xl p-2.5 border border-gray-200/50">
                         <label class="text-xs font-semibold text-gray-700 flex items-center gap-1">
-                            <span class="text-base">🎭</span>
-                            <span>模擬人聲</span>
+                            <span class="text-base">🎤</span>
+                            <span id="modeToggleLabel">真實錄音</span>
                         </label>
-                        <button id="voiceSimToggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1" role="switch" aria-checked="false">
-                            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform translate-x-1"></span>
+                        <button id="modeToggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1" role="switch" aria-checked="true" title="切換真實錄音/Demo模式">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform translate-x-6"></span>
                         </button>
+                        <span id="modeHint" class="text-[10px] text-gray-500">開啟 = 真實</span>
                     </div>
 
                     <!-- Right: Recording Waveform + Timer (only shows when recording) -->
@@ -487,7 +499,7 @@
                     </div>
 
                     <!-- Audio Waveform Animation -->
-                    <div id="waveformContainer" class="waveform-container mb-4">
+                    <div id="waveformContainer" class="waveform-container mb-4" style="display: none;">
                         <div class="waveform-bar"></div>
                         <div class="waveform-bar"></div>
                         <div class="waveform-bar"></div>
@@ -544,32 +556,19 @@
                         </div>
                     </div>
 
-                    <!-- Speaker Toggle (Manual) - Enhanced -->
-                    <!-- Hidden in Demo mode since scripted conversations include speaker info -->
-                    <div class="mb-4" id="speakerToggleSection">
-                        <label class="block text-sm font-bold mb-3 text-gray-700">當前說話者</label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <button id="speakerCounselor" class="btn-touch py-3 px-4 rounded-xl font-bold bg-gradient-to-br from-blue-500 to-indigo-600 text-white transition-smooth shadow-md hover:shadow-lg flex items-center justify-center gap-2">
-                                <span class="text-lg">👨‍⚕️</span>
-                                <span class="text-sm md:text-base">諮商師</span>
-                            </button>
-                            <button id="speakerClient" class="btn-touch py-3 px-4 rounded-xl font-bold bg-gray-200 text-gray-700 transition-smooth hover:bg-gray-300 shadow-sm flex items-center justify-center gap-2">
-                                <span class="text-lg">🧑</span>
-                                <span class="text-sm md:text-base">案主</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Voice Simulation Toggle - Desktop -->
+                    <!-- Mode Toggle - Desktop -->
                     <div class="mb-4">
-                        <div class="flex items-center justify-between bg-gray-50 rounded-xl p-4 border border-gray-200">
-                            <label class="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                <span class="text-lg">🎭</span>
-                                <span>模擬人聲</span>
+                        <div class="flex items-center justify-between bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
+                            <label class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                <span class="text-lg">🎤</span>
+                                <span id="modeToggleLabelDesktop">真實錄音</span>
                             </label>
-                            <button id="voiceSimToggleDesktop" class="relative inline-flex h-7 w-12 items-center rounded-full bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" role="switch" aria-checked="false">
-                                <span class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform translate-x-1"></span>
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <span id="modeHintDesktop" class="text-xs text-gray-600">開啟 = 真實</span>
+                                <button id="modeToggleDesktop" class="relative inline-flex h-7 w-12 items-center rounded-full bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" role="switch" aria-checked="true" title="切換真實錄音/Demo模式">
+                                    <span class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform translate-x-6"></span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -699,8 +698,16 @@
         let transcriptSegments = []; // Only stores DISPLAYED transcript segments
         let lastAutoAnalysisTime = 0; // Track last auto-analysis to prevent duplicates
         let analysisHistory = [];
-        let isDemoMode = true; // Always in demo mode (no real recording)
-        let isVoiceSimEnabled = false; // Voice simulation toggle state
+        let isDemoMode = false; // Default to real recording, toggle switches to demo mode
+        let isVoiceSimEnabled = false; // Voice simulation toggle state (demo mode only)
+
+        // === ElevenLabs Real-time STT State ===
+        let elevenLabsWs = null; // WebSocket connection
+        let audioContext = null; // Web Audio API context
+        let audioWorkletNode = null; // AudioWorklet for PCM processing
+        let audioStream = null; // MediaStream from microphone
+        let partialTranscriptText = ''; // Temporary storage for partial transcript
+        let elevenlabsToken = null; // Token from backend
 
         // === Audio Simulation State ===
         let audioSimulation = {
@@ -746,8 +753,12 @@
         const recordingTimerDisplayMobile = document.getElementById('recordingTimerDisplayMobile');
         const recordingTimer = document.getElementById('recordingTimer');
         const recordingTimerMobile = document.getElementById('recordingTimerMobile');
-        const voiceSimToggle = document.getElementById('voiceSimToggle');
-        const voiceSimToggleDesktop = document.getElementById('voiceSimToggleDesktop');
+        const modeToggle = document.getElementById('modeToggle');
+        const modeToggleDesktop = document.getElementById('modeToggleDesktop');
+        const modeToggleLabel = document.getElementById('modeToggleLabel');
+        const modeToggleLabelDesktop = document.getElementById('modeToggleLabelDesktop');
+        const modeHint = document.getElementById('modeHint');
+        const modeHintDesktop = document.getElementById('modeHintDesktop');
 
         // NEW: Mobile-specific elements for requirements 3, 4, 6
         const mainHeader = document.getElementById('mainHeader');
@@ -778,8 +789,7 @@
         stopBtn.addEventListener('click', stopSession);
         startBtnMobile.addEventListener('click', startSession);
         stopBtnMobile.addEventListener('click', stopSession);
-        speakerCounselorBtn.addEventListener('click', () => switchSpeaker('counselor'));
-        speakerClientBtn.addEventListener('click', () => switchSpeaker('client'));
+        // Speaker buttons removed (AI auto-detects speakers)
         triggerAnalysisBtn.addEventListener('click', manuallyTriggerAnalysis);
         generateMultipleBtn.addEventListener('click', generateMultipleAnalyses);
         fabAnalyze.addEventListener('click', manuallyTriggerAnalysis);
@@ -788,9 +798,9 @@
         if (carouselPrev) carouselPrev.addEventListener('click', () => navigateCarousel(-1));
         if (carouselNext) carouselNext.addEventListener('click', () => navigateCarousel(1));
 
-        // Voice Simulation Toggle
-        voiceSimToggle.addEventListener('click', toggleVoiceSimulation);
-        if (voiceSimToggleDesktop) voiceSimToggleDesktop.addEventListener('click', toggleVoiceSimulation);
+        // Mode Toggle (Demo/Real)
+        modeToggle.addEventListener('click', toggleRecordingMode);
+        if (modeToggleDesktop) modeToggleDesktop.addEventListener('click', toggleRecordingMode);
 
         // Audio Player Controls
         if (audioPlayBtn) audioPlayBtn.addEventListener('click', toggleAudioPlayback);
@@ -807,20 +817,339 @@
         // Initialize Web Speech API (TTS)
         initializeSpeechSynthesis();
 
+        // === ElevenLabs Real-time STT Functions ===
+
+        /**
+         * Start real recording with ElevenLabs WebSocket + MediaRecorder
+         */
+        async function startRealRecording() {
+            // Step 1: Get single-use token from backend
+            console.log('📞 呼叫後端取得 ElevenLabs token...');
+            const tokenResponse = await fetch('/api/v1/realtime/elevenlabs-token', {
+                method: 'POST'
+            });
+
+            if (!tokenResponse.ok) {
+                throw new Error(`Token 生成失敗: ${tokenResponse.status}`);
+            }
+
+            const { token } = await tokenResponse.json();
+            elevenlabsToken = token;
+            console.log('✅ Token 取得成功');
+
+            // Step 2: Request microphone access
+            try {
+                audioStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 16000, // 16kHz for speech (ElevenLabs supports 8-48kHz)
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                console.log('✅ Microphone access granted');
+            } catch (error) {
+                throw new Error(`麥克風存取失敗: ${error.message}`);
+            }
+
+            // Step 3: Establish WebSocket connection to ElevenLabs
+            // All configuration goes in query parameters, not as JSON message
+            // Use "token" parameter (browsers can't set custom headers in WebSocket)
+            const wsUrl = `wss://api.elevenlabs.io/v1/speech-to-text/realtime?` +
+                `token=${elevenlabsToken}` +
+                `&audio_format=pcm_16000` +
+                `&language=cmn` +  // Mandarin Chinese (cmn, not zh)
+                `&commit_strategy=vad`;  // Auto-commit with Voice Activity Detection
+
+            console.log('🔌 Connecting to ElevenLabs WebSocket...');
+            elevenLabsWs = new WebSocket(wsUrl);
+
+            return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('WebSocket 連線超時'));
+                }, 10000); // 10 second timeout
+
+                elevenLabsWs.onopen = () => {
+                    clearTimeout(timeout);
+                    console.log('✅ ElevenLabs WebSocket connected');
+                    console.log('⏳ Waiting for session_started message...');
+
+                    // No need to send config - it's all in the URL query parameters
+                    // Wait for session_started confirmation before starting audio
+
+                    // Step 3: Start AudioContext to capture PCM audio
+                    startAudioCapture();
+                    resolve();
+                };
+
+                elevenLabsWs.onmessage = (event) => {
+                    handleElevenLabsMessage(event.data);
+                };
+
+                elevenLabsWs.onerror = (error) => {
+                    clearTimeout(timeout);
+                    console.error('❌ WebSocket error:', error);
+                    reject(new Error('WebSocket 連線錯誤'));
+                };
+
+                elevenLabsWs.onclose = (event) => {
+                    console.log('🔌 WebSocket closed:', event.code, event.reason);
+                    if (!event.wasClean) {
+                        console.warn('⚠️ WebSocket closed unexpectedly');
+                    }
+                };
+            });
+        }
+
+        /**
+         * Start AudioContext to capture and stream PCM audio
+         */
+        function startAudioCapture() {
+            // Create AudioContext with 16kHz sample rate (ElevenLabs requirement)
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            const source = audioContext.createMediaStreamSource(audioStream);
+
+            // Create ScriptProcessorNode for audio processing (4096 buffer size)
+            const bufferSize = 4096;
+            const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+
+            processor.onaudioprocess = (e) => {
+                if (elevenLabsWs && elevenLabsWs.readyState === WebSocket.OPEN) {
+                    // Get PCM float32 audio data
+                    const inputData = e.inputBuffer.getChannelData(0);
+
+                    // Convert Float32 to Int16 (PCM S16LE)
+                    const pcmData = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        // Clamp to [-1, 1] and convert to 16-bit
+                        const s = Math.max(-1, Math.min(1, inputData[i]));
+                        pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+
+                    // Convert to Base64
+                    const base64Audio = arrayBufferToBase64(pcmData.buffer);
+
+                    // Send to ElevenLabs (correct JSON format)
+                    const message = {
+                        message_type: 'input_audio_chunk',
+                        audio_base_64: base64Audio,
+                        commit: false,  // Auto-commit handled by VAD
+                        sample_rate: 16000
+                    };
+                    elevenLabsWs.send(JSON.stringify(message));
+                }
+            };
+
+            // Connect audio graph: source -> processor -> destination
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+
+            console.log('✅ AudioContext started (PCM 16kHz streaming)');
+        }
+
+        /**
+         * Convert ArrayBuffer to Base64
+         */
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        /**
+         * Handle messages from ElevenLabs WebSocket
+         */
+        function handleElevenLabsMessage(data) {
+            try {
+                const message = JSON.parse(data);
+
+                // Debug: Log raw message to understand ElevenLabs response format
+                console.log('📨 ElevenLabs raw message:', JSON.stringify(message, null, 2));
+                console.log('📨 Message type:', message.message_type);
+                console.log('📨 Message keys:', Object.keys(message));
+
+                switch (message.message_type) {
+                    case 'session_started':
+                        console.log('✅ ElevenLabs session started:', message);
+                        break;
+
+                    case 'partial_transcript':
+                        // Real-time transcription (not yet finalized)
+                        if (message.text) {
+                            partialTranscriptText = message.text;
+                            updatePartialTranscriptUI(message.text);
+                            console.log('📝 Partial:', message.text);
+                        }
+                        break;
+
+                    case 'committed_transcript':
+                        // Finalized transcription - add to chat
+                        if (message.text && message.text.trim()) {
+                            // Clear partial transcript UI
+                            clearPartialTranscriptUI();
+
+                            // Add to transcript with current speaker
+                            addTranscriptLine(currentSpeaker, message.text.trim());
+                            console.log('✅ Committed:', message.text);
+
+                            // Reset partial text
+                            partialTranscriptText = '';
+                        }
+                        break;
+
+                    case 'committed_transcript_with_timestamps':
+                        // Finalized transcription with word-level timestamps
+                        if (message.text && message.text.trim()) {
+                            clearPartialTranscriptUI();
+                            addTranscriptLine(currentSpeaker, message.text.trim());
+                            console.log('✅ Committed (with timestamps):', message.text);
+
+                            // You can use message.words for word-level timing if needed
+                            if (message.words) {
+                                console.log('⏱️ Word timestamps:', message.words);
+                            }
+
+                            partialTranscriptText = '';
+                        }
+                        break;
+
+                    case 'error':
+                        console.error('❌ ElevenLabs error:', message);
+                        alert(`語音辨識錯誤: ${message.message || message.error || '未知錯誤'}`);
+                        break;
+
+                    default:
+                        console.log('ℹ️ Unknown message type:', message.message_type);
+                }
+            } catch (error) {
+                console.error('❌ Failed to parse WebSocket message:', error);
+            }
+        }
+
+        /**
+         * Update UI with partial (in-progress) transcript
+         */
+        function updatePartialTranscriptUI(text) {
+            // Check if partial transcript bubble already exists
+            let partialBubble = document.getElementById('partial-transcript-bubble');
+
+            if (!partialBubble) {
+                // Create new partial transcript bubble
+                const messageDiv = document.createElement('div');
+                messageDiv.id = 'partial-transcript-container';
+                messageDiv.className = `flex items-start gap-2 mb-3 fade-in ${currentSpeaker === 'client' ? 'flex-row-reverse' : ''}`;
+
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = `w-8 h-8 ${currentSpeaker === 'counselor' ? 'bg-blue-500' : 'bg-green-500'} rounded-full flex items-center justify-center flex-shrink-0 shadow-md opacity-60`;
+                avatarDiv.innerHTML = `<span class="text-white text-sm">${currentSpeaker === 'counselor' ? '👨‍⚕️' : '🧑'}</span>`;
+
+                const bubbleWrapper = document.createElement('div');
+                bubbleWrapper.className = `flex-1 flex flex-col ${currentSpeaker === 'client' ? 'items-end' : 'items-start'}`;
+
+                const bubble = document.createElement('div');
+                bubble.id = 'partial-transcript-bubble';
+                bubble.className = `chat-bubble ${currentSpeaker === 'counselor' ? 'bg-blue-100 rounded-2xl rounded-tl-none' : 'bg-green-100 rounded-2xl rounded-tr-none'} px-4 py-2 shadow-sm border-2 border-dashed ${currentSpeaker === 'counselor' ? 'border-blue-300' : 'border-green-300'} opacity-75`;
+                bubble.innerHTML = `<p class="text-sm text-gray-700 leading-relaxed italic">${text}</p>`;
+
+                bubbleWrapper.appendChild(bubble);
+                messageDiv.appendChild(avatarDiv);
+                messageDiv.appendChild(bubbleWrapper);
+
+                transcript.appendChild(messageDiv);
+            } else {
+                // Update existing partial transcript
+                partialBubble.querySelector('p').textContent = text;
+            }
+
+            // Auto-scroll to bottom
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        /**
+         * Clear partial transcript UI when committed
+         */
+        function clearPartialTranscriptUI() {
+            const partialContainer = document.getElementById('partial-transcript-container');
+            if (partialContainer) {
+                partialContainer.remove();
+            }
+        }
+
+        /**
+         * Stop real recording and cleanup resources
+         */
+        function stopRealRecording() {
+            // Stop AudioContext
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+                console.log('⏹️ AudioContext stopped');
+            }
+
+            // Stop audio stream
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+                audioStream = null;
+                console.log('🎤 Microphone released');
+            }
+
+            // Close WebSocket
+            if (elevenLabsWs && elevenLabsWs.readyState === WebSocket.OPEN) {
+                elevenLabsWs.close();
+                elevenLabsWs = null;
+                console.log('🔌 WebSocket closed');
+            }
+
+            // Clear partial transcript
+            clearPartialTranscriptUI();
+            partialTranscriptText = '';
+        }
+
+        /**
+         * Convert Blob to Base64
+         */
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
         // === Core Functions ===
-        function startSession() {
+        async function startSession() {
             isRecording = true;
             startTime = Date.now();
             transcriptSegments = [];
             analysisHistory = [];
 
-            // Initialize audio simulation
-            initializeAudioSimulation();
+            // REAL RECORDING MODE: Start ElevenLabs WebSocket + Microphone
+            if (!isDemoMode) {
+                try {
+                    await startRealRecording();
+                    console.log('🎤 Real recording started with ElevenLabs STT');
+                } catch (error) {
+                    console.error('❌ Failed to start real recording:', error);
+                    alert(`無法啟動麥克風或連接語音辨識服務：${error.message}\n\n將切換到 Demo 模式`);
+                    isDemoMode = true; // Fallback to demo mode
+                }
+            }
 
-            // Auto-play audio if voice simulation is enabled
-            if (isVoiceSimEnabled) {
-                playAudioSimulation();
-                console.log('🎵 自動開始播放音訊（模擬人聲已啟用）');
+            // DEMO MODE: Initialize audio simulation
+            if (isDemoMode) {
+                initializeAudioSimulation();
+
+                // Auto-play audio if voice simulation is enabled
+                if (isVoiceSimEnabled) {
+                    playAudioSimulation();
+                    console.log('🎵 自動開始播放音訊（模擬人聲已啟用）');
+                }
             }
 
             // UI Updates - Desktop
@@ -889,10 +1218,15 @@
         function stopSession() {
             isRecording = false;
 
+            // Stop real recording if active
+            if (!isDemoMode) {
+                stopRealRecording();
+            }
+
             // Final analysis
             analyzeTranscript();
 
-            // Stop audio playback and speech
+            // Stop audio playback and speech (demo mode)
             if (audioSimulation.isPlaying) {
                 pauseAudioSimulation();
             }
@@ -966,6 +1300,75 @@
                 speakerCounselorBtn.classList.remove('bg-gradient-to-br', 'from-blue-500', 'to-indigo-600', 'text-white', 'shadow-md', 'hover:shadow-lg');
                 speakerCounselorBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300', 'shadow-sm');
             }
+        }
+
+        function toggleRecordingMode() {
+            // Prevent mode change during recording
+            if (isRecording) {
+                alert('請先停止錄音再切換模式');
+                return;
+            }
+
+            // Toggle mode
+            isDemoMode = !isDemoMode;
+
+            // Update all toggle switches (mobile + desktop)
+            const toggles = [modeToggle, modeToggleDesktop].filter(t => t);
+            const labels = [
+                { elem: modeToggleLabel, hintElem: modeHint },
+                { elem: modeToggleLabelDesktop, hintElem: modeHintDesktop }
+            ].filter(l => l.elem);
+
+            toggles.forEach(toggleBtn => {
+                const toggleCircle = toggleBtn.querySelector('span');
+
+                if (!isDemoMode) {
+                    // Real recording mode: green background, circle to right
+                    toggleBtn.classList.remove('bg-gray-300');
+                    toggleBtn.classList.add('bg-green-600');
+                    toggleBtn.setAttribute('aria-checked', 'true');
+                    toggleCircle.classList.remove('translate-x-1');
+                    toggleCircle.classList.add('translate-x-6');
+                } else {
+                    // Demo mode: gray background, circle to left
+                    toggleBtn.classList.remove('bg-green-600');
+                    toggleBtn.classList.add('bg-gray-300');
+                    toggleBtn.setAttribute('aria-checked', 'false');
+                    toggleCircle.classList.remove('translate-x-6');
+                    toggleCircle.classList.add('translate-x-1');
+                }
+            });
+
+            // Update labels
+            labels.forEach(({ elem, hintElem }) => {
+                if (!isDemoMode) {
+                    elem.textContent = '真實錄音';
+                    hintElem.textContent = '開啟 = 真實';
+                } else {
+                    elem.textContent = 'Demo 模式';
+                    hintElem.textContent = '關閉 = Demo';
+                }
+            });
+
+            // Log mode change
+            console.log(`🔄 Mode switched to: ${isDemoMode ? 'Demo' : 'Real Recording'}`);
+
+            // Show notification
+            const modeText = isDemoMode ? 'Demo 模式（模擬對話）' : '真實錄音模式（需要麥克風權限）';
+            showNotification(`已切換到 ${modeText}`, isDemoMode ? 'info' : 'success');
+        }
+
+        function showNotification(message, type = 'info') {
+            const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+            const notification = document.createElement('div');
+            notification.className = `fixed top-20 right-4 ${bgColor} text-white px-6 py-3 rounded-xl shadow-lg z-50 fade-in`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
         }
 
         function toggleVoiceSimulation() {
@@ -1112,32 +1515,47 @@
 
         // === AI Analysis ===
         async function analyzeTranscript() {
-            if (transcriptSegments.length === 0) return;
+            // Set loading state for both analyze buttons (do this first for user feedback)
+            setAnalyzeButtonsLoading(true);
 
-            // Build transcript text
-            const transcriptText = transcriptSegments.map(s =>
-                `${s.speaker === 'counselor' ? '諮商師' : '案主'}：${s.text}`
-            ).join('\n');
-
-            // Calculate time range and capture recording timestamp
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const minutes = Math.floor(elapsed / 60);
-            const seconds = elapsed % 60;
-            const timeRange = `${Math.max(0, minutes - 1)}:00-${minutes}:00`;
-            const recordingTimestamp = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
-            // === 使用假資料模式（Demo） ===
-            const useMockData = false; // 設為 false 使用真實 API
-
-            if (useMockData) {
-                // 智慧生成假資料
-                const mockAnalysis = generateMockAnalysis(transcriptText, timeRange, recordingTimestamp);
-                displayAnalysisCard(mockAnalysis);
+            if (transcriptSegments.length === 0) {
+                // Restore button state and show error
+                setAnalyzeButtonsLoading(false);
+                alert('目前沒有逐字稿內容，請先開始錄音');
                 return;
             }
 
-            // === 真實 API 呼叫（需要認證） ===
             try {
+                // Build transcript text
+                const transcriptText = transcriptSegments.map(s =>
+                    `${s.speaker === 'counselor' ? '諮商師' : '案主'}：${s.text}`
+                ).join('\n');
+
+                // Skip analysis if transcript is too short (less than 10 characters)
+                if (!transcriptText || transcriptText.trim().length < 10) {
+                    console.log('⏭️ Skipping analysis: transcript too short');
+                    setAnalyzeButtonsLoading(false);
+                    return;
+                }
+
+                // Calculate time range and capture recording timestamp
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                const timeRange = `${Math.max(0, minutes - 1)}:00-${minutes}:00`;
+                const recordingTimestamp = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+                // === 使用假資料模式（Demo） ===
+                const useMockData = false; // 設為 false 使用真實 API
+
+                if (useMockData) {
+                    // 智慧生成假資料
+                    const mockAnalysis = generateMockAnalysis(transcriptText, timeRange, recordingTimestamp);
+                    displayAnalysisCard(mockAnalysis);
+                    return;
+                }
+
+                // === 真實 API 呼叫（需要認證） ===
                 const response = await fetch('/api/v1/realtime/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1160,10 +1578,94 @@
 
             } catch (error) {
                 console.error('Analysis error:', error);
-                // Fallback to mock data
-                const mockAnalysis = generateMockAnalysis(transcriptText, timeRange, recordingTimestamp);
-                displayAnalysisCard(mockAnalysis);
+
+                // Don't show error to user for short transcripts or display mock data
+                // Only log warning for meaningful errors
+                if (error.message && !error.message.includes('too short')) {
+                    console.warn('分析暫時無法執行，將在下次嘗試');
+                }
+
+                // Fallback to mock data if we have valid transcript
+                try {
+                    const transcriptText = transcriptSegments.map(s =>
+                        `${s.speaker === 'counselor' ? '諮商師' : '案主'}：${s.text}`
+                    ).join('\n');
+
+                    if (transcriptText && transcriptText.trim().length >= 10) {
+                        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                        const minutes = Math.floor(elapsed / 60);
+                        const seconds = elapsed % 60;
+                        const timeRange = `${Math.max(0, minutes - 1)}:00-${minutes}:00`;
+                        const recordingTimestamp = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+                        const mockAnalysis = generateMockAnalysis(transcriptText, timeRange, recordingTimestamp);
+                        displayAnalysisCard(mockAnalysis);
+                    }
+                } catch (fallbackError) {
+                    console.error('Fallback mock data generation failed:', fallbackError);
+                }
+            } finally {
+                // Always restore button states, even if error occurs
+                setAnalyzeButtonsLoading(false);
             }
+        }
+
+        // Helper function to set loading state for analyze buttons
+        function setAnalyzeButtonsLoading(isLoading) {
+            const buttons = [
+                { btn: fabAnalyze, icon: '⚡', text: '即時分析' },
+                { btn: triggerAnalysisBtn, icon: '⚡', text: '立即分析' }
+            ];
+
+            buttons.forEach(({ btn, icon, text }) => {
+                if (!btn) return;
+
+                if (isLoading) {
+                    // Set loading state
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.classList.remove('hover:shadow-xl');
+
+                    // Update button content with spinner
+                    const isFab = btn.id === 'fabAnalyze';
+                    if (isFab) {
+                        btn.innerHTML = `
+                            <span class="text-3xl spinner">⚙️</span>
+                            <span class="text-lg tracking-wide">分析中...</span>
+                        `;
+                    } else {
+                        btn.innerHTML = `
+                            <span class="spinner">⚙️</span>
+                            <span class="hidden sm:inline">分析中...</span>
+                            <span class="sm:hidden">...</span>
+                        `;
+                    }
+                } else {
+                    // Restore normal state (only if recording is active)
+                    if (isRecording) {
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        if (btn.id === 'fabAnalyze') {
+                            btn.classList.add('hover:shadow-xl');
+                        }
+                    }
+
+                    // Restore original button content
+                    const isFab = btn.id === 'fabAnalyze';
+                    if (isFab) {
+                        btn.innerHTML = `
+                            <span class="text-3xl">${icon}</span>
+                            <span class="text-lg tracking-wide">${text}</span>
+                        `;
+                    } else {
+                        btn.innerHTML = `
+                            <span>${icon}</span>
+                            <span class="hidden sm:inline">${text}</span>
+                            <span class="sm:hidden">分析</span>
+                        `;
+                    }
+                }
+            });
         }
 
         // === Mock Data Generator ===

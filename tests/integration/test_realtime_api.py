@@ -285,3 +285,23 @@ class TestRealtimeAnalysisAPI:
 
             for suggestion in data["suggestions"]:
                 assert isinstance(suggestion, str)
+
+
+class TestElevenLabsTokenAPI:
+    """Test ElevenLabs Token Generation API (No Auth Required)"""
+
+    def test_generate_token_success(self):
+        """Test POST /api/v1/realtime/elevenlabs-token - Should return a valid token"""
+        with TestClient(app) as client:
+            response = client.post("/api/v1/realtime/elevenlabs-token")
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Verify response structure
+            assert "token" in data
+            assert isinstance(data["token"], str)
+            assert len(data["token"]) > 0
+
+            # Token should be non-empty string (ElevenLabs generates UUID-like tokens)
+            assert data["token"].strip() != ""

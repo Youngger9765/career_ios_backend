@@ -2,14 +2,20 @@
 Realtime STT Counseling API
 """
 import logging
+import os
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import List
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.schemas.realtime import RealtimeAnalyzeRequest, RealtimeAnalyzeResponse
+from app.schemas.realtime import (
+    RAGSource,
+    RealtimeAnalyzeRequest,
+    RealtimeAnalyzeResponse,
+)
 from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
 from app.services.rag_chat_service import RAGChatService
@@ -71,7 +77,7 @@ def _detect_career_keywords(transcript: str) -> bool:
 
 async def _search_rag_knowledge(
     transcript: str, db: Session, top_k: int = 3, similarity_threshold: float = 0.7
-) -> List[Dict[str, Any]]:
+) -> List[RAGSource]:
     """Search RAG knowledge base for relevant content.
 
     Args:
@@ -101,11 +107,11 @@ async def _search_rag_knowledge(
         rag_sources = []
         for row in rows:
             rag_sources.append(
-                {
-                    "title": row.document_title,
-                    "content": row.text[:300],  # Truncate to 300 chars
-                    "score": round(float(row.similarity_score), 2),
-                }
+                RAGSource(
+                    title=row.document_title,
+                    content=row.text[:300],  # Truncate to 300 chars
+                    score=round(float(row.similarity_score), 2),
+                )
             )
 
         logger.info(f"RAG search found {len(rag_sources)} relevant sources")
@@ -149,7 +155,7 @@ async def analyze_transcript(
                 rag_context_parts = ["\n\n📚 相關職涯知識庫內容（供參考）：\n"]
                 for idx, source in enumerate(rag_sources, 1):
                     rag_context_parts.append(
-                        f"[{idx}] {source['title']}: {source['content'][:200]}..."
+                        f"[{idx}] {source.title}: {source.content[:200]}..."
                     )
                 rag_context = "\n".join(rag_context_parts)
 
@@ -172,3 +178,58 @@ async def analyze_transcript(
     except Exception as e:
         logger.error(f"Realtime analysis failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/elevenlabs-token")
+async def generate_elevenlabs_token():
+    """Generate a single-use token for ElevenLabs Speech-to-Text WebSocket.
+
+    This endpoint calls ElevenLabs API to generate a temporary token that
+    can be used by the frontend to connect to their WebSocket service.
+    This approach keeps the API key secure on the server side.
+
+    Returns:
+        Dict with 'token' key containing the single-use token
+
+    Raises:
+        HTTPException: If token generation fails
+    """
+    try:
+        # Get API key from environment
+        api_key = os.getenv("ELEVEN_LABS_API_KEY")
+        if not api_key:
+            logger.error("ELEVEN_LABS_API_KEY not found in environment")
+            raise HTTPException(
+                status_code=500, detail="ElevenLabs API key not configured"
+            )
+
+        # Call ElevenLabs API to generate single-use token
+        # Token type: "realtime_scribe" for speech-to-text WebSocket
+        url = "https://api.elevenlabs.io/v1/single-use-token/realtime_scribe"
+        headers = {"xi-api-key": api_key}
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, headers=headers, timeout=30.0)
+
+            if response.status_code != 200:
+                logger.error(
+                    f"ElevenLabs API error: {response.status_code} - {response.text}"
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to generate token: {response.text}",
+                )
+
+            token_data = response.json()
+            logger.info("Successfully generated ElevenLabs token")
+
+            return {"token": token_data.get("token")}
+
+    except httpx.TimeoutException:
+        logger.error("Timeout calling ElevenLabs API")
+        raise HTTPException(
+            status_code=504, detail="Timeout generating token from ElevenLabs"
+        )
+    except Exception as e:
+        logger.error(f"Token generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Token generation failed: {e}")
