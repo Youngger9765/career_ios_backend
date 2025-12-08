@@ -290,6 +290,57 @@ poetry run pytest tests/integration/ -v
 
 ---
 
+## 🔍 Third-Party API Documentation
+
+### Critical Rule: Always Check Official Docs First
+
+**When integrating third-party services:**
+
+1. **✅ MANDATORY: Read official API documentation FIRST**
+   - Don't rely on general web search results
+   - Don't assume based on similar APIs
+   - Always check the specific version documentation
+
+2. **Key Services & Documentation Sources:**
+
+   - **ElevenLabs Realtime v2 Speech-to-Text**
+     - Official: https://elevenlabs.io/docs/api-reference/speech-to-text/v-1-speech-to-text-realtime
+     - Language codes: Use ISO 639-1 (e.g., `zh` for Chinese)
+     - ⚠️ Different from TTS language codes
+
+   - **OpenAI APIs**
+     - Official: https://platform.openai.com/docs/api-reference
+     - Always check model-specific parameters
+
+   - **Google Gemini / Vertex AI**
+     - Official: https://cloud.google.com/vertex-ai/docs
+     - Check regional availability
+
+3. **Development Process:**
+   ```
+   1. 需求確定 → 立即查官方文檔
+   2. 找到正確的 API endpoint 和參數格式
+   3. 查看官方範例代碼
+   4. 實作並測試
+   5. ❌ 不要先寫代碼再查文檔
+   ```
+
+4. **Lesson Learned: ElevenLabs Language Code**
+   - ❌ Wrong: Assumed `cmn` or `zho` based on web search
+   - ✅ Correct: Should have checked Realtime v2 docs → `zh`
+   - Impact: 2 commits wasted, deployment delays
+
+**Rule**: "When in doubt, RTFM (Read The F***ing Manual)"
+
+**Integration with TDD**:
+- When writing tests for third-party APIs:
+  1. Check official docs for correct parameters
+  2. Use official examples as test cases
+  3. Write tests that validate API contract
+  4. Keep API documentation link in test comments
+
+---
+
 ## 🔒 不可妥協的規則
 
 **CRITICAL: These rules are ABSOLUTE and CANNOT be violated**
