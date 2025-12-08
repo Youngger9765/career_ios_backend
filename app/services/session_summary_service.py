@@ -94,7 +94,7 @@ class SessionSummaryService:
             messages=[
                 {
                     "role": "system",
-                    "content": "你是專業的諮商記錄助理，擅長從會談逐字稿中提煉核心要點，生成簡潔的會談摘要。",
+                    "content": "你是專業的諮詢記錄助理，擅長從會談逐字稿中提煉核心要點，生成簡潔的會談摘要。",
                 },
                 {"role": "user", "content": prompt},
             ],
@@ -109,7 +109,7 @@ class SessionSummaryService:
 
     async def _generate_with_gemini(self, prompt: str) -> str:
         """Generate summary using Gemini"""
-        full_prompt = f"""你是專業的諮商記錄助理，擅長從會談逐字稿中提煉核心要點，生成簡潔的會談摘要。
+        full_prompt = f"""你是專業的諮詢記錄助理，擅長從會談逐字稿中提煉核心要點，生成簡潔的會談摘要。
 
 {prompt}"""
 
@@ -137,8 +137,8 @@ class SessionSummaryService:
 【摘要要求】
 1. 核心內容：本次會談的主要議題、活動（如：使用牌卡工具、探索職涯方向）
 2. 個案狀態：情緒狀態、行為表現（如：焦慮、迴避、自信不足）
-3. 關鍵發現：諮商師觀察到的重點（如：價值觀衝突、優勢特質）
-4. 用詞專業：使用諮商專業用語，避免口語化
+3. 關鍵發現：諮詢師觀察到的重點（如：價值觀衝突、優勢特質）
+4. 用詞專業：使用諮詢專業用語，避免口語化
 5. 字數限制：嚴格控制在 {max_length} 字以內
 
 【逐字稿】

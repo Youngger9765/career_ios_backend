@@ -85,7 +85,7 @@ class TestCasesAPI:
                 headers=auth_headers,
                 json={
                     "client_id": str(test_client_obj.id),
-                    "summary": "職涯諮商個案",
+                    "summary": "職涯諮詢個案",
                     "goals": "協助個案探索職涯方向",
                     "problem_description": "對未來職涯感到迷惘",
                 },
@@ -94,7 +94,7 @@ class TestCasesAPI:
             assert response.status_code == 201
             data = response.json()
             assert data["client_id"] == str(test_client_obj.id)
-            assert data["summary"] == "職涯諮商個案"
+            assert data["summary"] == "職涯諮詢個案"
             assert data["status"] == 0  # NOT_STARTED
             assert "case_number" in data
             assert "id" in data
@@ -314,14 +314,14 @@ class TestCasesAPI:
                 headers=auth_headers,
                 json={
                     "summary": "更新後的摘要",
-                    "goals": "新的諮商目標",
+                    "goals": "新的諮詢目標",
                 },
             )
 
             assert response.status_code == 200
             data = response.json()
             assert data["summary"] == "更新後的摘要"
-            assert data["goals"] == "新的諮商目標"
+            assert data["goals"] == "新的諮詢目標"
 
     def test_update_case_status(
         self, db_session: Session, auth_headers, test_client_obj

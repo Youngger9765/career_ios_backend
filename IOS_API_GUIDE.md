@@ -13,7 +13,7 @@
 1. [認證 APIs](#認證-apis) (1-3)
 2. [個案管理 APIs](#個案管理-apis) (4-9)
 3. [會談記錄管理 APIs](#會談記錄管理-apis) (10-17)
-4. [諮商師反思 APIs](#諮商師反思-apis) (18-19)
+4. [諮詢師反思 APIs](#諮詢師反思-apis) (18-19)
 5. [報告 APIs](#報告-apis) (20-24)
 6. [完整使用流程](#完整使用流程)
 7. [錯誤處理](#錯誤處理)
@@ -36,7 +36,7 @@
 
 **自動儲存:**
 - 呼叫 analyze-keywords 時，分析結果自動儲存至 `analysis_logs` 欄位
-- 記錄包含：時間戳記、關鍵字、類別、信心分數、諮商師洞見、AI/備援標記
+- 記錄包含：時間戳記、關鍵字、類別、信心分數、諮詢師洞見、AI/備援標記
 
 **詳細文件:** 請參閱本文件「關鍵字分析 APIs」章節
 
@@ -80,8 +80,8 @@
       "start_time": "2025-01-15 10:00",
       "end_time": "2025-01-15 10:30",
       "duration_seconds": 1800,
-      "transcript_text": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
-      "transcript_sanitized": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘..."
+      "transcript_text": "諮詢師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
+      "transcript_sanitized": "諮詢師：今天想聊什麼？\n個案：我最近對未來感到很迷惘..."
     }
   ]
 }
@@ -465,8 +465,8 @@ func deleteClientCase(token: String, caseId: UUID) async throws -> DeleteRespons
 
 ### 👤 認證 APIs
 4. POST /api/auth/login - 登入
-5. GET /api/auth/me - 取得諮商師資訊
-6. PATCH /api/auth/me - 更新諮商師資訊
+5. GET /api/auth/me - 取得諮詢師資訊
+6. PATCH /api/auth/me - 更新諮詢師資訊
 
 ### 👥 個案管理 APIs
 4. POST /api/v1/clients - 建立個案
@@ -484,7 +484,7 @@ func deleteClientCase(token: String, caseId: UUID) async throws -> DeleteRespons
 14. DELETE /api/v1/sessions/{id} - 刪除會談記錄
 15. POST /api/v1/sessions/{id}/recordings/append - 🎙️ Append 錄音片段 (iOS 友善) ⭐️ NEW
 
-### 🧠 諮商師反思 APIs
+### 🧠 諮詢師反思 APIs
 16. GET /api/v1/sessions/{id}/reflection - 取得反思內容
 17. PUT /api/v1/sessions/{id}/reflection - 更新反思內容
 
@@ -802,7 +802,7 @@ func getCurrentUser(token: String) async throws -> Counselor {
 
 ---
 
-### 3. 更新諮商師資訊
+### 3. 更新諮詢師資訊
 
 **Endpoint:** `PATCH /api/auth/me`
 
@@ -1086,7 +1086,7 @@ Authorization: Bearer {access_token}
 
 **Endpoint:** `GET /api/v1/sessions/timeline`
 
-**描述:** 取得個案的所有會談記錄時間線，包含會談次數、日期、時間範圍、摘要、是否有報告等資訊。適合在個案詳情頁面顯示完整的諮商歷程。
+**描述:** 取得個案的所有會談記錄時間線，包含會談次數、日期、時間範圍、摘要、是否有報告等資訊。適合在個案詳情頁面顯示完整的諮詢歷程。
 
 **Headers:**
 ```
@@ -1184,7 +1184,7 @@ func getClientTimeline(token: String, clientId: UUID) async throws -> ClientTime
 
 **Endpoint:** `POST /api/v1/sessions`
 
-**描述:** 儲存會談逐字稿（不立即生成報告）。諮商師可以先儲存逐字稿，稍後再決定是否生成報告。
+**描述:** 儲存會談逐字稿（不立即生成報告）。諮詢師可以先儲存逐字稿，稍後再決定是否生成報告。
 
 **重要:** `session_number` 是自動按照會談時間排序生成的：
 - **排序規則**: 優先使用 `start_time`，如果沒有提供則使用 `session_date`
@@ -1231,8 +1231,8 @@ Content-Type: application/json
     }
   ],
   "duration_minutes": 50,                  // optional (保留向下兼容)
-  "notes": "備註說明",                       // optional，諮商師人工撰寫的備註
-  "reflection": {                          // ⭐️ NEW optional，諮商師反思（人類撰寫）
+  "notes": "備註說明",                       // optional，諮詢師人工撰寫的備註
+  "reflection": {                          // ⭐️ NEW optional，諮詢師反思（人類撰寫）
     "working_with_client": "整體過程流暢輕鬆，逐漸贏得信任...",
     "feeling_source": "個案從緊張到逐步放鬆...",
     "current_challenges": "當肯定個案時，仍會有自我懷疑反應...",
@@ -1244,7 +1244,7 @@ Content-Type: application/json
 **📝 欄位說明:**
 - `name`: ⭐️ NEW 會談名稱（optional），用於組織和區分會談記錄
   - 例如：「初次會談」、「職涯探索」、「壓力管理」、「追蹤會談」
-  - 幫助諮商師快速識別會談主題
+  - 幫助諮詢師快速識別會談主題
   - 未提供時系統會自動使用 `session_number` 作為預設名稱
 - `transcript` vs `recordings`: **二選一**
   - `transcript`: 直接提供完整逐字稿（傳統方式）
@@ -1253,8 +1253,8 @@ Content-Type: application/json
   - 按 `segment_number` 排序
   - 用 `\n\n` (兩個換行) 連接所有 `transcript_text`
   - 自動填充到 `transcript_text` 和 `transcript_sanitized` 欄位
-- `notes`: 諮商師對本次會談的簡短備註
-- `reflection`: ⭐️ 諮商師對本次會談的深度反思，包含 4 個反思問題（選填）
+- `notes`: 諮詢師對本次會談的簡短備註
+- `reflection`: ⭐️ 諮詢師對本次會談的深度反思，包含 4 個反思問題（選填）
   - `working_with_client`: 我和這個人工作的感受是？
   - `feeling_source`: 這個感受的原因是？
   - `current_challenges`: 目前的困難／想更深入的地方是？
@@ -1624,13 +1624,13 @@ func appendRecording(
 
 ---
 
-## 🧠 諮商師反思 APIs
+## 🧠 諮詢師反思 APIs
 
 ### 16. 取得反思內容
 
 **Endpoint:** `GET /api/v1/sessions/{session_id}/reflection`
 
-**描述:** 取得諮商師對特定會談的反思內容。反思是諮商師人工撰寫的內容，用於深度自我覺察和督導討論。
+**描述:** 取得諮詢師對特定會談的反思內容。反思是諮詢師人工撰寫的內容，用於深度自我覺察和督導討論。
 
 **Headers:**
 ```
@@ -1691,7 +1691,7 @@ func getReflection(token: String, sessionId: UUID) async throws -> ReflectionRes
 
 **Endpoint:** `PUT /api/v1/sessions/{session_id}/reflection`
 
-**描述:** 更新或新增諮商師對特定會談的反思。可以只填寫部分問題，未填寫的問題不會被儲存。
+**描述:** 更新或新增諮詢師對特定會談的反思。可以只填寫部分問題，未填寫的問題不會被儲存。
 
 **Headers:**
 ```
@@ -1752,7 +1752,7 @@ func updateReflection(token: String, sessionId: UUID, reflection: ReflectionUpda
 ```
 
 **💡 使用場景:**
-1. **撰寫反思**: 會談後諮商師填寫反思問題
+1. **撰寫反思**: 會談後諮詢師填寫反思問題
 2. **補充反思**: 稍後回顧時補充遺漏的問題
 3. **督導前整理**: 督導前重新整理反思內容
 4. **生成報告時**: 反思內容會被包含在報告的「四、個人化分析」章節
@@ -1765,7 +1765,7 @@ func updateReflection(token: String, sessionId: UUID, reflection: ReflectionUpda
 
 **Endpoint:** `POST /api/v1/sessions/{session_id}/analyze-keywords`
 
-**描述:** 使用 AI 分析逐字稿片段，提取關鍵字、類別、信心分數與諮商師洞見。分析結果會**自動儲存**至 session 的 `analysis_logs` 欄位，建立完整的分析歷程記錄。
+**描述:** 使用 AI 分析逐字稿片段，提取關鍵字、類別、信心分數與諮詢師洞見。分析結果會**自動儲存**至 session 的 `analysis_logs` 欄位，建立完整的分析歷程記錄。
 
 **技術棧:**
 - **AI 引擎**: Google Vertex AI (Gemini 2.5 Flash)
@@ -1863,7 +1863,7 @@ func analyzeKeywords(token: String, sessionId: UUID, segment: String) async thro
 - 每次分析會自動儲存至 `analysis_logs`，無需手動儲存
 - `transcript_segment` 建議 50-500 字，過短分析效果差，過長影響效能
 - `confidence` < 0.5 時建議參考 `fallback` 欄位，可能使用了備援機制
-- 分析結果包含諮商師 ID (`counselor_id`)，用於多諮商師協作場景
+- 分析結果包含諮詢師 ID (`counselor_id`)，用於多諮詢師協作場景
 
 ---
 
@@ -2002,7 +2002,7 @@ struct AnalysisLogsView: View {
                     }
                 }
 
-                // 諮商師洞見
+                // 諮詢師洞見
                 Text(log.counselor_insights)
                     .font(.body)
                     .foregroundColor(.primary)
@@ -2030,7 +2030,7 @@ struct AnalysisLogsView: View {
 1. **歷程回顧**: 會談後回顧所有分析記錄，整理重點
 2. **議題追蹤**: 查看關鍵字演變，了解議題發展軌跡
 3. **報告準備**: 根據分析歷程撰寫會談報告
-4. **督導討論**: 展示分析歷程，與督導討論諮商策略
+4. **督導討論**: 展示分析歷程，與督導討論諮詢策略
 5. **品質檢核**: 檢視 `confidence` 和 `fallback` 欄位，評估分析品質
 
 ---
@@ -2273,7 +2273,7 @@ Content-Type: application/json
 
 **⭐️ 新增欄位說明:**
 - `content_markdown`: AI 原始生成的 Markdown 格式 (與 content_json 同步生成)
-- `edited_content_markdown`: 諮商師編輯後的 Markdown 格式 (編輯後才會有值)
+- `edited_content_markdown`: 諮詢師編輯後的 Markdown 格式 (編輯後才會有值)
 - **iOS 可直接使用 Markdown 欄位渲染，無需處理 JSON**
 
 **Swift 範例:**
@@ -2514,11 +2514,11 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 20. 更新報告 (諮商師編輯)
+### 20. 更新報告 (諮詢師編輯)
 
 **Endpoint:** `PATCH /api/v1/reports/{report_id}`
 
-**描述:** 諮商師編輯 AI 生成的報告內容
+**描述:** 諮詢師編輯 AI 生成的報告內容
 
 **Headers:**
 ```
@@ -2674,7 +2674,7 @@ try await updateReportMarkdown(reportId: reportId, markdown: editedMarkdown, tok
 #### 重要說明
 
 - AI 原始生成的報告保存在 `content_json` 和 `content_markdown` (不可變)
-- 諮商師編輯的版本保存在 `edited_content_json` 和 `edited_content_markdown`
+- 諮詢師編輯的版本保存在 `edited_content_json` 和 `edited_content_markdown`
 - **推薦使用 Markdown 欄位直接渲染**，無需解析 JSON
 
 **⭐️ Markdown 欄位使用建議:**

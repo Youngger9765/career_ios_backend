@@ -22,29 +22,39 @@ class ReportStatus(str, enum.Enum):
 class Report(Base, BaseModel):
     __tablename__ = "reports"
 
-    session_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("sessions.id"), nullable=False)
-    client_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("clients.id"), nullable=False)
-    created_by_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
+    session_id: Column[uuid.UUID] = Column(
+        GUID(), ForeignKey("sessions.id"), nullable=False
+    )
+    client_id: Column[uuid.UUID] = Column(
+        GUID(), ForeignKey("clients.id"), nullable=False
+    )
+    created_by_id: Column[uuid.UUID] = Column(
+        GUID(), ForeignKey("counselors.id"), nullable=False
+    )
     tenant_id = Column(String, nullable=False, index=True)
     version = Column(Integer, default=1)
-    status: Column[ReportStatus] = Column(SQLEnum(ReportStatus, values_callable=lambda x: [e.value for e in x]), default=ReportStatus.DRAFT, nullable=False)
+    status: Column[ReportStatus] = Column(
+        SQLEnum(ReportStatus, values_callable=lambda x: [e.value for e in x]),
+        default=ReportStatus.DRAFT,
+        nullable=False,
+    )
     mode = Column(String)  # 報告生成模式
 
     # Report content - 結構化報告內容
-    content_json = Column(
-        JSON
-    )  # AI 原始生成的報告 (不可變，用於審計和回溯)
+    content_json = Column(JSON)  # AI 原始生成的報告 (不可變，用於審計和回溯)
     content_markdown = Column(Text)  # AI 原始生成的 Markdown 格式 (不可變)
 
-    # User edited content - 諮商師編輯後的版本
-    edited_content_json = Column(JSON)  # 諮商師手動編輯的報告內容
-    edited_content_markdown = Column(Text)  # 諮商師編輯後的 Markdown 格式
+    # User edited content - 諮詢師編輯後的版本
+    edited_content_json = Column(JSON)  # 諮詢師手動編輯的報告內容
+    edited_content_markdown = Column(Text)  # 諮詢師編輯後的 Markdown 格式
     edited_at = Column(String)  # ISO 8601 timestamp of last edit
     edit_count = Column(Integer, default=0)  # 編輯次數
 
     # RAG Agent 引用
     citations_json = Column(JSON)  # RAG檢索的理論引用
-    agent_id = Column(Integer, ForeignKey("agents.id", ondelete='SET NULL'), nullable=True)  # 使用的Agent ID
+    agent_id = Column(
+        Integer, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True
+    )  # 使用的Agent ID
 
     # Legacy fields (保留向下兼容)
     summary = Column(Text)

@@ -55,8 +55,8 @@ Automatically detects coding tasks and enforces agent-manager usage to ensure:
 ## 🌟 Project-Specific Keywords
 
 The hook recognizes Career iOS Backend specific terms:
-- **Session/Consultation**: 諮詢, 諮商, 會談, reflection, 心得
-- **Client Management**: 案主, 個案, counselor, 諮商師
+- **Session/Consultation**: 諮詢, 諮詢, 會談, reflection, 心得
+- **Client Management**: 案主, 個案, counselor, 諮詢師
 - **Features**: transcript keywords, 逐字稿關鍵字, keyword analysis
 - **Reports**: 報告生成, report generation
 

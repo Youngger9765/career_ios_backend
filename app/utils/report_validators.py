@@ -41,7 +41,7 @@ def validate_report_structure(report_text: str, use_legacy: bool = False) -> Dic
             "【五、多層次因素分析】",
             "【六、個案優勢與資源】",
             "【七、諮詢師的專業判斷】",
-            "【八、諮商目標與介入策略】",
+            "【八、諮詢目標與介入策略】",
             "【九、預期成效與評估】",
             "【十、諮詢師自我反思】",
         ]
@@ -90,7 +90,7 @@ def validate_citations(report_text: str, use_legacy: bool = False) -> Dict:
         critical_sections = {
             "【五、多層次因素分析】": "因素分析需要理論支持",
             "【七、諮詢師的專業判斷】": "專業判斷需要理論依據",
-            "【八、諮商目標與介入策略】": "介入策略需要技術引用",
+            "【八、諮詢目標與介入策略】": "介入策略需要技術引用",
         }
 
     results = {}

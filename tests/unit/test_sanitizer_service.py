@@ -18,7 +18,10 @@ class TestSanitizerService:
         text = "我的身分證字號是 A123456789，請幫我保密"
         result = sanitizer.sanitize_text(text)
 
-        assert result["sanitized_text"] == "我的身分證字號是 [已遮蔽身分證字號]，請幫我保密"
+        assert (
+            result["sanitized_text"]
+            == "我的身分證字號是 [已遮蔽身分證字號]，請幫我保密"
+        )
         assert result["count"] == 1
         assert "id_card" in result["found_items"]
         assert result["found_items"]["id_card"] == ["A123456789"]
@@ -137,9 +140,9 @@ class TestSanitizerService:
     def test_sanitize_session_transcript(self, sanitizer):
         """測試會談逐字稿專用方法"""
         transcript = """
-        諮商師：請問您的聯絡方式？
+        諮詢師：請問您的聯絡方式？
         案主：我的電話是 0912345678，email 是 test@example.com
-        諮商師：好的，已記錄
+        諮詢師：好的，已記錄
         """
 
         sanitized_text, metadata = sanitizer.sanitize_session_transcript(transcript)
@@ -204,12 +207,12 @@ class TestSanitizerServiceRealWorldScenarios:
         return SanitizerService()
 
     def test_real_counseling_transcript(self, sanitizer):
-        """測試真實諮商逐字稿場景"""
+        """測試真實諮詢逐字稿場景"""
         transcript = """
-        諮商師：首先，請問您的基本資料？
+        諮詢師：首先，請問您的基本資料？
         案主：我叫王大明，身分證字號 B234567890，
               住在新北市50號，電話是 0923456789。
-        諮商師：您的困擾是什麼？
+        諮詢師：您的困擾是什麼？
         案主：最近工作壓力很大，老闆一直打我的手機 0987654321，
               連我的個人信箱 wang.daming@gmail.com 都不放過。
               我的信用卡 5555-6666-7777-8888 都快刷爆了。
@@ -225,7 +228,7 @@ class TestSanitizerServiceRealWorldScenarios:
         assert "5555-6666-7777-8888" not in sanitized
 
         # 但對話內容應該保留
-        assert "諮商師：首先，請問您的基本資料？" in sanitized
+        assert "諮詢師：首先，請問您的基本資料？" in sanitized
         assert "案主：我叫王大明" in sanitized
         assert "最近工作壓力很大" in sanitized
 

@@ -26,8 +26,8 @@ class RecordingSegment(BaseModel):
                     "start_time": "2025-01-15 10:00",
                     "end_time": "2025-01-15 10:30",
                     "duration_seconds": 1800,
-                    "transcript_text": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
-                    "transcript_sanitized": "諮商師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
+                    "transcript_text": "諮詢師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
+                    "transcript_sanitized": "諮詢師：今天想聊什麼？\n個案：我最近對未來感到很迷惘...",
                 }
             ]
         }
@@ -157,13 +157,13 @@ class SessionTimelineResponse(BaseModel):
 
 # Reflection schemas
 class ReflectionRequest(BaseModel):
-    """諮商師反思請求"""
+    """諮詢師反思請求"""
 
     reflection: dict
 
 
 class ReflectionResponse(BaseModel):
-    """諮商師反思響應"""
+    """諮詢師反思響應"""
 
     session_id: UUID
     reflection: Optional[dict] = None

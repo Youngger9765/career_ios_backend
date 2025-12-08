@@ -226,7 +226,7 @@ def get_reflection(
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
 ) -> ReflectionResponse:
-    """取得會談的諮商師反思"""
+    """取得會談的諮詢師反思"""
     service = ReflectionService(db)
     try:
         reflection, session = service.get_reflection(
@@ -251,7 +251,7 @@ def update_reflection(
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
 ) -> ReflectionResponse:
-    """更新或建立會談的諮商師反思"""
+    """更新或建立會談的諮詢師反思"""
     service = ReflectionService(db)
     try:
         reflection, session = service.update_reflection(

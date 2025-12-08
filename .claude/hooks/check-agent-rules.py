@@ -34,7 +34,7 @@ CODING_TASK_PATTERNS = {
     # Deployment (MANDATORY)
     "deployment": r"(deploy|staging|production|release|部署|發布|上線)",
     # Career-specific features (MANDATORY)
-    "career": r"(session|consultation|transcript|recording|諮詢|諮商|會談|逐字稿|錄音)",
+    "career": r"(session|consultation|transcript|recording|諮詢|諮詢|會談|逐字稿|錄音)",
     # Code review and optimization (MANDATORY)
     "optimization": r"(optimize|improve|enhance|review|優化|改善|提升|審查)",
 }

@@ -451,7 +451,7 @@
                     </div>
                     <div class="form-group">
                         <label>備註 (私人)</label>
-                        <textarea id="client-notes" rows="2" placeholder="諮商師私人備註"></textarea>
+                        <textarea id="client-notes" rows="2" placeholder="諮詢師私人備註"></textarea>
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <button class="btn btn-primary" onclick="executeCreateClient()" ${!state.token ? 'disabled' : ''}>建立個案</button>
@@ -796,7 +796,7 @@
                         return `
                             <div class="info-card">
                                 <h3>📅 個案歷程</h3>
-                                <p style="color: #6b7280; font-size: 14px; margin-top: 12px;">此個案尚無諮商記錄</p>
+                                <p style="color: #6b7280; font-size: 14px; margin-top: 12px;">此個案尚無諮詢記錄</p>
                             </div>
                         `;
                     }
@@ -805,7 +805,7 @@
                         <div class="info-card">
                             <h3>📅 個案歷程 - ${data.client_name} (${data.client_code})</h3>
                             <div style="margin-top: 16px;">
-                                <p style="color: #374151; font-size: 14px; margin-bottom: 12px;">共 ${data.total_sessions} 次諮商</p>
+                                <p style="color: #374151; font-size: 14px; margin-bottom: 12px;">共 ${data.total_sessions} 次諮詢</p>
                                 ${data.sessions.map(session => {
                                     // Remove surrounding quotes from summary if present
                                     let cleanSummary = session.summary;
@@ -890,7 +890,7 @@
                 },
                 renderPreview: (data) => `
                     <div class="info-card">
-                        <h3>💭 諮商師反思</h3>
+                        <h3>💭 諮詢師反思</h3>
                         <div class="info-row">
                             <span class="info-label">Session ID</span>
                             <span class="info-value" style="font-size: 11px;">${data.session_id}</span>
@@ -964,7 +964,7 @@
                             </select>
                         </div>
                         <div class="info-card" style="background: #eff6ff; border-color: #3b82f6;">
-                            <h4 style="color: #1e40af; margin-bottom: 12px;">諮商師反思</h4>
+                            <h4 style="color: #1e40af; margin-bottom: 12px;">諮詢師反思</h4>
                             <div class="form-group">
                                 <label>我和這個人工作的感受是？</label>
                                 <textarea id="put-reflection-working" placeholder="例如：整體過程流暢輕鬆，逐漸贏得信任..." rows="2"></textarea>
@@ -1193,7 +1193,7 @@
                             <p style="color: #6366f1; font-size: 13px; margin: 0;">
                                 從逐字稿片段即時提取關鍵字，不儲存任何資料<br/>
                                 自動從會談載入案主背景、案例目標和會談資訊作為 AI 分析脈絡<br/>
-                                <strong>包含諮商師洞見</strong>：AI 會根據背景提供關注重點建議
+                                <strong>包含諮詢師洞見</strong>：AI 會根據背景提供關注重點建議
                             </p>
                         </div>
 
@@ -1280,7 +1280,7 @@
 
                         ${data.counselor_insights ? `
                             <div style="margin-top: 16px;">
-                                <h4 style="color: #374151; margin-bottom: 8px;">💡 諮商師洞見</h4>
+                                <h4 style="color: #374151; margin-bottom: 8px;">💡 諮詢師洞見</h4>
                                 <div class="info-card" style="background: #fef3c7; border-color: #fbbf24;">
                                     <p style="color: #92400e; font-size: 13px; margin: 0; line-height: 1.6;">
                                         ${data.counselor_insights}
@@ -1785,7 +1785,7 @@
                             <span class="info-value" style="font-size: 11px;">${data.client_id}</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">諮商師 ID</span>
+                            <span class="info-label">諮詢師 ID</span>
                             <span class="info-value" style="font-size: 11px;">${data.counselor_id}</span>
                         </div>
                         <div class="info-row">
@@ -2062,7 +2062,7 @@
                             <textarea id="session-notes" placeholder="選填" rows="3"></textarea>
                         </div>
                         <div class="info-card" style="background: #eff6ff; border-color: #3b82f6;">
-                            <h4 style="color: #1e40af; margin-bottom: 12px;">諮商師反思（選填）</h4>
+                            <h4 style="color: #1e40af; margin-bottom: 12px;">諮詢師反思（選填）</h4>
                             <div class="form-group">
                                 <label>我和這個人工作的感受是？</label>
                                 <textarea id="reflection-working" placeholder="例如：整體過程流暢輕鬆，逐漸贏得信任..." rows="2"></textarea>
@@ -2380,7 +2380,7 @@
                     ` : ''}
                     ${data.reflection && Object.keys(data.reflection).length > 0 ? `
                         <div class="info-card">
-                            <h4>諮商師反思（人類撰寫）</h4>
+                            <h4>諮詢師反思（人類撰寫）</h4>
                             ${data.reflection.working_with_client ? `
                                 <div style="margin-bottom: 12px;">
                                     <strong style="color: #2563eb;">我和這個人工作的感受是？</strong>
@@ -2475,7 +2475,7 @@
                             <textarea id="update-session-notes" placeholder="更新備註" rows="3"></textarea>
                         </div>
                         <div class="info-card" style="background: #eff6ff; border-color: #3b82f6;">
-                            <h4 style="color: #1e40af; margin-bottom: 12px;">諮商師反思（選填）</h4>
+                            <h4 style="color: #1e40af; margin-bottom: 12px;">諮詢師反思（選填）</h4>
                             <div class="form-group">
                                 <label>我和這個人工作的感受是？</label>
                                 <textarea id="update-reflection-working" placeholder="例如：整體過程流暢輕鬆，逐漸贏得信任..." rows="2"></textarea>
@@ -2615,7 +2615,7 @@
                 `
             },
             'update-counselor': {
-                title: '更新諮商師資訊',
+                title: '更新諮詢師資訊',
                 subtitle: 'PATCH /api/auth/me',
                 renderForm: () => `
                     <div class="info-card">
@@ -2656,7 +2656,7 @@
                 },
                 renderPreview: (data) => `
                     <div class="info-card">
-                        <h3>✅ 諮商師資訊更新成功</h3>
+                        <h3>✅ 諮詢師資訊更新成功</h3>
                         <div class="info-row">
                             <span class="info-label">全名</span>
                             <span class="info-value">${data.full_name}</span>
@@ -3104,7 +3104,7 @@
                     return `
                         <div class="info-card" style="background: #fef3c7; border-color: #f59e0b;">
                             <p style="color: #92400e; font-size: 12px;">
-                                ⚠️ 此 API 僅供 iOS App 使用，用於提交諮商師編輯後的報告內容。<br>
+                                ⚠️ 此 API 僅供 iOS App 使用，用於提交諮詢師編輯後的報告內容。<br>
                                 Web Console 不提供編輯功能。
                             </p>
                         </div>
@@ -4595,7 +4595,7 @@
                                 <span class="info-value">${(log.confidence * 100).toFixed(0)}%</span>
                             </div>
                             <div class="info-row">
-                                <span class="info-label">諮商師洞見</span>
+                                <span class="info-label">諮詢師洞見</span>
                                 <span class="info-value" style="font-size: 12px;">${log.counselor_insights}</span>
                             </div>
                         </div>
@@ -5157,7 +5157,7 @@ Co: 聽起來這個策略很有效，繼續保持！`
                 },
                 {
                     working: '個案展現出強烈的改變動機，工作配合度高，讓會談進展順利。',
-                    source: '個案對自己的困境有清楚的認知，也願意嘗試新的方法，這讓諮商過程更有效率。',
+                    source: '個案對自己的困境有清楚的認知，也願意嘗試新的方法，這讓諮詢過程更有效率。',
                     challenges: '個案有時會過度理性化自己的情緒，需要引導其更深入地覺察感受。',
                     supervision: '如何幫助個案在理性思考與情緒覺察間取得平衡？是否需要引入更多情緒焦點技術？'
                 },
@@ -5273,7 +5273,7 @@ Cl: 謝謝，我會的。`
                 '與伴侶同居；家人知情'
             ];
             const notes = [
-                '初次諮商，對職涯發展有疑問',
+                '初次諮詢，對職涯發展有疑問',
                 '曾有轉職經驗，希望確認方向',
                 '對未來感到焦慮，需要引導',
                 '積極主動，目標明確',

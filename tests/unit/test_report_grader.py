@@ -70,14 +70,14 @@ class TestGradeReportWithLLM:
             "problem_judgment_score": 8,
             "problem_judgment_feedback": "問題判斷有理論依據",
             "counseling_plan_score": 8,
-            "counseling_plan_feedback": "諮商計劃具體可行",
+            "counseling_plan_feedback": "諮詢計劃具體可行",
             "implementation_eval_score": 4,
             "implementation_eval_feedback": "實施評估完整",
             "total_score": 78,
             "grade": "良好",
             "overall_feedback": "整體報告品質良好，結構完整",
             "strengths": ["理論應用得當", "分析深入", "計劃具體"],
-            "improvements": ["可加強功能評估", "建議補充更多案例", "理論引用可更明確"]
+            "improvements": ["可加強功能評估", "建議補充更多案例", "理論引用可更明確"],
         }
 
     @pytest.mark.asyncio
@@ -95,13 +95,15 @@ class TestGradeReportWithLLM:
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
 
-        mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=mock_response
+        )
 
         # Execute
         result = await grade_report_with_llm(
             report_text="這是一份完整的新版10段式個案概念化報告...",
             use_legacy=False,
-            client=mock_openai_client
+            client=mock_openai_client,
         )
 
         # Verify
@@ -122,9 +124,7 @@ class TestGradeReportWithLLM:
         assert "督導" in call_kwargs["messages"][0]["content"]
 
     @pytest.mark.asyncio
-    async def test_grade_report_success_legacy_format(
-        self, mock_openai_client
-    ):
+    async def test_grade_report_success_legacy_format(self, mock_openai_client):
         """測試舊版5段式報告評分（分數較低）"""
         legacy_response = {
             "problem_clarity_score": 10,
@@ -146,8 +146,8 @@ class TestGradeReportWithLLM:
             "total_score": 54,
             "grade": "需改進",
             "overall_feedback": "舊版格式結構簡化，建議升級為新版10段式",
-            "strengths": ["基本問題描述清楚", "有初步諮商計劃", "文字表達流暢"],
-            "improvements": ["補充問題演變分析", "加強功能評估", "理論引用需具體化"]
+            "strengths": ["基本問題描述清楚", "有初步諮詢計劃", "文字表達流暢"],
+            "improvements": ["補充問題演變分析", "加強功能評估", "理論引用需具體化"],
         }
 
         mock_message = MagicMock()
@@ -157,12 +157,14 @@ class TestGradeReportWithLLM:
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
 
-        mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=mock_response
+        )
 
         result = await grade_report_with_llm(
             report_text="這是舊版5段式報告...",
             use_legacy=True,
-            client=mock_openai_client
+            client=mock_openai_client,
         )
 
         assert result["total_score"] == 54
@@ -192,14 +194,19 @@ class TestGradeReportWithLLM:
             "problem_judgment_score": 9,
             "problem_judgment_feedback": "理論取向明確且應用得當",
             "counseling_plan_score": 9,
-            "counseling_plan_feedback": "諮商計劃具體且有理論基礎",
+            "counseling_plan_feedback": "諮詢計劃具體且有理論基礎",
             "implementation_eval_score": 5,
             "implementation_eval_feedback": "實施評估完整詳盡",
             "total_score": 93,
             "grade": "優秀",
             "overall_feedback": "這是一份優秀的個案概念化報告",
-            "strengths": ["理論應用專業", "分析層次清晰", "計劃可行性高", "符合督導標準"],
-            "improvements": ["已達優秀水準", "可考慮加入更多實證研究", "持續保持"]
+            "strengths": [
+                "理論應用專業",
+                "分析層次清晰",
+                "計劃可行性高",
+                "符合督導標準",
+            ],
+            "improvements": ["已達優秀水準", "可考慮加入更多實證研究", "持續保持"],
         }
 
         mock_message = MagicMock()
@@ -209,12 +216,14 @@ class TestGradeReportWithLLM:
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
 
-        mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=mock_response
+        )
 
         result = await grade_report_with_llm(
             report_text="這是一份優秀的新版報告...",
             use_legacy=False,
-            client=mock_openai_client
+            client=mock_openai_client,
         )
 
         assert result["total_score"] >= 90
@@ -226,7 +235,7 @@ class TestGradeReportWithLLM:
         incomplete_response = {
             "problem_clarity_score": 10,
             # 缺少其他必要欄位
-            "total_score": 70
+            "total_score": 70,
         }
 
         mock_message = MagicMock()
@@ -236,13 +245,13 @@ class TestGradeReportWithLLM:
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
 
-        mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=mock_response
+        )
 
         with pytest.raises(RuntimeError) as exc_info:
             await grade_report_with_llm(
-                report_text="測試報告",
-                use_legacy=False,
-                client=mock_openai_client
+                report_text="測試報告", use_legacy=False, client=mock_openai_client
             )
 
         assert "Missing required field" in str(exc_info.value)
@@ -268,7 +277,7 @@ class TestGradeReportWithLLM:
             "implementation_eval_score": 4,
             "implementation_eval_feedback": "測試",
             "total_score": 86,
-            "grade": "良好"
+            "grade": "良好",
         }
 
         mock_message = MagicMock()
@@ -278,13 +287,13 @@ class TestGradeReportWithLLM:
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
 
-        mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=mock_response
+        )
 
         with pytest.raises(RuntimeError) as exc_info:
             await grade_report_with_llm(
-                report_text="測試報告",
-                use_legacy=False,
-                client=mock_openai_client
+                report_text="測試報告", use_legacy=False, client=mock_openai_client
             )
 
         assert "Invalid problem_clarity_score" in str(exc_info.value)
@@ -299,13 +308,13 @@ class TestGradeReportWithLLM:
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
 
-        mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=mock_response
+        )
 
         with pytest.raises(ValueError) as exc_info:
             await grade_report_with_llm(
-                report_text="測試報告",
-                use_legacy=False,
-                client=mock_openai_client
+                report_text="測試報告", use_legacy=False, client=mock_openai_client
             )
 
         assert "Failed to parse LLM response as JSON" in str(exc_info.value)
@@ -320,13 +329,13 @@ class TestGradeReportWithLLM:
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
 
-        mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=mock_response
+        )
 
         with pytest.raises(RuntimeError) as exc_info:
             await grade_report_with_llm(
-                report_text="測試報告",
-                use_legacy=False,
-                client=mock_openai_client
+                report_text="測試報告", use_legacy=False, client=mock_openai_client
             )
 
         assert "OpenAI response content is None" in str(exc_info.value)
@@ -342,17 +351,13 @@ class TestGradeReportWithLLM:
 
         mock_openai_client.chat.completions.create = AsyncMock(
             side_effect=RateLimitError(
-                "Rate limit exceeded",
-                response=mock_response,
-                body=mock_body
+                "Rate limit exceeded", response=mock_response, body=mock_body
             )
         )
 
         with pytest.raises(RuntimeError) as exc_info:
             await grade_report_with_llm(
-                report_text="測試報告",
-                use_legacy=False,
-                client=mock_openai_client
+                report_text="測試報告", use_legacy=False, client=mock_openai_client
             )
 
         assert "Error grading report with LLM" in str(exc_info.value)
@@ -381,7 +386,7 @@ class TestGradeReportWithLLM:
             "grade": "優秀",
             "overall_feedback": "滿分報告",
             "strengths": ["完美", "卓越", "專業"],
-            "improvements": ["無需改進", "保持水準", "持續精進"]
+            "improvements": ["無需改進", "保持水準", "持續精進"],
         }
 
         mock_message = MagicMock()
@@ -391,12 +396,12 @@ class TestGradeReportWithLLM:
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
 
-        mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=mock_response
+        )
 
         result = await grade_report_with_llm(
-            report_text="完美報告",
-            use_legacy=False,
-            client=mock_openai_client
+            report_text="完美報告", use_legacy=False, client=mock_openai_client
         )
 
         assert result["total_score"] == 100
@@ -413,12 +418,12 @@ class TestReportGraderRealWorldScenarios:
 
     @pytest.mark.asyncio
     async def test_real_counseling_report_with_theory(self, mock_openai_client):
-        """測試真實諮商報告（含理論引用）"""
+        """測試真實諮詢報告（含理論引用）"""
         real_report = """
         【個案概念化報告】
 
         一、當事人的問題
-        案主小明（化名）因職涯發展困擾前來諮商...
+        案主小明（化名）因職涯發展困擾前來諮詢...
 
         六、對當事人問題的判斷
         根據 Super 的生涯發展理論與 Holland 的職業興趣理論...
@@ -445,7 +450,7 @@ class TestReportGraderRealWorldScenarios:
             "grade": "良好",
             "overall_feedback": "理論引用明確，符合專業標準",
             "strengths": ["理論基礎扎實", "分析有依據", "專業術語使用正確"],
-            "improvements": ["可補充更多案例", "建議加入實證研究", "強化評估工具"]
+            "improvements": ["可補充更多案例", "建議加入實證研究", "強化評估工具"],
         }
 
         mock_message = MagicMock()
@@ -455,12 +460,12 @@ class TestReportGraderRealWorldScenarios:
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
 
-        mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=mock_response
+        )
 
         result = await grade_report_with_llm(
-            report_text=real_report,
-            use_legacy=False,
-            client=mock_openai_client
+            report_text=real_report, use_legacy=False, client=mock_openai_client
         )
 
         assert result["total_score"] >= 80
@@ -497,7 +502,7 @@ class TestReportGraderRealWorldScenarios:
             "grade": "及格",
             "overall_feedback": "理論引用需明確化",
             "strengths": ["結構完整", "文字流暢", "有引用意識"],
-            "improvements": ["理論名稱需明確標示", "避免只用編號", "加強理論說明"]
+            "improvements": ["理論名稱需明確標示", "避免只用編號", "加強理論說明"],
         }
 
         mock_message = MagicMock()
@@ -507,12 +512,14 @@ class TestReportGraderRealWorldScenarios:
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
 
-        mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        mock_openai_client.chat.completions.create = AsyncMock(
+            return_value=mock_response
+        )
 
         result = await grade_report_with_llm(
             report_text=report_with_numbers_only,
             use_legacy=False,
-            client=mock_openai_client
+            client=mock_openai_client,
         )
 
         assert result["total_score"] < 70

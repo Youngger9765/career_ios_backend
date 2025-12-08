@@ -51,7 +51,7 @@ class TestRealtimeRAGIntegration:
             response = client.post(
                 "/api/v1/realtime/analyze",
                 json={
-                    "transcript": "諮商師：你想轉職嗎？\n案主：是的，但我不知道怎麼寫履歷。",
+                    "transcript": "諮詢師：你想轉職嗎？\n案主：是的，但我不知道怎麼寫履歷。",
                     "speakers": [
                         {"speaker": "counselor", "text": "你想轉職嗎？"},
                         {"speaker": "client", "text": "是的，但我不知道怎麼寫履歷。"},
@@ -133,7 +133,7 @@ class TestRealtimeRAGIntegration:
             response = client.post(
                 "/api/v1/realtime/analyze",
                 json={
-                    "transcript": "諮商師：今天天氣如何？\n案主：天氣很好。",
+                    "transcript": "諮詢師：今天天氣如何？\n案主：天氣很好。",
                     "speakers": [
                         {"speaker": "counselor", "text": "今天天氣如何？"},
                         {"speaker": "client", "text": "天氣很好。"},

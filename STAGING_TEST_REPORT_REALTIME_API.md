@@ -68,7 +68,7 @@ The Realtime Analysis API on staging environment is **fully functional** and rea
 **Test Case**:
 ```json
 {
-  "transcript": "諮商師：你最近工作上有什麼困擾嗎？\n案主：我覺得活著沒什麼意義...",
+  "transcript": "諮詢師：你最近工作上有什麼困擾嗎？\n案主：我覺得活著沒什麼意義...",
   "speakers": [
     {"speaker": "counselor", "text": "你最近工作上有什麼困擾嗎？"},
     {"speaker": "client", "text": "我覺得活著沒什麼意義..."}
@@ -91,12 +91,12 @@ The Realtime Analysis API on staging environment is **fully functional** and rea
 **Sample Response**:
 ```json
 {
-  "summary": "諮商師詢問工作困擾，但案主立即表達對生命意義的深刻失落感，顯示其主要困擾可能遠超工作層面，且情緒狀態較為嚴重。",
+  "summary": "諮詢師詢問工作困擾，但案主立即表達對生命意義的深刻失落感，顯示其主要困擾可能遠超工作層面，且情緒狀態較為嚴重。",
   "alerts": [
     "案主表達「活著沒什麼意義」是一個嚴重的警訊，可能指向重度憂鬱或潛在的自殺意念，需立即關注。",
-    "案主的回應完全偏離了諮商師關於工作困擾的提問，表明其當前最核心的痛苦並非工作，而是更深層的生存議題。",
-    "案主的情緒狀態顯然處於高度痛苦和絕望中，需要諮商師高度的敏感與同理，並將焦點轉移至其核心痛苦。",
-    "諮商師需將焦點從工作轉移到案主所表達的深層痛苦，並進行初步的危機評估。"
+    "案主的回應完全偏離了諮詢師關於工作困擾的提問，表明其當前最核心的痛苦並非工作，而是更深層的生存議題。",
+    "案主的情緒狀態顯然處於高度痛苦和絕望中，需要諮詢師高度的敏感與同理，並將焦點轉移至其核心痛苦。",
+    "諮詢師需將焦點從工作轉移到案主所表達的深層痛苦，並進行初步的危機評估。"
   ],
   "suggestions": [
     "立即暫停對工作議題的探討，轉而聚焦並同理案主「活著沒什麼意義」的感受，例如：「聽到你說活著沒什麼意義，這聽起來讓你非常痛苦，我很關心你，可以多說一點嗎？」",
@@ -123,7 +123,7 @@ The Realtime Analysis API on staging environment is **fully functional** and rea
 **Test Case**:
 ```json
 {
-  "transcript": "諮商師：你想轉職嗎？\n案主：是的，但我不知道怎麼寫履歷。",
+  "transcript": "諮詢師：你想轉職嗎？\n案主：是的，但我不知道怎麼寫履歷。",
   "speakers": [
     {"speaker": "counselor", "text": "你想轉職嗎？"},
     {"speaker": "client", "text": "是的，但我不知道怎麼寫履歷。"}
@@ -158,9 +158,9 @@ To verify RAG is truly functional (not just missing due to short transcripts), a
 
 **Test Case** (336 characters, 8 speaker segments):
 ```
-諮商師：你提到想要轉職，能多說一些你目前的想法嗎？
+諮詢師：你提到想要轉職，能多說一些你目前的想法嗎？
 案主：我在目前公司工作了五年，但覺得職涯發展遇到瓶頸。我想要轉換到科技業，但不知道怎麼開始。
-諮商師：聽起來你對職涯發展有些焦慮。你有考慮過需要具備哪些能力嗎？
+諮詢師：聽起來你對職涯發展有些焦慮。你有考慮過需要具備哪些能力嗎？
 案主：我知道需要學習新的技能，但更困擾的是履歷要怎麼寫才能突顯我的優勢...
 [continues]
 ```
@@ -195,7 +195,7 @@ To verify RAG is truly functional (not just missing due to short transcripts), a
 **Test Case**:
 ```json
 {
-  "transcript": "諮商師：今天天氣如何？\n案主：天氣很好。",
+  "transcript": "諮詢師：今天天氣如何？\n案主：天氣很好。",
   "speakers": [
     {"speaker": "counselor", "text": "今天天氣如何？"},
     {"speaker": "client", "text": "天氣很好。"}
@@ -231,7 +231,7 @@ To verify RAG is truly functional (not just missing due to short transcripts), a
 **Sample Quality Assessment**:
 
 **Summary** (55 chars):
-> "諮商師詢問工作困擾，但案主立即表達對生命意義的深刻失落感，顯示其主要困擾可能遠超工作層面，且情緒狀態較為嚴重。"
+> "諮詢師詢問工作困擾，但案主立即表達對生命意義的深刻失落感，顯示其主要困擾可能遠超工作層面，且情緒狀態較為嚴重。"
 
 **Alerts** (4 items):
 1. Correctly identifies suicide risk warning ("活著沒什麼意義")

@@ -24,8 +24,8 @@ class ReportResponse(BaseModel):
     # Report content
     content_json: Optional[Dict[str, Any]]  # AI 原始生成 (處理中時為 None)
     content_markdown: Optional[str]  # AI 原始生成的 Markdown 格式
-    edited_content_json: Optional[Dict[str, Any]]  # 諮商師編輯版本
-    edited_content_markdown: Optional[str]  # 諮商師編輯後的 Markdown 格式
+    edited_content_json: Optional[Dict[str, Any]]  # 諮詢師編輯版本
+    edited_content_markdown: Optional[str]  # 諮詢師編輯後的 Markdown 格式
     edited_at: Optional[str]  # 最後編輯時間
     edit_count: Optional[int]  # 編輯次數
     citations_json: Optional[List[Dict[str, Any]]]
@@ -67,7 +67,9 @@ class ReportListResponse(BaseModel):
 class ReportUpdateRequest(BaseModel):
     """Schema for updating report content"""
 
-    edited_content_json: Optional[Dict[str, Any]] = None  # 完整的編輯後報告 JSON（選填）
+    edited_content_json: Optional[
+        Dict[str, Any]
+    ] = None  # 完整的編輯後報告 JSON（選填）
     edited_content_markdown: Optional[str] = None  # 前端編輯後的 Markdown 字串（選填）
 
 
@@ -75,7 +77,9 @@ class ReportUpdateResponse(BaseModel):
     """Schema for report update response"""
 
     id: UUID
-    edited_content_json: Optional[Dict[str, Any]]  # Optional when only markdown is updated
+    edited_content_json: Optional[
+        Dict[str, Any]
+    ]  # Optional when only markdown is updated
     edited_content_markdown: Optional[str]  # Optional when only JSON is updated
     edited_at: str
     edit_count: int

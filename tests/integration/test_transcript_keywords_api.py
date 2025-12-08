@@ -364,8 +364,8 @@ class TestTranscriptKeywordsAPI:
                 json={
                     "case_id": case_id,
                     "session_date": "2025-01-20",
-                    "transcript": "諮商師：今天想聊些什麼？\n案主：我最近對工作感到很迷惘...",
-                    "notes": "第一次諮商",
+                    "transcript": "諮詢師：今天想聊些什麼？\n案主：我最近對工作感到很迷惘...",
+                    "notes": "第一次諮詢",
                 },
             )
             assert session_response.status_code == 201

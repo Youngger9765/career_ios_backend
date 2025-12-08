@@ -62,7 +62,7 @@
 
 **何時必須用 TDD？**
 - ✅ **關鍵功能**：所有 `console.html` 使用的 API（35+ endpoints）
-- ✅ **核心業務邏輯**：認證、案主管理、諮商記錄、報告生成
+- ✅ **核心業務邏輯**：認證、案主管理、諮詢記錄、報告生成
 - ✅ **RAG 功能**：文件上傳、嵌入、搜尋、評估
 
 **何時可以跳過 TDD？**
@@ -404,7 +404,7 @@ poetry run pytest tests/integration/ -v | grep -E "(test_.*_api\.py|PASSED|FAILE
 # ✅ 所有主要功能都有測試：
 #    - 認證 API (test_auth_api.py)
 #    - 案主管理 (test_clients_api.py)
-#    - 諮商記錄 (test_sessions_api.py)
+#    - 諮詢記錄 (test_sessions_api.py)
 #    - 案例管理 (test_cases_api.py)
 #    - 報告生成 (test_reports_api.py)
 #    - RAG 功能 (test_rag_*.py)

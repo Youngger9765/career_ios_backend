@@ -187,7 +187,7 @@ class GeminiService:
         suicide_keywords = ["自殺", "想死", "活著沒意義", "不想活", "結束生命"]
         has_suicide_risk = any(keyword in transcript for keyword in suicide_keywords)
 
-        prompt = f"""你是專業諮商督導，分析即時諮商對話。
+        prompt = f"""你是專業諮詢督導，分析即時諮詢對話。
 
 對話內容：
 {speaker_context}
@@ -196,7 +196,7 @@ class GeminiService:
 請提供：
 1. summary: 簡短摘要（1-2 句，歸納對話重點）
 2. alerts: 提醒事項（列表，3-5 點，標注重要關注點）
-3. suggestions: 給諮商師的建議（列表，2-3 點，具體可執行的回應建議）
+3. suggestions: 給諮詢師的建議（列表，2-3 點，具體可執行的回應建議）
 {"   - 如果有職涯知識庫內容，請在建議中適當引用相關知識" if rag_context else ""}
 
 {

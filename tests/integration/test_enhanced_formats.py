@@ -88,7 +88,7 @@ class TestEnhancedJSON:
             "【五、多層次因素分析】",
             "【六、個案優勢與資源】",
             "【七、諮詢師的專業判斷】",
-            "【八、諮商目標與介入策略】",
+            "【八、諮詢目標與介入策略】",
             "【九、預期成效與評估】",
             "【十、諮詢師自我反思】",
         ]
@@ -107,14 +107,14 @@ class TestEnhancedJSON:
 
         # Section 七: must cite theories
         section_7_start = conceptualization.find("【七、諮詢師的專業判斷】")
-        section_7_end = conceptualization.find("【八、諮商目標與介入策略】")
+        section_7_end = conceptualization.find("【八、諮詢目標與介入策略】")
         section_7_content = conceptualization[section_7_start:section_7_end]
         assert (
             "[3]" in section_7_content or "[4]" in section_7_content
         ), "Section 七 must cite theories [3] or [4]"
 
         # Section 八: must cite theories
-        section_8_start = conceptualization.find("【八、諮商目標與介入策略】")
+        section_8_start = conceptualization.find("【八、諮詢目標與介入策略】")
         section_8_end = conceptualization.find("【九、預期成效與評估】")
         section_8_content = conceptualization[section_8_start:section_8_end]
         assert (

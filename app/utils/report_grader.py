@@ -48,7 +48,7 @@ async def grade_report_with_llm(
 
     # 根據「個案概念化能力評量表」設定評分標準
     grading_prompt = f"""
-你是一位經驗豐富的職涯諮商督導，請依據「個案概念化能力評量表」的標準評分這份個案概念化報告。
+你是一位經驗豐富的職涯諮詢督導，請依據「個案概念化能力評量表」的標準評分這份個案概念化報告。
 
 【評量表八大向度】（參考專業督導使用的標準化評量工具）
 
@@ -91,14 +91,14 @@ async def grade_report_with_llm(
 2. 對當事人問題的判斷
 3. 對當事人問題判斷的理論取向
 
-七、諮商計劃與策略的形成（10分）
-1. 諮商目標
-2. 諮商策略
-3. 諮商技術
-4. 諮商介入步驟
+七、諮詢計劃與策略的形成（10分）
+1. 諮詢目標
+2. 諮詢策略
+3. 諮詢技術
+4. 諮詢介入步驟
 5. 轉介的評估與進行轉介
 
-八、對諮商計劃實施的評估（5分）
+八、對諮詢計劃實施的評估（5分）
 1. 當事人在改變過程中可能的進展
 2. 當事人在改變過程中可能的助力
 3. 當事人在改變過程中可能的阻力
@@ -132,7 +132,7 @@ async def grade_report_with_llm(
     "problem_judgment_score": 數字 (0-10),
     "problem_judgment_feedback": "問題判斷評分說明（需有明確理論取向）",
     "counseling_plan_score": 數字 (0-10),
-    "counseling_plan_feedback": "諮商計劃評分說明",
+    "counseling_plan_feedback": "諮詢計劃評分說明",
     "implementation_eval_score": 數字 (0-5),
     "implementation_eval_feedback": "實施評估評分說明",
     "total_score": 數字,
@@ -151,7 +151,7 @@ async def grade_report_with_llm(
         # Use Gemini or OpenAI
         if provider == "gemini":
             # Add JSON instruction to prompt for Gemini
-            full_prompt = f"""你是職涯諮商領域的資深督導，擅長評估個案概念化報告的品質。你的評分客觀、嚴謹，能提供具體且有建設性的回饋。
+            full_prompt = f"""你是職涯諮詢領域的資深督導，擅長評估個案概念化報告的品質。你的評分客觀、嚴謹，能提供具體且有建設性的回饋。
 
 {grading_prompt}
 
@@ -236,7 +236,7 @@ async def grade_report_with_llm(
                 messages=[
                     {
                         "role": "system",
-                        "content": "你是職涯諮商領域的資深督導，擅長評估個案概念化報告的品質。你的評分客觀、嚴謹，能提供具體且有建設性的回饋。",
+                        "content": "你是職涯諮詢領域的資深督導，擅長評估個案概念化報告的品質。你的評分客觀、嚴謹，能提供具體且有建設性的回饋。",
                     },
                     {"role": "user", "content": grading_prompt},
                 ],

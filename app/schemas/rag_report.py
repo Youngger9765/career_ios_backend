@@ -25,7 +25,7 @@ class EnhancedReportSchema(BaseModel):
         description="七、諮詢師的專業判斷 - 問題假設、理論依據（必須引用理論[3][4]）"
     )
     section_8_goals_strategies: str = Field(
-        description="八、諮商目標與介入策略 - SMART目標、介入技術（必須引用理論[5][6]）"
+        description="八、諮詢目標與介入策略 - SMART目標、介入技術（必須引用理論[5][6]）"
     )
     section_9_expected_outcomes: str = Field(
         description="九、預期成效與評估 - 短期指標、長期指標、可能調整"

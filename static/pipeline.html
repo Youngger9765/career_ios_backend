@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>諮商會談處理流程視覺化</title>
+    <title>諮詢會談處理流程視覺化</title>
     <style>
         * {
             margin: 0;
@@ -244,7 +244,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎯 諮商會談處理流程</h1>
+        <h1>🎯 諮詢會談處理流程</h1>
         <p class="subtitle">從錄音上傳到報告生成的即時追蹤</p>
 
         <div class="progress-bar">
@@ -293,8 +293,8 @@
                     <span class="detail-value">C2024-0087</span>
                 </div>
                 <div class="detail-item">
-                    <span class="detail-label">諮商師：</span>
-                    <span class="detail-value">張諮商師</span>
+                    <span class="detail-label">諮詢師：</span>
+                    <span class="detail-value">張諮詢師</span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">會談時長：</span>
@@ -370,16 +370,16 @@
                 if (currentProgress < 100) {
                     currentProgress += Math.random() * 5;
                     if (currentProgress > 100) currentProgress = 100;
-                    
+
                     updateProgress(currentProgress);
-                    
+
                     // Update step status
                     if (currentProgress > 80 && currentStep === 4) {
                         completeStep(4);
                         startStep(5);
                         currentStep = 5;
                     }
-                    
+
                     if (currentProgress === 100) {
                         completeStep(5);
                         clearInterval(interval);

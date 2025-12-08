@@ -5,7 +5,7 @@ FastAPI 後端服務，支援 iOS App 的職涯諮詢功能，整合 RAG Agent �
 ## ✨ 核心功能
 
 ### 雙業務線架構
-1. **諮商應用線** - 個案管理、會談記錄、智能報告生成
+1. **諮詢應用線** - 個案管理、會談記錄、智能報告生成
 2. **RAG Ops 線** - AI Agent 管理、知識庫維護、向量搜尋
 
 ### 關鍵特性
@@ -59,7 +59,7 @@ MOCK_MODE=true poetry run uvicorn app.main:app --reload
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 - **RAG Ops Console**: http://localhost:8000/rag
-- **諮商前台**: http://localhost:8000/console
+- **諮詢前台**: http://localhost:8000/console
 
 詳細文件：
 - **[🚀 Handoff Guide](HANDOFF_GUIDE.md)** - 交付說明（給案主與 iOS 開發者）
@@ -157,7 +157,7 @@ career_ios_backend/
 │   │
 │   ├── templates/         # FastAPI Templates
 │   │   ├── rag/          # RAG Ops Console
-│   │   └── console/      # 諮商前台
+│   │   └── console/      # 諮詢前台
 │   │
 │   └── core/
 │       ├── config.py
@@ -376,8 +376,8 @@ iOS App → 已處理逐字稿 → 脫敏 → 報告生成
 
 ## 📊 資料庫架構
 
-### 諮商系統（9 個表）
-- `counselors` - 諮商師（JWT 認證）
+### 諮詢系統（9 個表）
+- `counselors` - 諮詢師（JWT 認證）
 - `clients` - 客戶（支援動態欄位）
 - `cases` - 個案（自動生成編號）
 - `sessions` - 會談

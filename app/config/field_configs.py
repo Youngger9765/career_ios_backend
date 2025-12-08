@@ -135,7 +135,7 @@ CAREER_CLIENT_SECTIONS = [
                 type=FieldType.TEXTAREA,
                 required=False,
                 placeholder="其他需要記錄的資訊",
-                help_text="諮商師私人備註",
+                help_text="諮詢師私人備註",
                 order=14,
             ),
         ],
@@ -304,7 +304,7 @@ ISLAND_CLIENT_SECTIONS = [
 ISLAND_CASE_SECTIONS = [
     FieldSection(
         title="個案資訊",
-        description="個案編號、狀態與諮商內容",
+        description="個案編號、狀態與諮詢內容",
         order=1,
         fields=[
             FieldSchema(
@@ -339,7 +339,7 @@ ISLAND_CASE_SECTIONS = [
                 label="預期收穫",
                 type=FieldType.TEXTAREA,
                 required=False,
-                placeholder="本次諮商的預期收穫",
+                placeholder="本次諮詢的預期收穫",
                 order=4,
             ),
             FieldSchema(

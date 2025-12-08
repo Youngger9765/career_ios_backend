@@ -14,10 +14,10 @@
 - BigQuery 整合實現即時成本追蹤
 - Gemini AI 自動化帳單報告生成
 - Gemini 回應診斷詳細日誌
-- **即時 STT 諮商系統**（Phase 2 前端完成）：AI 驅動的即時諮商分析
+- **即時 STT 諮詢系統**（Phase 2 前端完成）：AI 驅動的即時諮詢分析
   - TDD 方法論，11 個整合測試（後端 API 完成）
   - ElevenLabs Scribe v2 Realtime API 整合（支援中文）
-  - 手動說話者切換（諮商師/案主）適用 Demo 場景
+  - 手動說話者切換（諮詢師/案主）適用 Demo 場景
   - 點擊即時分析，提供逐分鐘漸進式模擬
   - 商用級行動優先 UI 與 RWD（斷點：640px, 1024px）
   - 聊天風格逐字稿，仿 WhatsApp 訊息氣泡
@@ -75,7 +75,7 @@
 ### 新增
 - 快速 CI 策略，包含 smoke tests（< 10 秒）
 - 報告生成整合測試（使用 mocked background tasks）
-- Admin 角色，支援跨諮商師資源管理
+- Admin 角色，支援跨諮詢師資源管理
 
 ### 變更
 - Staging CI 跳過耗時的 background task 測試，加快部署速度
@@ -291,7 +291,7 @@
 - RAG Console，整合 Supabase
 - RAG 系統模型和 API 端點
 - RAG 處理服務（chunking, embedding, retrieval）
-- 諮商 console UI，支援文件上傳
+- 諮詢 console UI，支援文件上傳
 
 ### 變更
 - RAG chat 測試改用整合方法
@@ -338,14 +338,14 @@
 ### 📅 第三階段：業務邏輯（2025 年 11 月）
 **期間**：2 週 | **版本**：0.1.0 - 0.3.1
 
-建立完整的諮商平台，包含認證和 CRUD 操作：
+建立完整的諮詢平台，包含認證和 CRUD 操作：
 - JWT 認證，多租戶隔離
 - Client, Case, Session 管理
 - 即時逐字稿關鍵字分析
 - iOS 優化 API，效能調校（快 3-5 倍）
 - 100% 整合測試覆蓋率（106 個測試）
 
-**關鍵成就**：完整的諮商平台，準備好整合 iOS
+**關鍵成就**：完整的諮詢平台，準備好整合 iOS
 
 ---
 
@@ -386,7 +386,7 @@
 - 無
 
 **建議行動**：
-- 更新 iOS app，在諮商會談期間利用即時關鍵字分析功能
+- 更新 iOS app，在諮詢會談期間利用即時關鍵字分析功能
 - 考慮新增 session 命名功能以改善 UX
 
 ### 從 0.2.x 升級到 0.3.0

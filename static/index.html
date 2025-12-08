@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>諮商會談錄音管理系統</title>
+    <title>諮詢會談錄音管理系統</title>
     <style>
         * {
             margin: 0;
@@ -418,10 +418,10 @@
         <div class="header">
             <h1>
                 <span>🎙️</span>
-                <span>諮商會談錄音管理系統</span>
+                <span>諮詢會談錄音管理系統</span>
             </h1>
-            <p>選擇錄音檔案進行處理，生成專業諮商報告</p>
-            
+            <p>選擇錄音檔案進行處理，生成專業諮詢報告</p>
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value">24</div>
@@ -446,7 +446,7 @@
         <div class="main-content">
             <div class="toolbar">
                 <div class="search-box">
-                    <input type="text" placeholder="搜尋個案編號、諮商師或來訪者..." id="searchInput">
+                    <input type="text" placeholder="搜尋個案編號、諮詢師或來訪者..." id="searchInput">
                 </div>
                 <div class="filters">
                     <button class="filter-btn active" data-filter="all">全部</button>
@@ -467,7 +467,7 @@
                             </th>
                             <th>會談編號</th>
                             <th>個案編號</th>
-                            <th>諮商師</th>
+                            <th>諮詢師</th>
                             <th>來訪者</th>
                             <th>會談日期</th>
                             <th>錄音檔案</th>
@@ -506,7 +506,7 @@
             </div>
             <div class="modal-body">
                 <p>您確定要處理選中的 <span id="selectedCount">0</span> 個錄音檔案嗎？</p>
-                <p style="margin-top: 10px; color: #666;">處理完成後將生成相應的諮商報告。</p>
+                <p style="margin-top: 10px; color: #666;">處理完成後將生成相應的諮詢報告。</p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal()">取消</button>
@@ -532,7 +532,7 @@
             {
                 id: 'S2024-0143',
                 caseId: 'C2024-0088',
-                counselor: '李諮商師',
+                counselor: '李諮詢師',
                 visitor: 'V10235',
                 date: '2024-01-20 15:30',
                 audioFile: 'session_143.m4a',
@@ -554,7 +554,7 @@
             {
                 id: 'S2024-0145',
                 caseId: 'C2024-0090',
-                counselor: '王諮商師',
+                counselor: '王諮詢師',
                 visitor: 'V10237',
                 date: '2024-01-21 10:30',
                 audioFile: 'session_145.m4a',
@@ -576,7 +576,7 @@
             {
                 id: 'S2024-0147',
                 caseId: 'C2024-0092',
-                counselor: '黃諮商師',
+                counselor: '黃諮詢師',
                 visitor: 'V10239',
                 date: '2024-01-22 09:30',
                 audioFile: 'session_147.m4a',
@@ -598,7 +598,7 @@
             {
                 id: 'S2024-0149',
                 caseId: 'C2024-0094',
-                counselor: '趙諮商師',
+                counselor: '趙諮詢師',
                 visitor: 'V10241',
                 date: '2024-01-22 14:30',
                 audioFile: 'session_149.m4a',
@@ -637,7 +637,7 @@
                 row.innerHTML = `
                     <td>
                         <div class="checkbox-wrapper">
-                            <input type="checkbox" class="row-checkbox" data-id="${session.id}" 
+                            <input type="checkbox" class="row-checkbox" data-id="${session.id}"
                                 ${selectedSessions.has(session.id) ? 'checked' : ''}>
                         </div>
                     </td>
@@ -815,10 +815,10 @@
         function startProcessing() {
             const sessionIds = Array.from(selectedSessions);
             console.log('Processing sessions:', sessionIds);
-            
+
             // Store selected sessions in localStorage
             localStorage.setItem('processingSeessions', JSON.stringify(sessionIds));
-            
+
             // Redirect to pipeline view
             window.location.href = `/static/pipeline.html?sessions=${sessionIds.join(',')}`;
         }

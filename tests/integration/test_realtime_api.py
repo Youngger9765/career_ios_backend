@@ -66,7 +66,7 @@ class TestRealtimeAnalysisAPI:
             response = client.post(
                 "/api/v1/realtime/analyze",
                 json={
-                    "transcript": "諮商師：你最近工作上有什麼困擾嗎？\n案主：我覺得活著沒什麼意義...",
+                    "transcript": "諮詢師：你最近工作上有什麼困擾嗎？\n案主：我覺得活著沒什麼意義...",
                     "speakers": [
                         {"speaker": "counselor", "text": "你最近工作上有什麼困擾嗎？"},
                         {"speaker": "client", "text": "我覺得活著沒什麼意義..."},
@@ -104,7 +104,7 @@ class TestRealtimeAnalysisAPI:
             response = client.post(
                 "/api/v1/realtime/analyze",
                 json={
-                    "transcript": "諮商師：你好。\n案主：你好。",
+                    "transcript": "諮詢師：你好。\n案主：你好。",
                     "speakers": [
                         {"speaker": "counselor", "text": "你好。"},
                         {"speaker": "client", "text": "你好。"},
@@ -180,13 +180,13 @@ class TestRealtimeAnalysisAPI:
         """Test with longer transcript (simulate 1 minute of conversation)"""
         with TestClient(app) as client:
             long_transcript = """
-諮商師：你好，今天想聊什麼呢？
+諮詢師：你好，今天想聊什麼呢？
 案主：我最近對工作感到很焦慮。
-諮商師：能多說一些嗎？
+諮詢師：能多說一些嗎？
 案主：我覺得我做什麼都不對，主管總是在盯著我。
-諮商師：聽起來你感受到很大的壓力。
+諮詢師：聽起來你感受到很大的壓力。
 案主：對，我有時候會想，活著到底有什麼意義...
-諮商師：你說「活著沒意義」，這是最近才有的想法嗎？
+諮詢師：你說「活著沒意義」，這是最近才有的想法嗎？
 案主：最近特別強烈。
             """
             response = client.post(
@@ -232,7 +232,7 @@ class TestRealtimeAnalysisAPI:
                 response = client.post(
                     "/api/v1/realtime/analyze",
                     json={
-                        "transcript": "諮商師：你好。\n案主：你好。",
+                        "transcript": "諮詢師：你好。\n案主：你好。",
                         "speakers": [
                             {"speaker": "counselor", "text": "你好。"},
                             {"speaker": "client", "text": "你好。"},
@@ -256,7 +256,7 @@ class TestRealtimeAnalysisAPI:
             response = client.post(
                 "/api/v1/realtime/analyze",
                 json={
-                    "transcript": "諮商師：你最近怎麼樣？\n案主：還好。",
+                    "transcript": "諮詢師：你最近怎麼樣？\n案主：還好。",
                     "speakers": [
                         {"speaker": "counselor", "text": "你最近怎麼樣？"},
                         {"speaker": "client", "text": "還好。"},
@@ -278,7 +278,7 @@ class TestRealtimeAnalysisAPI:
             response = client.post(
                 "/api/v1/realtime/analyze",
                 json={
-                    "transcript": "諮商師：今天感覺如何？\n案主：我覺得有點焦慮。",
+                    "transcript": "諮詢師：今天感覺如何？\n案主：我覺得有點焦慮。",
                     "speakers": [
                         {"speaker": "counselor", "text": "今天感覺如何？"},
                         {"speaker": "client", "text": "我覺得有點焦慮。"},

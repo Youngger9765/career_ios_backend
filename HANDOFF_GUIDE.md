@@ -8,7 +8,7 @@
 
 ### 功能展示區域
 
-#### 1️⃣ 諮商系統 Console
+#### 1️⃣ 諮詢系統 Console
 **URL**: https://career-app-api-staging-kxaznpplqq-uc.a.run.app/console
 
 **功能**:
@@ -40,17 +40,17 @@
 
 ```
 組織 A (tenant_id: "career")
-  ├── 諮商師 Alice, Bob, Carol
+  ├── 諮詢師 Alice, Bob, Carol
   └── 客戶 100 人
 
 組織 B (tenant_id: "island")
-  ├── 諮商師 David, Eve
+  ├── 諮詢師 David, Eve
   └── 客戶 50 人
 ```
 
 **租戶隔離保證**：
-- ✅ 組織 A 的諮商師只能看到組織 A 的客戶
-- ✅ 組織 B 的諮商師只能看到組織 B 的客戶
+- ✅ 組織 A 的諮詢師只能看到組織 A 的客戶
+- ✅ 組織 B 的諮詢師只能看到組織 B 的客戶
 - ✅ 資料完全隔離，無法跨組織存取
 
 #### iOS App 如何處理 Tenant ID？

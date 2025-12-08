@@ -186,8 +186,8 @@ Complex Tasks (Opus - User Decision):
 | **code-reviewer** | Review quality | After implementation | review, quality, 審查, 檢查 |
 
 #### Career iOS Backend Specific Keywords:
-- **Session/Consultation**: 諮詢, 諮商, 會談, reflection, 心得, transcript, 逐字稿
-- **Client Management**: 案主, 個案, counselor, 諮商師, client code, 案主代碼
+- **Session/Consultation**: 諮詢, 諮詢, 會談, reflection, 心得, transcript, 逐字稿
+- **Client Management**: 案主, 個案, counselor, 諮詢師, client code, 案主代碼
 - **Features**: keyword analysis, 關鍵字分析, report, 報告生成
 - **RAG/AI**: embedding, vector, gemini, vertex ai
 

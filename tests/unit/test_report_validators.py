@@ -36,8 +36,8 @@ class TestValidateReportStructure:
         【七、諮詢師的專業判斷】
         問題假設：生涯發展停滯
 
-        【八、諮商目標與介入策略】
-        諮商目標：找到方向
+        【八、諮詢目標與介入策略】
+        諮詢目標：找到方向
 
         【九、預期成效與評估】
         短期指標：明確目標
@@ -139,7 +139,7 @@ class TestValidateCitations:
         【七、諮詢師的專業判斷】
         基於動機理論 [3][4]，我認為案主缺乏內在動機。
 
-        【八、諮商目標與介入策略】
+        【八、諮詢目標與介入策略】
         採用卡片排序 [5] 和生涯幻遊 [6]。
         """
 
@@ -150,10 +150,20 @@ class TestValidateCitations:
         assert result["has_rationale"] is True
 
         # 檢查各段落詳情
-        assert result["section_details"]["【五、多層次因素分析】"]["has_citations"] is True
-        assert result["section_details"]["【五、多層次因素分析】"]["citation_count"] == 2
-        assert result["section_details"]["【七、諮詢師的專業判斷】"]["has_citations"] is True
-        assert result["section_details"]["【八、諮商目標與介入策略】"]["has_citations"] is True
+        assert (
+            result["section_details"]["【五、多層次因素分析】"]["has_citations"] is True
+        )
+        assert (
+            result["section_details"]["【五、多層次因素分析】"]["citation_count"] == 2
+        )
+        assert (
+            result["section_details"]["【七、諮詢師的專業判斷】"]["has_citations"]
+            is True
+        )
+        assert (
+            result["section_details"]["【八、諮詢目標與介入策略】"]["has_citations"]
+            is True
+        )
 
     def test_partial_citations(self):
         """測試部分段落有引用"""
@@ -164,7 +174,7 @@ class TestValidateCitations:
         【七、諮詢師的專業判斷】
         我認為案主缺乏內在動機。（無引用）
 
-        【八、諮商目標與介入策略】
+        【八、諮詢目標與介入策略】
         採用卡片排序 [2]。
         """
 
@@ -174,7 +184,10 @@ class TestValidateCitations:
         assert result["total_citations"] == 2
 
         # 第七段落缺少引用
-        assert result["section_details"]["【七、諮詢師的專業判斷】"]["has_citations"] is False
+        assert (
+            result["section_details"]["【七、諮詢師的專業判斷】"]["has_citations"]
+            is False
+        )
         assert result["section_details"]["【七、諮詢師的專業判斷】"]["status"] == "❌"
 
     def test_no_citations(self):
@@ -186,7 +199,7 @@ class TestValidateCitations:
         【七、諮詢師的專業判斷】
         問題很複雜。
 
-        【八、諮商目標與介入策略】
+        【八、諮詢目標與介入策略】
         使用一些技術。
         """
 
@@ -195,8 +208,7 @@ class TestValidateCitations:
         assert result["all_critical_sections_cited"] is False
         assert result["total_citations"] == 0
         assert all(
-            not detail["has_citations"]
-            for detail in result["section_details"].values()
+            not detail["has_citations"] for detail in result["section_details"].values()
         )
 
     def test_has_rationale_detection(self):
@@ -308,11 +320,7 @@ class TestCalculateQualityScore:
 
     def test_perfect_score(self):
         """測試完美報告的分數"""
-        structure = {
-            "coverage": 100.0,
-            "complete": True,
-            "missing_sections": []
-        }
+        structure = {"coverage": 100.0, "complete": True, "missing_sections": []}
 
         citation = {
             "all_critical_sections_cited": True,
@@ -321,8 +329,8 @@ class TestCalculateQualityScore:
             "section_details": {
                 "【五、多層次因素分析】": {"has_citations": True},
                 "【七、諮詢師的專業判斷】": {"has_citations": True},
-                "【八、諮商目標與介入策略】": {"has_citations": True}
-            }
+                "【八、諮詢目標與介入策略】": {"has_citations": True},
+            },
         }
 
         score = calculate_quality_score(structure, citation)
@@ -331,11 +339,7 @@ class TestCalculateQualityScore:
 
     def test_good_score(self):
         """測試良好報告的分數"""
-        structure = {
-            "coverage": 100.0,
-            "complete": True,
-            "missing_sections": []
-        }
+        structure = {"coverage": 100.0, "complete": True, "missing_sections": []}
 
         citation = {
             "all_critical_sections_cited": True,
@@ -344,8 +348,8 @@ class TestCalculateQualityScore:
             "section_details": {
                 "【五、多層次因素分析】": {"has_citations": True},
                 "【七、諮詢師的專業判斷】": {"has_citations": True},
-                "【八、諮商目標與介入策略】": {"has_citations": True}
-            }
+                "【八、諮詢目標與介入策略】": {"has_citations": True},
+            },
         }
 
         score = calculate_quality_score(structure, citation)
@@ -362,7 +366,11 @@ class TestCalculateQualityScore:
         structure = {
             "coverage": 70.0,  # 缺少 3 個段落
             "complete": False,
-            "missing_sections": ["【三、問題發展脈絡】", "【四、求助動機與期待】", "【六、個案優勢與資源】"]
+            "missing_sections": [
+                "【三、問題發展脈絡】",
+                "【四、求助動機與期待】",
+                "【六、個案優勢與資源】",
+            ],
         }
 
         citation = {
@@ -372,8 +380,8 @@ class TestCalculateQualityScore:
             "section_details": {
                 "【五、多層次因素分析】": {"has_citations": True},
                 "【七、諮詢師的專業判斷】": {"has_citations": True},
-                "【八、諮商目標與介入策略】": {"has_citations": True}
-            }
+                "【八、諮詢目標與介入策略】": {"has_citations": True},
+            },
         }
 
         score = calculate_quality_score(structure, citation)
@@ -387,11 +395,7 @@ class TestCalculateQualityScore:
 
     def test_poor_citations(self):
         """測試引用不足的分數"""
-        structure = {
-            "coverage": 100.0,
-            "complete": True,
-            "missing_sections": []
-        }
+        structure = {"coverage": 100.0, "complete": True, "missing_sections": []}
 
         citation = {
             "all_critical_sections_cited": False,  # 只有部分段落有引用
@@ -400,8 +404,8 @@ class TestCalculateQualityScore:
             "section_details": {
                 "【五、多層次因素分析】": {"has_citations": True},
                 "【七、諮詢師的專業判斷】": {"has_citations": False},
-                "【八、諮商目標與介入策略】": {"has_citations": True}
-            }
+                "【八、諮詢目標與介入策略】": {"has_citations": True},
+            },
         }
 
         score = calculate_quality_score(structure, citation)
@@ -418,7 +422,13 @@ class TestCalculateQualityScore:
         structure = {
             "coverage": 50.0,  # 缺少一半段落
             "complete": False,
-            "missing_sections": ["【三、問題發展脈絡】", "【四、求助動機與期待】", "【六、個案優勢與資源】", "【九、預期成效與評估】", "【十、諮詢師自我反思】"]
+            "missing_sections": [
+                "【三、問題發展脈絡】",
+                "【四、求助動機與期待】",
+                "【六、個案優勢與資源】",
+                "【九、預期成效與評估】",
+                "【十、諮詢師自我反思】",
+            ],
         }
 
         citation = {
@@ -428,8 +438,8 @@ class TestCalculateQualityScore:
             "section_details": {
                 "【五、多層次因素分析】": {"has_citations": True},
                 "【七、諮詢師的專業判斷】": {"has_citations": False},
-                "【八、諮商目標與介入策略】": {"has_citations": False}
-            }
+                "【八、諮詢目標與介入策略】": {"has_citations": False},
+            },
         }
 
         score = calculate_quality_score(structure, citation)

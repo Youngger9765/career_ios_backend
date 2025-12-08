@@ -45,7 +45,7 @@ def test_basic_functionality() -> Dict[str, Any]:
     print_section("Test 1: Basic API Functionality")
 
     payload = {
-        "transcript": "諮商師：你最近工作上有什麼困擾嗎？\n案主：我覺得活著沒什麼意義...",
+        "transcript": "諮詢師：你最近工作上有什麼困擾嗎？\n案主：我覺得活著沒什麼意義...",
         "speakers": [
             {"speaker": "counselor", "text": "你最近工作上有什麼困擾嗎？"},
             {"speaker": "client", "text": "我覺得活著沒什麼意義..."},
@@ -112,7 +112,7 @@ def test_rag_with_career_keywords() -> Dict[str, Any]:
     print_section("Test 2: RAG Integration with Career Keywords")
 
     payload = {
-        "transcript": "諮商師：你想轉職嗎？\n案主：是的，但我不知道怎麼寫履歷。",
+        "transcript": "諮詢師：你想轉職嗎？\n案主：是的，但我不知道怎麼寫履歷。",
         "speakers": [
             {"speaker": "counselor", "text": "你想轉職嗎？"},
             {"speaker": "client", "text": "是的，但我不知道怎麼寫履歷。"},
@@ -220,7 +220,7 @@ def test_without_career_keywords() -> Dict[str, Any]:
     print_section("Test 3: Without Career Keywords (No RAG)")
 
     payload = {
-        "transcript": "諮商師：今天天氣如何？\n案主：天氣很好。",
+        "transcript": "諮詢師：今天天氣如何？\n案主：天氣很好。",
         "speakers": [
             {"speaker": "counselor", "text": "今天天氣如何？"},
             {"speaker": "client", "text": "天氣很好。"},

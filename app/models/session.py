@@ -35,7 +35,7 @@ class Session(Base, BaseModel):
     summary = Column(Text)  # 會談摘要（100字內，用於歷程展示，AI 生成）
     reflection = Column(
         JSON, default=dict
-    )  # 諮商師反思（人類撰寫，格式彈性以支援不同租戶需求）
+    )  # 諮詢師反思（人類撰寫，格式彈性以支援不同租戶需求）
 
     # Recordings - 會談逐字稿片段（JSON list）
     # 支援會談中斷後繼續的場景，每個 recording 包含：
@@ -52,11 +52,11 @@ class Session(Base, BaseModel):
     # - keywords: 提取的關鍵字列表
     # - categories: 分類列表
     # - confidence: 信心分數 (0.0-1.0)
-    # - counselor_insights: 諮商師洞見
+    # - counselor_insights: 諮詢師洞見
     # - risk_level: 風險等級 (low/medium/high)
     # - risk_indicators: 風險指標列表
     # - risk_alert: 風險警示訊息
-    # - counselor_id: 執行分析的諮商師 ID
+    # - counselor_id: 執行分析的諮詢師 ID
     analysis_logs = Column(JSON, default=lambda: [])
 
     # Relationships

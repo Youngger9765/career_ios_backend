@@ -4,10 +4,7 @@ Tests the complete flow:
 1. Transcript parsing → 2. RAG query → 3. Report generation → 4. Quality validation
 """
 
-
 import pytest
-
-pytestmark = [pytest.mark.asyncio, pytest.mark.slow, pytest.mark.integration]
 
 from app.utils.rag_query_builder import build_enhanced_query
 from app.utils.report_quality import generate_quality_summary
@@ -16,6 +13,8 @@ from app.utils.report_validators import (
     validate_citations,
     validate_report_structure,
 )
+
+pytestmark = [pytest.mark.asyncio, pytest.mark.slow, pytest.mark.integration]
 
 
 class TestReportGenerationE2E:
@@ -37,7 +36,7 @@ class TestReportGenerationE2E:
             "counseling_goals": ["找到職涯方向", "提升工作動機"],
             "counselor_techniques": ["卡片排序", "生涯幻遊"],
             "session_content": "個案表示最近工作感到迷茫，不確定未來方向...",
-            "counselor_self_evaluation": "本次晤談順利建立關係"
+            "counselor_self_evaluation": "本次晤談順利建立關係",
         }
 
     @pytest.fixture
@@ -48,14 +47,14 @@ class TestReportGenerationE2E:
                 "id": 1,
                 "title": "Super 生涯發展理論",
                 "content": "Super 認為個體生涯發展分為五個階段：成長期、探索期、建立期...",
-                "similarity": 0.85
+                "similarity": 0.85,
             },
             {
                 "id": 2,
                 "title": "自我效能理論",
                 "content": "Bandura 提出自我效能影響個人選擇與表現...",
-                "similarity": 0.78
-            }
+                "similarity": 0.78,
+            },
         ]
 
     def test_enhanced_query_construction(self, sample_parsed_data):
@@ -69,10 +68,14 @@ class TestReportGenerationE2E:
         assert "女性" in query or "碩士" in query
 
         # 應包含主訴（前3個）
-        assert any(concern in query for concern in sample_parsed_data["main_concerns"][:3])
+        assert any(
+            concern in query for concern in sample_parsed_data["main_concerns"][:3]
+        )
 
         # 應包含技巧（前2個）
-        assert any(tech in query for tech in sample_parsed_data["counselor_techniques"][:2])
+        assert any(
+            tech in query for tech in sample_parsed_data["counselor_techniques"][:2]
+        )
 
     def test_complete_report_validation(self):
         """測試 M1: 完整報告結構驗證"""
@@ -102,7 +105,7 @@ class TestReportGenerationE2E:
         基於自我效能理論 [3]，問題源於過往成功經驗不足。
         從動機理論觀點 [4]，案主缺乏內在動機。
 
-        【八、諮商目標與介入策略】
+        【八、諮詢目標與介入策略】
         採用卡片排序法 [5] 協助澄清價值觀，此技術適合探索階段個案。
         搭配生涯幻遊 [6] 增強自我覺察。
 
@@ -138,15 +141,12 @@ class TestReportGenerationE2E:
         【五、多層次因素分析】根據 Super 理論 [1]，案主處於建立期。
         【六、個案優勢與資源】積極求助
         【七、諮詢師的專業判斷】基於理論 [2]，問題源於...
-        【八、諮商目標與介入策略】採用卡片排序 [3]，因為...
+        【八、諮詢目標與介入策略】採用卡片排序 [3]，因為...
         【九、預期成效與評估】3個月內完成
         【十、諮詢師自我反思】本次順利
         """
 
-        report = {
-            "client_name": "小美",
-            "conceptualization": report_text
-        }
+        report = {"client_name": "小美", "conceptualization": report_text}
 
         summary = generate_quality_summary(report, report_text, sample_theories)
 
@@ -193,7 +193,7 @@ class TestReportGenerationE2E:
         【七、諮詢師的專業判斷】
         問題複雜 [3][4]。
 
-        【八、諮商目標與介入策略】
+        【八、諮詢目標與介入策略】
         使用技術 [5][6]。
         """
 
@@ -213,7 +213,7 @@ class TestReportGenerationE2E:
         【七、諮詢師的專業判斷】
         從自我效能理論觀點 [3]，案主過往成功經驗不足導致信心低落。
 
-        【八、諮商目標與介入策略】
+        【八、諮詢目標與介入策略】
         考量案主處於價值觀探索階段 [4]，因此採用卡片排序法 [5]。
         """
 
@@ -229,7 +229,11 @@ class TestParameterTuning:
     def test_quality_score_thresholds(self):
         """測試品質分數門檻是否合理"""
         # 完美報告
-        perfect_structure = {"coverage": 100.0, "complete": True, "missing_sections": []}
+        perfect_structure = {
+            "coverage": 100.0,
+            "complete": True,
+            "missing_sections": [],
+        }
         perfect_citation = {
             "all_critical_sections_cited": True,
             "total_citations": 7,
@@ -237,13 +241,17 @@ class TestParameterTuning:
             "section_details": {
                 "【五、多層次因素分析】": {"has_citations": True},
                 "【七、諮詢師的專業判斷】": {"has_citations": True},
-                "【八、諮商目標與介入策略】": {"has_citations": True}
-            }
+                "【八、諮詢目標與介入策略】": {"has_citations": True},
+            },
         }
         assert calculate_quality_score(perfect_structure, perfect_citation) == 100.0
 
         # 及格邊緣（60分）
-        passing_structure = {"coverage": 80.0, "complete": False, "missing_sections": ["【十、諮詢師自我反思】", "【九、預期成效與評估】"]}
+        passing_structure = {
+            "coverage": 80.0,
+            "complete": False,
+            "missing_sections": ["【十、諮詢師自我反思】", "【九、預期成效與評估】"],
+        }
         passing_citation = {
             "all_critical_sections_cited": False,
             "total_citations": 3,
@@ -251,8 +259,8 @@ class TestParameterTuning:
             "section_details": {
                 "【五、多層次因素分析】": {"has_citations": True},
                 "【七、諮詢師的專業判斷】": {"has_citations": True},
-                "【八、諮商目標與介入策略】": {"has_citations": False}
-            }
+                "【八、諮詢目標與介入策略】": {"has_citations": False},
+            },
         }
         score = calculate_quality_score(passing_structure, passing_citation)
         # 實際計算：80*0.4 + (2/3)*40 + 10 + (3/7)*10 = 32 + 26.7 + 10 + 4.3 = 73
@@ -267,8 +275,8 @@ class TestParameterTuning:
             "section_details": {
                 "【五、多層次因素分析】": {"has_citations": True},
                 "【七、諮詢師的專業判斷】": {"has_citations": True},
-                "【八、諮商目標與介入策略】": {"has_citations": True}
-            }
+                "【八、諮詢目標與介入策略】": {"has_citations": True},
+            },
         }
 
         # 5個引用

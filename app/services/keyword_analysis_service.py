@@ -132,7 +132,7 @@ JSON回應（精簡）：
         """Get default keyword analysis result"""
         return {
             "keywords": ["探索中", "情緒", "發展"],
-            "categories": ["一般諮商"],
+            "categories": ["一般諮詢"],
             "confidence": 0.5,
             "counselor_insights": "持續觀察案主狀態。",
         }
@@ -252,8 +252,8 @@ JSON回應（精簡）：
 
         # Default if no keywords found
         if not found_keywords:
-            found_keywords = ["探索中", "諮商進行"]
-            categories = {"一般諮商"}
+            found_keywords = ["探索中", "諮詢進行"]
+            categories = {"一般諮詢"}
 
         # Generate insights based on keywords
         insights = self._generate_simple_insights(found_keywords, relationship_keywords)
