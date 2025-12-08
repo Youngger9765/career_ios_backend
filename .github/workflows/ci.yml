@@ -117,6 +117,7 @@ jobs:
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        ELEVEN_LABS_API_KEY: ${{ secrets.ELEVEN_LABS_API_KEY }}
       run: |
         gcloud run deploy ${{ steps.env.outputs.SERVICE_NAME }} \
           --image=us-central1-docker.pkg.dev/groovy-iris-473015-h3/career-app/app:${{ github.sha }} \
@@ -132,7 +133,7 @@ jobs:
           --cpu-throttling \
           --port=8080 \
           --allow-unauthenticated \
-          --set-env-vars="DATABASE_URL=${DATABASE_URL},DATABASE_URL_DIRECT=${DATABASE_URL_DIRECT},SECRET_KEY=${SECRET_KEY},OPENAI_API_KEY=${OPENAI_API_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY},MOCK_MODE=false,DEBUG=${{ steps.env.outputs.DEBUG }},GCS_PROJECT=groovy-iris-473015-h3,ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }}"
+          --set-env-vars="DATABASE_URL=${DATABASE_URL},DATABASE_URL_DIRECT=${DATABASE_URL_DIRECT},SECRET_KEY=${SECRET_KEY},OPENAI_API_KEY=${OPENAI_API_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY},ELEVEN_LABS_API_KEY=${ELEVEN_LABS_API_KEY},MOCK_MODE=false,DEBUG=${{ steps.env.outputs.DEBUG }},GCS_PROJECT=groovy-iris-473015-h3,ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }}"
 
     - name: Get service URL
       run: |
