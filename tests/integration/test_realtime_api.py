@@ -38,6 +38,24 @@ skip_without_gcp = pytest.mark.skipif(
 )
 
 
+# Skip ElevenLabs tests if API key is not available
+# This happens in CI without secrets configured or when key is not set locally
+def _check_elevenlabs_credentials():
+    """Check if ElevenLabs API key is available"""
+    import os
+
+    api_key = os.getenv("ELEVEN_LABS_API_KEY")
+    return api_key is not None and len(api_key) > 0
+
+
+HAS_ELEVENLABS_API_KEY = _check_elevenlabs_credentials()
+
+skip_without_elevenlabs = pytest.mark.skipif(
+    not HAS_ELEVENLABS_API_KEY,
+    reason="ElevenLabs API key not available (set ELEVEN_LABS_API_KEY in environment)",
+)
+
+
 class TestRealtimeAnalysisAPI:
     """Test Realtime Analysis API endpoints (No Auth Required - Demo Feature)"""
 
@@ -290,6 +308,7 @@ class TestRealtimeAnalysisAPI:
 class TestElevenLabsTokenAPI:
     """Test ElevenLabs Token Generation API (No Auth Required)"""
 
+    @skip_without_elevenlabs
     def test_generate_token_success(self):
         """Test POST /api/v1/realtime/elevenlabs-token - Should return a valid token"""
         with TestClient(app) as client:
