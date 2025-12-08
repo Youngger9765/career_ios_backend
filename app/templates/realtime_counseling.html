@@ -728,6 +728,11 @@
             currentUtterance: null
         };
 
+        // === Inactivity Timeout State ===
+        let lastActivityTime = Date.now();
+        let inactivityCheckInterval = null;
+        let countdownInterval = null;
+
         // === DOM Elements ===
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
@@ -880,6 +885,11 @@
 
                     // Step 3: Start AudioContext to capture PCM audio
                     startAudioCapture();
+
+                    // Start inactivity monitoring
+                    startInactivityMonitoring();
+                    resetInactivityTimer();
+
                     resolve();
                 };
 
@@ -984,6 +994,7 @@
                             partialTranscriptText = message.text;
                             updatePartialTranscriptUI(message.text);
                             console.log('📝 Partial:', message.text);
+                            resetInactivityTimer(); // Reset timer on any transcript activity
                         }
                         break;
 
@@ -999,6 +1010,9 @@
 
                             // Reset partial text
                             partialTranscriptText = '';
+
+                            // Reset inactivity timer on committed transcript
+                            resetInactivityTimer();
                         }
                         break;
 
@@ -1015,6 +1029,9 @@
                             }
 
                             partialTranscriptText = '';
+
+                            // Reset inactivity timer on committed transcript
+                            resetInactivityTimer();
                         }
                         break;
 
@@ -1078,6 +1095,132 @@
             if (partialContainer) {
                 partialContainer.remove();
             }
+        }
+
+        /**
+         * Reset inactivity timer when user is active
+         */
+        function resetInactivityTimer() {
+            lastActivityTime = Date.now();
+            console.log('⏰ Inactivity timer reset');
+        }
+
+        /**
+         * Start monitoring for inactivity (check every 10 seconds)
+         */
+        function startInactivityMonitoring() {
+            console.log('🔍 Starting inactivity monitoring');
+            inactivityCheckInterval = setInterval(() => {
+                const inactiveTime = Date.now() - lastActivityTime;
+                const inactiveSeconds = Math.floor(inactiveTime / 1000);
+
+                // Check if inactive for more than 60 seconds
+                if (inactiveTime > 60000 && !document.getElementById('inactivityModal')) {
+                    console.warn(`⚠️ User inactive for ${inactiveSeconds} seconds, showing warning`);
+                    showInactivityWarning();
+                }
+            }, 10000); // Check every 10 seconds
+        }
+
+        /**
+         * Stop inactivity monitoring and cleanup
+         */
+        function stopInactivityMonitoring() {
+            console.log('🛑 Stopping inactivity monitoring');
+            if (inactivityCheckInterval) {
+                clearInterval(inactivityCheckInterval);
+                inactivityCheckInterval = null;
+            }
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            // Remove modal if exists
+            const modal = document.getElementById('inactivityModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        /**
+         * Show inactivity warning modal with 10-second countdown
+         */
+        function showInactivityWarning() {
+            // Create modal
+            const modal = document.createElement('div');
+            modal.id = 'inactivityModal';
+            modal.innerHTML = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-8 max-w-md mx-4 text-center shadow-2xl">
+                        <h2 class="text-2xl font-bold mb-4 text-gray-800">還在嗎？</h2>
+                        <p class="mb-4 text-gray-600">已經 1 分鐘沒有對話了，是否要繼續？</p>
+                        <p class="text-red-500 font-bold mb-6 text-lg">
+                            將在 <span id="countdownSeconds" class="text-2xl">10</span> 秒後自動結束
+                        </p>
+                        <div class="flex gap-4">
+                            <button onclick="continueSession()"
+                                class="flex-1 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors font-semibold">
+                                繼續對話
+                            </button>
+                            <button onclick="endSessionFromModal()"
+                                class="flex-1 bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-colors font-semibold">
+                                結束對話
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Start 10-second countdown
+            let secondsLeft = 10;
+            countdownInterval = setInterval(() => {
+                secondsLeft--;
+                const countdownEl = document.getElementById('countdownSeconds');
+                if (countdownEl) {
+                    countdownEl.textContent = secondsLeft;
+                }
+
+                // Auto-end if countdown reaches 0
+                if (secondsLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                    console.log('⏱️ Countdown reached 0, auto-ending session');
+                    endSessionFromModal();
+                }
+            }, 1000);
+        }
+
+        /**
+         * User chose to continue session
+         */
+        function continueSession() {
+            console.log('✅ User chose to continue session');
+            const modal = document.getElementById('inactivityModal');
+            if (modal) {
+                modal.remove();
+            }
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            resetInactivityTimer();
+        }
+
+        /**
+         * User chose to end session or countdown expired
+         */
+        function endSessionFromModal() {
+            console.log('🛑 Ending session from inactivity modal');
+            const modal = document.getElementById('inactivityModal');
+            if (modal) {
+                modal.remove();
+            }
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            stopSession();
         }
 
         /**
@@ -1217,6 +1360,9 @@
 
         function stopSession() {
             isRecording = false;
+
+            // Stop inactivity monitoring
+            stopInactivityMonitoring();
 
             // Stop real recording if active
             if (!isDemoMode) {
