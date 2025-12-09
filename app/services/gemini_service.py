@@ -304,20 +304,32 @@ class GeminiService:
 
         # Extract usage metadata
         usage_metadata = {}
+
+        # Debug: log all response attributes
+        logger.info(f"🔍 Response attributes: {dir(response)}")
+        logger.info(f"🔍 Response type: {type(response)}")
+
         if hasattr(response, "usage_metadata"):
             usage = response.usage_metadata
             logger.info(f"📊 Usage metadata: {usage}")
-            if hasattr(usage, "cached_content_token_count"):
-                usage_metadata[
-                    "cached_content_token_count"
-                ] = usage.cached_content_token_count
-                logger.info(f"🎯 Cached tokens: {usage.cached_content_token_count}")
-            if hasattr(usage, "prompt_token_count"):
-                usage_metadata["prompt_token_count"] = usage.prompt_token_count
-                logger.info(f"📝 Prompt tokens: {usage.prompt_token_count}")
-            if hasattr(usage, "candidates_token_count"):
-                usage_metadata["candidates_token_count"] = usage.candidates_token_count
-                logger.info(f"💬 Output tokens: {usage.candidates_token_count}")
+            logger.info(f"🔍 Usage metadata type: {type(usage)}")
+            logger.info(f"🔍 Usage attributes: {dir(usage)}")
+
+            # Try different attribute names
+            for attr in [
+                "cached_content_token_count",
+                "prompt_token_count",
+                "candidates_token_count",
+                "total_token_count",
+                "input_token_count",
+                "output_token_count",
+            ]:
+                if hasattr(usage, attr):
+                    value = getattr(usage, attr)
+                    logger.info(f"✅ Found {attr}: {value}")
+                    usage_metadata[attr] = value
+        else:
+            logger.warning("⚠️ Response has NO usage_metadata attribute!")
 
         # Parse JSON from response
         import json
