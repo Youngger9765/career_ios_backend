@@ -41,20 +41,20 @@ class TestRealtimeRAGIntegration:
     """Test RAG integration with Realtime Analysis API"""
 
     @skip_without_gcp
-    def test_rag_query_triggered_with_career_keywords(self):
-        """Test 1: RAG query triggered when transcript contains career keywords
+    def test_rag_query_triggered_with_parenting_keywords(self):
+        """Test 1: RAG query triggered when transcript contains parenting keywords
 
-        Scenario: Given a transcript with career-related keywords (轉職, 履歷)
+        Scenario: Given a transcript with parenting-related keywords (親子, 孩子)
         Expected: API should trigger RAG search and include rag_sources in response
         """
         with TestClient(app) as client:
             response = client.post(
                 "/api/v1/realtime/analyze",
                 json={
-                    "transcript": "諮詢師：你想轉職嗎？\n案主：是的，但我不知道怎麼寫履歷。",
+                    "transcript": "諮詢師：你和孩子的關係如何？\n案主：我不知道怎麼和他溝通。",
                     "speakers": [
-                        {"speaker": "counselor", "text": "你想轉職嗎？"},
-                        {"speaker": "client", "text": "是的，但我不知道怎麼寫履歷。"},
+                        {"speaker": "counselor", "text": "你和孩子的關係如何？"},
+                        {"speaker": "client", "text": "我不知道怎麼和他溝通。"},
                     ],
                     "time_range": "0:00-1:00",
                 },
@@ -86,18 +86,18 @@ class TestRealtimeRAGIntegration:
     def test_rag_results_integrated_in_suggestions(self):
         """Test 2: RAG results are integrated into AI suggestions
 
-        Scenario: Given transcript: "我想轉職但不知道怎麼寫履歷"
+        Scenario: Given transcript about parenting issues
         Expected: AI suggestions should reference knowledge from RAG sources
         """
         with TestClient(app) as client:
             response = client.post(
                 "/api/v1/realtime/analyze",
                 json={
-                    "transcript": "案主：我想轉職，但不知道怎麼寫履歷，也不知道怎麼準備面試。",
+                    "transcript": "案主：我的孩子很叛逆，不知道怎麼管教，也不知道怎麼和他溝通。",
                     "speakers": [
                         {
                             "speaker": "client",
-                            "text": "我想轉職，但不知道怎麼寫履歷，也不知道怎麼準備面試。",
+                            "text": "我的孩子很叛逆，不知道怎麼管教，也不知道怎麼和他溝通。",
                         }
                     ],
                     "time_range": "0:00-1:00",
@@ -113,13 +113,13 @@ class TestRealtimeRAGIntegration:
             # Verify RAG sources are included
             assert "rag_sources" in data
 
-            # If RAG found sources, verify suggestions reference career knowledge
+            # If RAG found sources, verify suggestions reference parenting knowledge
             if len(data["rag_sources"]) > 0:
                 suggestions_text = " ".join(data["suggestions"])
-                # Suggestions should contain career-related advice
+                # Suggestions should contain parenting-related advice
                 assert any(
                     keyword in suggestions_text
-                    for keyword in ["履歷", "面試", "轉職", "職涯", "求職"]
+                    for keyword in ["孩子", "親子", "溝通", "管教", "教養"]
                 )
 
     @skip_without_gcp
@@ -162,16 +162,16 @@ class TestRealtimeRAGIntegration:
     def test_keyword_detection_triggers_rag(self):
         """Test 4: Keyword detection correctly triggers RAG search
 
-        Scenario: Test multiple career keywords: 轉職, 履歷, 面試, 職涯規劃, 離職, 求職
+        Scenario: Test multiple parenting keywords: 親子, 孩子, 教養, 溝通, 情緒, 管教
         Expected: All these keywords should trigger RAG search
         """
         keywords_to_test = [
-            ("轉職", "我想轉職到科技業。"),
-            ("履歷", "我的履歷需要怎麼寫？"),
-            ("面試", "面試時該注意什麼？"),
-            ("職涯規劃", "我需要做職涯規劃。"),
-            ("離職", "我想離職了。"),
-            ("求職", "求職過程很艱難。"),
+            ("親子", "我和孩子的親子關係有問題。"),
+            ("孩子", "我的孩子不聽話。"),
+            ("教養", "教養方式應該如何調整？"),
+            ("溝通", "我不知道怎麼和孩子溝通。"),
+            ("情緒", "孩子的情緒管理有問題。"),
+            ("管教", "管教方式該如何拿捏？"),
         ]
 
         with TestClient(app) as client:
@@ -209,11 +209,11 @@ class TestRealtimeRAGIntegration:
             response = client.post(
                 "/api/v1/realtime/analyze",
                 json={
-                    "transcript": "案主：我想轉職，需要準備履歷和面試技巧。",
+                    "transcript": "案主：我的孩子很叛逆，需要學習親子溝通和管教技巧。",
                     "speakers": [
                         {
                             "speaker": "client",
-                            "text": "我想轉職，需要準備履歷和面試技巧。",
+                            "text": "我的孩子很叛逆，需要學習親子溝通和管教技巧。",
                         }
                     ],
                     "time_range": "0:00-1:00",
@@ -268,9 +268,12 @@ class TestRealtimeRAGIntegration:
             response = client.post(
                 "/api/v1/realtime/analyze",
                 json={
-                    "transcript": "案主：我想轉職，但不知道怎麼寫履歷。",
+                    "transcript": "案主：我的孩子不聽話，不知道怎麼管教。",
                     "speakers": [
-                        {"speaker": "client", "text": "我想轉職，但不知道怎麼寫履歷。"}
+                        {
+                            "speaker": "client",
+                            "text": "我的孩子不聽話，不知道怎麼管教。",
+                        }
                     ],
                     "time_range": "0:00-1:00",
                 },
@@ -297,11 +300,11 @@ class TestRealtimeRAGIntegration:
             response = client.post(
                 "/api/v1/realtime/analyze",
                 json={
-                    "transcript": "案主：我想了解職涯規劃、履歷撰寫、面試技巧、求職策略等所有相關知識。",
+                    "transcript": "案主：我想了解親子溝通、教養方式、情緒管理、管教技巧等所有相關知識。",
                     "speakers": [
                         {
                             "speaker": "client",
-                            "text": "我想了解職涯規劃、履歷撰寫、面試技巧、求職策略等所有相關知識。",
+                            "text": "我想了解親子溝通、教養方式、情緒管理、管教技巧等所有相關知識。",
                         }
                     ],
                     "time_range": "0:00-1:00",
@@ -327,8 +330,13 @@ class TestRealtimeRAGIntegration:
             response = client.post(
                 "/api/v1/realtime/analyze",
                 json={
-                    "transcript": "案主：我想轉職到科技業。",
-                    "speakers": [{"speaker": "client", "text": "我想轉職到科技業。"}],
+                    "transcript": "案主：我的孩子很叛逆，需要親子溝通技巧。",
+                    "speakers": [
+                        {
+                            "speaker": "client",
+                            "text": "我的孩子很叛逆，需要親子溝通技巧。",
+                        }
+                    ],
                     "time_range": "0:00-1:00",
                 },
             )

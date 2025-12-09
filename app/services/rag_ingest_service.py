@@ -84,6 +84,7 @@ class RAGIngestService:
         file_content: bytes,
         text: str,
         metadata: Dict,
+        category: str = "general",
     ) -> Tuple[Datasource, Document]:
         """Create datasource and document database records
 
@@ -93,6 +94,7 @@ class RAGIngestService:
             file_content: File content bytes (for size calculation)
             text: Extracted text
             metadata: PDF metadata dictionary
+            category: Document category (e.g., "parenting", "career", "general")
 
         Returns:
             Tuple of (datasource, document)
@@ -108,6 +110,7 @@ class RAGIngestService:
             pages=metadata.get("pages", 0),
             content=text,
             text_length=len(text),
+            category=category,
             meta_json=metadata,
         )
         self.db.add(document)

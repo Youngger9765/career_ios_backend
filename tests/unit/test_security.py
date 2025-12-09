@@ -2,9 +2,9 @@
 Unit tests for security functions (password hashing, JWT tokens)
 TDD - Write tests first, then implement
 """
-import pytest
 from datetime import datetime, timedelta
-from jose import jwt, JWTError
+
+from jose import jwt
 
 
 class TestPasswordHashing:
@@ -64,8 +64,11 @@ class TestJWTTokens:
 
         # Decode to check expiration
         from app.core.config import Settings
+
         settings = Settings()
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
 
         assert "exp" in payload
         # Check expiration exists and is a future timestamp

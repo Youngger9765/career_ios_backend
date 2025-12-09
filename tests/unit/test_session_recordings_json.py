@@ -3,8 +3,9 @@ Test Session.recordings as JSON list field (TDD)
 
 RED phase: These tests will fail initially
 """
-import pytest
 from datetime import datetime, timezone
+
+import pytest
 from sqlalchemy.orm import Session as DBSession
 
 from app.core.database import get_db
@@ -30,11 +31,11 @@ class TestSessionRecordingsAsJSON:
             tenant_id="test_tenant",
             session_number=1,
             session_date=datetime.now(timezone.utc),
-            recordings=[]
+            recordings=[],
         )
 
         # Assert
-        assert hasattr(session, 'recordings')
+        assert hasattr(session, "recordings")
         assert session.recordings is not None
         assert isinstance(session.recordings, list)
         assert session.recordings == []
@@ -47,7 +48,7 @@ class TestSessionRecordingsAsJSON:
             "start_time": "2025-01-15T10:00:00Z",
             "end_time": "2025-01-15T10:30:00Z",
             "transcript_text": "這是第一段逐字稿",
-            "transcript_sanitized": "這是第一段逐字稿（脫敏）"
+            "transcript_sanitized": "這是第一段逐字稿（脫敏）",
         }
 
         # Act
@@ -55,14 +56,16 @@ class TestSessionRecordingsAsJSON:
             tenant_id="test_tenant",
             session_number=1,
             session_date=datetime.now(timezone.utc),
-            recordings=[recording_data]
+            recordings=[recording_data],
         )
 
         # Assert
         assert len(session.recordings) == 1
         assert session.recordings[0]["segment_number"] == 1
         assert session.recordings[0]["transcript_text"] == "這是第一段逐字稿"
-        assert session.recordings[0]["transcript_sanitized"] == "這是第一段逐字稿（脫敏）"
+        assert (
+            session.recordings[0]["transcript_sanitized"] == "這是第一段逐字稿（脫敏）"
+        )
 
     def test_session_can_store_multiple_recordings(self):
         """Test storing multiple transcript segments"""
@@ -72,20 +75,20 @@ class TestSessionRecordingsAsJSON:
                 "segment_number": 1,
                 "start_time": "2025-01-15T10:00:00Z",
                 "end_time": "2025-01-15T10:30:00Z",
-                "transcript_text": "第一段逐字稿"
+                "transcript_text": "第一段逐字稿",
             },
             {
                 "segment_number": 2,
                 "start_time": "2025-01-15T10:35:00Z",
                 "end_time": "2025-01-15T11:00:00Z",
-                "transcript_text": "第二段逐字稿（中斷後恢復）"
+                "transcript_text": "第二段逐字稿（中斷後恢復）",
             },
             {
                 "segment_number": 3,
                 "start_time": "2025-01-15T11:05:00Z",
                 "end_time": "2025-01-15T11:30:00Z",
-                "transcript_text": "第三段逐字稿"
-            }
+                "transcript_text": "第三段逐字稿",
+            },
         ]
 
         # Act
@@ -93,7 +96,7 @@ class TestSessionRecordingsAsJSON:
             tenant_id="test_tenant",
             session_number=1,
             session_date=datetime.now(timezone.utc),
-            recordings=recordings_data
+            recordings=recordings_data,
         )
 
         # Assert
@@ -110,11 +113,11 @@ class TestSessionRecordingsAsJSON:
             tenant_id="test_tenant",
             session_number=1,
             session_date=datetime.now(timezone.utc),
-            recordings=None
+            recordings=None,
         )
 
         # Assert - SQLAlchemy default works at DB level, Python level is None
         # When saved to DB and reloaded, it will be []
-        assert hasattr(session, 'recordings')
+        assert hasattr(session, "recordings")
         # Accept both None (Python level) or [] (after DB persist)
         assert session.recordings is None or session.recordings == []

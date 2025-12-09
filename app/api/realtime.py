@@ -28,49 +28,49 @@ router = APIRouter(prefix="/api/v1/realtime", tags=["Realtime Counseling"])
 gemini_service = GeminiService()
 openai_service = OpenAIService()
 
-# Career-related keywords that trigger RAG search
-CAREER_KEYWORDS = [
-    "轉職",
-    "履歷",
-    "面試",
-    "職涯",
-    "職涯規劃",
-    "離職",
-    "求職",
-    "工作",
-    "主管",
-    "同事",
-    "公司",
-    "升遷",
-    "加薪",
-    "跳槽",
-    "生涯",
-    "興趣",
-    "熱情",
-    "目標",
+# Parenting-related keywords that trigger RAG search
+PARENTING_KEYWORDS = [
+    "親子",
+    "孩子",
+    "小孩",
+    "兒童",
+    "青少年",
+    "教養",
+    "育兒",
+    "管教",
+    "溝通",
+    "情緒",
+    "行為",
+    "學習",
     "發展",
-    "規劃",
-    "能力",
-    "優勢",
-    "專長",
-    "技能",
-    "價值觀",
+    "成長",
+    "叛逆",
+    "青春期",
+    "親職",
+    "家庭",
+    "父母",
+    "媽媽",
+    "爸爸",
+    "教育",
+    "陪伴",
+    "關係",
+    "衝突",
 ]
 
 
-def _detect_career_keywords(transcript: str) -> bool:
-    """Detect if transcript contains career-related keywords.
+def _detect_parenting_keywords(transcript: str) -> bool:
+    """Detect if transcript contains parenting-related keywords.
 
     Args:
         transcript: The transcript text
 
     Returns:
-        True if career keywords detected, False otherwise
+        True if parenting keywords detected, False otherwise
     """
     transcript_lower = transcript.lower()
-    for keyword in CAREER_KEYWORDS:
+    for keyword in PARENTING_KEYWORDS:
         if keyword in transcript_lower:
-            logger.info(f"Career keyword detected: {keyword}")
+            logger.info(f"Parenting keyword detected: {keyword}")
             return True
     return False
 
@@ -78,7 +78,7 @@ def _detect_career_keywords(transcript: str) -> bool:
 async def _search_rag_knowledge(
     transcript: str, db: Session, top_k: int = 3, similarity_threshold: float = 0.7
 ) -> List[RAGSource]:
-    """Search RAG knowledge base for relevant content.
+    """Search RAG knowledge base for relevant parenting content.
 
     Args:
         transcript: The transcript text to search
@@ -96,11 +96,12 @@ async def _search_rag_knowledge(
         # Generate embedding for transcript
         query_embedding = await openai_service.create_embedding(transcript)
 
-        # Search similar chunks
+        # Search similar chunks with parenting category filter
         rows = await rag_service.search_similar_chunks(
             query_embedding=query_embedding,
             top_k=top_k,
             similarity_threshold=similarity_threshold,
+            category="parenting",  # Filter for parenting documents only
         )
 
         # Build RAG sources response
@@ -140,19 +141,19 @@ async def analyze_transcript(
             {"speaker": s.speaker, "text": s.text} for s in request.speakers
         ]
 
-        # Detect career keywords and trigger RAG if needed
+        # Detect parenting keywords and trigger RAG if needed
         rag_sources = []
         rag_context = ""
 
-        if _detect_career_keywords(request.transcript):
-            logger.info("Career keywords detected, triggering RAG search")
+        if _detect_parenting_keywords(request.transcript):
+            logger.info("Parenting keywords detected, triggering RAG search")
             rag_sources = await _search_rag_knowledge(
                 transcript=request.transcript, db=db, top_k=3, similarity_threshold=0.7
             )
 
             # Build RAG context for Gemini prompt
             if rag_sources:
-                rag_context_parts = ["\n\n📚 相關職涯知識庫內容（供參考）：\n"]
+                rag_context_parts = ["\n\n📚 相關親子教養知識庫內容（供參考）：\n"]
                 for idx, source in enumerate(rag_sources, 1):
                     rag_context_parts.append(
                         f"[{idx}] {source.title}: {source.content[:200]}..."

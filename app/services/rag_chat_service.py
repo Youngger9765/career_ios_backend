@@ -189,6 +189,7 @@ Examples:
         top_k: int,
         similarity_threshold: float,
         chunk_strategy: Optional[str] = None,
+        category: Optional[str] = None,
     ) -> List[Tuple]:
         """Search for similar document chunks using vector similarity
 
@@ -197,6 +198,7 @@ Examples:
             top_k: Number of results to return
             similarity_threshold: Minimum similarity score
             chunk_strategy: Optional chunk strategy filter
+            category: Optional category filter (e.g., "parenting", "career")
 
         Returns:
             List of result rows with (chunk_id, doc_id, text, document_title, similarity_score)
@@ -209,53 +211,44 @@ Examples:
             "top_k": top_k,
         }
 
+        # Build WHERE clause filters
+        where_filters = [
+            "1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold"
+        ]
+
         if chunk_strategy:
-            # Query with strategy filter
-            query_sql = text(
-                """
-                SELECT
-                    c.id as chunk_id,
-                    c.doc_id,
-                    c.text,
-                    d.title as document_title,
-                    1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
-                FROM chunks c
-                JOIN embeddings e ON c.id = e.chunk_id
-                JOIN documents d ON c.doc_id = d.id
-                WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
-                    AND c.chunk_strategy = :chunk_strategy
-                ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
-                LIMIT :top_k
-            """
-            ).bindparams(
-                bindparam("query_embedding", type_=String),
-                bindparam("threshold", type_=Float),
-                bindparam("top_k", type_=Integer),
-                bindparam("chunk_strategy", type_=String),
-            )
+            where_filters.append("c.chunk_strategy = :chunk_strategy")
             params["chunk_strategy"] = chunk_strategy
-        else:
-            # Query without strategy filter
-            query_sql = text(
-                """
-                SELECT
-                    c.id as chunk_id,
-                    c.doc_id,
-                    c.text,
-                    d.title as document_title,
-                    1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
-                FROM chunks c
-                JOIN embeddings e ON c.id = e.chunk_id
-                JOIN documents d ON c.doc_id = d.id
-                WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
-                ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
-                LIMIT :top_k
-            """
-            ).bindparams(
-                bindparam("query_embedding", type_=String),
-                bindparam("threshold", type_=Float),
-                bindparam("top_k", type_=Integer),
-            )
+
+        if category:
+            where_filters.append("d.category = :category")
+            params["category"] = category
+
+        where_clause = " AND ".join(where_filters)
+
+        # Build query with dynamic filters
+        query_sql = text(
+            f"""
+            SELECT
+                c.id as chunk_id,
+                c.doc_id,
+                c.text,
+                d.title as document_title,
+                1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
+            FROM chunks c
+            JOIN embeddings e ON c.id = e.chunk_id
+            JOIN documents d ON c.doc_id = d.id
+            WHERE {where_clause}
+            ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
+            LIMIT :top_k
+        """
+        ).bindparams(
+            bindparam("query_embedding", type_=String),
+            bindparam("threshold", type_=Float),
+            bindparam("top_k", type_=Integer),
+            bindparam("chunk_strategy", type_=String),
+            bindparam("category", type_=String),
+        )
 
         result = self.db.execute(query_sql, params)
         return result.fetchall()

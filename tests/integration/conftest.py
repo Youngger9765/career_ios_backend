@@ -12,30 +12,30 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.main import app
+from app.models.agent import Agent, AgentVersion  # noqa: F401
+from app.models.case import Case  # noqa: F401
+from app.models.chat import ChatLog  # noqa: F401
+from app.models.client import Client  # noqa: F401
+from app.models.collection import Collection, CollectionItem  # noqa: F401
 
 # Import all models to ensure they're registered with Base.metadata
 # Console models
 from app.models.counselor import Counselor  # noqa: F401
-from app.models.client import Client  # noqa: F401
-from app.models.case import Case  # noqa: F401
-from app.models.session import Session as SessionModel  # noqa: F401
-from app.models.report import Report  # noqa: F401
-from app.models.job import Job  # noqa: F401
-from app.models.reminder import Reminder  # noqa: F401
-from app.models.refresh_token import RefreshToken  # noqa: F401
 
 # RAG models
-from app.models.document import Datasource, Document, Chunk, Embedding  # noqa: F401
-from app.models.collection import Collection, CollectionItem  # noqa: F401
-from app.models.chat import ChatLog  # noqa: F401
+from app.models.document import Chunk, Datasource, Document, Embedding  # noqa: F401
 from app.models.evaluation import (  # noqa: F401
+    DocumentQualityMetric,
     EvaluationExperiment,
     EvaluationResult,
     EvaluationTestSet,
-    DocumentQualityMetric,
 )
-from app.models.agent import Agent, AgentVersion  # noqa: F401
+from app.models.job import Job  # noqa: F401
 from app.models.pipeline import PipelineRun  # noqa: F401
+from app.models.refresh_token import RefreshToken  # noqa: F401
+from app.models.reminder import Reminder  # noqa: F401
+from app.models.report import Report  # noqa: F401
+from app.models.session import Session as SessionModel  # noqa: F401
 
 
 @pytest.fixture
@@ -52,7 +52,9 @@ async def async_db_session() -> AsyncGenerator[AsyncSession, None]:
     from app.core.config import settings
 
     # Convert postgresql:// to postgresql+asyncpg:// for async support
-    db_url = str(settings.DATABASE_URL).replace("postgresql://", "postgresql+asyncpg://")
+    db_url = str(settings.DATABASE_URL).replace(
+        "postgresql://", "postgresql+asyncpg://"
+    )
     engine = create_async_engine(db_url, echo=False)
 
     # Create tables
@@ -79,13 +81,13 @@ async def async_db_session() -> AsyncGenerator[AsyncSession, None]:
 def db_session() -> Generator[Session, None, None]:
     """Create a synchronous test database session for integration tests"""
     # Use in-memory SQLite with StaticPool for testing (works across threads)
-    SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+    sqlalchemy_database_url = "sqlite:///:memory:"
 
     engine = create_engine(
-        SQLALCHEMY_DATABASE_URL,
+        sqlalchemy_database_url,
         connect_args={"check_same_thread": False},
         echo=True,  # Enable SQL logging for debugging
-        poolclass=StaticPool  # Keep connection alive across requests
+        poolclass=StaticPool,  # Keep connection alive across requests
     )
 
     # Create all tables - this will show which tables are being created
@@ -93,8 +95,8 @@ def db_session() -> Generator[Session, None, None]:
     Base.metadata.create_all(bind=engine)
 
     # Create session
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    session = TestingSessionLocal()
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    session = testing_session_local()
 
     # Override get_db dependency - CRITICAL: must return the same session
     def override_get_db():

@@ -5,12 +5,10 @@ and thus don't persist to the database.
 
 Test approach: Use simplified in-memory SQLite database to isolate the issue.
 """
-import pytest
-from uuid import uuid4
-from datetime import datetime, timezone
 
-from sqlalchemy import create_engine, select, Column, Integer, JSON, Text, String
-from sqlalchemy.orm import Session, sessionmaker, DeclarativeBase
+import pytest
+from sqlalchemy import JSON, Column, Integer, String, Text, create_engine, select
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 
 # Simplified model for testing (SQLite compatible)
@@ -34,8 +32,8 @@ def in_memory_db():
     """Create an in-memory SQLite database for testing"""
     engine = create_engine("sqlite:///:memory:", echo=False)
     Base.metadata.create_all(engine)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    return SessionLocal()
+    session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return session_local()
 
 
 @pytest.fixture
@@ -57,7 +55,9 @@ def sample_report(in_memory_db: Session):
 class TestJSONColumnPersistence:
     """測試 JSON column 的持久化問題 (TDD)"""
 
-    def test_json_column_update_WITHOUT_flag_modified_FAILS(self, in_memory_db: Session, sample_report: TestReport):
+    def test_json_column_update_without_flag_modified_fails(
+        self, in_memory_db: Session, sample_report: TestReport
+    ):
         """
         ❌ RED TEST: 這個測試預期會失敗
 
@@ -90,16 +90,22 @@ class TestJSONColumnPersistence:
 
         # Step 3: 驗證 - 這裡會失敗！
         # 因為 JSON column 沒有被標記為 modified，所以 commit 沒有真正寫入
-        assert persisted_report.edited_content_json is not None, \
-            "edited_content_json should persist"
+        assert (
+            persisted_report.edited_content_json is not None
+        ), "edited_content_json should persist"
 
-        assert persisted_report.edited_content_json.get("_test_marker") == "persistence_test", \
-            "❌ BUG: JSON column was not marked as modified, changes lost!"
+        assert (
+            persisted_report.edited_content_json.get("_test_marker")
+            == "persistence_test"
+        ), "❌ BUG: JSON column was not marked as modified, changes lost!"
 
-        assert persisted_report.edit_count == 1, \
-            "edit_count should persist (non-JSON column works fine)"
+        assert (
+            persisted_report.edit_count == 1
+        ), "edit_count should persist (non-JSON column works fine)"
 
-    def test_json_column_update_WITH_flag_modified_SUCCEEDS(self, in_memory_db: Session, sample_report: TestReport):
+    def test_json_column_update_with_flag_modified_succeeds(
+        self, in_memory_db: Session, sample_report: TestReport
+    ):
         """
         ✅ GREEN TEST: 使用 flag_modified() 後應該成功
 
@@ -137,10 +143,15 @@ class TestJSONColumnPersistence:
 
         # Step 3: 驗證 - 這次應該成功！
         assert persisted_report.edited_content_json is not None
-        assert persisted_report.edited_content_json.get("_test_marker") == "persistence_test_fixed"
+        assert (
+            persisted_report.edited_content_json.get("_test_marker")
+            == "persistence_test_fixed"
+        )
         assert persisted_report.edit_count == 1
 
-    def test_markdown_column_also_needs_flag_modified(self, in_memory_db: Session, sample_report: TestReport):
+    def test_markdown_column_also_needs_flag_modified(
+        self, in_memory_db: Session, sample_report: TestReport
+    ):
         """測試 Text column (markdown) 通常不需要 flag_modified，但為了保險起見也加上"""
         from sqlalchemy.orm import attributes
 

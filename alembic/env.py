@@ -3,38 +3,19 @@ import sys
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
+
 from alembic import context
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Import settings and Base
-from app.core.config import settings
-from app.core.database import Base
+from app.core.config import settings  # noqa: E402
+from app.core.database import Base  # noqa: E402
 
 # Import all models so Alembic can detect them
 # Console models
-from app.models.counselor import Counselor
-from app.models.client import Client
-from app.models.case import Case
-from app.models.session import Session
-from app.models.report import Report
-from app.models.job import Job
-from app.models.reminder import Reminder
-from app.models.refresh_token import RefreshToken
-
 # RAG models
-from app.models.document import Datasource, Document, Chunk, Embedding
-from app.models.collection import Collection, CollectionItem
-from app.models.chat import ChatLog
-from app.models.evaluation import (
-    EvaluationExperiment,
-    EvaluationResult,
-    EvaluationTestSet,
-    DocumentQualityMetric,
-)
-from app.models.agent import Agent, AgentVersion
-from app.models.pipeline import PipelineRun
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -102,9 +83,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

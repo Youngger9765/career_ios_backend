@@ -1,6 +1,7 @@
 """Playwright test for RAG Evaluation Matrix frontend"""
 import time
-from playwright.sync_api import sync_playwright, expect
+
+from playwright.sync_api import sync_playwright
 
 
 def test_matrix_page_with_real_data():
@@ -35,7 +36,11 @@ def test_matrix_page_with_real_data():
         headers = [h.text_content() for h in header_elements]
         print(f"表頭: {headers}")
         header_text = " ".join(headers)
-        assert "Chunk Strategy" in header_text or "策略" in header_text or "Chunk" in header_text
+        assert (
+            "Chunk Strategy" in header_text
+            or "策略" in header_text
+            or "Chunk" in header_text
+        )
         assert "Prompt" in header_text or "提示" in header_text
         print("✅ 表頭正確")
 
@@ -94,9 +99,9 @@ def test_matrix_page_with_real_data():
 
         browser.close()
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("測試完成！")
-        print("="*60)
+        print("=" * 60)
 
 
 if __name__ == "__main__":

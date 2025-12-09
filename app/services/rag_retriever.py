@@ -4,7 +4,7 @@ RAGRetriever Service - 檢索相關理論文獻
 Extracted from app/api/rag_report.py to follow SRP (Single Responsibility Principle)
 """
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from fastapi import HTTPException
 from sqlalchemy import Float, Integer, String, bindparam, text
@@ -20,7 +20,12 @@ class RAGRetriever:
         self.openai_service = openai_service
 
     async def search(
-        self, query: str, top_k: int, threshold: float, db: Session
+        self,
+        query: str,
+        top_k: int,
+        threshold: float,
+        db: Session,
+        category: Optional[str] = None,
     ) -> List[Dict]:
         """
         Search for relevant theories using vector similarity (RAG)
@@ -30,6 +35,7 @@ class RAGRetriever:
             top_k: Maximum number of results to return
             threshold: Minimum similarity threshold (0.0-1.0)
             db: Database session
+            category: Optional category filter (e.g., "parenting", "career")
 
         Returns:
             List of theories:
@@ -61,6 +67,7 @@ class RAGRetriever:
             JOIN embeddings e ON c.id = e.chunk_id
             JOIN documents d ON c.doc_id = d.id
             WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
+              AND (:category IS NULL OR d.category = :category)
             ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
             LIMIT :top_k
         """
@@ -68,6 +75,7 @@ class RAGRetriever:
             bindparam("query_embedding", type_=String),
             bindparam("threshold", type_=Float),
             bindparam("top_k", type_=Integer),
+            bindparam("category", type_=String),
         )
 
         result = db.execute(
@@ -76,6 +84,7 @@ class RAGRetriever:
                 "query_embedding": embedding_str,
                 "threshold": threshold,
                 "top_k": top_k,
+                "category": category,
             },
         )
 

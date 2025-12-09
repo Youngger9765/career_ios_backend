@@ -37,6 +37,7 @@ ragas = "^0.3.6"
 mlflow = "^3.4.0"
 google-cloud-aiplatform = "^1.120.0"
 google-cloud-bigquery = "^3.14.0"
+openpyxl = "^3.1.5"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

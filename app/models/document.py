@@ -41,6 +41,13 @@ class Document(Base):
     pages = Column(Integer)
     content = Column(Text, nullable=True)  # Original extracted text content
     text_length = Column(Integer)  # Original extracted text length in characters
+    category = Column(
+        String(50),
+        default="general",
+        server_default="general",
+        nullable=False,
+        index=True,
+    )
     meta_json = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(

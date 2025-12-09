@@ -2,21 +2,22 @@
 Integration tests for Session Append Recording API (iOS-friendly)
 TDD - Write tests first
 """
-import pytest
 from datetime import datetime, timezone
 from uuid import uuid4
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session as DBSession
+from sqlalchemy.orm import Session as DBSession
+from sqlalchemy.orm import sessionmaker
 
-from app.main import app
 from app.core.database import Base, get_db
 from app.core.security import hash_password
-from app.models.counselor import Counselor
-from app.models.client import Client
+from app.main import app
 from app.models.case import Case
+from app.models.client import Client
+from app.models.counselor import Counselor
 from app.models.session import Session
-
 
 # Test database setup
 TEST_DATABASE_URL = "sqlite:///./test_append_recording.db"
@@ -39,6 +40,7 @@ def db_session():
 @pytest.fixture
 def client(db_session):
     """Create test client with overridden DB dependency"""
+
     def override_get_db():
         try:
             yield db_session
@@ -74,6 +76,7 @@ def test_counselor(db_session: DBSession):
 def test_client_data(db_session: DBSession, test_counselor: Counselor):
     """Create a test client"""
     from datetime import date
+
     client = Client(
         id=uuid4(),
         name="Test Client",
@@ -94,7 +97,9 @@ def test_client_data(db_session: DBSession, test_counselor: Counselor):
 
 
 @pytest.fixture
-def test_case(db_session: DBSession, test_client_data: Client, test_counselor: Counselor):
+def test_case(
+    db_session: DBSession, test_client_data: Client, test_counselor: Counselor
+):
     """Create a test case"""
     case = Case(
         id=uuid4(),
@@ -293,8 +298,13 @@ class TestAppendRecordingAPI:
         # Assert
         assert response.status_code == 200
         data = response.json()
-        assert data["recording_added"]["transcript_text"] == "我的名字是張三，住在台北市。"
-        assert data["recording_added"]["transcript_sanitized"] == "我的名字是XXX，住在XXX。"
+        assert (
+            data["recording_added"]["transcript_text"] == "我的名字是張三，住在台北市。"
+        )
+        assert (
+            data["recording_added"]["transcript_sanitized"]
+            == "我的名字是XXX，住在XXX。"
+        )
 
     def test_append_without_sanitized_defaults_to_original(
         self, client, test_session: Session, auth_token: str
@@ -320,9 +330,7 @@ class TestAppendRecordingAPI:
         data = response.json()
         assert data["recording_added"]["transcript_sanitized"] == "測試內容"
 
-    def test_append_to_nonexistent_session_returns_404(
-        self, client, auth_token: str
-    ):
+    def test_append_to_nonexistent_session_returns_404(self, client, auth_token: str):
         """Test appending to non-existent session returns 404"""
         # Arrange
         fake_session_id = uuid4()
@@ -344,9 +352,7 @@ class TestAppendRecordingAPI:
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
-    def test_append_without_auth_returns_401(
-        self, client, test_session: Session
-    ):
+    def test_append_without_auth_returns_401(self, client, test_session: Session):
         """Test appending without authentication returns 401/403"""
         # Arrange
         request_data = {

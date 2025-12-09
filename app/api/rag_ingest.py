@@ -26,6 +26,7 @@ async def ingest_file(
     chunk_size: int = 400,
     overlap: int = 80,
     chunk_strategy: str = None,  # NEW: optional strategy name
+    category: str = "general",  # NEW: document category
     db: Session = Depends(get_db),
 ):
     """
@@ -40,6 +41,7 @@ async def ingest_file(
         file: PDF file to upload
         chunk_size: Size of text chunks
         overlap: Overlap between chunks
+        category: Document category (parenting, career, general)
         db: Database session
 
     Returns:
@@ -65,7 +67,7 @@ async def ingest_file(
 
         # Create document records
         datasource, document = service.create_document_records(
-            storage_url, file.filename, file_content, text, metadata
+            storage_url, file.filename, file_content, text, metadata, category
         )
 
         # Generate chunks and embeddings

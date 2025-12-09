@@ -9,15 +9,15 @@ This test verifies the fix for iOS issue where sending:
 
 Should accept the markdown and ignore the empty dict.
 """
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from uuid import uuid4
-from datetime import datetime, timezone
 
+import pytest
 from fastapi import HTTPException
+
 from app.api.reports import update_report
-from app.schemas.report import ReportUpdateRequest
 from app.models.report import Report, ReportStatus
+from app.schemas.report import ReportUpdateRequest
 
 
 def test_patch_with_empty_dict_and_valid_markdown():
@@ -48,11 +48,11 @@ def test_patch_with_empty_dict_and_valid_markdown():
     # Test with empty dict + valid markdown (iOS sends this)
     update_request = ReportUpdateRequest(
         edited_content_json={},  # Empty dict - should be ignored
-        edited_content_markdown="# Updated Markdown\n\nNew content"
+        edited_content_markdown="# Updated Markdown\n\nNew content",
     )
 
     # Execute
-    result = update_report(
+    update_report(
         report_id=report_id,
         update_request=update_request,
         current_user=mock_user,
@@ -97,7 +97,7 @@ def test_patch_with_only_markdown():
     )
 
     # Execute
-    result = update_report(
+    update_report(
         report_id=report_id,
         update_request=update_request,
         current_user=mock_user,
@@ -136,9 +136,7 @@ def test_patch_rejects_empty_markdown():
     mock_user.id = mock_report.created_by_id
 
     # Test with empty markdown
-    update_request = ReportUpdateRequest(
-        edited_content_markdown=""
-    )
+    update_request = ReportUpdateRequest(edited_content_markdown="")
 
     # Execute & Verify exception
     with pytest.raises(HTTPException) as exc_info:
@@ -180,9 +178,7 @@ def test_patch_rejects_whitespace_only_markdown():
     mock_user.id = mock_report.created_by_id
 
     # Test with whitespace-only markdown
-    update_request = ReportUpdateRequest(
-        edited_content_markdown="   \n\n  "
-    )
+    update_request = ReportUpdateRequest(edited_content_markdown="   \n\n  ")
 
     # Execute & Verify exception
     with pytest.raises(HTTPException) as exc_info:

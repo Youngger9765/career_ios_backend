@@ -7,13 +7,13 @@ Create Date: 2025-11-23 02:49:06.794386
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = '81cbbd9cf05e'
-down_revision: Union[str, None] = 'd7c037c2c1d9'
+revision: str = "81cbbd9cf05e"
+down_revision: Union[str, None] = "d7c037c2c1d9"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -28,11 +28,12 @@ def upgrade() -> None:
     - 'REFERRED' → 2 (COMPLETED)
     """
     # Create a temporary integer column
-    op.add_column('cases', sa.Column('status_new', sa.Integer(), nullable=True))
+    op.add_column("cases", sa.Column("status_new", sa.Integer(), nullable=True))
 
     # Migrate data from old enum status to new integer status
     # Note: The status column is currently a PostgreSQL ENUM or Integer
-    op.execute("""
+    op.execute(
+        """
         UPDATE cases
         SET status_new = CASE status::text
             WHEN 'ACTIVE' THEN 0
@@ -46,16 +47,17 @@ def upgrade() -> None:
             WHEN '2' THEN 2
             ELSE 0  -- Default to NOT_STARTED
         END
-    """)
+    """
+    )
 
     # Drop old status column
-    op.drop_column('cases', 'status')
+    op.drop_column("cases", "status")
 
     # Rename new column to status
-    op.alter_column('cases', 'status_new', new_column_name='status')
+    op.alter_column("cases", "status_new", new_column_name="status")
 
     # Set NOT NULL constraint and default
-    op.alter_column('cases', 'status', nullable=False, server_default='0')
+    op.alter_column("cases", "status", nullable=False, server_default="0")
 
 
 def downgrade() -> None:
@@ -63,10 +65,11 @@ def downgrade() -> None:
     Revert Case.status from Integer back to ENUM/String
     """
     # Create temporary string column
-    op.add_column('cases', sa.Column('status_old', sa.String(), nullable=True))
+    op.add_column("cases", sa.Column("status_old", sa.String(), nullable=True))
 
     # Migrate data back from integer to string
-    op.execute("""
+    op.execute(
+        """
         UPDATE cases
         SET status_old = CASE
             WHEN status = 0 THEN 'NOT_STARTED'
@@ -74,10 +77,11 @@ def downgrade() -> None:
             WHEN status = 2 THEN 'COMPLETED'
             ELSE 'NOT_STARTED'
         END
-    """)
+    """
+    )
 
     # Drop integer status column
-    op.drop_column('cases', 'status')
+    op.drop_column("cases", "status")
 
     # Rename old column back to status
-    op.alter_column('cases', 'status_old', new_column_name='status')
+    op.alter_column("cases", "status_old", new_column_name="status")

@@ -1,6 +1,8 @@
 """Debug matrix page JavaScript errors"""
 import time
+
 from playwright.sync_api import sync_playwright
+
 
 def test_matrix_with_console():
     with sync_playwright() as p:
@@ -9,6 +11,7 @@ def test_matrix_with_console():
 
         # Listen to console messages
         console_messages = []
+
         def handle_console(msg):
             console_messages.append(f"[{msg.type}] {msg.text}")
             print(f"Console [{msg.type}]: {msg.text}")
@@ -54,6 +57,7 @@ def test_matrix_with_console():
 
         time.sleep(3)
         browser.close()
+
 
 if __name__ == "__main__":
     test_matrix_with_console()

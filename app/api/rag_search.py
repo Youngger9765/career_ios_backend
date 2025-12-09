@@ -18,6 +18,7 @@ class SearchRequest(BaseModel):
     top_k: int = 5
     similarity_threshold: float = 0.7
     chunk_strategy: Optional[str] = None  # NEW: filter by chunk strategy
+    category: Optional[str] = None  # NEW: filter by document category
 
 
 class SearchResult(BaseModel):
@@ -57,55 +58,46 @@ async def search_similar(request: SearchRequest, db: Session = Depends(get_db)):
         # Convert embedding to PostgreSQL array format
         embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
 
-        # Build SQL query based on strategy filter
+        # Build SQL query based on strategy and category filters
         params = {
             "query_embedding": embedding_str,
             "threshold": request.similarity_threshold,
             "top_k": request.top_k,
         }
 
+        # Build WHERE clause dynamically
+        where_conditions = [
+            "1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold"
+        ]
+
         if request.chunk_strategy:
-            # Query with strategy filter
-            query_sql = text(
-                """
-                SELECT
-                    c.id as chunk_id,
-                    c.doc_id,
-                    c.text,
-                    c.ordinal,
-                    c.chunk_strategy,
-                    d.title as document_title,
-                    1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
-                FROM chunks c
-                JOIN embeddings e ON c.id = e.chunk_id
-                JOIN documents d ON c.doc_id = d.id
-                WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
-                    AND c.chunk_strategy = :chunk_strategy
-                ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
-                LIMIT :top_k
-            """
-            )
+            where_conditions.append("c.chunk_strategy = :chunk_strategy")
             params["chunk_strategy"] = request.chunk_strategy
-        else:
-            # Query without strategy filter
-            query_sql = text(
-                """
-                SELECT
-                    c.id as chunk_id,
-                    c.doc_id,
-                    c.text,
-                    c.ordinal,
-                    c.chunk_strategy,
-                    d.title as document_title,
-                    1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
-                FROM chunks c
-                JOIN embeddings e ON c.id = e.chunk_id
-                JOIN documents d ON c.doc_id = d.id
-                WHERE 1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold
-                ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
-                LIMIT :top_k
-            """
-            )
+
+        if request.category:
+            where_conditions.append("d.category = :category")
+            params["category"] = request.category
+
+        where_clause = " AND ".join(where_conditions)
+
+        query_sql = text(
+            f"""
+            SELECT
+                c.id as chunk_id,
+                c.doc_id,
+                c.text,
+                c.ordinal,
+                c.chunk_strategy,
+                d.title as document_title,
+                1 - (e.embedding <=> CAST(:query_embedding AS vector)) as similarity_score
+            FROM chunks c
+            JOIN embeddings e ON c.id = e.chunk_id
+            JOIN documents d ON c.doc_id = d.id
+            WHERE {where_clause}
+            ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
+            LIMIT :top_k
+        """
+        )
 
         result = db.execute(query_sql, params)
 

@@ -3,6 +3,7 @@ Unit tests for CaseStatus enum
 TDD - Write test first (RED phase)
 """
 import pytest
+
 from app.models.case import CaseStatus
 
 

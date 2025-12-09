@@ -3,7 +3,7 @@ Test RAGAS basic functionality with existing RAG system
 """
 
 import asyncio
-import os
+
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -54,7 +54,7 @@ async def test_ragas_basic():
 
     print("🚀 Starting RAGAS evaluation...")
     print(f"Dataset size: {len(dataset)} examples")
-    print(f"Metrics: faithfulness, answer_relevancy, context_recall, context_precision")
+    print("Metrics: faithfulness, answer_relevancy, context_recall, context_precision")
     print()
 
     # Run evaluation
@@ -79,7 +79,12 @@ async def test_ragas_basic():
         df = result.to_pandas()
 
         # Calculate average for each metric
-        metrics = ['faithfulness', 'answer_relevancy', 'context_recall', 'context_precision']
+        metrics = [
+            "faithfulness",
+            "answer_relevancy",
+            "context_recall",
+            "context_precision",
+        ]
         for metric_name in metrics:
             if metric_name in df.columns:
                 avg_value = df[metric_name].mean()
@@ -95,6 +100,7 @@ async def test_ragas_basic():
     except Exception as e:
         print(f"❌ Error during evaluation: {str(e)}")
         import traceback
+
         traceback.print_exc()
         raise
 
@@ -145,7 +151,9 @@ async def test_ragas_with_real_data():
         context_text = "\n\n".join(sample_context)
         prompt = f"根據以下內容回答問題：\n\n{context_text}\n\n問題：{question}"
 
-        answer = await openai_service.chat_completion([{"role": "user", "content": prompt}])
+        answer = await openai_service.chat_completion(
+            [{"role": "user", "content": prompt}]
+        )
 
         # Prepare RAGAS dataset
         from datasets import Dataset
@@ -174,7 +182,7 @@ async def test_ragas_with_real_data():
 
         # Convert to pandas and extract metrics
         df = result.to_pandas()
-        for metric_name in ['faithfulness', 'answer_relevancy']:
+        for metric_name in ["faithfulness", "answer_relevancy"]:
             if metric_name in df.columns:
                 avg_value = df[metric_name].mean()
                 print(f"{metric_name:20s}: {avg_value:.4f}")
