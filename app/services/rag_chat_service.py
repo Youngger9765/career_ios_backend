@@ -205,6 +205,7 @@ Examples:
         """
         embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
 
+        # Build params dict and WHERE clause dynamically
         params = {
             "query_embedding": embedding_str,
             "threshold": similarity_threshold,
@@ -216,13 +217,23 @@ Examples:
             "1 - (e.embedding <=> CAST(:query_embedding AS vector)) >= :threshold"
         ]
 
+        # Build bindparams list dynamically
+        bind_params = [
+            bindparam("query_embedding", type_=String),
+            bindparam("threshold", type_=Float),
+            bindparam("top_k", type_=Integer),
+        ]
+
+        # Only add filters and bindparams if values provided
         if chunk_strategy:
             where_filters.append("c.chunk_strategy = :chunk_strategy")
             params["chunk_strategy"] = chunk_strategy
+            bind_params.append(bindparam("chunk_strategy", type_=String))
 
         if category:
             where_filters.append("d.category = :category")
             params["category"] = category
+            bind_params.append(bindparam("category", type_=String))
 
         where_clause = " AND ".join(where_filters)
 
@@ -242,13 +253,7 @@ Examples:
             ORDER BY e.embedding <=> CAST(:query_embedding AS vector)
             LIMIT :top_k
         """
-        ).bindparams(
-            bindparam("query_embedding", type_=String),
-            bindparam("threshold", type_=Float),
-            bindparam("top_k", type_=Integer),
-            bindparam("chunk_strategy", type_=String),
-            bindparam("category", type_=String),
-        )
+        ).bindparams(*bind_params)
 
         result = self.db.execute(query_sql, params)
         return result.fetchall()
