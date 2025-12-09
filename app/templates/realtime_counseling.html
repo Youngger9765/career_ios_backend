@@ -603,11 +603,6 @@
                                 <span class="hidden sm:inline">立即分析</span>
                                 <span class="sm:hidden">分析</span>
                             </button>
-                            <button id="generateMultipleBtn" class="btn-touch bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-smooth shadow-md hover:shadow-lg flex items-center gap-1">
-                                <span>🎬</span>
-                                <span class="hidden sm:inline">生成連續分析</span>
-                                <span class="sm:hidden">Demo</span>
-                            </button>
                         </div>
                     </div>
 
@@ -620,7 +615,7 @@
                             </div>
                             <h3 class="text-base md:text-lg font-bold text-gray-800 mb-2">等待分析</h3>
                             <p class="text-gray-600 text-xs md:text-sm max-w-xs">
-                                點擊「立即分析」或「生成連續分析」查看 AI 督導建議
+                                點擊「立即分析」查看 AI 督導建議
                             </p>
                         </div>
                     </div>
@@ -741,7 +736,6 @@
         const speakerClientBtn = document.getElementById('speakerClient');
         const speakerToggleSection = document.getElementById('speakerToggleSection');
         const triggerAnalysisBtn = document.getElementById('triggerAnalysisBtn');
-        const generateMultipleBtn = document.getElementById('generateMultipleBtn');
         const liveIndicator = document.getElementById('liveIndicator');
         const transcriptEmpty = document.getElementById('transcriptEmpty');
         const analysisEmpty = document.getElementById('analysisEmpty');
@@ -790,7 +784,6 @@
         stopBtnMobile.addEventListener('click', stopSession);
         // Speaker buttons removed (AI auto-detects speakers)
         triggerAnalysisBtn.addEventListener('click', manuallyTriggerAnalysis);
-        generateMultipleBtn.addEventListener('click', generateMultipleAnalyses);
         fabAnalyze.addEventListener('click', manuallyTriggerAnalysis);
 
         // NEW: Carousel navigation
@@ -2096,136 +2089,6 @@
                 return;
             }
             analyzeTranscript();
-        }
-
-        function generateMultipleAnalyses() {
-            // Clear existing cards and show loading
-            analysisCards.innerHTML = '';
-            if (analysisEmpty) analysisEmpty.style.display = 'none';
-
-            // Clear mobile carousel
-            if (mobileCarouselTrack) {
-                mobileCarouselTrack.innerHTML = '';
-                mobileAnalysisCards = [];
-                currentCarouselIndex = 0;
-                if (mobileCarousel) mobileCarousel.classList.add('hidden');
-            }
-
-            // Show loading skeleton
-            for (let i = 0; i < 3; i++) {
-                const skeleton = document.createElement('div');
-                skeleton.className = 'bg-white rounded-xl p-5 border border-gray-200 animate-pulse';
-                skeleton.innerHTML = `
-                    <div class="flex justify-between mb-3">
-                        <div class="h-6 bg-gray-200 rounded-full w-20"></div>
-                        <div class="h-4 bg-gray-200 rounded w-12"></div>
-                    </div>
-                    <div class="space-y-2">
-                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-                    </div>
-                `;
-                analysisCards.appendChild(skeleton);
-            }
-
-            // Clear skeletons after 1 second
-            setTimeout(() => {
-                analysisCards.innerHTML = '';
-            }, 1000);
-
-            // Generate 5 progressive analyses (simulating 5 minutes of conversation)
-            const mockProgressiveData = [
-                {
-                    timeRange: '0:00-1:00',
-                    transcript: '諮詢師：你好，今天想聊什麼呢？\n案主：我最近工作壓力很大...',
-                    hasIssue: { anxiety: true }
-                },
-                {
-                    timeRange: '1:00-2:00',
-                    transcript: '諮詢師：聽起來壓力真的很大，能跟我多說一些嗎？\n案主：我覺得不管怎麼做，主管都不滿意。\n諮詢師：這讓你感到很挫折，是嗎？',
-                    hasIssue: { anxiety: true, work: true }
-                },
-                {
-                    timeRange: '2:00-3:00',
-                    transcript: '案主：對，而且我開始懷疑自己的能力...\n諮詢師：當你說「懷疑自己」，具體是指什麼呢？\n案主：我覺得自己什麼都做不好。',
-                    hasIssue: { anxiety: true, work: true, depression: true }
-                },
-                {
-                    timeRange: '3:00-4:00',
-                    transcript: '案主：有時候覺得活著好像沒什麼意義。\n諮詢師：你剛才說「活著沒意義」，這是最近才有的想法嗎？\n案主：嗯...最近特別強烈。',
-                    hasIssue: { anxiety: true, work: true, depression: true, suicideRisk: true }
-                },
-                {
-                    timeRange: '4:00-5:00',
-                    transcript: '諮詢師：當你說「活著沒意義」，有想過要結束生命嗎？\n案主：有想過...但我不確定會不會真的去做。\n諮詢師：有什麼事情或人，讓你到現在還願意活著？',
-                    hasIssue: { suicideRisk: true, assessment: true }
-                }
-            ];
-
-            // Generate analyses for each segment with staggered animation
-            mockProgressiveData.forEach((data, index) => {
-                const mockAnalysis = generateProgressiveAnalysis(data, index + 1);
-                setTimeout(() => {
-                    displayAnalysisCard(mockAnalysis);
-                }, 1000 + (index * 400)); // Start after skeleton clears, stagger by 400ms
-            });
-        }
-
-        function generateProgressiveAnalysis(data, minute) {
-            const { timeRange, transcript, hasIssue } = data;
-
-            let summary = '';
-            const alerts = [];
-            const suggestions = [];
-
-            // Progressive summary
-            if (hasIssue.suicideRisk && hasIssue.assessment) {
-                summary = '⚠️ 諮詢師正進行自殺風險評估，案主表達有自殺意念但尚未有具體計畫。正在探索保護因子。';
-                alerts.push('🔴 立即行動：案主確認有自殺意念，需完整評估計畫、方法、時間');
-                alerts.push('⚠️ 安全計畫：建立危機處理聯絡人、移除危險物品');
-                alerts.push('⚠️ 後續追蹤：安排密集會談（每週2-3次），考慮精神科會診');
-                suggestions.push('💡 繼續評估：「你是否有想過具體的方法？」「什麼時候這個想法最強烈？」');
-                suggestions.push('💡 強化保護因子：深入探索支持系統、生活目標、重要關係');
-                suggestions.push('💡 建立安全契約：與案主共同制定危機時的因應計畫');
-            } else if (hasIssue.suicideRisk) {
-                summary = '⚠️ 案主首次提及「活著沒意義」，諮詢師警覺並開始評估自殺風險程度。';
-                alerts.push('🔴 高風險警示：案主提及「活著沒意義」，需立即評估自殺意念');
-                alerts.push('⚠️ 下一步：直接詢問是否有自殺想法或計畫');
-                suggestions.push('💡 直接評估：「當你說活著沒意義，是否曾想過要結束生命？」');
-                suggestions.push('💡 澄清嚴重度：「這個想法有多強烈？多常出現？」');
-            } else if (hasIssue.depression) {
-                summary = `案主表達憂鬱症狀（自我懷疑、無價值感），諮詢師探索具體感受與想法。`;
-                alerts.push('⚠️ 注意憂鬱指標：自我否定、無價值感，需評估持續時間與嚴重度');
-                alerts.push('💡 建議評估：詢問睡眠、食慾、興趣、精力等其他憂鬱症狀');
-                suggestions.push('💡 探索認知模式：「什麼讓你覺得自己什麼都做不好？」');
-                suggestions.push('💡 尋找例外：「有沒有做得還不錯的時候？」');
-            } else if (hasIssue.work) {
-                summary = `案主談論工作壓力與挫折感，諮詢師使用反映技巧建立同理連結。`;
-                alerts.push('✅ 諮詢師使用反映技巧適當（「這讓你感到很挫折」）');
-                alerts.push('💡 可深入探索：主管的具體行為、案主的因應方式');
-                suggestions.push('💡 具體化：「主管哪些行為讓你覺得不被滿意？」');
-                suggestions.push('💡 評估影響：「這種狀況持續多久了？對你的影響有多大？」');
-            } else {
-                summary = `會談開始，諮詢師引導案主談論近況，案主提及工作壓力議題。`;
-                alerts.push('✅ 良好的開放式提問');
-                alerts.push('💡 建議方向：持續探索壓力來源與影響');
-                suggestions.push('💡 深入了解：「壓力大的時候，你會有什麼感覺或反應？」');
-                suggestions.push('💡 評估因應：「你平常怎麼處理這些壓力？」');
-            }
-
-            // Generate recording timestamp for auto-analysis (at the end of each minute)
-            const recordingMinutes = minute;
-            const recordingSeconds = 0;
-            const recordingTimestamp = `${String(recordingMinutes).padStart(2, '0')}:${String(recordingSeconds).padStart(2, '0')}`;
-
-            return {
-                summary: summary,
-                alerts: alerts.slice(0, 3),
-                suggestions: suggestions.slice(0, 3),
-                time_range: timeRange,
-                recording_timestamp: recordingTimestamp,
-                timestamp: new Date(Date.now() + minute * 60000).toISOString()
-            };
         }
 
         // === localStorage Management ===
