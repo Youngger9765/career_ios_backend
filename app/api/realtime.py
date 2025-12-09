@@ -75,6 +75,34 @@ def _detect_parenting_keywords(transcript: str) -> bool:
     return False
 
 
+def _detect_parenting_theory(title: str) -> str:
+    """Detect which parenting theory a document belongs to based on title.
+
+    Args:
+        title: Document title
+
+    Returns:
+        Theory name in Chinese (e.g., "正向教養", "情緒教養")
+    """
+    # Theory keyword mappings (Chinese and English)
+    theory_mappings = {
+        "正向教養": ["正向教養", "Positive Discipline"],
+        "情緒教養": ["情緒教養", "Emotional Coaching", "Emotion Coaching"],
+        "依附理論": ["依附理論", "Attachment Theory"],
+        "認知發展理論": ["認知發展", "Cognitive Development"],
+        "自我決定論": ["自我決定", "Self-Determination"],
+    }
+
+    # Check each theory's keywords
+    for theory_name, keywords in theory_mappings.items():
+        for keyword in keywords:
+            if keyword in title:
+                return theory_name
+
+    # Default if no match found
+    return "其他"
+
+
 async def _search_rag_knowledge(
     transcript: str, db: Session, top_k: int = 3, similarity_threshold: float = 0.7
 ) -> List[RAGSource]:
@@ -107,11 +135,15 @@ async def _search_rag_knowledge(
         # Build RAG sources response
         rag_sources = []
         for row in rows:
+            # Detect theory from document title
+            theory = _detect_parenting_theory(row.document_title)
+
             rag_sources.append(
                 RAGSource(
                     title=row.document_title,
                     content=row.text[:300],  # Truncate to 300 chars
                     score=round(float(row.similarity_score), 2),
+                    theory=theory,
                 )
             )
 

@@ -65,6 +65,7 @@ class RAGSource(BaseModel):
     title: str = Field(..., description="文件標題")
     content: str = Field(..., description="相關內容片段")
     score: float = Field(..., ge=0.0, le=1.0, description="相似度分數（0-1）")
+    theory: str = Field(default="其他", description="所屬理論（正向教養、情緒教養等）")
 
 
 class RealtimeAnalyzeResponse(BaseModel):

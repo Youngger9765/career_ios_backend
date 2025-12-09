@@ -1982,7 +1982,7 @@
 
                 <!-- Suggestions Section -->
                 ${analysis.suggestions.length > 0 ? `
-                    <div>
+                    <div class="mb-4">
                         <div class="flex items-center gap-2 mb-2">
                             <div class="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
                                 💡
@@ -1995,6 +1995,47 @@
                                     <p class="text-xs md:text-sm text-green-700 leading-relaxed">${sug}</p>
                                 </div>
                             `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- RAG Knowledge Sources Section -->
+                ${analysis.rag_sources && analysis.rag_sources.length > 0 ? `
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
+                                📚
+                            </div>
+                            <h3 class="font-bold text-sm md:text-base text-gray-800">參考理論</h3>
+                        </div>
+                        <div class="space-y-2 pl-8">
+                            ${analysis.rag_sources.map(source => {
+                                // Theory-based color mapping
+                                const theoryColors = {
+                                    '正向教養': { bg: 'bg-purple-50', border: 'border-purple-300', badge: 'bg-purple-500', text: 'text-purple-700' },
+                                    '情緒教養': { bg: 'bg-blue-50', border: 'border-blue-300', badge: 'bg-blue-500', text: 'text-blue-700' },
+                                    '依附理論': { bg: 'bg-green-50', border: 'border-green-300', badge: 'bg-green-500', text: 'text-green-700' },
+                                    '認知發展理論': { bg: 'bg-orange-50', border: 'border-orange-300', badge: 'bg-orange-500', text: 'text-orange-700' },
+                                    '自我決定論': { bg: 'bg-pink-50', border: 'border-pink-300', badge: 'bg-pink-500', text: 'text-pink-700' },
+                                    '其他': { bg: 'bg-gray-50', border: 'border-gray-300', badge: 'bg-gray-500', text: 'text-gray-700' }
+                                };
+                                const colors = theoryColors[source.theory] || theoryColors['其他'];
+
+                                return `
+                                    <div class="p-3 ${colors.bg} border ${colors.border} rounded-lg hover:shadow-sm transition-smooth">
+                                        <div class="flex items-start gap-2 mb-2">
+                                            <span class="inline-flex items-center px-2 py-1 ${colors.badge} text-white text-xs font-semibold rounded-full shadow-sm">
+                                                ${source.theory}
+                                            </span>
+                                            <span class="inline-flex items-center px-2 py-0.5 bg-white/80 text-gray-600 text-xs rounded-full">
+                                                相似度 ${(source.score * 100).toFixed(0)}%
+                                            </span>
+                                        </div>
+                                        <p class="text-xs font-semibold ${colors.text} mb-1">${source.title}</p>
+                                        <p class="text-xs ${colors.text} opacity-80 leading-relaxed">${source.content}</p>
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 ` : ''}
