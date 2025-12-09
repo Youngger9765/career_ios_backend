@@ -262,7 +262,7 @@ class GeminiService:
         response = await self.generate_text(
             prompt=prompt,
             temperature=0.3,
-            max_tokens=2000,
+            max_tokens=8000,  # Increased from 2000 to prevent JSON truncation
             response_format={"type": "json_object"},
         )
 
