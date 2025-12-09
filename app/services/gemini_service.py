@@ -268,7 +268,7 @@ class GeminiService:
         response = await self.generate_text(
             prompt=prompt,
             temperature=0.7,  # Increased from 0.3 for more empathetic, human-like responses
-            max_tokens=2500,  # Optimized for typical response size (1500 tokens) with safety margin
+            max_tokens=4000,  # Increased from 2500 - previous value caused JSON truncation (finish_reason=2)
             response_format={"type": "json_object"},
         )
 
