@@ -31,6 +31,10 @@
   - 完整基準測試腳本，涵蓋 1/10/30/60 分鐘逐字稿
   - 效能測試報告與客戶友善文件
   - 所有逐字稿長度 100% 成功率（11-12 秒響應時間）
+- **Gemini Cache 效能追蹤**
+  - 使用量元資料記錄（cached_content_token_count, prompt_token_count, candidates_token_count）
+  - 累積性逐字稿 Cache 效能測試腳本（1-10 分鐘）
+  - 驗證 Gemini Implicit Caching 效能（快取 tokens 節省 75% 成本）
 
 ### 變更
 - Gemini max_tokens 從 4000 提升至 8000（防止 JSON 截斷）

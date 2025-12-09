@@ -67,35 +67,43 @@
 - `PATCH /ui/client-case/{id}` - 更新客戶個案
 - `DELETE /ui/client-case/{id}` - 刪除個案
 
-#### 動態欄位 Schema 詳細說明
+**動態欄位**: 支援 10 種類型（text, number, date, select等），不同 tenant 獨立配置。詳見 [IOS_API_GUIDE.md](./IOS_API_GUIDE.md)
 
-Backend 支援以下欄位類型，iOS app 需根據 schema 動態生成表單：
+### ✅ 即時語音諮詢系統 (Realtime STT Counseling)
+**功能定位**: AI 輔助即時諮詢督導系統
 
-| Backend Type | iOS Swift Type | 說明 | UI Component |
-|--------------|----------------|------|--------------|
-| `text` | `String` | 單行文字 | TextField |
-| `textarea` | `String` | 多行文字 | TextEditor |
-| `number` | `Int`/`Double` | 數字 | NumberField |
-| `date` | `Date` | 日期 | DatePicker |
-| `datetime` | `Date` | 日期時間 | DatePicker (mode: dateAndTime) |
-| `email` | `String` | Email | TextField (keyboardType: .emailAddress) |
-| `phone` | `String` | 電話 | TextField (keyboardType: .phonePad) |
-| `single_select` | `String` | 單選下拉 | Picker |
-| `multi_select` | `[String]` | 多選 | MultiSelect |
-| `boolean` | `Bool` | 布林值 | Toggle |
+#### 核心功能
+- ✅ **即時語音轉文字 (STT)**
+  - ElevenLabs Scribe v2 Realtime API
+  - 中文繁體支援（language_code: `zh`）
+  - < 100ms 低延遲
+  - 手動說話者切換（諮詢師/案主）
+- ✅ **AI 即時分析**
+  - Gemini 2.5 Flash 驅動（Implicit Caching 優化）
+  - 每 60 秒自動分析對話內容
+  - 提供：對話歸納、提醒事項、建議回應
+  - Cache 效能追蹤：usage_metadata 記錄（cached tokens, prompt tokens, output tokens）
+- ✅ **RAG 知識庫整合**
+  - 7 種教養理論標籤（依附理論、正向教養、發展心理學等）
+  - Color-coded badges 視覺化
+  - 每個建議都有理論來源可追溯
+- ✅ **分析卡片流**
+  - 時間軸展示（最新在上）
+  - localStorage 歷史記錄
+  - 自動超時保護（5 分鐘無語音自動結束）
 
-**Tenant 配置差異**：
-- 不同 tenant 的欄位配置完全獨立
-- **Career 租戶**: 著重職涯諮詢欄位（身分選項、職涯現況、現職資訊）
-- **Island 租戶**: 著重心理諮詢欄位（身心狀態、精神醫療史、隱私保護）
-- iOS app 需動態適應不同 tenant 的配置
+#### API 端點
+| Method | Endpoint | 用途 |
+|--------|----------|------|
+| POST | `/api/v1/realtime/analyze` | AI 分析逐字稿（每 60 秒） |
 
-> 📘 **完整 API 文件**: 請參考 [IOS_API_GUIDE.md Section 2.3](./IOS_API_GUIDE.md) 獲取完整的 API 端點、請求範例、Swift 程式碼範例、錯誤處理等技術細節。
+**技術選型**: ElevenLabs STT ($0.46/h) + Gemini Flash + Vanilla JS | 7種理論標籤（依附、正向教養、發展心理、家庭系統、認知行為、情緒教練、綜合）
 
 ### ✅ Web 測試控制台 (`/console`)
 - 整合式 API 測試介面（包含所有 API）
 - RWD 設計：支援手機 + 平板 + 桌面
 - 手機模擬圖：iOS UI 預覽
+- Realtime Counseling 快速連結
 
 ---
 
@@ -195,12 +203,18 @@ Backend 支援以下欄位類型，iOS app 需根據 schema 動態生成表單�
 | PATCH | `/ui/client-case/{id}` | 更新 |
 | DELETE | `/ui/client-case/{id}` | 刪除 |
 
+### 即時諮詢 (`/api/v1/realtime/*`)
+| Method | Endpoint | 用途 |
+|--------|----------|------|
+| POST | `/realtime/analyze` | AI 分析逐字稿（Gemini + RAG） |
+
 ### RAG 系統 (`/api/rag/*`)
 - `/rag/agents` - Agent 管理
 - `/rag/ingest/*` - 文件上傳
 - `/rag/search` - 向量檢索
 - `/rag/chat` - RAG 問答（**諮詢系統調用**）
 - `/rag/experiments/*` - 評估系統
+- `/rag/stats` - RAG 統計頁面（理論標籤 Color-coded badges）
 
 ---
 
@@ -231,39 +245,25 @@ Backend 支援以下欄位類型，iOS app 需根據 schema 動態生成表單�
 - [ ] 逐字稿脫敏串接
 - [ ] 督導審核流程
 
-### Phase 4: 進階功能（未開始）
-- 提醒系統
-- 集合管理（RAG）
-- Pipeline 可視化
-- RAG 評估系統優化
-
-### Phase 5: 優化與上線（未開始）
-- 性能優化
-- 安全加固
-- 測試與文檔
-- 正式部署
+### Phase 4+: 未來規劃
+- 提醒系統、集合管理、Pipeline 可視化、性能優化、安全加固
 
 ---
 
 ## 關鍵技術決策
 
-### 1. 資料庫連線 SSL 配置
-**日期**: 2025-11-24
-**問題**: Cloud Run migration 執行失敗（SSL connection closed unexpectedly）
-**解決**: 在 `database.py` 和 `alembic/env.py` 加入 `connect_args={"sslmode": "require"}`
+### 基礎架構決策（2025-11-24）
+1. **資料庫 SSL**: Supabase 需 `sslmode=require`
+2. **Mypy 策略**: 保持傳統 `Column()` 定義
+3. **測試 DB**: SQLite + StaticPool（跨執行緒共享）
+4. **API 架構**: 分離 RESTful (`/api/v1/*`) 和 UI (`/api/v1/ui/*`)
 
-### 2. Mypy 類型檢查策略
-**日期**: 2025-11-24
-**決策**: 保持傳統 `Column()` 定義，在 `pyproject.toml` 抑制 `var-annotated` 錯誤
-**原因**: SQLAlchemy 2.0 新版 `Mapped[]` 註解導致執行時錯誤
+### Realtime STT 技術選型（2025-12-06）
+**決策**: ElevenLabs Scribe v2（$0.46/h）vs AssemblyAI（不支援中文）vs Google Chirp 3（貴5倍）
+**教訓**: 第三方 API 必須先讀官方文檔（語言代碼：`cmn`→`zho`→`zh`）
 
-### 3. 測試資料庫配置
-**決策**: Integration tests 使用 SQLite + `StaticPool`
-**原因**: 確保 FastAPI TestClient 跨執行緒共享連線
-
-### 4. API 架構設計
-**決策**: 分離 RESTful API (`/api/v1/*`) 和 UI 整合 API (`/api/v1/ui/*`)
-**原因**: iOS 需要高階 API 減少網路往返，Web 測試需要細粒度 API
+### RAG 理論標籤系統（2025-12-09）
+**決策**: 7種教養理論標籤 + Color-coded badges | **價值**: AI建議可追溯理論框架
 
 ---
 
@@ -286,34 +286,20 @@ Backend 支援以下欄位類型，iOS app 需根據 schema 動態生成表單�
 - `OPENAI_API_KEY` - GPT-4 + Embeddings
 - `SECRET_KEY` - JWT 簽章
 - `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` - 檔案儲存
+- `ELEVEN_LABS_API_KEY` - ElevenLabs Scribe v2 STT (Realtime Counseling)
 
 ---
 
-## 近期更新（2025-11-29）
+## 近期更新（2025-12-09）
 
-### 已完成
-1. ✅ **Analysis Logs CRUD API** - 關鍵字分析歷程追蹤
-   - 自動儲存分析結果（AI + 備援）
-   - GET/DELETE 端點管理分析記錄
-   - 結構化記錄格式（時間、關鍵字、類別、信心分數、洞見）
-2. ✅ **Service Layer Refactoring** - Sessions API 大幅簡化
-   - Sessions API: 1,219 → 756 行（-38%）
-   - 抽取 KeywordAnalysisService（288 行）
-   - 抽取複雜會談編號重算邏輯至 SessionService
-   - 34 個整合測試全數通過
-3. ✅ **Console UI 模組化** - 程式碼減少 75%
-   - console.html: 7,245 → 1,785 行
-   - 抽取 5,479 行至 console-steps.js
-   - 新增分析記錄查看/刪除功能（Steps #19 & #20）
-4. ✅ **Vertex AI 權限修復** - Staging 環境現使用 AI 分析
-   - 新增 roles/aiplatform.user 至 service account
-   - 83% 分析成功率（5/6 logs 使用 AI）
-5. ✅ **Session Name 欄位** - 改善會談組織管理
-6. ✅ **強制文檔更新規則** - Agent 系統自動檢查
+### 本週完成（2025-12-08~09）🎉
+1. **Realtime STT Counseling** - 本專案最複雜功能（STT + AI分析 + RAG理論標籤 + 超時保護）2週開發
+2. **RAG 理論標籤** - 7種教養理論 Color-coded badges，提升專業性與可追溯性
+3. **法規遵循** - 諮商→諮詢（35+檔案），符合台灣心理師法
+4. **Migration修復** - No-op migration恢復Staging
+5. **API文檔規範** - CLAUDE.md新增第三方API整合規則
 
-### 本週進度（2025-11-24 ~ 2025-11-29）
-- 20+ commits
-- 主要工作：Service layer 重構、Analysis logs CRUD、Console 模組化、Vertex AI 權限
+**累積數據**: 31+ API | 106 tests (100%通過) | 12,000+行 | 12模組
 
 ---
 
@@ -340,14 +326,14 @@ Backend 支援以下欄位類型，iOS app 需根據 schema 動態生成表單�
 
 ## 文檔資源
 
-- **API 文檔**: `https://<cloud-run-url>/docs` (Swagger UI)
-- **ReDoc**: `https://<cloud-run-url>/redoc`
-- **iOS 快速指南**: `IOS_API_GUIDE.md`
-- **多租戶架構**: `MULTI_TENANT_ARCHITECTURE.md`
-- **專案規範**: `CLAUDE.md` (Git workflow, TDD 原則)
+- **API**: [Swagger UI](https://<cloud-run-url>/docs) | [ReDoc](https://<cloud-run-url>/redoc)
+- **iOS**: `IOS_API_GUIDE.md` - 快速整合指南
+- **架構**: `MULTI_TENANT_ARCHITECTURE.md` - 多租戶設計
+- **規範**: `CLAUDE.md` - Git workflow, TDD, API整合規範
+- **進度**: `WEEKLY_REPORT_*.md` | `CHANGELOG.md` / `CHANGELOG_zh-TW.md`
 
 ---
 
-**版本**: v2.4 (精簡版)
-**最後更新**: 2025-11-29
-**行數**: < 500 行
+**版本**: v2.5
+**最後更新**: 2025-12-09
+**本次更新**: 新增 Realtime STT Counseling 系統、RAG 理論標籤、法規遵循

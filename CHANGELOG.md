@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive benchmark script testing 1/10/30/60 minute transcripts
   - Performance test reports and client-friendly documentation
   - 100% success rate across all transcript lengths (11-12 second response times)
+- **Gemini Cache Performance Tracking**
+  - Usage metadata logging (cached_content_token_count, prompt_token_count, candidates_token_count)
+  - Cache performance test script for cumulative transcripts (1-10 minutes)
+  - Validates Gemini Implicit Caching effectiveness (75% cost savings on cached tokens)
 
 ### Changed
 - Gemini max_tokens increased from 4000 to 8000 (prevents JSON truncation)
