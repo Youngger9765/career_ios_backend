@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Analysis cards: summary, alerts, suggestions with animated gradients
   - Demo mode with 5-scenario progressive conversation simulation
   - localStorage-based session history management
+- **Performance Benchmark Testing Suite** for realtime analysis
+  - Comprehensive benchmark script testing 1/10/30/60 minute transcripts
+  - Performance test reports and client-friendly documentation
+  - 100% success rate across all transcript lengths (11-12 second response times)
 
 ### Changed
 - Gemini max_tokens increased from 4000 to 8000 (prevents JSON truncation)
@@ -37,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Concrete, actionable suggestions: All recommendations include specific steps and dialogue examples
   - Gentle, non-judgmental tone: Replaced direct/critical language with supportive guidance
   - Structured output: Summary, empathy section, concerns, and action steps with examples
+  - **Focus Scope Optimization**: Added 【分析範圍】section to ensure AI focuses on latest minute instead of summarizing entire conversation
+    - Main focus: Latest 1-minute dialogue (real-time supervision context)
+    - Background context: Earlier conversation for understanding continuity
+    - Prevents generic summaries, ensures actionable real-time guidance
 
 ### Fixed
 - Gemini report grading JSON truncation (success rate: 85% → 100%)
