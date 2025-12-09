@@ -68,7 +68,7 @@ MOCK_MODE=true poetry run uvicorn app.main:app --reload
 
 ### 🔑 測試帳號
 
-**Staging 環境**: https://career-app-api-staging-kxaznpplqq-uc.a.run.app
+**Staging 環境**: `https://your-api-staging.example.com` （請向技術團隊索取實際 URL）
 
 | Tenant | Email | Password | 用途 |
 |--------|-------|----------|------|

@@ -1,8 +1,10 @@
 # iOS App API 完整指南
 
-**Base URL (Staging):** `https://duotopia-staging-backend-b2ovkkgl6a-de.a.run.app`
+**Base URL (Staging):** `https://your-api-staging.example.com`
 
 **Base URL (Local):** `http://localhost:8080`
+
+> 🔒 **注意**: Staging URL 請向技術團隊索取
 
 **認證方式:** Bearer Token (JWT)
 

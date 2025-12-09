@@ -270,10 +270,9 @@
 ## 部署狀態
 
 **Cloud Run 服務**:
-- 當前版本: `career-app-api-staging-00077-dmt`
+- 環境: Staging (production-ready)
 - 健康狀態: ✅ Healthy
 - CI/CD: ✅ All tests passing (unit + integration)
-- GCP Project: `career-ios-app`
 - 記憶體: 1Gi / CPU: 1
 
 **CI/CD Pipeline**:
