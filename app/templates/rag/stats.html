@@ -48,6 +48,7 @@
             <thead>
                 <tr class="border-b-2 border-gray-200">
                     <th class="py-3 px-4 text-gray-700 font-semibold">文件名稱</th>
+                    <th class="py-3 px-4 text-gray-700 font-semibold">類別</th>
                     <th class="py-3 px-4 text-gray-700 font-semibold">頁數</th>
                     <th class="py-3 px-4 text-gray-700 font-semibold">策略</th>
                     <th class="py-3 px-4 text-gray-700 font-semibold">Chunk Size</th>
@@ -61,7 +62,7 @@
             </thead>
             <tbody id="docsList">
                 <tr>
-                    <td colspan="10" class="text-gray-500 text-center py-8">載入中...</td>
+                    <td colspan="11" class="text-gray-500 text-center py-8">載入中...</td>
                 </tr>
             </tbody>
         </table>
@@ -107,9 +108,11 @@ async function loadStats() {
             console.log('Rendering', data.documents.length, 'documents');
             docsList.innerHTML = data.documents.map(doc => {
                 const health = calculateHealth(doc);
+                const categoryBadge = getCategoryBadge(doc.category || 'general');
                 return `
                 <tr class="border-b border-gray-200 hover:bg-blue-50 transition">
                     <td class="py-4 px-4 text-gray-800 font-medium">${doc.title}</td>
+                    <td class="py-4 px-4">${categoryBadge}</td>
                     <td class="py-4 px-4 text-gray-600">${doc.pages}</td>
                     <td class="py-4 px-4 text-gray-600 text-sm">${doc.chunk_strategy}</td>
                     <td class="py-4 px-4 text-gray-600 text-center">${doc.chunk_size}</td>
@@ -141,17 +144,25 @@ async function loadStats() {
             `}).join('');
         } else {
             console.log('No documents found in response');
-            docsList.innerHTML = '<tr><td colspan="10" class="text-gray-500 text-center py-8">尚無文件</td></tr>';
+            docsList.innerHTML = '<tr><td colspan="11" class="text-gray-500 text-center py-8">尚無文件</td></tr>';
         }
     } catch (error) {
         console.error('Failed to load stats:', error);
         console.error('Error stack:', error.stack);
-        document.getElementById('docsList').innerHTML = '<tr><td colspan="10" class="text-red-600 text-center py-8">載入失敗: ' + error.message + '</td></tr>';
+        document.getElementById('docsList').innerHTML = '<tr><td colspan="11" class="text-red-600 text-center py-8">載入失敗: ' + error.message + '</td></tr>';
         // Also update stats to show error
         document.getElementById('totalDocs').textContent = 'Error';
         document.getElementById('totalChunks').textContent = 'Error';
         document.getElementById('totalEmbeddings').textContent = 'Error';
         document.getElementById('totalSize').textContent = 'Error';
+    }
+}
+
+function getCategoryBadge(category) {
+    if (category === 'parenting') {
+        return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">教養</span>';
+    } else {
+        return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">一般</span>';
     }
 }
 

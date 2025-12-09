@@ -15,6 +15,7 @@ router = APIRouter(prefix="/api/rag/stats", tags=["rag-stats"])
 class DocumentStats(BaseModel):
     id: int
     title: str
+    category: str  # Document category: parenting or general
     pages: int
     bytes: int
     chunk_strategy: str  # Strategy name like "rec_400_80"
@@ -60,6 +61,7 @@ def get_database_stats(db: Session = Depends(get_db)):
         SELECT
             d.id,
             d.title,
+            d.category,
             d.pages,
             d.bytes,
             d.text_length,
@@ -71,7 +73,7 @@ def get_database_stats(db: Session = Depends(get_db)):
         FROM documents d
         LEFT JOIN chunks c ON d.id = c.doc_id
         LEFT JOIN embeddings e ON c.id = e.chunk_id
-        GROUP BY d.id, d.title, d.pages, d.bytes, d.text_length, d.created_at, c.chunk_strategy
+        GROUP BY d.id, d.title, d.category, d.pages, d.bytes, d.text_length, d.created_at, c.chunk_strategy
         ORDER BY d.created_at DESC, c.chunk_strategy
     """
     )
@@ -95,6 +97,7 @@ def get_database_stats(db: Session = Depends(get_db)):
         DocumentStats(
             id=row.id,
             title=row.title,
+            category=row.category or "general",
             pages=row.pages or 0,
             bytes=row.bytes or 0,
             chunk_strategy=row.chunk_strategy,
