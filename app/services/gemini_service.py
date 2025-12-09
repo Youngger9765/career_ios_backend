@@ -259,9 +259,15 @@ class GeminiService:
 請嚴格遵守上述原則，以溫暖、專業、具體的方式提供督導建議。
 """
 
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"Starting realtime transcript analysis. Transcript length: {len(transcript)}, "
+            f"Speakers: {len(speakers)}, RAG context length: {len(rag_context)}"
+        )
+
         response = await self.generate_text(
             prompt=prompt,
-            temperature=0.3,
+            temperature=0.7,  # Increased from 0.3 for more empathetic, human-like responses
             max_tokens=8000,  # Increased from 2000 to prevent JSON truncation
             response_format={"type": "json_object"},
         )
@@ -280,21 +286,46 @@ class GeminiService:
             if "summary" not in result:
                 result["summary"] = "分析中..."
 
+            logger.info(
+                f"Successfully parsed Gemini response. Summary length: {len(result.get('summary', ''))}, "
+                f"Alerts: {len(result.get('alerts', []))}, Suggestions: {len(result.get('suggestions', []))}"
+            )
+
             return result
         except json.JSONDecodeError as e:
-            logger = logging.getLogger(__name__)
             logger.error(f"Failed to parse Gemini JSON response: {e}")
-            logger.error(f"Response text: {response}")
+            logger.error(f"Response text length: {len(response)}")
+            logger.error(f"Response text (first 500 chars): {response[:500]}")
+            logger.error(f"Response text (last 500 chars): {response[-500:]}")
+
+            # Check if response was truncated by examining finish_reason
+            # Note: The response here is already text, but we can check if it's incomplete
+            if len(response) >= 7900:  # Near max_tokens limit
+                logger.warning(
+                    f"Response length ({len(response)}) is near max_tokens (8000). "
+                    "Response may have been truncated. Consider increasing max_tokens."
+                )
 
             # Fallback: try to extract JSON from text
             import re
 
             json_match = re.search(r"\{.*\}", response, re.DOTALL)
             if json_match:
+                logger.info("Attempting to extract JSON from response using regex...")
                 try:
-                    return json.loads(json_match.group())
-                except json.JSONDecodeError:
-                    pass
+                    extracted_result = json.loads(json_match.group())
+                    logger.info("Successfully extracted JSON from response")
+                    return extracted_result
+                except json.JSONDecodeError as regex_error:
+                    logger.error(f"Failed to parse extracted JSON: {regex_error}")
+                    logger.error(
+                        f"Extracted JSON (first 500 chars): {json_match.group()[:500]}"
+                    )
+
+            # Log fallback usage
+            logger.error(
+                "All JSON parsing attempts failed. Returning fallback error response."
+            )
 
             # Final fallback
             return {
