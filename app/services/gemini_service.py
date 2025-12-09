@@ -292,18 +292,38 @@ class GeminiService:
             f"Speakers: {len(speakers)}, RAG context length: {len(rag_context)}"
         )
 
-        response = await self.generate_text(
-            prompt=prompt,
-            temperature=0.7,  # Increased from 0.3 for more empathetic, human-like responses
-            max_tokens=4000,  # Increased from 2500 - previous value caused JSON truncation (finish_reason=2)
-            response_format={"type": "json_object"},
-        )
+        # Generate response with metadata tracking
+        generation_config: Dict[str, Any] = {
+            "temperature": 0.7,
+            "max_output_tokens": 4000,
+            "response_mime_type": "application/json",
+        }
+
+        config = GenerationConfig(**generation_config)
+        response = self.chat_model.generate_content(prompt, generation_config=config)
+
+        # Extract usage metadata
+        usage_metadata = {}
+        if hasattr(response, "usage_metadata"):
+            usage = response.usage_metadata
+            logger.info(f"📊 Usage metadata: {usage}")
+            if hasattr(usage, "cached_content_token_count"):
+                usage_metadata[
+                    "cached_content_token_count"
+                ] = usage.cached_content_token_count
+                logger.info(f"🎯 Cached tokens: {usage.cached_content_token_count}")
+            if hasattr(usage, "prompt_token_count"):
+                usage_metadata["prompt_token_count"] = usage.prompt_token_count
+                logger.info(f"📝 Prompt tokens: {usage.prompt_token_count}")
+            if hasattr(usage, "candidates_token_count"):
+                usage_metadata["candidates_token_count"] = usage.candidates_token_count
+                logger.info(f"💬 Output tokens: {usage.candidates_token_count}")
 
         # Parse JSON from response
         import json
 
         try:
-            result = json.loads(response)
+            result = json.loads(response.text)
 
             # Ensure lists are present
             if "alerts" not in result:
@@ -313,6 +333,10 @@ class GeminiService:
             if "summary" not in result:
                 result["summary"] = "分析中..."
 
+            # Add usage metadata to result
+            if usage_metadata:
+                result["usage_metadata"] = usage_metadata
+
             logger.info(
                 f"Successfully parsed Gemini response. Summary length: {len(result.get('summary', ''))}, "
                 f"Alerts: {len(result.get('alerts', []))}, Suggestions: {len(result.get('suggestions', []))}"
@@ -321,22 +345,22 @@ class GeminiService:
             return result
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse Gemini JSON response: {e}")
-            logger.error(f"Response text length: {len(response)}")
-            logger.error(f"Response text (first 500 chars): {response[:500]}")
-            logger.error(f"Response text (last 500 chars): {response[-500:]}")
+            logger.error(f"Response text length: {len(response.text)}")
+            logger.error(f"Response text (first 500 chars): {response.text[:500]}")
+            logger.error(f"Response text (last 500 chars): {response.text[-500:]}")
 
             # Check if response was truncated by examining finish_reason
             # Note: The response here is already text, but we can check if it's incomplete
-            if len(response) >= 7900:  # Near max_tokens limit
+            if len(response.text) >= 7900:  # Near max_tokens limit
                 logger.warning(
-                    f"Response length ({len(response)}) is near max_tokens (8000). "
+                    f"Response length ({len(response.text)}) is near max_tokens (8000). "
                     "Response may have been truncated. Consider increasing max_tokens."
                 )
 
             # Fallback: try to extract JSON from text
             import re
 
-            json_match = re.search(r"\{.*\}", response, re.DOTALL)
+            json_match = re.search(r"\{.*\}", response.text, re.DOTALL)
             if json_match:
                 logger.info("Attempting to extract JSON from response using regex...")
                 try:

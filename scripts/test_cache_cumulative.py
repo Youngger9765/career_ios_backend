@@ -127,11 +127,33 @@ async def analyze_minute(minute: int) -> Dict[str, Any]:
             if response.status_code == 200:
                 result = response.json()
                 summary = result.get("summary", "")
+                usage = result.get("usage_metadata", {})
 
                 print("✅ 成功")
                 print(f"⏱️  响应时间: {elapsed_time:.2f} 秒")
                 print(f"📝 Summary: {summary}")
                 print(f"📏 Summary 长度: {len(summary)} 字")
+
+                # Print usage metadata if available
+                if usage:
+                    print(
+                        f"🎯 Cached tokens: {usage.get('cached_content_token_count', 0)}"
+                    )
+                    print(f"📝 Prompt tokens: {usage.get('prompt_token_count', 0)}")
+                    print(f"💬 Output tokens: {usage.get('candidates_token_count', 0)}")
+                    total_tokens = usage.get("prompt_token_count", 0) + usage.get(
+                        "candidates_token_count", 0
+                    )
+                    cache_ratio = (
+                        (
+                            usage.get("cached_content_token_count", 0)
+                            / total_tokens
+                            * 100
+                        )
+                        if total_tokens > 0
+                        else 0
+                    )
+                    print(f"📊 Cache ratio: {cache_ratio:.1f}%")
 
                 return {
                     "minute": minute,
@@ -143,6 +165,10 @@ async def analyze_minute(minute: int) -> Dict[str, Any]:
                     "summary_length": len(summary),
                     "alerts_count": len(result.get("alerts", [])),
                     "suggestions_count": len(result.get("suggestions", [])),
+                    "cached_tokens": usage.get("cached_content_token_count", 0),
+                    "prompt_tokens": usage.get("prompt_token_count", 0),
+                    "output_tokens": usage.get("candidates_token_count", 0),
+                    "cache_ratio": round(cache_ratio, 1) if usage else 0,
                 }
             else:
                 elapsed_time = time.time() - start_time
@@ -236,26 +262,32 @@ async def main():
             improvement = ((first_time - last_time) / first_time) * 100
             print(f"\n🚀 速度改善: 第1分钟 vs 第10分钟 = {improvement:.1f}%")
 
-    print("\n" + "=" * 60)
-    print("详细结果表格:")
-    print("=" * 60)
+    print("\n" + "=" * 100)
+    print("详细结果表格（含 Cache 数据）:")
+    print("=" * 100)
     print(
-        f"{'分钟':<6} {'字符数':<8} {'估算Tokens':<12} {'响应时间(秒)':<14} {'Summary长度':<12} {'成功':<6}"
+        f"{'分钟':<6} {'字符':<6} {'Tokens':<8} {'响应(秒)':<10} {'Cached':<8} {'Prompt':<8} {'Output':<8} {'Cache%':<8} {'状态':<6}"
     )
-    print("-" * 60)
+    print("-" * 100)
 
     for r in results:
         status = "✅" if r["success"] else "❌"
-        summary_len = r.get("summary_length", "N/A")
+        cached = r.get("cached_tokens", 0)
+        prompt = r.get("prompt_tokens", 0)
+        output = r.get("output_tokens", 0)
+        cache_pct = r.get("cache_ratio", 0)
         print(
-            f"{r['minute']:<6} {r['transcript_chars']:<8} {r['estimated_tokens']:<12} "
-            f"{r['response_time']:<14.2f} {summary_len!s:<12} {status:<6}"
+            f"{r['minute']:<6} {r['transcript_chars']:<6} {r['estimated_tokens']:<8} "
+            f"{r['response_time']:<10.2f} {cached:<8} {prompt:<8} {output:<8} {cache_pct:<8.1f} {status:<6}"
         )
 
-    print("\n💡 注意: 缓存 tokens 信息需要查看 staging 日志中的 usage_metadata")
-    print(
-        "   查看命令: gcloud logging read 'resource.labels.service_name=\"career-app-api-staging\"' --limit 50"
-    )
+    # Cache improvement analysis
+    if successful and len(successful) >= 2:
+        first_cache = results[0].get("cache_ratio", 0)
+        last_cache = results[-1].get("cache_ratio", 0)
+        print(
+            f"\n🎯 Cache 改善: 第1分钟 {first_cache:.1f}% → 第10分钟 {last_cache:.1f}%"
+        )
 
 
 if __name__ == "__main__":
