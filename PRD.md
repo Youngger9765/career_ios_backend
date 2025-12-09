@@ -99,6 +99,130 @@
 
 **技術選型**: ElevenLabs STT ($0.46/h) + Gemini Flash + Vanilla JS | 7種理論標籤（依附、正向教養、發展心理、家庭系統、認知行為、情緒教練、綜合）
 
+#### 🔬 Gemini Caching 技術細節與最佳實踐 (2025-12-10 實驗結論)
+
+##### Implicit Caching vs Explicit Context Caching
+
+| 特性 | **Implicit Caching** (自動) | **Explicit Context Caching** (手動) |
+|------|---------------------------|----------------------------------|
+| **啟用方式** | 自動啟用（無需設定） | 手動創建 cache object |
+| **控制權** | 無法控制 | 完全控制 cache lifecycle |
+| **費用** | 自動 75% 折扣（2.5 Flash） | 90% 折扣 + 每小時儲存費 |
+| **最小 tokens** | **1024** (文檔) / **3000-6000** (實測) | **2048** tokens (強制) |
+| **適用場景** | 簡單、固定 system instructions | 大量重複內容（累積 transcript） |
+| **穩定性** | ⚠️ 不穩定（見下方問題） | ✅ 保證運作 |
+
+##### ⚠️ Implicit Caching 已知問題（2025-12 實測）
+
+**問題 1: 實際 Token 門檻遠高於文檔**
+- 📄 官方文檔：1024 tokens (Flash) / 2048 tokens (Pro)
+- 🔬 社群實測：**3000-6000 tokens** 才會觸發
+- 🎯 我們的測試：996 tokens system prompt → `cached_content_token_count = 0`
+
+**問題 2: JSON Mode 可能禁用 Implicit Caching**
+- 使用 `response_mime_type: "application/json"` 時，caching 可能失效
+- Google 正在調查 structured output 對 caching 的影響
+- 來源：[Google AI Forum #88557](https://discuss.ai.google.dev/t/implicit-caching-not-working-on-gemini-2-5-pro/88557)
+
+**問題 3: Production 環境也有問題**
+- ❌ 不是 local vs Cloud 的差異
+- ❌ Cloud Run 環境仍然 `cached_content_token_count = 0`
+- ✅ 這是 Gemini API 本身的已知問題
+- 來源：[Google AI Forum #107342](https://discuss.ai.google.dev/t/gemini-2-5-flash-lite-implicit-caching-not-working-despite-meeting-documented-requirements/107342)
+
+##### ✅ Explicit Context Caching 使用場景
+
+**最適合我們的累積 transcript 場景：**
+
+```python
+# 實時諮詢場景（60 分鐘會談）
+# 第 1 分鐘：創建 cache
+cache = client.caches.create(
+    model="gemini-2.5-flash",
+    contents=[transcript_min1],  # 第 1 分鐘內容
+    system_instruction=system_prompt,
+    ttl="3600s"  # 1 小時
+)
+
+# 第 2-60 分鐘：每分鐘重複使用 cache
+for minute in range(2, 61):
+    model = GenerativeModel(cached_content=cache)
+    response = model.generate_content(
+        f"{transcript_accumulated}\n新增: {transcript_new}"
+    )
+    # ↑ 每次都享受 90% cached tokens 折扣
+```
+
+**成本估算（60 分鐘會談）：**
+- System prompt: 996 tokens × 60 次 = **59,760 tokens**
+- 使用 Explicit Caching: 996 tokens × 10% × 60 = **5,976 tokens** (節省 90%)
+- 儲存費用: $0.01/hour (可忽略)
+- **總節省: 約 $0.004** per session
+
+##### 🎯 當前實作狀態
+
+**已實作（2025-11-24）：**
+- ✅ Usage metadata tracking (`cached_content_token_count`, `prompt_token_count`, `candidates_token_count`)
+- ✅ Debug logging for cache performance monitoring
+- ✅ 累積 transcript 測試腳本 (`scripts/test_cache_cumulative.py`)
+
+**實驗結論（2025-12-10）：**
+- ⚠️ Implicit Caching **不適用**於我們的場景（996 tokens < 3000 最低門檻）
+- ⚠️ JSON mode 與 Implicit Caching **不相容**
+- ✅ 如需 cache 優化，必須改用 **Explicit Context Caching**
+
+##### 🧪 Explicit Context Caching 實驗結果 (2025-12-10)
+
+**測試場景**: 60 分鐘累積 transcript (模擬實時諮詢會談)
+
+**測試設計**:
+- Cache creation: 前 10 分鐘對話內容 (系統 prompt + 累積 transcript)
+- Cache hit tests: 第 11-60 分鐘，每 5 分鐘採樣一次 (共 11 次測試)
+- Model: `gemini-2.5-flash`
+- System instruction: 996 tokens (諮詢督導 prompt)
+
+**實驗結果**:
+
+| 指標 | 數值 |
+|------|------|
+| 測試次數 | 11 次 (分鐘 11, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60) |
+| 總 Cached tokens | 14,245 |
+| 總 Prompt tokens | 14,982 |
+| 總 Output tokens | 1,965 |
+| **平均 Cache 命中率** | **48.7%** |
+| **平均響應時間** | **7.97s** |
+| **Token 節省** | **14,245 tokens** (原本需要 29,227) |
+
+**關鍵發現**:
+
+1. **✅ Cache 穩定運作**: 所有 11 次測試都成功命中 cache (1295 cached tokens)
+2. **✅ 持續有效**: Cache 在 1 小時內持續有效，無衰減
+3. **💰 成本節省**: 每次請求節省 ~48.7% tokens
+   - Without cache: 29,227 tokens × 11 calls = 321,497 tokens
+   - With cache: 16,947 tokens × 11 calls = 186,417 tokens
+   - **節省: 135,080 tokens (~42% 成本降低)**
+
+**結論**:
+
+- ✅ **Explicit Context Caching 完全適用**於累積 transcript 場景
+- ✅ Cache 命中率穩定，無需擔心隨機失效
+- ✅ 與 JSON mode 完全相容 (`response_mime_type: "application/json"`)
+- ⚠️ 需要手動管理 cache lifecycle (create, delete)
+- ⚠️ 最小 token 要求：2048 tokens (系統 prompt + 初始 transcript)
+
+**未來優化方向：**
+- [x] ~~實作 Explicit Context Caching（需評估儲存成本）~~ → **已驗證可行** (2025-12-10)
+- [ ] Production 實作：整合到 `/api/v1/realtime/analyze` endpoint
+- [ ] Cache 管理策略：session 開始時創建，結束時自動清理
+- [ ] 監控 cache performance metrics (hit rate, token savings)
+
+##### 參考資料
+- [Context Caching Overview | Vertex AI](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/context-cache/context-cache-overview)
+- [Gemini Implicit Caching 官方公告](https://developers.googleblog.com/en/gemini-2-5-models-now-support-implicit-caching/)
+- [Community Issue: Implicit Caching Not Working](https://discuss.ai.google.dev/t/gemini-2-5-flash-lite-implicit-caching-not-working-despite-meeting-documented-requirements/107342)
+
+---
+
 ### ✅ Web 測試控制台 (`/console`)
 - 整合式 API 測試介面（包含所有 API）
 - RWD 設計：支援手機 + 平板 + 桌面

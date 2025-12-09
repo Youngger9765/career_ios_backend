@@ -1,0 +1,106 @@
+{
+  "timestamp": "2025-12-10T02:57:32.172182",
+  "model": "gemini-2.5-flash",
+  "test_scenario": "60-minute cumulative transcript",
+  "cache_creation": "First 10 minutes",
+  "cache_hit_tests": "Minutes 11-60 (sampled)",
+  "results": [
+    {
+      "minute": 11,
+      "cached_tokens": 1295,
+      "prompt_tokens": 1352,
+      "output_tokens": 182,
+      "response_time": 11.88,
+      "summary": "家長正因與孩子的關係緊張而困擾，孩子在學校有衝突、不專心等問題，且回家後不願與家長溝通。"
+    },
+    {
+      "minute": 15,
+      "cached_tokens": 1295,
+      "prompt_tokens": 1361,
+      "output_tokens": 181,
+      "response_time": 6.02,
+      "summary": "家長正承受巨大的教養壓力，坦承有時難以忍受情緒衝動，並因此感到極度無助與自我否定。"
+    },
+    {
+      "minute": 20,
+      "cached_tokens": 1295,
+      "prompt_tokens": 1365,
+      "output_tokens": 198,
+      "response_time": 6.94,
+      "summary": "案主因長期努力改善親子關係卻未見成效，感到極度無力與挫折，甚至自我懷疑是否為失敗的父母。"
+    },
+    {
+      "minute": 25,
+      "cached_tokens": 1295,
+      "prompt_tokens": 1361,
+      "output_tokens": 212,
+      "response_time": 9.15,
+      "summary": "家長表達了在教養困境中感到極度無助與自我批判，認為自己是個糟糕的父母。"
+    },
+    {
+      "minute": 30,
+      "cached_tokens": 1295,
+      "prompt_tokens": 1365,
+      "output_tokens": 160,
+      "response_time": 4.3,
+      "summary": "家長因親子關係無進展而感到極度無力與挫折，甚至開始自我懷疑是否為失敗的父母。"
+    },
+    {
+      "minute": 35,
+      "cached_tokens": 1295,
+      "prompt_tokens": 1361,
+      "output_tokens": 160,
+      "response_time": 7.41,
+      "summary": "案主因難以控制對孩子的負面情緒而感到極度無助與自我批判，認為自己是個糟糕的父母。"
+    },
+    {
+      "minute": 40,
+      "cached_tokens": 1295,
+      "prompt_tokens": 1365,
+      "output_tokens": 156,
+      "response_time": 12.14,
+      "summary": "家長感到極度無力與挫折，認為自身努力無效，甚至質疑自己是否為一個失敗的父母。"
+    },
+    {
+      "minute": 45,
+      "cached_tokens": 1295,
+      "prompt_tokens": 1361,
+      "output_tokens": 177,
+      "response_time": 6.16,
+      "summary": "案主在面對親職壓力時，感受到巨大的情緒困擾與無力感，並因此產生自我否定與內疚。"
+    },
+    {
+      "minute": 50,
+      "cached_tokens": 1295,
+      "prompt_tokens": 1365,
+      "output_tokens": 190,
+      "response_time": 5.41,
+      "summary": "家長目前感到極度無力與挫折，對於改善親子關係的努力感到沒有進展，甚至開始質疑自己是否是個失敗的父母。"
+    },
+    {
+      "minute": 55,
+      "cached_tokens": 1295,
+      "prompt_tokens": 1361,
+      "output_tokens": 161,
+      "response_time": 13.36,
+      "summary": "案主因管教困境感到情緒失控，並為此深感自責與無助，認為自己是個糟糕的父母。"
+    },
+    {
+      "minute": 60,
+      "cached_tokens": 1295,
+      "prompt_tokens": 1365,
+      "output_tokens": 188,
+      "response_time": 4.85,
+      "summary": "案主目前感到極度無力與挫折，認為自己在親子關係上的努力沒有進展，甚至開始質疑自己是否是個失敗的父母。"
+    }
+  ],
+  "summary": {
+    "test_count": 11,
+    "total_cached_tokens": 14245,
+    "total_prompt_tokens": 14982,
+    "total_output_tokens": 1965,
+    "avg_cache_hit_ratio": 48.74,
+    "avg_response_time": 7.97,
+    "token_savings": 14245
+  }
+}

@@ -215,9 +215,9 @@ async def main():
         result = await analyze_minute(minute)
         results.append(result)
 
-        # 短暂延迟（让缓存生效）
+        # 快速連續請求測試 implicit caching (間隔 < 1 秒)
         if minute < 10:
-            await asyncio.sleep(2)
+            await asyncio.sleep(0.1)
 
     # 保存结果
     output_data = {
@@ -230,7 +230,7 @@ async def main():
         "results": results,
     }
 
-    output_file = "scripts/cache_cumulative_results.json"
+    output_file = "cache_cumulative_results.json"
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(output_data, f, ensure_ascii=False, indent=2)
 

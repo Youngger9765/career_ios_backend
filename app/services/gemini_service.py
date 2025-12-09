@@ -305,29 +305,22 @@ class GeminiService:
         # Extract usage metadata
         usage_metadata = {}
 
-        # Debug: log all response attributes
-        logger.info(f"🔍 Response attributes: {dir(response)}")
-        logger.info(f"🔍 Response type: {type(response)}")
-
+        # Extract usage metadata for cache performance tracking
         if hasattr(response, "usage_metadata"):
             usage = response.usage_metadata
             logger.info(f"📊 Usage metadata: {usage}")
-            logger.info(f"🔍 Usage metadata type: {type(usage)}")
-            logger.info(f"🔍 Usage attributes: {dir(usage)}")
 
-            # Try different attribute names
+            # Extract token counts
             for attr in [
                 "cached_content_token_count",
                 "prompt_token_count",
                 "candidates_token_count",
                 "total_token_count",
-                "input_token_count",
-                "output_token_count",
             ]:
                 if hasattr(usage, attr):
                     value = getattr(usage, attr)
-                    logger.info(f"✅ Found {attr}: {value}")
                     usage_metadata[attr] = value
+                    logger.debug(f"Token count - {attr}: {value}")
         else:
             logger.warning("⚠️ Response has NO usage_metadata attribute!")
 
