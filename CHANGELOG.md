@@ -32,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Gemini max_tokens increased from 4000 to 8000 (prevents JSON truncation)
 - Documentation consolidation (42 → 31 files, single source of truth in PRD.md)
 - Code quality improvements (11 files refactored, 100% file size compliance)
+- **Realtime AI Prompt Enhancement**: Improved counseling supervision prompt based on professional counselor feedback
+  - Empathy-first approach: AI now validates parent emotions before offering guidance
+  - Concrete, actionable suggestions: All recommendations include specific steps and dialogue examples
+  - Gentle, non-judgmental tone: Replaced direct/critical language with supportive guidance
+  - Structured output: Summary, empathy section, concerns, and action steps with examples
 
 ### Fixed
 - Gemini report grading JSON truncation (success rate: 85% → 100%)
