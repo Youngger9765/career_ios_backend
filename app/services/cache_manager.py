@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 class CacheManager:
     """Manager for Gemini explicit context caching"""
 
+    # Gemini's minimum token requirement for caching
+    MIN_CACHE_TOKENS = 1024
+
     def __init__(self):
         """Initialize cache manager"""
         self.project_id = getattr(
@@ -32,15 +35,35 @@ class CacheManager:
             vertexai.init(project=self.project_id, location=self.location)
             self._initialized = True
 
+    def estimate_token_count(self, text: str) -> int:
+        """
+        Estimate token count for text.
+
+        Uses a rough heuristic: 1 token ≈ 2-3 characters for English/Chinese mix.
+        For Chinese text, this is more conservative (2 chars/token).
+
+        Args:
+            text: Text to estimate tokens for
+
+        Returns:
+            Estimated token count
+        """
+        # Conservative estimate: 1 token per 2 characters
+        # This ensures we don't underestimate and attempt cache creation too early
+        return len(text) // 2
+
     async def get_or_create_cache(
         self,
         session_id: str,
         system_instruction: str,
         accumulated_transcript: str,
         ttl_seconds: int = 7200,
-    ) -> Tuple[caching.CachedContent, bool]:
+    ) -> Tuple[caching.CachedContent | None, bool]:
         """
-        Get existing cache or create new one for a session
+        Get or create cache for a session (Strategy A: Always update)
+
+        Strategy A: Delete old cache and create new one with updated transcript.
+        This ensures cache always contains the latest accumulated conversation.
 
         Args:
             session_id: Unique session identifier
@@ -49,9 +72,9 @@ class CacheManager:
             ttl_seconds: Time-to-live in seconds (default: 2 hours)
 
         Returns:
-            Tuple of (CachedContent, is_new)
-            - CachedContent: The cache object
-            - is_new: True if cache was created, False if reused
+            Tuple of (CachedContent | None, is_new)
+            - CachedContent: The cache object (None if content too short)
+            - is_new: Always True for Strategy A (always recreating)
 
         Raises:
             Exception: If cache creation/retrieval fails
@@ -61,27 +84,32 @@ class CacheManager:
         cache_display_name = f"counseling_session_{session_id}"
 
         try:
-            # Try to find existing cache
+            # Step 1: Find and delete existing cache (if any)
             existing_caches = caching.CachedContent.list()
             for cache in existing_caches:
                 if cache.display_name == cache_display_name:
-                    # Check if cache is still valid (not expired)
-                    if cache.expire_time and cache.expire_time > datetime.now(
-                        timezone.utc
-                    ):
-                        logger.info(
-                            f"Reusing existing cache: {cache.name}, "
-                            f"expires at {cache.expire_time}"
-                        )
-                        return cache, False
-                    else:
-                        # Cache expired, delete it
-                        logger.info(f"Cache expired, deleting: {cache.name}")
-                        cache.delete()
+                    logger.info(
+                        f"Found existing cache, deleting to update with new content: {cache.name}"
+                    )
+                    cache.delete()
+                    break
 
-            # No valid cache found, create new one
+            # Step 2: Check if content is long enough for caching
+            combined_content = system_instruction + "\n\n" + accumulated_transcript
+            estimated_tokens = self.estimate_token_count(combined_content)
+
+            if estimated_tokens < self.MIN_CACHE_TOKENS:
+                logger.info(
+                    f"Content too short for caching: {estimated_tokens} tokens "
+                    f"(minimum: {self.MIN_CACHE_TOKENS}). "
+                    f"Transcript length: {len(accumulated_transcript)} chars"
+                )
+                return None, False
+
+            # Step 3: Create new cache with updated accumulated transcript
             logger.info(
                 f"Creating new cache for session: {session_id}, "
+                f"estimated tokens: {estimated_tokens}, "
                 f"transcript length: {len(accumulated_transcript)} chars"
             )
 
@@ -94,14 +122,15 @@ class CacheManager:
             )
 
             logger.info(
-                f"Cache created: {cached_content.name}, "
+                f"Cache created successfully: {cached_content.name}, "
                 f"expires at {cached_content.expire_time}"
             )
 
+            # Strategy A always returns is_new=True (always recreating)
             return cached_content, True
 
         except Exception as e:
-            logger.error(f"Failed to get or create cache for session {session_id}: {e}")
+            logger.error(f"Failed to create cache for session {session_id}: {e}")
             raise
 
     async def cleanup_expired_caches(self) -> int:

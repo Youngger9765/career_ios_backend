@@ -12,10 +12,65 @@ class TestRealtimeCacheAPI:
     """Test Gemini explicit context caching functionality"""
 
     @pytest.mark.asyncio
+    async def test_analyze_with_short_content_skips_cache(self, async_client):
+        """
+        Test that short content (< 1024 tokens) skips cache creation
+        GIVEN: A realtime analyze request with short transcript
+        WHEN: Request is made with use_cache=True
+        THEN: Cache is not created, returns friendly message
+        """
+        # Mock cache manager returning None (content too short)
+        with patch(
+            "app.services.cache_manager.CacheManager.get_or_create_cache"
+        ) as mock_cache:
+            mock_cache.return_value = (None, False)  # (cache=None, is_new=False)
+
+            # Mock standard analysis
+            with patch(
+                "app.services.gemini_service.GeminiService.analyze_realtime_transcript"
+            ) as mock_analyze:
+                mock_analyze.return_value = {
+                    "summary": "Short conversation summary",
+                    "alerts": ["Alert 1"],
+                    "suggestions": ["Suggestion 1"],
+                }
+
+                # Make request with short content
+                response = await async_client.post(
+                    "/api/v1/realtime/analyze",
+                    json={
+                        "transcript": "counselor: Hello\nclient: Hi",
+                        "speakers": [
+                            {"speaker": "counselor", "text": "Hello"},
+                            {"speaker": "client", "text": "Hi"},
+                        ],
+                        "time_range": "0:00-1:00",
+                        "use_cache": True,
+                        "session_id": "session_short",
+                    },
+                )
+
+                # Assert response
+                assert response.status_code == 200
+                data = response.json()
+                assert data["summary"] == "Short conversation summary"
+                assert "cache_metadata" in data
+                assert data["cache_metadata"]["cache_created"] is False
+                assert data["cache_metadata"]["cached_tokens"] == 0
+                assert (
+                    "error" not in data["cache_metadata"]
+                    or not data["cache_metadata"]["error"]
+                )
+                assert (
+                    "較短" in data["cache_metadata"]["message"]
+                    or "1024 tokens" in data["cache_metadata"]["message"]
+                )
+
+    @pytest.mark.asyncio
     async def test_analyze_with_cache_creates_cache(self, async_client):
         """
-        Test that first call creates a cache
-        GIVEN: A realtime analyze request with use_cache=True
+        Test that first call with long content creates a cache
+        GIVEN: A realtime analyze request with long transcript (>= 1024 tokens)
         WHEN: First call is made
         THEN: Cache is created and response includes cache metadata
         """
@@ -41,14 +96,17 @@ class TestRealtimeCacheAPI:
                     },
                 }
 
-                # Make request
+                # Make request with long content (simulated)
+                long_transcript = (
+                    "counselor: " + "Hello " * 500 + "\nclient: " + "Hi " * 500
+                )
                 response = await async_client.post(
                     "/api/v1/realtime/analyze",
                     json={
-                        "transcript": "counselor: Hello\nclient: Hi",
+                        "transcript": long_transcript,
                         "speakers": [
-                            {"speaker": "counselor", "text": "Hello"},
-                            {"speaker": "client", "text": "Hi"},
+                            {"speaker": "counselor", "text": "Hello " * 500},
+                            {"speaker": "client", "text": "Hi " * 500},
                         ],
                         "time_range": "0:00-1:00",
                         "use_cache": True,
@@ -67,24 +125,55 @@ class TestRealtimeCacheAPI:
     @pytest.mark.asyncio
     async def test_analyze_with_cache_reuses_cache(self, async_client):
         """
-        Test that second call reuses existing cache
-        GIVEN: A cache already exists for session_id
+        Test that subsequent calls UPDATE the cache (Strategy A)
+        GIVEN: Two consecutive realtime analyze requests with same session_id
         WHEN: Second call is made
-        THEN: Cache is reused and cached_tokens > 0
+        THEN: Cache is DELETED and RECREATED with updated content
         """
         with patch(
             "app.services.cache_manager.CacheManager.get_or_create_cache"
         ) as mock_cache:
-            mock_cached_content = MagicMock()
-            mock_cached_content.name = "cache_session_123"
-            mock_cache.return_value = (
-                mock_cached_content,
-                False,
-            )  # (cache, is_new=False)
+            # First call: Create cache
+            mock_cached_content_1 = MagicMock()
+            mock_cached_content_1.name = "cache_v1"
+            mock_cache.return_value = (mock_cached_content_1, True)  # is_new=True
 
             with patch(
                 "app.services.gemini_service.GeminiService.analyze_with_cache"
             ) as mock_analyze:
+                mock_analyze.return_value = {
+                    "summary": "Test summary 1",
+                    "alerts": ["Alert 1"],
+                    "suggestions": ["Suggestion 1"],
+                    "usage_metadata": {
+                        "cached_content_token_count": 0,
+                        "prompt_token_count": 1500,
+                    },
+                }
+
+                # First call
+                await async_client.post(
+                    "/api/v1/realtime/analyze",
+                    json={
+                        "transcript": "counselor: Hello\nclient: Hi",
+                        "speakers": [
+                            {"speaker": "counselor", "text": "Hello"},
+                            {"speaker": "client", "text": "Hi"},
+                        ],
+                        "time_range": "0:00-1:00",
+                        "use_cache": True,
+                        "session_id": "session_123",
+                    },
+                )
+
+                # Second call: Cache is RECREATED (not reused)
+                mock_cached_content_2 = MagicMock()
+                mock_cached_content_2.name = "cache_v2"
+                mock_cache.return_value = (
+                    mock_cached_content_2,
+                    True,
+                )  # is_new=True (recreated)
+
                 mock_analyze.return_value = {
                     "summary": "Test summary 2",
                     "alerts": ["Alert 2"],
@@ -112,7 +201,8 @@ class TestRealtimeCacheAPI:
                 assert response.status_code == 200
                 data = response.json()
                 assert "cache_metadata" in data
-                assert data["cache_metadata"]["cache_created"] is False
+                # Assert: is_new should be True (cache recreated)
+                assert data["cache_metadata"]["cache_created"] is True
                 assert data["cache_metadata"]["cached_tokens"] > 0
 
     @pytest.mark.asyncio
@@ -194,6 +284,30 @@ class TestRealtimeCacheAPI:
             data = response.json()
             assert data["summary"] == "Non-cached summary"
             assert "cache_metadata" not in data or data["cache_metadata"] is None
+
+    @pytest.mark.asyncio
+    async def test_token_estimation_logic(self):
+        """
+        Test token estimation logic in CacheManager
+        GIVEN: Different length texts
+        WHEN: Token count is estimated
+        THEN: Estimation is reasonable (1 token ≈ 2 chars)
+        """
+        from app.services.cache_manager import CacheManager
+
+        manager = CacheManager()
+
+        # Test short text (should be < 1024 tokens)
+        short_text = "Hello world" * 10  # ~110 chars = ~55 tokens
+        assert manager.estimate_token_count(short_text) < manager.MIN_CACHE_TOKENS
+
+        # Test medium text (should be close to 1024 tokens)
+        medium_text = "Hello world " * 200  # ~2400 chars = ~1200 tokens
+        assert manager.estimate_token_count(medium_text) >= manager.MIN_CACHE_TOKENS
+
+        # Test long text (should be > 1024 tokens)
+        long_text = "Hello world " * 500  # ~6000 chars = ~3000 tokens
+        assert manager.estimate_token_count(long_text) > manager.MIN_CACHE_TOKENS * 2
 
     @pytest.mark.asyncio
     async def test_cleanup_expired_caches(self):
