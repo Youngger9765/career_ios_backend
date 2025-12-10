@@ -34,6 +34,8 @@ class RealtimeAnalyzeRequest(BaseModel):
     transcript: str = Field(..., min_length=1, description="完整逐字稿（過去 1 分鐘）")
     speakers: List[SpeakerSegment] = Field(..., description="Speaker 片段列表")
     time_range: str = Field(..., description="時間範圍（例如：0:00-1:00）")
+    use_cache: bool = Field(default=True, description="是否使用 Gemini context caching")
+    session_id: str = Field(default="", description="會談 session ID（用於 cache key）")
 
     @field_validator("transcript")
     @classmethod
@@ -68,6 +70,16 @@ class RAGSource(BaseModel):
     theory: str = Field(default="其他", description="所屬理論（正向教養、情緒教養等）")
 
 
+class CacheMetadata(BaseModel):
+    """Cache 元數據"""
+
+    cache_name: str = Field(..., description="Cache 名稱")
+    cache_created: bool = Field(..., description="是否為新建的 cache")
+    cached_tokens: int = Field(default=0, description="從 cache 讀取的 token 數")
+    prompt_tokens: int = Field(default=0, description="新增的 prompt token 數")
+    error: str = Field(default="", description="錯誤訊息（如有）")
+
+
 class RealtimeAnalyzeResponse(BaseModel):
     """即時分析回應（AI 督導建議）"""
 
@@ -78,6 +90,9 @@ class RealtimeAnalyzeResponse(BaseModel):
     timestamp: str = Field(..., description="分析時間戳（ISO 8601 格式）")
     rag_sources: List[RAGSource] = Field(
         default=[], description="RAG 知識庫來源（可選）"
+    )
+    cache_metadata: CacheMetadata | None = Field(
+        default=None, description="Cache 元數據（如有使用 cache）"
     )
 
     model_config = {

@@ -1,0 +1,167 @@
+"""
+Gemini Explicit Context Caching Manager
+Manages creation, retrieval, and cleanup of Gemini cached contents
+"""
+import logging
+from datetime import datetime, timezone
+from typing import Tuple
+
+import vertexai
+from vertexai.preview import caching
+
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+class CacheManager:
+    """Manager for Gemini explicit context caching"""
+
+    def __init__(self):
+        """Initialize cache manager"""
+        self.project_id = getattr(
+            settings, "GEMINI_PROJECT_ID", "groovy-iris-473015-h3"
+        )
+        self.location = getattr(settings, "GEMINI_LOCATION", "us-central1")
+        self.model_name = getattr(settings, "GEMINI_CHAT_MODEL", "gemini-2.5-flash")
+        self._initialized = False
+
+    def _ensure_initialized(self):
+        """Lazy initialization of Vertex AI"""
+        if not self._initialized:
+            vertexai.init(project=self.project_id, location=self.location)
+            self._initialized = True
+
+    async def get_or_create_cache(
+        self,
+        session_id: str,
+        system_instruction: str,
+        accumulated_transcript: str,
+        ttl_seconds: int = 7200,
+    ) -> Tuple[caching.CachedContent, bool]:
+        """
+        Get existing cache or create new one for a session
+
+        Args:
+            session_id: Unique session identifier
+            system_instruction: System instruction for Gemini
+            accumulated_transcript: Accumulated conversation transcript
+            ttl_seconds: Time-to-live in seconds (default: 2 hours)
+
+        Returns:
+            Tuple of (CachedContent, is_new)
+            - CachedContent: The cache object
+            - is_new: True if cache was created, False if reused
+
+        Raises:
+            Exception: If cache creation/retrieval fails
+        """
+        self._ensure_initialized()
+
+        cache_display_name = f"counseling_session_{session_id}"
+
+        try:
+            # Try to find existing cache
+            existing_caches = caching.CachedContent.list()
+            for cache in existing_caches:
+                if cache.display_name == cache_display_name:
+                    # Check if cache is still valid (not expired)
+                    if cache.expire_time and cache.expire_time > datetime.now(
+                        timezone.utc
+                    ):
+                        logger.info(
+                            f"Reusing existing cache: {cache.name}, "
+                            f"expires at {cache.expire_time}"
+                        )
+                        return cache, False
+                    else:
+                        # Cache expired, delete it
+                        logger.info(f"Cache expired, deleting: {cache.name}")
+                        cache.delete()
+
+            # No valid cache found, create new one
+            logger.info(
+                f"Creating new cache for session: {session_id}, "
+                f"transcript length: {len(accumulated_transcript)} chars"
+            )
+
+            cached_content = caching.CachedContent.create(
+                model_name=self.model_name,
+                system_instruction=system_instruction,
+                contents=[accumulated_transcript],
+                ttl=f"{ttl_seconds}s",
+                display_name=cache_display_name,
+            )
+
+            logger.info(
+                f"Cache created: {cached_content.name}, "
+                f"expires at {cached_content.expire_time}"
+            )
+
+            return cached_content, True
+
+        except Exception as e:
+            logger.error(f"Failed to get or create cache for session {session_id}: {e}")
+            raise
+
+    async def cleanup_expired_caches(self) -> int:
+        """
+        Clean up expired caches
+
+        Returns:
+            Number of caches deleted
+        """
+        self._ensure_initialized()
+
+        try:
+            caches = caching.CachedContent.list()
+            deleted_count = 0
+            now = datetime.now(timezone.utc)
+
+            for cache in caches:
+                if cache.expire_time and cache.expire_time < now:
+                    logger.info(f"Deleting expired cache: {cache.name}")
+                    cache.delete()
+                    deleted_count += 1
+
+            logger.info(f"Cleanup completed: {deleted_count} caches deleted")
+            return deleted_count
+
+        except Exception as e:
+            logger.error(f"Failed to cleanup caches: {e}")
+            raise
+
+    async def delete_cache_by_session(self, session_id: str) -> bool:
+        """
+        Delete cache for a specific session
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            True if cache was deleted, False if not found
+        """
+        self._ensure_initialized()
+
+        cache_display_name = f"counseling_session_{session_id}"
+
+        try:
+            caches = caching.CachedContent.list()
+            for cache in caches:
+                if cache.display_name == cache_display_name:
+                    logger.info(
+                        f"Deleting cache for session {session_id}: {cache.name}"
+                    )
+                    cache.delete()
+                    return True
+
+            logger.info(f"No cache found for session {session_id}")
+            return False
+
+        except Exception as e:
+            logger.error(f"Failed to delete cache for session {session_id}: {e}")
+            raise
+
+
+# Singleton instance
+cache_manager = CacheManager()

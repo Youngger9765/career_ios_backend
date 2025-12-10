@@ -12,10 +12,12 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.realtime import (
+    CacheMetadata,
     RAGSource,
     RealtimeAnalyzeRequest,
     RealtimeAnalyzeResponse,
 )
+from app.services.cache_manager import CacheManager
 from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
 from app.services.rag_chat_service import RAGChatService
@@ -27,6 +29,58 @@ router = APIRouter(prefix="/api/v1/realtime", tags=["Realtime Counseling"])
 # Initialize services
 gemini_service = GeminiService()
 openai_service = OpenAIService()
+cache_manager = CacheManager()
+
+# System instruction for cache (固定不變的部分)
+CACHE_SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
+
+【角色定義】CRITICAL - 必須嚴格遵守：
+- "counselor" = 諮詢師/輔導師（專業助人者，提供協助的一方）
+- "client" = 案主/個案/家長（求助者，有困擾需要協助的一方）
+- 所有問題、困擾、症狀都是「案主/個案」面臨的，不是諮詢師的問題
+- 分析焦點：案主的狀況、需求、風險
+- 建議對象：給諮詢師的專業建議（如何協助案主）
+
+【分析範圍】CRITICAL - 必須嚴格遵守：
+🎯 **主要分析焦點**：最新一分鐘內的對話內容
+   - 你會收到完整的對話記錄（可能長達數十分鐘）
+   - 但你的分析必須聚焦在「最後出現的對話」（最新一分鐘）
+   - 前面的對話僅作為背景脈絡參考，幫助你理解前因後果
+
+【核心原則】同理優先、溫和引導、具體行動：
+
+1. **同理與理解為先**
+   - 永遠先理解與同理案主（家長）的感受和處境
+   - 認可教養壓力、情緒失控是正常的人性反應
+   - 避免批判、指責或讓案主感到被否定
+
+2. **溫和、非批判的語氣**
+   - ❌ 禁止用語：「表達出對孩子使用身體暴力的衝動」「可能造成傷害」「不當管教」
+   - ✅ 建議用語：「理解到在教養壓力下，父母有時會感到情緒失控是很正常的」
+   - ✅ 使用：「可以考慮」「或許」「試試看」等柔和引導詞
+   - ✅ 焦點放在「如何調整」而非「哪裡做錯」
+
+3. **具體、簡潔的建議**
+   - 建議要具體可行，但保持簡短（不超過 50 字）
+   - 避免抽象概念，用具體做法
+   - 不要冗長的步驟說明或對話範例
+
+【輸出格式】請提供以下 JSON 格式回應：
+
+{
+  "summary": "案主處境簡述（1-2 句）",
+  "alerts": [
+    "💡 同理案主感受（1 句）",
+    "⚠️ 需關注的部分（1 句）"
+  ],
+  "suggestions": [
+    "💡 核心建議（簡短，< 50 字）",
+    "💡 具體做法（簡短，< 50 字）"
+  ]
+}
+
+【語氣要求】溫和、同理、簡潔，避免批判或過度說教。
+"""
 
 # Parenting-related keywords that trigger RAG search
 PARENTING_KEYWORDS = [
@@ -165,6 +219,8 @@ async def analyze_transcript(
     Returns summary, alerts, and suggestions for the counselor based on
     the conversation in the past 60 seconds.
 
+    Supports Gemini explicit context caching for improved performance.
+
     This is a demo feature with no authentication required.
     """
     try:
@@ -192,12 +248,73 @@ async def analyze_transcript(
                     )
                 rag_context = "\n".join(rag_context_parts)
 
-        # Call Gemini service for analysis (with optional RAG context)
-        analysis = await gemini_service.analyze_realtime_transcript(
-            transcript=request.transcript,
-            speakers=speakers_dict,
-            rag_context=rag_context,  # Pass RAG context to Gemini
-        )
+        # Initialize cache metadata
+        cache_metadata = None
+
+        # Use cache if enabled and session_id is provided
+        if request.use_cache and request.session_id:
+            try:
+                logger.info(
+                    f"Cache enabled for session {request.session_id}, "
+                    f"attempting to get or create cache"
+                )
+
+                # Get or create cache with accumulated transcript
+                cached_content, is_new = await cache_manager.get_or_create_cache(
+                    session_id=request.session_id,
+                    system_instruction=CACHE_SYSTEM_INSTRUCTION,
+                    accumulated_transcript=request.transcript,
+                    ttl_seconds=7200,  # 2 hours
+                )
+
+                # Analyze with cache
+                analysis = await gemini_service.analyze_with_cache(
+                    cached_content=cached_content,
+                    transcript=request.transcript,
+                    speakers=speakers_dict,
+                    rag_context=rag_context,
+                )
+
+                # Extract cache metadata from usage_metadata
+                usage_metadata = analysis.get("usage_metadata", {})
+                cache_metadata = CacheMetadata(
+                    cache_name=cached_content.name,
+                    cache_created=is_new,
+                    cached_tokens=usage_metadata.get("cached_content_token_count", 0),
+                    prompt_tokens=usage_metadata.get("prompt_token_count", 0),
+                )
+
+                logger.info(
+                    f"Cache analysis completed. Cache created: {is_new}, "
+                    f"Cached tokens: {cache_metadata.cached_tokens}, "
+                    f"Prompt tokens: {cache_metadata.prompt_tokens}"
+                )
+
+            except Exception as cache_error:
+                # Cache failed, fallback to non-cached analysis
+                logger.warning(
+                    f"Cache analysis failed, falling back to non-cached: {cache_error}"
+                )
+                analysis = await gemini_service.analyze_realtime_transcript(
+                    transcript=request.transcript,
+                    speakers=speakers_dict,
+                    rag_context=rag_context,
+                )
+                cache_metadata = CacheMetadata(
+                    cache_name="",
+                    cache_created=False,
+                    cached_tokens=0,
+                    prompt_tokens=0,
+                    error=str(cache_error),
+                )
+        else:
+            # Cache disabled or no session_id, use standard analysis
+            logger.info("Cache disabled or no session_id, using standard analysis")
+            analysis = await gemini_service.analyze_realtime_transcript(
+                transcript=request.transcript,
+                speakers=speakers_dict,
+                rag_context=rag_context,
+            )
 
         # Build response
         return RealtimeAnalyzeResponse(
@@ -207,6 +324,7 @@ async def analyze_transcript(
             time_range=request.time_range,
             timestamp=datetime.now(timezone.utc).isoformat(),
             rag_sources=rag_sources,
+            cache_metadata=cache_metadata,
         )
     except Exception as e:
         logger.error(f"Realtime analysis failed: {e}")
