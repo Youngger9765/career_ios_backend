@@ -10,10 +10,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Gemini Explicit Context Caching Production Implementation** (2025-12-10)
+  - ✅ Cache Manager service with Strategy A (always update with accumulated transcript)
+  - ✅ Multi-layer cleanup mechanism (manual delete + TTL + cleanup script)
+  - ✅ Automatic fallback for short content (<1024 tokens)
+  - ✅ Integration with `/api/v1/realtime/analyze` endpoint
+  - ✅ Cache metadata tracking in API responses
+  - ✅ 8 integration tests covering all scenarios
+- **Cache Strategy Comparison Experiments** (2025-12-10)
+  - Strategy A: Full cumulative (10/10 success, 100% stability, complete context)
+  - Strategy B: Incremental only (9/10 success, 90% stability, missing context)
+  - Experimental data saved in `CACHE_STRATEGY_ANALYSIS.md`
 - **Cost-benefit analysis** for Explicit Context Caching in realtime counseling (PRD.md)
   - Complete cost breakdown: STT + Gemini with/without caching
   - ROI analysis: 15.2% cost savings per session, NT$10,439/year savings (10 sessions/day)
   - Recommendation: Implement Explicit Caching for production
+
+### Fixed
+- **Critical Cache Update Bug** (2025-12-10)
+  - Fixed: Cache content was frozen after first creation, never updated
+  - Root cause: `get_or_create_cache()` returned existing cache without checking new content
+  - Solution: Implemented Strategy A - always delete old cache and create new one with latest transcript
+  - Impact: AI analysis now correctly includes all conversation history
 
 ### Changed
 - GCP Billing Monitor with AI analysis and email reports (3 new APIs)

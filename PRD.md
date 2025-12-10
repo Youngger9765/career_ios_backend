@@ -213,9 +213,71 @@ for minute in range(2, 61):
 **未來優化方向：**
 - [x] ~~實作 Explicit Context Caching（需評估儲存成本）~~ → **已驗證可行** (2025-12-10)
 - [x] ~~成本分析評估~~ → **完成** (2025-12-10)
-- [ ] Production 實作：整合到 `/api/v1/realtime/analyze` endpoint
-- [ ] Cache 管理策略：session 開始時創建，結束時自動清理
+- [x] ~~Production 實作：整合到 `/api/v1/realtime/analyze` endpoint~~ → **已上線** (2025-12-10)
+- [x] ~~Cache 管理策略：session 開始時創建，結束時自動清理~~ → **已實作** (2025-12-10)
 - [ ] 監控 cache performance metrics (hit rate, token savings)
+
+##### 🎯 Production 實作狀態 (2025-12-10)
+
+**✅ 已上線功能**:
+
+**Cache Manager (`app/services/cache_manager.py`)**:
+- ✅ **Strategy A (Always Update)**: 每次請求都刪除舊 cache，創建新的包含最新累積 transcript
+- ✅ **自動內容檢查**: < 1024 tokens 自動 fallback 到無 cache 模式
+- ✅ **多層清理機制**:
+  - Manual delete (每次更新前)
+  - TTL auto-expire (7200s = 2 hours)
+  - Cleanup script (`scripts/cleanup_caches.py`)
+  - BigQuery monitoring (未來)
+
+**API 整合 (`/api/v1/realtime/analyze`)**:
+```python
+# Request with cache enabled
+{
+  "transcript": "累積的完整對話...",  # 持續累積
+  "speakers": [...],
+  "session_id": "session-123",  # 必須提供
+  "use_cache": true  # 啟用 cache
+}
+
+# Response includes cache metadata
+{
+  "summary": "...",
+  "cache_metadata": {
+    "cache_name": "projects/.../locations/.../cachedContents/...",
+    "cache_created": true,  # Strategy A 總是 true
+    "cached_tokens": 1295,
+    "prompt_tokens": 150,
+    "message": "Cache updated successfully"
+  }
+}
+```
+
+**Cache 更新策略對比實驗** (2025-12-10):
+
+| 策略 | 方式 | 上下文 | 穩定性 | 實驗結果 |
+|------|------|--------|--------|----------|
+| **Strategy A** | 每次刪除重建 | ✅ 完整累積 | ✅ 10/10 成功 | **已採用** |
+| Strategy B | 固定 cache | ❌ 僅當前分鐘 | ⚠️ 9/10 成功 | 已棄用 |
+
+**實驗數據**:
+- **測試場景**: 10 分鐘即時對話（每分鐘發送一次）
+- **Strategy A**: 100% 成功率，133.21s 總時間，完整對話上下文
+- **Strategy B**: 90% 成功率（第 9 分鐘 HTTP 500），121.45s 總時間，缺少上下文
+- **結論**: Strategy A 雖然稍慢（+9.7%），但保證對話連貫性和穩定性
+
+**Critical Bug Fix** (2025-12-10):
+- **問題**: Cache 在首次創建後內容凍結，不再更新
+- **原因**: `get_or_create_cache()` 直接返回現有 cache
+- **修復**: 實作 Strategy A - 每次先刪除舊 cache，再創建新的
+- **影響**: 修復前會導致 AI 分析缺少最新對話內容
+
+**測試覆蓋** (`tests/integration/test_realtime_cache.py`):
+- ✅ 8 integration tests 全部通過
+- ✅ Cache creation, update, fallback scenarios
+- ✅ Error handling and edge cases
+
+**詳細實驗報告**: 參考 `CACHE_STRATEGY_ANALYSIS.md`
 
 ##### 💰 成本效益分析 (2025-12-10)
 
@@ -527,6 +589,6 @@ Input tokens = Σ(996 + 150×N) for N=1 to 60
 
 ---
 
-**版本**: v2.5
-**最後更新**: 2025-12-09
-**本次更新**: 新增 Realtime STT Counseling 系統、RAG 理論標籤、法規遵循
+**版本**: v2.6
+**最後更新**: 2025-12-10
+**本次更新**: Gemini Explicit Context Caching 實作上線（Strategy A）、Cache 策略對比實驗、Critical Bug Fix

@@ -10,10 +10,28 @@
 ## [未發布]
 
 ### 新增
+- **Gemini Explicit Context Caching Production 實作** (2025-12-10)
+  - ✅ Cache Manager 服務採用 Strategy A（總是更新累積對話）
+  - ✅ 多層清理機制（手動刪除 + TTL + 清理腳本）
+  - ✅ 短內容自動降級（< 1024 tokens）
+  - ✅ 整合到 `/api/v1/realtime/analyze` endpoint
+  - ✅ API 回應包含 cache metadata
+  - ✅ 8 個整合測試覆蓋所有場景
+- **Cache 策略對比實驗** (2025-12-10)
+  - 策略 A：完整累積（10/10 成功，100% 穩定，完整上下文）
+  - 策略 B：僅當前增量（9/10 成功，90% 穩定，缺少上下文）
+  - 實驗數據儲存於 `CACHE_STRATEGY_ANALYSIS.md`
 - **即時諮詢成本效益分析**（PRD.md）
   - 完整成本拆解：STT + Gemini 有/無 Cache 方案對比
   - ROI 分析：每場諮詢省 15.2%，每年省 NT$10,439（每日 10 場）
   - 建議：Production 環境應實作 Explicit Context Caching
+
+### 修復
+- **Critical Cache 更新 Bug** (2025-12-10)
+  - 修復：首次創建後 Cache 內容凍結，不再更新
+  - 根本原因：`get_or_create_cache()` 返回舊 cache 不檢查新內容
+  - 解決方案：實作 Strategy A - 總是刪除舊 cache，用最新 transcript 創建新的
+  - 影響：AI 分析現在正確包含所有對話歷史
 
 ### 變更
 - GCP Billing Monitor（AI 分析與 Email 報告，3 個新 API）
