@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 class FieldType(str, Enum):
     """Field input types"""
+
     TEXT = "text"
     EMAIL = "email"
     PHONE = "phone"
@@ -31,7 +32,9 @@ class FieldSchema(BaseModel):
     options: Optional[List[str]] = Field(None, description="Options for select fields")
     default_value: Optional[Any] = Field(None, description="Default value")
     help_text: Optional[str] = Field(None, description="Help text or description")
-    validation_rules: Optional[Dict[str, Any]] = Field(None, description="Validation rules")
+    validation_rules: Optional[Dict[str, Any]] = Field(
+        None, description="Validation rules"
+    )
     order: int = Field(default=0, description="Display order")
 
 

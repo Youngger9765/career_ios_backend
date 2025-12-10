@@ -36,9 +36,7 @@ async def async_client() -> AsyncGenerator:
 @pytest.fixture
 def mock_audio_file():
     """Create a mock audio file for testing"""
-    return {
-        "file": ("test_audio.mp3", b"fake audio content", "audio/mpeg")
-    }
+    return {"file": ("test_audio.mp3", b"fake audio content", "audio/mpeg")}
 
 
 @pytest.fixture
@@ -48,13 +46,11 @@ def sample_session_data():
         "counselor_id": 1,
         "client_id": 1,
         "room_number": "A101",
-        "notes": "Initial consultation session"
+        "notes": "Initial consultation session",
     }
 
 
 @pytest.fixture
 def auth_headers():
     """Mock authentication headers"""
-    return {
-        "Authorization": "Bearer mock_token_12345"
-    }
+    return {"Authorization": "Bearer mock_token_12345"}

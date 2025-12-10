@@ -41,7 +41,11 @@ class TestPromptRationaleExamples:
         assert enhanced_prompt.count("❌") >= 1
 
         # 應該明確指出差異
-        assert "說明理由" in enhanced_prompt or "因為" in enhanced_prompt or "根據" in enhanced_prompt
+        assert (
+            "說明理由" in enhanced_prompt
+            or "因為" in enhanced_prompt
+            or "根據" in enhanced_prompt
+        )
 
 
 class TestPromptValidation:

@@ -113,7 +113,7 @@ def format_client_case_list_item(
 
 
 def sort_items_by_last_session_date(
-    items: List[Dict[str, Any]]
+    items: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
     """Sort items by last_session_date (newest first)."""
     min_datetime = datetime.min.replace(tzinfo=timezone.utc)

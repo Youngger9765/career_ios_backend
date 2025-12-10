@@ -40,7 +40,7 @@ def login(
     result = db.execute(
         select(Counselor).where(
             Counselor.email == credentials.email,
-            Counselor.tenant_id == credentials.tenant_id
+            Counselor.tenant_id == credentials.tenant_id,
         )
     )
     counselor = result.scalar_one_or_none()
@@ -128,7 +128,11 @@ def update_current_counselor(
     """
     try:
         # Convert to dict and filter out None values
-        update_fields = {k: v for k, v in update_data.model_dump(exclude_unset=True).items() if v is not None}
+        update_fields = {
+            k: v
+            for k, v in update_data.model_dump(exclude_unset=True).items()
+            if v is not None
+        }
 
         if not update_fields:
             raise HTTPException(
@@ -137,7 +141,10 @@ def update_current_counselor(
             )
 
         # Check username uniqueness if being updated (only if different from current)
-        if "username" in update_fields and update_fields["username"] != current_user.username:
+        if (
+            "username" in update_fields
+            and update_fields["username"] != current_user.username
+        ):
             result = db.execute(
                 select(Counselor).where(
                     Counselor.username == update_fields["username"],

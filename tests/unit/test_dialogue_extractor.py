@@ -51,14 +51,28 @@ Co: 聽起來你壓力很大，可以多說一些嗎？
 Cl: 我每天加班到很晚，感覺快撐不下去了。"""
 
         # Mock LLM response
-        mock_openai_service.chat_completion.return_value = json.dumps({
-            "dialogues": [
-                {"speaker": "speaker1", "order": 1, "text": "你好，今天想聊什麼？"},
-                {"speaker": "speaker2", "order": 2, "text": "我最近工作壓力很大，不知道該不該轉職。"},
-                {"speaker": "speaker1", "order": 3, "text": "聽起來你壓力很大，可以多說一些嗎？"},
-                {"speaker": "speaker2", "order": 4, "text": "我每天加班到很晚，感覺快撐不下去了。"}
-            ]
-        })
+        mock_openai_service.chat_completion.return_value = json.dumps(
+            {
+                "dialogues": [
+                    {"speaker": "speaker1", "order": 1, "text": "你好，今天想聊什麼？"},
+                    {
+                        "speaker": "speaker2",
+                        "order": 2,
+                        "text": "我最近工作壓力很大，不知道該不該轉職。",
+                    },
+                    {
+                        "speaker": "speaker1",
+                        "order": 3,
+                        "text": "聽起來你壓力很大，可以多說一些嗎？",
+                    },
+                    {
+                        "speaker": "speaker2",
+                        "order": 4,
+                        "text": "我每天加班到很晚，感覺快撐不下去了。",
+                    },
+                ]
+            }
+        )
 
         dialogues = await extractor.extract(transcript, num_participants=2)
 
@@ -82,13 +96,15 @@ Cl: 我每天加班到很晚，感覺快撐不下去了。"""
 S2: 謝謝
 S3: 很高興參加"""
 
-        mock_openai_service.chat_completion.return_value = json.dumps({
-            "dialogues": [
-                {"speaker": "speaker1", "order": 1, "text": "歡迎兩位來到職涯諮詢"},
-                {"speaker": "speaker2", "order": 2, "text": "謝謝"},
-                {"speaker": "speaker3", "order": 3, "text": "很高興參加"}
-            ]
-        })
+        mock_openai_service.chat_completion.return_value = json.dumps(
+            {
+                "dialogues": [
+                    {"speaker": "speaker1", "order": 1, "text": "歡迎兩位來到職涯諮詢"},
+                    {"speaker": "speaker2", "order": 2, "text": "謝謝"},
+                    {"speaker": "speaker3", "order": 3, "text": "很高興參加"},
+                ]
+            }
+        )
 
         dialogues = await extractor.extract(transcript, num_participants=3)
 
@@ -110,12 +126,12 @@ S3: 很高興參加"""
 
         # Mock exactly 7 dialogues (within 5-10 range)
         mock_dialogues = [
-            {"speaker": f"speaker{i%2+1}", "order": i+1, "text": f"Dialogue {i+1}"}
+            {"speaker": f"speaker{i%2+1}", "order": i + 1, "text": f"Dialogue {i+1}"}
             for i in range(7)
         ]
-        mock_openai_service.chat_completion.return_value = json.dumps({
-            "dialogues": mock_dialogues
-        })
+        mock_openai_service.chat_completion.return_value = json.dumps(
+            {"dialogues": mock_dialogues}
+        )
 
         dialogues = await extractor.extract(transcript, num_participants=2)
 
@@ -179,13 +195,15 @@ S3: 很高興參加"""
         """
         transcript = "Multi-line transcript"
 
-        mock_openai_service.chat_completion.return_value = json.dumps({
-            "dialogues": [
-                {"speaker": "speaker1", "order": 1, "text": "First"},
-                {"speaker": "speaker2", "order": 2, "text": "Second"},
-                {"speaker": "speaker1", "order": 3, "text": "Third"}
-            ]
-        })
+        mock_openai_service.chat_completion.return_value = json.dumps(
+            {
+                "dialogues": [
+                    {"speaker": "speaker1", "order": 1, "text": "First"},
+                    {"speaker": "speaker2", "order": 2, "text": "Second"},
+                    {"speaker": "speaker1", "order": 3, "text": "Third"},
+                ]
+            }
+        )
 
         dialogues = await extractor.extract(transcript, num_participants=2)
 
@@ -194,7 +212,9 @@ S3: 很高興參加"""
         assert dialogues[2]["order"] == 3
 
     @pytest.mark.asyncio
-    async def test_extract_uses_correct_temperature(self, extractor, mock_openai_service):
+    async def test_extract_uses_correct_temperature(
+        self, extractor, mock_openai_service
+    ):
         """
         Test: Extraction uses temperature=0.3 for consistency
 
@@ -204,9 +224,9 @@ S3: 很高興參加"""
         """
         transcript = "Test"
 
-        mock_openai_service.chat_completion.return_value = json.dumps({
-            "dialogues": [{"speaker": "speaker1", "order": 1, "text": "Test"}]
-        })
+        mock_openai_service.chat_completion.return_value = json.dumps(
+            {"dialogues": [{"speaker": "speaker1", "order": 1, "text": "Test"}]}
+        )
 
         await extractor.extract(transcript, num_participants=2)
 

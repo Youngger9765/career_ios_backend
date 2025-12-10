@@ -49,22 +49,24 @@ class TestTranscriptParser:
 Cl: 我28歲，在科技公司當軟體工程師，最近想轉職。"""
 
         # Mock LLM response
-        mock_openai_service.chat_completion.return_value = json.dumps({
-            "client_name": "案主A",
-            "gender": "未提及",
-            "age": "28",
-            "occupation": "軟體工程師",
-            "education": "未提及",
-            "location": "未提及",
-            "economic_status": "未提及",
-            "family_relations": "未提及",
-            "other_info": [],
-            "main_concerns": ["轉職"],
-            "counseling_goals": ["探索職涯方向"],
-            "counselor_techniques": ["開放式問句"],
-            "session_content": "案主表達轉職意願",
-            "counselor_self_evaluation": "建立初步關係"
-        })
+        mock_openai_service.chat_completion.return_value = json.dumps(
+            {
+                "client_name": "案主A",
+                "gender": "未提及",
+                "age": "28",
+                "occupation": "軟體工程師",
+                "education": "未提及",
+                "location": "未提及",
+                "economic_status": "未提及",
+                "family_relations": "未提及",
+                "other_info": [],
+                "main_concerns": ["轉職"],
+                "counseling_goals": ["探索職涯方向"],
+                "counselor_techniques": ["開放式問句"],
+                "session_content": "案主表達轉職意願",
+                "counselor_self_evaluation": "建立初步關係",
+            }
+        )
 
         result = await parser.parse(transcript)
 
@@ -86,22 +88,24 @@ Cl: 我28歲，在科技公司當軟體工程師，最近想轉職。"""
         """
         transcript = """Cl: 我工作壓力很大，常失眠，也不知道該不該轉職。"""
 
-        mock_openai_service.chat_completion.return_value = json.dumps({
-            "client_name": "案主B",
-            "gender": "未提及",
-            "age": "未提及",
-            "occupation": "未提及",
-            "education": "未提及",
-            "location": "未提及",
-            "economic_status": "未提及",
-            "family_relations": "未提及",
-            "other_info": [],
-            "main_concerns": ["工作壓力", "失眠", "轉職猶豫"],
-            "counseling_goals": ["壓力管理", "職涯決策"],
-            "counselor_techniques": [],
-            "session_content": "案主表達壓力和失眠困擾",
-            "counselor_self_evaluation": "需評估壓力程度"
-        })
+        mock_openai_service.chat_completion.return_value = json.dumps(
+            {
+                "client_name": "案主B",
+                "gender": "未提及",
+                "age": "未提及",
+                "occupation": "未提及",
+                "education": "未提及",
+                "location": "未提及",
+                "economic_status": "未提及",
+                "family_relations": "未提及",
+                "other_info": [],
+                "main_concerns": ["工作壓力", "失眠", "轉職猶豫"],
+                "counseling_goals": ["壓力管理", "職涯決策"],
+                "counselor_techniques": [],
+                "session_content": "案主表達壓力和失眠困擾",
+                "counselor_self_evaluation": "需評估壓力程度",
+            }
+        )
 
         result = await parser.parse(transcript)
 
@@ -122,22 +126,24 @@ Cl: 我28歲，在科技公司當軟體工程師，最近想轉職。"""
         transcript = """Co: 你期待在諮詢中獲得什麼？
 Cl: 我希望能找到適合的職涯方向，也想學會如何平衡工作和生活。"""
 
-        mock_openai_service.chat_completion.return_value = json.dumps({
-            "client_name": "案主C",
-            "gender": "未提及",
-            "age": "未提及",
-            "occupation": "未提及",
-            "education": "未提及",
-            "location": "未提及",
-            "economic_status": "未提及",
-            "family_relations": "未提及",
-            "other_info": [],
-            "main_concerns": ["職涯方向不明"],
-            "counseling_goals": ["找到職涯方向", "工作生活平衡"],
-            "counselor_techniques": ["目標設定"],
-            "session_content": "案主期待釐清職涯方向",
-            "counselor_self_evaluation": "目標明確"
-        })
+        mock_openai_service.chat_completion.return_value = json.dumps(
+            {
+                "client_name": "案主C",
+                "gender": "未提及",
+                "age": "未提及",
+                "occupation": "未提及",
+                "education": "未提及",
+                "location": "未提及",
+                "economic_status": "未提及",
+                "family_relations": "未提及",
+                "other_info": [],
+                "main_concerns": ["職涯方向不明"],
+                "counseling_goals": ["找到職涯方向", "工作生活平衡"],
+                "counselor_techniques": ["目標設定"],
+                "session_content": "案主期待釐清職涯方向",
+                "counselor_self_evaluation": "目標明確",
+            }
+        )
 
         result = await parser.parse(transcript)
 
@@ -168,7 +174,9 @@ Cl: 我希望能找到適合的職涯方向，也想學會如何平衡工作和�
         assert isinstance(result["main_concerns"], list)
 
     @pytest.mark.asyncio
-    async def test_parse_extracts_counselor_techniques(self, parser, mock_openai_service):
+    async def test_parse_extracts_counselor_techniques(
+        self, parser, mock_openai_service
+    ):
         """
         Test: Extract counselor techniques used
 
@@ -179,28 +187,33 @@ Cl: 我希望能找到適合的職涯方向，也想學會如何平衡工作和�
         transcript = """Co: 聽起來你壓力很大（同理心回應），可以多說一些嗎？（開放式問句）
 Cl: 是的，我每天加班到很晚..."""
 
-        mock_openai_service.chat_completion.return_value = json.dumps({
-            "client_name": "案主D",
-            "gender": "未提及",
-            "age": "未提及",
-            "occupation": "未提及",
-            "education": "未提及",
-            "location": "未提及",
-            "economic_status": "未提及",
-            "family_relations": "未提及",
-            "other_info": [],
-            "main_concerns": ["工作壓力"],
-            "counseling_goals": ["壓力管理"],
-            "counselor_techniques": ["同理心回應", "開放式問句"],
-            "session_content": "諮詢師使用同理和開放問句",
-            "counselor_self_evaluation": "技巧運用適當"
-        })
+        mock_openai_service.chat_completion.return_value = json.dumps(
+            {
+                "client_name": "案主D",
+                "gender": "未提及",
+                "age": "未提及",
+                "occupation": "未提及",
+                "education": "未提及",
+                "location": "未提及",
+                "economic_status": "未提及",
+                "family_relations": "未提及",
+                "other_info": [],
+                "main_concerns": ["工作壓力"],
+                "counseling_goals": ["壓力管理"],
+                "counselor_techniques": ["同理心回應", "開放式問句"],
+                "session_content": "諮詢師使用同理和開放問句",
+                "counselor_self_evaluation": "技巧運用適當",
+            }
+        )
 
         result = await parser.parse(transcript)
 
         assert "counselor_techniques" in result
         assert len(result["counselor_techniques"]) > 0
-        assert "同理心" in result["counselor_techniques"][0] or "開放式" in result["counselor_techniques"][0]
+        assert (
+            "同理心" in result["counselor_techniques"][0]
+            or "開放式" in result["counselor_techniques"][0]
+        )
 
     @pytest.mark.asyncio
     async def test_parse_json_with_extra_text(self, parser, mock_openai_service):

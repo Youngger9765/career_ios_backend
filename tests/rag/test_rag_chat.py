@@ -51,7 +51,9 @@ class TestRagChatAPI:
         # Verify no embedding was created (no RAG search)
         assert not mock_openai_service.create_embedding.called
 
-    async def test_off_topic_question_no_rag_search(self, async_client, mock_openai_service):
+    async def test_off_topic_question_no_rag_search(
+        self, async_client, mock_openai_service
+    ):
         """Test that off-topic questions are handled gracefully"""
         mock_openai_service.chat_completion.side_effect = [
             '{"needs_search": false, "reason": "off-topic"}',
@@ -59,7 +61,8 @@ class TestRagChatAPI:
         ]
 
         response = await async_client.post(
-            "/api/rag/chat/", json={"question": "怎麼煮牛肉麵？", "similarity_threshold": 0.35}
+            "/api/rag/chat/",
+            json={"question": "怎麼煮牛肉麵？", "similarity_threshold": 0.35},
         )
 
         assert response.status_code == 200
@@ -157,7 +160,9 @@ class TestRagChatAPI:
         messages = call_args[1]["messages"]
         assert messages[0]["content"] == custom_system_prompt
 
-    async def test_english_question_gets_english_answer(self, async_client, mock_openai_service):
+    async def test_english_question_gets_english_answer(
+        self, async_client, mock_openai_service
+    ):
         """Test that English questions get English responses"""
         mock_openai_service.chat_completion.side_effect = [
             '{"needs_search": false, "reason": "greeting"}',
@@ -236,12 +241,16 @@ class TestRagChatAPI:
         mock_db_session.execute.return_value.fetchall.return_value = []
 
         with patch("app.api.rag_chat.get_db", return_value=iter([mock_db_session])):
-            response = await async_client.post("/api/rag/chat/", json={"question": "職涯規劃"})
+            response = await async_client.post(
+                "/api/rag/chat/", json={"question": "職涯規劃"}
+            )
 
         assert response.status_code == 200
         # Should still work by extracting JSON
 
-    async def test_error_handling_with_traceback(self, async_client, mock_openai_service):
+    async def test_error_handling_with_traceback(
+        self, async_client, mock_openai_service
+    ):
         """Test that errors return detailed traceback"""
         mock_openai_service.chat_completion.side_effect = Exception("OpenAI API error")
 
@@ -263,7 +272,9 @@ class TestRagChatIntentClassifier:
             mock.return_value = service_instance
             yield service_instance
 
-    async def test_greeting_keywords_detected(self, async_client, mock_openai_service_2):
+    async def test_greeting_keywords_detected(
+        self, async_client, mock_openai_service_2
+    ):
         """Test various greeting keywords are properly classified"""
         mock_openai_service_2.chat_completion.side_effect = [
             '{"needs_search": false, "reason": "greeting"}',
@@ -287,7 +298,9 @@ class TestRagChatIntentClassifier:
             mock_db.execute.return_value.fetchall.return_value = []
 
             with patch("app.api.rag_chat.get_db", return_value=iter([mock_db])):
-                response = await async_client.post("/api/rag/chat/", json={"question": "職涯發展"})
+                response = await async_client.post(
+                    "/api/rag/chat/", json={"question": "職涯發展"}
+                )
                 assert response.status_code == 200
 
 
@@ -305,7 +318,9 @@ class TestRagChatResponseFormat:
                 "Test answer",
             ]
 
-            response = await async_client.post("/api/rag/chat/", json={"question": "test"})
+            response = await async_client.post(
+                "/api/rag/chat/", json={"question": "test"}
+            )
 
             assert response.status_code == 200
             data = response.json()

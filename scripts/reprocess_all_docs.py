@@ -29,7 +29,9 @@ async def get_all_document_ids() -> list[tuple[int, str]]:
         return list(docs)
 
 
-async def reprocess_document(doc_id: int, chunk_size: int = 400, overlap: int = 80) -> dict:
+async def reprocess_document(
+    doc_id: int, chunk_size: int = 400, overlap: int = 80
+) -> dict:
     """Call reprocess API for a single document"""
     async with httpx.AsyncClient(timeout=300.0) as client:
         response = await client.post(
@@ -40,7 +42,10 @@ async def reprocess_document(doc_id: int, chunk_size: int = 400, overlap: int = 
         if response.status_code == 200:
             return {"success": True, "data": response.json()}
         else:
-            return {"success": False, "error": f"{response.status_code}: {response.text}"}
+            return {
+                "success": False,
+                "error": f"{response.status_code}: {response.text}",
+            }
 
 
 async def main():
@@ -74,16 +79,25 @@ async def main():
                 print(f"      Old chunks: {data['old_chunks_deleted']}")
                 print(f"      New chunks: {data['new_chunks_created']}")
                 print(f"      Embeddings: {data['new_embeddings_created']}")
-                results.append({"doc_id": doc_id, "title": title, "success": True, "data": data})
+                results.append(
+                    {"doc_id": doc_id, "title": title, "success": True, "data": data}
+                )
             else:
                 print(f"   ❌ Failed: {result['error']}")
                 results.append(
-                    {"doc_id": doc_id, "title": title, "success": False, "error": result["error"]}
+                    {
+                        "doc_id": doc_id,
+                        "title": title,
+                        "success": False,
+                        "error": result["error"],
+                    }
                 )
 
         except Exception as e:
             print(f"   ❌ Exception: {str(e)}")
-            results.append({"doc_id": doc_id, "title": title, "success": False, "error": str(e)})
+            results.append(
+                {"doc_id": doc_id, "title": title, "success": False, "error": str(e)}
+            )
 
         print()
 
@@ -99,8 +113,12 @@ async def main():
     print(f"❌ Failed: {failed}")
 
     if successful > 0:
-        total_old_chunks = sum(r["data"]["old_chunks_deleted"] for r in results if r["success"])
-        total_new_chunks = sum(r["data"]["new_chunks_created"] for r in results if r["success"])
+        total_old_chunks = sum(
+            r["data"]["old_chunks_deleted"] for r in results if r["success"]
+        )
+        total_new_chunks = sum(
+            r["data"]["new_chunks_created"] for r in results if r["success"]
+        )
         print(f"\n📈 Total old chunks deleted: {total_old_chunks}")
         print(f"📈 Total new chunks created: {total_new_chunks}")
         increase = total_new_chunks - total_old_chunks

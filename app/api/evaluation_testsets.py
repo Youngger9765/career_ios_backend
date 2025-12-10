@@ -134,7 +134,9 @@ async def update_testset(
 
     # 如果更新 test_cases，要更新 total_cases
     if "test_cases" in update_data:
-        test_cases_json = [case.model_dump() for case in (testset_update.test_cases or [])]
+        test_cases_json = [
+            case.model_dump() for case in (testset_update.test_cases or [])
+        ]
         update_data["test_cases"] = test_cases_json
         update_data["total_cases"] = len(test_cases_json)
 

@@ -13,6 +13,7 @@ router = APIRouter(prefix="/api/v1/ui/field-schemas", tags=["UI APIs - Field Sch
 
 class ClientCaseSchemaResponse(BaseModel):
     """Combined Client + Case schema response"""
+
     client: FormSchema
     case: FormSchema
     tenant_id: str
@@ -171,9 +172,7 @@ def get_client_case_schemas(
         case_schema = get_field_config(tenant_id, "case")
 
         return ClientCaseSchemaResponse(
-            client=client_schema,
-            case=case_schema,
-            tenant_id=tenant_id
+            client=client_schema, case=case_schema, tenant_id=tenant_id
         )
     except ValueError as e:
         raise HTTPException(

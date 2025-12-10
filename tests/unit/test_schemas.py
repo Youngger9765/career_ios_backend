@@ -59,9 +59,7 @@ class TestBaseResponse:
         test_id = uuid4()
         test_time = datetime.now()
 
-        response = BaseResponse(
-            id=test_id, created_at=test_time, updated_at=None
-        )
+        response = BaseResponse(id=test_id, created_at=test_time, updated_at=None)
 
         assert response.id == test_id
         assert response.created_at == test_time

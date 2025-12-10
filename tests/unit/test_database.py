@@ -51,8 +51,8 @@ class TestDatabaseBase:
         from app.core.database import Base
 
         # SQLAlchemy 2.0: Base should be instance of DeclarativeBase or have registry
-        assert hasattr(Base, 'registry') or isinstance(Base, type)
-        assert hasattr(Base, 'metadata')
+        assert hasattr(Base, "registry") or isinstance(Base, type)
+        assert hasattr(Base, "metadata")
 
     def test_base_can_create_table_model(self):
         """Test Base can be used to create a model"""
@@ -67,7 +67,7 @@ class TestDatabaseBase:
             name = Column(String)
 
         # Verify model was created successfully
-        assert hasattr(TestModel, '__tablename__')
+        assert hasattr(TestModel, "__tablename__")
         assert TestModel.__tablename__ == "test_model"
-        assert hasattr(TestModel, 'id')
-        assert hasattr(TestModel, 'name')
+        assert hasattr(TestModel, "id")
+        assert hasattr(TestModel, "name")

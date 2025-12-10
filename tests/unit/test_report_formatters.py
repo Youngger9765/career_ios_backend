@@ -240,13 +240,12 @@ class TestWrappedJSONHandling:
             "mode": "enhanced",
             "report": sample_report,  # Actual report nested here
             "format": "json",
-            "quality_summary": {
-                "overall_score": 85,
-                "grade": "良好"
-            }
+            "quality_summary": {"overall_score": 85, "grade": "良好"},
         }
 
-    def test_formatter_with_wrapped_json_produces_empty_skeleton(self, wrapped_rag_response):
+    def test_formatter_with_wrapped_json_produces_empty_skeleton(
+        self, wrapped_rag_response
+    ):
         """
         Document the bug: Formatter with wrapped JSON produces only headers (85 chars)
 
@@ -261,10 +260,14 @@ class TestWrappedJSONHandling:
         buggy_markdown = formatter.format(wrapped_rag_response)
 
         # This is what HAPPENS (not what we want)
-        assert len(buggy_markdown) == 85, "Wrapped JSON produces empty skeleton (85 chars)"
+        assert (
+            len(buggy_markdown) == 85
+        ), "Wrapped JSON produces empty skeleton (85 chars)"
         assert "小明" not in buggy_markdown, "Wrapped JSON loses actual content"
 
-    def test_unwrap_helper_extracts_report_from_wrapped_json(self, wrapped_rag_response):
+    def test_unwrap_helper_extracts_report_from_wrapped_json(
+        self, wrapped_rag_response
+    ):
         """
         Test the unwrap_report() helper function
 
@@ -288,7 +291,9 @@ class TestWrappedJSONHandling:
         result = unwrap_report(sample_report)
         assert result == sample_report
 
-    def test_formatter_with_unwrapped_json_produces_full_content(self, wrapped_rag_response):
+    def test_formatter_with_unwrapped_json_produces_full_content(
+        self, wrapped_rag_response
+    ):
         """
         Test that formatter works correctly with unwrapped data
 

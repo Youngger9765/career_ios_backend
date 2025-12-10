@@ -9,7 +9,9 @@ class TestSettingsConfig:
         from app.core.config import Settings
 
         # Create fresh settings without env vars
-        settings = Settings(_env_file=None, DEBUG=False, SECRET_KEY="test-secret-key-123")
+        settings = Settings(
+            _env_file=None, DEBUG=False, SECRET_KEY="test-secret-key-123"
+        )
 
         assert settings.APP_NAME == "Career Counseling API"
         assert settings.DEBUG is False
@@ -23,7 +25,7 @@ class TestSettingsConfig:
         settings = Settings(
             _env_file=None,
             SECRET_KEY="test-secret-key-123",
-            CORS_ORIGINS="http://localhost:3000,https://example.com"  # type: ignore
+            CORS_ORIGINS="http://localhost:3000,https://example.com",  # type: ignore
         )
 
         assert settings.CORS_ORIGINS == ["http://localhost:3000", "https://example.com"]
@@ -36,10 +38,13 @@ class TestSettingsConfig:
         settings = Settings(
             _env_file=None,
             SECRET_KEY="test-secret-key-123",
-            CORS_ORIGINS=["http://localhost:3000", "https://api.example.com"]
+            CORS_ORIGINS=["http://localhost:3000", "https://api.example.com"],
         )
 
-        assert settings.CORS_ORIGINS == ["http://localhost:3000", "https://api.example.com"]
+        assert settings.CORS_ORIGINS == [
+            "http://localhost:3000",
+            "https://api.example.com",
+        ]
 
     def test_cors_origins_handles_whitespace(self):
         """Test CORS origins strips whitespace from comma-separated values"""
@@ -48,10 +53,14 @@ class TestSettingsConfig:
         settings = Settings(
             _env_file=None,
             SECRET_KEY="test-secret-key-123",
-            CORS_ORIGINS="http://localhost:3000 , https://example.com , https://api.example.com"  # type: ignore
+            CORS_ORIGINS="http://localhost:3000 , https://example.com , https://api.example.com",  # type: ignore
         )
 
-        assert settings.CORS_ORIGINS == ["http://localhost:3000", "https://example.com", "https://api.example.com"]
+        assert settings.CORS_ORIGINS == [
+            "http://localhost:3000",
+            "https://example.com",
+            "https://api.example.com",
+        ]
 
     def test_settings_immutable_after_creation(self):
         """Test settings instance is created once at module load"""

@@ -92,26 +92,35 @@ class TestChunkingService:
             "Discussion of findings reveals interesting patterns.",
         ]
         # Repeat to create a text long enough to trigger the bug
-        text = " ".join(sentences * 50)  # ~250 chars per repetition * 50 = ~12,500 chars
+        text = " ".join(
+            sentences * 50
+        )  # ~250 chars per repetition * 50 = ~12,500 chars
 
         chunks = service.split_text(text, split_by_sentence=True, preserve_words=True)
 
         # Should create many chunks, not just 1-2
         expected_min_chunks = len(text) // (service.chunk_size - service.overlap) // 2
-        assert len(chunks) >= expected_min_chunks, f"Expected at least {expected_min_chunks} chunks, got {len(chunks)}"
+        assert (
+            len(chunks) >= expected_min_chunks
+        ), f"Expected at least {expected_min_chunks} chunks, got {len(chunks)}"
 
         # All chunks should have reasonable size
-        for i, chunk in enumerate(chunks[:-1]):  # Exclude last chunk which might be shorter
-            assert len(chunk) > 100, f"Chunk {i} is too short ({len(chunk)} chars): likely infinite loop bug"
+        for i, chunk in enumerate(
+            chunks[:-1]
+        ):  # Exclude last chunk which might be shorter
+            assert (
+                len(chunk) > 100
+            ), f"Chunk {i} is too short ({len(chunk)} chars): likely infinite loop bug"
 
         # Verify overlap between consecutive chunks
         for i in range(len(chunks) - 1):
             # The end of one chunk should overlap with the start of the next
-            overlap_text = chunks[i][-service.overlap:]
-            next_start = chunks[i+1][:service.overlap]
+            overlap_text = chunks[i][-service.overlap :]
+            next_start = chunks[i + 1][: service.overlap]
             # They should have some overlap (might not be exact due to sentence boundaries)
-            assert len(set(overlap_text.split()) & set(next_start.split())) > 0, \
-                f"No overlap found between chunk {i} and {i+1}"
+            assert (
+                len(set(overlap_text.split()) & set(next_start.split())) > 0
+            ), f"No overlap found between chunk {i} and {i+1}"
 
     def test_sparse_sentence_boundaries_bug(self):
         """Regression test for bug where sparse sentence endings cause infinite loop
@@ -147,6 +156,9 @@ class TestChunkingService:
 
         # Should create approximately (len(text) / (chunk_size - overlap)) chunks
         expected_chunks = len(text) // (service.chunk_size - service.overlap)
-        assert len(chunks) > 10, f"Only got {len(chunks)} chunks for {len(text)} chars - infinite loop bug detected"
-        assert len(chunks) >= expected_chunks * 0.5, \
-            f"Expected ~{expected_chunks} chunks, got {len(chunks)} - chunking is broken"
+        assert (
+            len(chunks) > 10
+        ), f"Only got {len(chunks)} chunks for {len(text)} chars - infinite loop bug detected"
+        assert (
+            len(chunks) >= expected_chunks * 0.5
+        ), f"Expected ~{expected_chunks} chunks, got {len(chunks)} - chunking is broken"

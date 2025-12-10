@@ -27,20 +27,20 @@ class ReportFormatter(ABC):
 
         sections.append(self._format_header())
         sections.append(self._format_client_info(report.get("client_info", {})))
-        sections.append(self._format_list_section("主訴問題", report.get("main_concerns", [])))
+        sections.append(
+            self._format_list_section("主訴問題", report.get("main_concerns", []))
+        )
         sections.append(
             self._format_list_section("晤談目標", report.get("counseling_goals", []))
         )
-        sections.append(self._format_list_section("諮詢技巧", report.get("techniques", [])))
         sections.append(
-            self._format_text_section(
-                "個案概念化", report.get("conceptualization", "")
-            )
+            self._format_list_section("諮詢技巧", report.get("techniques", []))
+        )
+        sections.append(
+            self._format_text_section("個案概念化", report.get("conceptualization", ""))
         )
         sections.append(self._format_theories(report.get("theories", [])))
-        sections.append(
-            self._format_dialogues(report.get("dialogue_excerpts", []))
-        )
+        sections.append(self._format_dialogues(report.get("dialogue_excerpts", [])))
 
         return self._wrap_document("".join(sections))
 

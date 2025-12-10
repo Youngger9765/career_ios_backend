@@ -16,7 +16,7 @@ class TestExtractKeyDemographics:
             "age": 28,
             "gender": "女性",
             "education": "碩士",
-            "main_concerns": ["職涯迷茫", "工作倦怠"]
+            "main_concerns": ["職涯迷茫", "工作倦怠"],
         }
 
         result = extract_key_demographics(parsed_data)
@@ -27,10 +27,7 @@ class TestExtractKeyDemographics:
 
     def test_extract_with_missing_fields(self):
         """測試部分欄位缺失"""
-        parsed_data = {
-            "age": 25,
-            "main_concerns": ["轉職"]
-        }
+        parsed_data = {"age": 25, "main_concerns": ["轉職"]}
 
         result = extract_key_demographics(parsed_data)
 
@@ -67,10 +64,7 @@ class TestExtractCareerStage:
 
     def test_with_concerns_context(self):
         """測試結合主訴問題判斷"""
-        parsed_data = {
-            "age": 28,
-            "main_concerns": ["職涯轉換", "探索新方向"]
-        }
+        parsed_data = {"age": 28, "main_concerns": ["職涯轉換", "探索新方向"]}
 
         stage = extract_career_stage(parsed_data)
 
@@ -87,7 +81,7 @@ class TestBuildEnhancedQuery:
             "age": 28,
             "gender": "女性",
             "main_concerns": ["職涯迷茫", "缺乏方向"],
-            "counselor_techniques": []
+            "counselor_techniques": [],
         }
 
         query = build_enhanced_query(parsed_data)
@@ -106,7 +100,7 @@ class TestBuildEnhancedQuery:
         parsed_data = {
             "age": 35,
             "main_concerns": ["工作倦怠"],
-            "counselor_techniques": ["卡片排序", "生涯幻遊"]
+            "counselor_techniques": ["卡片排序", "生涯幻遊"],
         }
 
         query = build_enhanced_query(parsed_data)
@@ -119,7 +113,7 @@ class TestBuildEnhancedQuery:
         parsed_data = {
             "age": 25,
             "main_concerns": ["議題A", "議題B", "議題C", "議題D", "議題E"],
-            "counselor_techniques": ["技巧1", "技巧2", "技巧3"]
+            "counselor_techniques": ["技巧1", "技巧2", "技巧3"],
         }
 
         query = build_enhanced_query(parsed_data)
@@ -132,10 +126,7 @@ class TestBuildEnhancedQuery:
 
     def test_fallback_query(self):
         """測試空資料時的預設查詢"""
-        parsed_data = {
-            "main_concerns": [],
-            "counselor_techniques": []
-        }
+        parsed_data = {"main_concerns": [], "counselor_techniques": []}
 
         query = build_enhanced_query(parsed_data)
 
@@ -150,7 +141,7 @@ class TestBuildEnhancedQuery:
             "gender": "男性",
             "education": "大學",
             "main_concerns": ["轉職焦慮", "能力不足"],
-            "counselor_techniques": ["敘事治療"]
+            "counselor_techniques": ["敘事治療"],
         }
 
         query = build_enhanced_query(parsed_data)
@@ -173,11 +164,13 @@ class TestQueryComparison:
             "gender": "女性",
             "education": "碩士",
             "main_concerns": ["職涯迷茫", "工作倦怠"],
-            "counselor_techniques": ["卡片排序"]
+            "counselor_techniques": ["卡片排序"],
         }
 
         # 舊版查詢（模擬原有邏輯）
-        old_query = " ".join(parsed_data["main_concerns"][:3] + parsed_data["counselor_techniques"][:2])
+        old_query = " ".join(
+            parsed_data["main_concerns"][:3] + parsed_data["counselor_techniques"][:2]
+        )
 
         # 新版查詢
         new_query = build_enhanced_query(parsed_data)
@@ -186,4 +179,4 @@ class TestQueryComparison:
         assert len(new_query) > len(old_query)
 
         # 新查詢應該包含生涯階段或人口統計資訊
-        assert ("28" in new_query or "探索" in new_query or "建立" in new_query)
+        assert "28" in new_query or "探索" in new_query or "建立" in new_query

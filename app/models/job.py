@@ -27,9 +27,13 @@ class JobStatus(str, enum.Enum):
 class Job(Base, BaseModel):
     __tablename__ = "jobs"
 
-    session_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("sessions.id"), nullable=False)
+    session_id: Column[uuid.UUID] = Column(
+        GUID(), ForeignKey("sessions.id"), nullable=False
+    )
     job_type: Column[JobType] = Column(SQLEnum(JobType), nullable=False)
-    status: Column[JobStatus] = Column(SQLEnum(JobStatus), default=JobStatus.PENDING, nullable=False)
+    status: Column[JobStatus] = Column(
+        SQLEnum(JobStatus), default=JobStatus.PENDING, nullable=False
+    )
 
     # Processing info
     started_at = Column(DateTime(timezone=True))

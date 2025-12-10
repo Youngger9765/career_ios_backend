@@ -15,6 +15,7 @@ class CaseStatus(enum.IntEnum):
     1 = 進行中 (In Progress)
     2 = 已完成 (Completed)
     """
+
     NOT_STARTED = 0
     IN_PROGRESS = 1
     COMPLETED = 2
@@ -23,12 +24,16 @@ class CaseStatus(enum.IntEnum):
 class Case(Base, BaseModel):
     __tablename__ = "cases"
     __table_args__ = (
-        UniqueConstraint('tenant_id', 'case_number', name='uix_tenant_case_number'),
+        UniqueConstraint("tenant_id", "case_number", name="uix_tenant_case_number"),
     )
 
     case_number = Column(String, index=True, nullable=False)
-    counselor_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
-    client_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("clients.id"), nullable=False)
+    counselor_id: Column[uuid.UUID] = Column(
+        GUID(), ForeignKey("counselors.id"), nullable=False
+    )
+    client_id: Column[uuid.UUID] = Column(
+        GUID(), ForeignKey("clients.id"), nullable=False
+    )
     tenant_id = Column(String, nullable=False, index=True)
     status = Column(Integer, default=CaseStatus.NOT_STARTED.value, nullable=False)
     summary = Column(Text)

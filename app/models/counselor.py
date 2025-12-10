@@ -25,11 +25,13 @@ class Counselor(Base, BaseModel):
 
     # Multi-tenant & role
     tenant_id = Column(String, nullable=False, index=True)
-    role: Column[CounselorRole] = Column(SQLEnum(CounselorRole), default=CounselorRole.COUNSELOR, nullable=False)
+    role: Column[CounselorRole] = Column(
+        SQLEnum(CounselorRole), default=CounselorRole.COUNSELOR, nullable=False
+    )
 
     # Unique constraint: email + tenant_id combination must be unique
     __table_args__ = (
-        UniqueConstraint('email', 'tenant_id', name='uq_counselor_email_tenant'),
+        UniqueConstraint("email", "tenant_id", name="uq_counselor_email_tenant"),
     )
 
     # Status & metadata

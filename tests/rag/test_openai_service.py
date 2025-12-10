@@ -86,7 +86,9 @@ class TestOpenAIService:
         context = "TDD stands for Test-Driven Development."
 
         mock_response = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="TDD is Test-Driven Development"))]
+            choices=[
+                MagicMock(message=MagicMock(content="TDD is Test-Driven Development"))
+            ]
         )
 
         with patch.object(

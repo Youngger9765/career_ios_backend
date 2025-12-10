@@ -19,23 +19,33 @@ from app.models.base import GUID, BaseModel
 class Client(Base, BaseModel):
     __tablename__ = "clients"
     __table_args__ = (
-        UniqueConstraint('tenant_id', 'code', name='uix_tenant_client_code'),
+        UniqueConstraint("tenant_id", "code", name="uix_tenant_client_code"),
     )
 
     # Core identification
-    code = Column(String, index=True, nullable=False)  # Anonymous code (unique per tenant)
+    code = Column(
+        String, index=True, nullable=False
+    )  # Anonymous code (unique per tenant)
     name = Column(String, nullable=False)  # Real name
     nickname = Column(String)  # Optional nickname
 
     # Common required fields (all tenants)
-    email = Column(String, nullable=False, index=True)  # Email address for consultation or records
+    email = Column(
+        String, nullable=False, index=True
+    )  # Email address for consultation or records
     gender = Column(String, nullable=False)  # Gender: 男／女／其他／不透露
-    birth_date = Column(Date, nullable=False)  # Birth date (Western calendar, 1900-2025)
+    birth_date = Column(
+        Date, nullable=False
+    )  # Birth date (Western calendar, 1900-2025)
     phone = Column(String, nullable=False)  # Mobile phone number
 
     # Tenant-specific required fields
-    identity_option = Column(String, nullable=False)  # Identity: 學生／社會新鮮人／轉職者／在職者／其他
-    current_status = Column(String, nullable=False)  # Current situation for quick case classification
+    identity_option = Column(
+        String, nullable=False
+    )  # Identity: 學生／社會新鮮人／轉職者／在職者／其他
+    current_status = Column(
+        String, nullable=False
+    )  # Current situation for quick case classification
 
     # Optional fields
     age = Column(Integer)  # Auto-calculated from birth_date, updated on each save
@@ -47,7 +57,9 @@ class Client(Base, BaseModel):
 
     # Consultation and medical history
     has_consultation_history = Column(String)  # Yes/No + supplementary text
-    has_mental_health_history = Column(String)  # Yes/No + supplementary text (sensitive)
+    has_mental_health_history = Column(
+        String
+    )  # Yes/No + supplementary text (sensitive)
 
     # Additional information
     economic_status = Column(String)
@@ -62,7 +74,9 @@ class Client(Base, BaseModel):
 
     # Multi-tenant & relationships
     tenant_id = Column(String, nullable=False, index=True)
-    counselor_id: Column[uuid.UUID] = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
+    counselor_id: Column[uuid.UUID] = Column(
+        GUID(), ForeignKey("counselors.id"), nullable=False
+    )
 
     # Relationships
     counselor = relationship("Counselor", back_populates="clients")
