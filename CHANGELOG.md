@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Cost-benefit analysis** for Explicit Context Caching in realtime counseling (PRD.md)
+  - Complete cost breakdown: STT + Gemini with/without caching
+  - ROI analysis: 15.2% cost savings per session, NT$10,439/year savings (10 sessions/day)
+  - Recommendation: Implement Explicit Caching for production
+
+### Changed
 - GCP Billing Monitor with AI analysis and email reports (3 new APIs)
 - BigQuery integration for real-time cost tracking
 - Automated billing report generation with Gemini AI

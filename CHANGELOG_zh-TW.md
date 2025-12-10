@@ -10,6 +10,12 @@
 ## [未發布]
 
 ### 新增
+- **即時諮詢成本效益分析**（PRD.md）
+  - 完整成本拆解：STT + Gemini 有/無 Cache 方案對比
+  - ROI 分析：每場諮詢省 15.2%，每年省 NT$10,439（每日 10 場）
+  - 建議：Production 環境應實作 Explicit Context Caching
+
+### 變更
 - GCP Billing Monitor（AI 分析與 Email 報告，3 個新 API）
 - BigQuery 整合實現即時成本追蹤
 - Gemini AI 自動化帳單報告生成
