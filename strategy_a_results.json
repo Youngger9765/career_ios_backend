@@ -1,0 +1,128 @@
+{
+  "timestamp": "2025-12-10T19:03:45.092784",
+  "strategy": "A - Full Cumulative (Simulated Rebuild Cache)",
+  "description": "每次發送完整累積對話，模擬重建 cache",
+  "results": [
+    {
+      "minute": 1,
+      "success": true,
+      "transcript_chars": 73,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 25.37,
+      "cache_ratio": 0,
+      "strategy": "A - Full Cumulative"
+    },
+    {
+      "minute": 2,
+      "success": true,
+      "transcript_chars": 158,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 9.95,
+      "cache_ratio": 0,
+      "strategy": "A - Full Cumulative"
+    },
+    {
+      "minute": 3,
+      "success": true,
+      "transcript_chars": 236,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 11.57,
+      "cache_ratio": 0,
+      "strategy": "A - Full Cumulative"
+    },
+    {
+      "minute": 4,
+      "success": true,
+      "transcript_chars": 338,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 14.64,
+      "cache_ratio": 0,
+      "strategy": "A - Full Cumulative"
+    },
+    {
+      "minute": 5,
+      "success": true,
+      "transcript_chars": 429,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 10.27,
+      "cache_ratio": 0,
+      "strategy": "A - Full Cumulative"
+    },
+    {
+      "minute": 6,
+      "success": true,
+      "transcript_chars": 523,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 14.7,
+      "cache_ratio": 0,
+      "strategy": "A - Full Cumulative"
+    },
+    {
+      "minute": 7,
+      "success": true,
+      "transcript_chars": 617,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 14.01,
+      "cache_ratio": 0,
+      "strategy": "A - Full Cumulative"
+    },
+    {
+      "minute": 8,
+      "success": true,
+      "transcript_chars": 702,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 12.54,
+      "cache_ratio": 0,
+      "strategy": "A - Full Cumulative"
+    },
+    {
+      "minute": 9,
+      "success": true,
+      "transcript_chars": 793,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 9.62,
+      "cache_ratio": 0,
+      "strategy": "A - Full Cumulative"
+    },
+    {
+      "minute": 10,
+      "success": true,
+      "transcript_chars": 885,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 10.54,
+      "cache_ratio": 0,
+      "strategy": "A - Full Cumulative"
+    }
+  ],
+  "summary": {
+    "test_count": 10,
+    "total_cached_tokens": 0,
+    "total_prompt_tokens": 0,
+    "total_output_tokens": 0,
+    "total_input_tokens": 0,
+    "avg_cache_hit_ratio": 0,
+    "total_response_time": 133.21,
+    "total_time": 133.21,
+    "total_cache_creation_time": 0
+  }
+}

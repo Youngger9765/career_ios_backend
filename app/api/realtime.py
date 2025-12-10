@@ -267,28 +267,48 @@ async def analyze_transcript(
                     ttl_seconds=7200,  # 2 hours
                 )
 
-                # Analyze with cache
-                analysis = await gemini_service.analyze_with_cache(
-                    cached_content=cached_content,
-                    transcript=request.transcript,
-                    speakers=speakers_dict,
-                    rag_context=rag_context,
-                )
+                # Check if content is too short for caching
+                if cached_content is None:
+                    logger.info(
+                        "Content too short for caching, using standard analysis"
+                    )
+                    analysis = await gemini_service.analyze_realtime_transcript(
+                        transcript=request.transcript,
+                        speakers=speakers_dict,
+                        rag_context=rag_context,
+                    )
+                    cache_metadata = CacheMetadata(
+                        cache_name="",
+                        cache_created=False,
+                        cached_tokens=0,
+                        prompt_tokens=0,
+                        message="對話內容較短，尚未啟用 cache（需 >= 1024 tokens）",
+                    )
+                else:
+                    # Analyze with cache
+                    analysis = await gemini_service.analyze_with_cache(
+                        cached_content=cached_content,
+                        transcript=request.transcript,
+                        speakers=speakers_dict,
+                        rag_context=rag_context,
+                    )
 
-                # Extract cache metadata from usage_metadata
-                usage_metadata = analysis.get("usage_metadata", {})
-                cache_metadata = CacheMetadata(
-                    cache_name=cached_content.name,
-                    cache_created=is_new,
-                    cached_tokens=usage_metadata.get("cached_content_token_count", 0),
-                    prompt_tokens=usage_metadata.get("prompt_token_count", 0),
-                )
+                    # Extract cache metadata from usage_metadata
+                    usage_metadata = analysis.get("usage_metadata", {})
+                    cache_metadata = CacheMetadata(
+                        cache_name=cached_content.name,
+                        cache_created=is_new,
+                        cached_tokens=usage_metadata.get(
+                            "cached_content_token_count", 0
+                        ),
+                        prompt_tokens=usage_metadata.get("prompt_token_count", 0),
+                    )
 
-                logger.info(
-                    f"Cache analysis completed. Cache created: {is_new}, "
-                    f"Cached tokens: {cache_metadata.cached_tokens}, "
-                    f"Prompt tokens: {cache_metadata.prompt_tokens}"
-                )
+                    logger.info(
+                        f"Cache analysis completed. Cache created: {is_new}, "
+                        f"Cached tokens: {cache_metadata.cached_tokens}, "
+                        f"Prompt tokens: {cache_metadata.prompt_tokens}"
+                    )
 
             except Exception as cache_error:
                 # Cache failed, fallback to non-cached analysis

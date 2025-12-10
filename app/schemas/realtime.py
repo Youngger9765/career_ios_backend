@@ -78,6 +78,7 @@ class CacheMetadata(BaseModel):
     cached_tokens: int = Field(default=0, description="從 cache 讀取的 token 數")
     prompt_tokens: int = Field(default=0, description="新增的 prompt token 數")
     error: str = Field(default="", description="錯誤訊息（如有）")
+    message: str = Field(default="", description="狀態訊息（如有）")
 
 
 class RealtimeAnalyzeResponse(BaseModel):

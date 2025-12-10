@@ -1,0 +1,123 @@
+{
+  "timestamp": "2025-12-10T19:06:12.281101",
+  "strategy": "B - Incremental Only (Simulated Fixed Cache)",
+  "description": "只發送當前對話，模擬固定 cache system instruction",
+  "warning": "此策略會失去對話上下文，僅用於技術測試",
+  "results": [
+    {
+      "minute": 1,
+      "success": true,
+      "transcript_chars": 73,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 10.82,
+      "cache_ratio": 0,
+      "strategy": "B - Incremental Only"
+    },
+    {
+      "minute": 2,
+      "success": true,
+      "transcript_chars": 83,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 6.44,
+      "cache_ratio": 0,
+      "strategy": "B - Incremental Only"
+    },
+    {
+      "minute": 3,
+      "success": true,
+      "transcript_chars": 76,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 21.09,
+      "cache_ratio": 0,
+      "strategy": "B - Incremental Only"
+    },
+    {
+      "minute": 4,
+      "success": true,
+      "transcript_chars": 100,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 21.46,
+      "cache_ratio": 0,
+      "strategy": "B - Incremental Only"
+    },
+    {
+      "minute": 5,
+      "success": true,
+      "transcript_chars": 89,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 9.1,
+      "cache_ratio": 0,
+      "strategy": "B - Incremental Only"
+    },
+    {
+      "minute": 6,
+      "success": true,
+      "transcript_chars": 92,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 18.41,
+      "cache_ratio": 0,
+      "strategy": "B - Incremental Only"
+    },
+    {
+      "minute": 7,
+      "success": true,
+      "transcript_chars": 92,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 6.56,
+      "cache_ratio": 0,
+      "strategy": "B - Incremental Only"
+    },
+    {
+      "minute": 8,
+      "success": true,
+      "transcript_chars": 83,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 9.49,
+      "cache_ratio": 0,
+      "strategy": "B - Incremental Only"
+    },
+    {
+      "minute": 9,
+      "success": false,
+      "error": "HTTP 500"
+    },
+    {
+      "minute": 10,
+      "success": true,
+      "transcript_chars": 90,
+      "cached_tokens": 0,
+      "prompt_tokens": 0,
+      "output_tokens": 0,
+      "response_time": 18.08,
+      "cache_ratio": 0,
+      "strategy": "B - Incremental Only"
+    }
+  ],
+  "summary": {
+    "test_count": 9,
+    "total_cached_tokens": 0,
+    "total_prompt_tokens": 0,
+    "total_output_tokens": 0,
+    "total_input_tokens": 0,
+    "avg_cache_hit_ratio": 0,
+    "total_response_time": 121.45,
+    "total_time": 121.45,
+    "cache_creation_time": 0
+  }
+}

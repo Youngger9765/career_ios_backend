@@ -1,0 +1,263 @@
+{
+  "timestamp": "2025-12-10T19:06:14.310497",
+  "strategy_a": {
+    "timestamp": "2025-12-10T19:03:45.092784",
+    "strategy": "A - Full Cumulative (Simulated Rebuild Cache)",
+    "description": "每次發送完整累積對話，模擬重建 cache",
+    "results": [
+      {
+        "minute": 1,
+        "success": true,
+        "transcript_chars": 73,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 25.37,
+        "cache_ratio": 0,
+        "strategy": "A - Full Cumulative"
+      },
+      {
+        "minute": 2,
+        "success": true,
+        "transcript_chars": 158,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 9.95,
+        "cache_ratio": 0,
+        "strategy": "A - Full Cumulative"
+      },
+      {
+        "minute": 3,
+        "success": true,
+        "transcript_chars": 236,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 11.57,
+        "cache_ratio": 0,
+        "strategy": "A - Full Cumulative"
+      },
+      {
+        "minute": 4,
+        "success": true,
+        "transcript_chars": 338,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 14.64,
+        "cache_ratio": 0,
+        "strategy": "A - Full Cumulative"
+      },
+      {
+        "minute": 5,
+        "success": true,
+        "transcript_chars": 429,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 10.27,
+        "cache_ratio": 0,
+        "strategy": "A - Full Cumulative"
+      },
+      {
+        "minute": 6,
+        "success": true,
+        "transcript_chars": 523,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 14.7,
+        "cache_ratio": 0,
+        "strategy": "A - Full Cumulative"
+      },
+      {
+        "minute": 7,
+        "success": true,
+        "transcript_chars": 617,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 14.01,
+        "cache_ratio": 0,
+        "strategy": "A - Full Cumulative"
+      },
+      {
+        "minute": 8,
+        "success": true,
+        "transcript_chars": 702,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 12.54,
+        "cache_ratio": 0,
+        "strategy": "A - Full Cumulative"
+      },
+      {
+        "minute": 9,
+        "success": true,
+        "transcript_chars": 793,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 9.62,
+        "cache_ratio": 0,
+        "strategy": "A - Full Cumulative"
+      },
+      {
+        "minute": 10,
+        "success": true,
+        "transcript_chars": 885,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 10.54,
+        "cache_ratio": 0,
+        "strategy": "A - Full Cumulative"
+      }
+    ],
+    "summary": {
+      "test_count": 10,
+      "total_cached_tokens": 0,
+      "total_prompt_tokens": 0,
+      "total_output_tokens": 0,
+      "total_input_tokens": 0,
+      "avg_cache_hit_ratio": 0,
+      "total_response_time": 133.21,
+      "total_time": 133.21,
+      "total_cache_creation_time": 0
+    }
+  },
+  "strategy_b": {
+    "timestamp": "2025-12-10T19:06:12.281101",
+    "strategy": "B - Incremental Only (Simulated Fixed Cache)",
+    "description": "只發送當前對話，模擬固定 cache system instruction",
+    "warning": "此策略會失去對話上下文，僅用於技術測試",
+    "results": [
+      {
+        "minute": 1,
+        "success": true,
+        "transcript_chars": 73,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 10.82,
+        "cache_ratio": 0,
+        "strategy": "B - Incremental Only"
+      },
+      {
+        "minute": 2,
+        "success": true,
+        "transcript_chars": 83,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 6.44,
+        "cache_ratio": 0,
+        "strategy": "B - Incremental Only"
+      },
+      {
+        "minute": 3,
+        "success": true,
+        "transcript_chars": 76,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 21.09,
+        "cache_ratio": 0,
+        "strategy": "B - Incremental Only"
+      },
+      {
+        "minute": 4,
+        "success": true,
+        "transcript_chars": 100,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 21.46,
+        "cache_ratio": 0,
+        "strategy": "B - Incremental Only"
+      },
+      {
+        "minute": 5,
+        "success": true,
+        "transcript_chars": 89,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 9.1,
+        "cache_ratio": 0,
+        "strategy": "B - Incremental Only"
+      },
+      {
+        "minute": 6,
+        "success": true,
+        "transcript_chars": 92,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 18.41,
+        "cache_ratio": 0,
+        "strategy": "B - Incremental Only"
+      },
+      {
+        "minute": 7,
+        "success": true,
+        "transcript_chars": 92,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 6.56,
+        "cache_ratio": 0,
+        "strategy": "B - Incremental Only"
+      },
+      {
+        "minute": 8,
+        "success": true,
+        "transcript_chars": 83,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 9.49,
+        "cache_ratio": 0,
+        "strategy": "B - Incremental Only"
+      },
+      {
+        "minute": 9,
+        "success": false,
+        "error": "HTTP 500"
+      },
+      {
+        "minute": 10,
+        "success": true,
+        "transcript_chars": 90,
+        "cached_tokens": 0,
+        "prompt_tokens": 0,
+        "output_tokens": 0,
+        "response_time": 18.08,
+        "cache_ratio": 0,
+        "strategy": "B - Incremental Only"
+      }
+    ],
+    "summary": {
+      "test_count": 9,
+      "total_cached_tokens": 0,
+      "total_prompt_tokens": 0,
+      "total_output_tokens": 0,
+      "total_input_tokens": 0,
+      "avg_cache_hit_ratio": 0,
+      "total_response_time": 121.45,
+      "total_time": 121.45,
+      "cache_creation_time": 0
+    }
+  },
+  "comparison": {
+    "cache_hit_ratio_diff": 0,
+    "input_tokens_diff": 0,
+    "input_tokens_diff_percent": 0,
+    "time_diff_seconds": 11.76,
+    "time_diff_percent": 9.68,
+    "cache_creation_overhead_diff": 0
+  },
+  "recommendation": "🎯 Cache 命中率: 兩種方案接近\n💰 Token 成本: 兩種方案差異不大 (<10%)\n⏱️  時間成本: 兩種方案差異不大 (<15%)\n\n🔧 實作複雜度:\n  方案 A: 複雜（需要管理 cache 生命週期，每次重建）\n  方案 B: 簡單（一次性創建，只管理 prompt）\n\n📝 適用場景:\n  方案 A 優勢:\n    - 對話累積很長（30+ 分鐘）\n    - Cache 命中率顯著提升時\n    - 可以接受 cache 重建開銷\n\n  方案 B 優勢:\n    - 對話較短（10-20 分鐘）\n    - 實作簡單，維護容易\n    - 即時性要求高（無需等待 cache 重建）\n\n🎯 最終推薦:\n  ✅ **推薦方案 B** - 效果接近但實作簡單"
+}
