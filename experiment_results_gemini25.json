@@ -1,0 +1,506 @@
+{
+  "timestamp": "2025-12-11T14:28:00.823107",
+  "test_config": {
+    "durations": [
+      8,
+      9,
+      10
+    ],
+    "providers": [
+      "gemini-2.5-flash (with cache)",
+      "codeer-claude-sonnet",
+      "codeer-gemini-flash",
+      "codeer-gpt5-mini"
+    ]
+  },
+  "results": [
+    {
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "analysis": {
+        "summary": "案主反思過去處理衝突時直接責罵孩子的習慣，顯示其對舊有模式的覺察與可能改變的意圖。",
+        "alerts": [
+          "案主過去的行為模式可能讓孩子感到不被理解，需要溫和引導。",
+          "案主可能對改變舊有習慣感到挑戰或懷疑其成效。"
+        ],
+        "suggestions": [
+          "同理案主過去的無奈，肯定其嘗試新方法的意願。",
+          "溫和引導案主思考新舊方式對孩子情緒及關係的差異。",
+          "詢問案主對「不當裁判」角色的具體感受或顧慮。"
+        ]
+      },
+      "latency_ms": 15733,
+      "cache_hit": false,
+      "usage_metadata": {},
+      "cost_data": {
+        "total_cost": 0.0,
+        "breakdown": {
+          "input_tokens": 0,
+          "cached_tokens": 0,
+          "output_tokens": 0,
+          "input_cost": 0.0,
+          "cached_cost": 0.0,
+          "output_cost": 0.0
+        }
+      },
+      "timestamp": "2025-12-11T14:26:18.644414",
+      "quality_score": {
+        "total_score": 65.5,
+        "breakdown": {
+          "structure": 100.0,
+          "relevance": 30.0,
+          "professionalism": 61.7,
+          "completeness": 90.0
+        }
+      },
+      "duration_minutes": 8,
+      "topic": "手足衝突",
+      "test_number": 1
+    },
+    {
+      "provider": "codeer",
+      "model": "claude-sonnet",
+      "analysis": {
+        "summary": "案主因兩個孩子頻繁爭吵而感到壓力，過去習慣用直接制止的方式處理衝突，現正開始理解需要調整介入方式。",
+        "alerts": [
+          "💡 理解案主過去在壓力下直接罵孩子是很自然的反應，這是多數父母都會經歷的過程。",
+          "⚠️ 案主正在意識到過去處理方式的限制，這是很好的轉變契機。"
+        ],
+        "suggestions": [
+          "💡 肯定案主願意嘗試新方法的開放態度，這份覺察本身就是很大的進步。",
+          "💡 可以邀請案主回想一次成功讓孩子冷靜的經驗，從既有經驗中找到可行的起點。"
+        ]
+      },
+      "latency_ms": 9853,
+      "session_reused": true,
+      "cost_data": {
+        "total_cost": 0.01,
+        "breakdown": {
+          "api_calls": 1,
+          "cost_per_call": 0.01,
+          "estimated_tokens": 0
+        },
+        "note": "Codeer pricing is estimated (actual pricing may vary)"
+      },
+      "timestamp": "2025-12-11T14:26:28.500141",
+      "quality_score": {
+        "total_score": 66.8,
+        "breakdown": {
+          "structure": 100.0,
+          "relevance": 50.0,
+          "professionalism": 46.0,
+          "completeness": 90.0
+        }
+      },
+      "duration_minutes": 8,
+      "topic": "手足衝突",
+      "test_number": 2
+    },
+    {
+      "provider": "codeer",
+      "model": "gemini-flash",
+      "analysis": {
+        "summary": "案主正在學習新的手足衝突處理方式，從以往直接責罵轉變為嘗試引導孩子冷靜與表達。",
+        "alerts": [
+          "💡 理解案主在面對孩子爭吵時，可能會因為焦慮和習慣而直接介入，責罵孩子。",
+          "⚠️ 案主過去習慣直接介入和責罵，這可能需要時間和練習才能改變。"
+        ],
+        "suggestions": [
+          "💡 鼓勵案主嘗試新的衝突處理方式，並提醒這個過程需要耐心與練習。",
+          "💡 可以進一步與案主討論在實際執行時，若遇到困難可以如何應對。"
+        ]
+      },
+      "latency_ms": 4422,
+      "session_reused": true,
+      "cost_data": {
+        "total_cost": 0.01,
+        "breakdown": {
+          "api_calls": 1,
+          "cost_per_call": 0.01,
+          "estimated_tokens": 0
+        },
+        "note": "Codeer pricing is estimated (actual pricing may vary)"
+      },
+      "timestamp": "2025-12-11T14:26:32.924054",
+      "quality_score": {
+        "total_score": 68.6,
+        "breakdown": {
+          "structure": 100.0,
+          "relevance": 40.0,
+          "professionalism": 62.0,
+          "completeness": 90.0
+        }
+      },
+      "duration_minutes": 8,
+      "topic": "手足衝突",
+      "test_number": 3
+    },
+    {
+      "provider": "codeer",
+      "model": "gpt5-mini",
+      "analysis": {
+        "summary": "案主為有兩名學齡子女的家長，兄妹每日爭吵讓她感到精疲力竭且常因妹妹哭鬧而心軟，哥哥覺得被偏心並以惹妹妹或退縮表達不滿。案主過去習慣直接責罵孩子，求助如何改善互動與處理衝突。",
+        "alerts": [
+          "💡 我理解您每天處理兄妹衝突很累，感到無力與內疚是很正常的。",
+          "⚠️ 需關注哥哥感到被忽視與家長回應不一致，可能強化爭吵或報復行為。"
+        ],
+        "suggestions": [
+          "💡 可以考慮與家長共同建立簡單可視化的輪流規則與獎勵表。",
+          "💡 示範冷靜時間與傾聽短句，且練習家長稱述孩子感受的說法。"
+        ]
+      },
+      "latency_ms": 17203,
+      "session_reused": true,
+      "cost_data": {
+        "total_cost": 0.01,
+        "breakdown": {
+          "api_calls": 1,
+          "cost_per_call": 0.01,
+          "estimated_tokens": 0
+        },
+        "note": "Codeer pricing is estimated (actual pricing may vary)"
+      },
+      "timestamp": "2025-12-11T14:26:50.128294",
+      "quality_score": {
+        "total_score": 77.6,
+        "breakdown": {
+          "structure": 100.0,
+          "relevance": 50.0,
+          "professionalism": 82.0,
+          "completeness": 90.0
+        }
+      },
+      "duration_minutes": 8,
+      "topic": "手足衝突",
+      "test_number": 4
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "analysis": {
+        "summary": "案主對諮詢師提出的解決衝突新方法，表達了對所需時間和耐心的擔憂，可能因此卻步。",
+        "alerts": [
+          "💡 理解案主對於新方法可能耗費時間而感到卻步的正常心情。",
+          "⚠️ 需關注案主可能因擔心耗時而降低執行意願，導致無法持續嘗試新策略。"
+        ],
+        "suggestions": [
+          "💡 再次同理時間考量，並強調長期益處。",
+          "💡 將策略拆解成更小、更易執行的步驟，減輕案主負擔。"
+        ]
+      },
+      "latency_ms": 7868,
+      "cache_hit": false,
+      "usage_metadata": {
+        "cached_content_token_count": 1425,
+        "prompt_token_count": 2224,
+        "candidates_token_count": 147,
+        "total_token_count": 2879
+      },
+      "cost_data": {
+        "total_cost": 0.000238,
+        "breakdown": {
+          "input_tokens": 2224,
+          "cached_tokens": 1425,
+          "output_tokens": 147,
+          "input_cost": 0.000167,
+          "cached_cost": 2.7e-05,
+          "output_cost": 4.4e-05
+        }
+      },
+      "timestamp": "2025-12-11T14:26:58.001136",
+      "quality_score": {
+        "total_score": 65.6,
+        "breakdown": {
+          "structure": 100.0,
+          "relevance": 20.0,
+          "professionalism": 72.0,
+          "completeness": 90.0
+        }
+      },
+      "duration_minutes": 9,
+      "topic": "手足衝突",
+      "test_number": 5
+    },
+    {
+      "provider": "codeer",
+      "model": "claude-sonnet",
+      "analysis": {
+        "summary": "案主對兩個孩子每天吵架感到疲憊，目前已理解可能存在的偏心問題，並開始接受諮詢師建議嘗試建立公平規則，但對執行效果和所需時間感到疑慮。",
+        "alerts": [
+          "💡 案主願意嘗試新方法是很好的改變動力，值得肯定",
+          "⚠️ 案主對「花時間」表現出抗拒，可能影響後續執行意願"
+        ],
+        "suggestions": [
+          "💡 同理案主的時間壓力，強調小步驟開始也有幫助，不需一次到位",
+          "💡 可提供一個最簡單的起點（例如：先從一項輪流規則開始），降低執行門檻"
+        ]
+      },
+      "latency_ms": 9284,
+      "session_reused": true,
+      "cost_data": {
+        "total_cost": 0.01,
+        "breakdown": {
+          "api_calls": 1,
+          "cost_per_call": 0.01,
+          "estimated_tokens": 0
+        },
+        "note": "Codeer pricing is estimated (actual pricing may vary)"
+      },
+      "timestamp": "2025-12-11T14:27:07.286808",
+      "quality_score": {
+        "total_score": 76.1,
+        "breakdown": {
+          "structure": 100.0,
+          "relevance": 60.0,
+          "professionalism": 67.0,
+          "completeness": 90.0
+        }
+      },
+      "duration_minutes": 9,
+      "topic": "手足衝突",
+      "test_number": 6
+    },
+    {
+      "provider": "codeer",
+      "model": "gemini-flash",
+      "analysis": {
+        "summary": "案主對於執行諮詢師提出的手足衝突處理方式，表達了對時間投入的擔憂與顧慮。",
+        "alerts": [
+          "💡 同理案主感受: 理解家長在繁忙的教養生活中，會考量新方法所需的時間成本是正常的。",
+          "⚠️ 需關注的部分: 案主可能因覺得「花時間」而對建議產生卻步，諮詢師需加強信心建立。"
+        ],
+        "suggestions": [
+          "💡 核心建議: 諮詢師可進一步同理案主的時間壓力，並強調長期實踐的益處。",
+          "💡 具體做法: 建議諮詢師引導案主設定小目標，從簡單、容易執行的方式開始嘗試。"
+        ]
+      },
+      "latency_ms": 5532,
+      "session_reused": true,
+      "cost_data": {
+        "total_cost": 0.01,
+        "breakdown": {
+          "api_calls": 1,
+          "cost_per_call": 0.01,
+          "estimated_tokens": 0
+        },
+        "note": "Codeer pricing is estimated (actual pricing may vary)"
+      },
+      "timestamp": "2025-12-11T14:27:12.821928",
+      "quality_score": {
+        "total_score": 79.7,
+        "breakdown": {
+          "structure": 100.0,
+          "relevance": 50.0,
+          "professionalism": 89.0,
+          "completeness": 90.0
+        }
+      },
+      "duration_minutes": 9,
+      "topic": "手足衝突",
+      "test_number": 7
+    },
+    {
+      "provider": "codeer",
+      "model": "gpt5-mini",
+      "analysis": {
+        "summary": "案主因兩個孩子（哥哥小六、妹妹小三）每日爭吵感到疲乏，擔心建立規則與教養方式會很耗時。",
+        "alerts": [
+          "💡 我理解您覺得花時間、會累的感受，這很辛苦。",
+          "⚠️ 需關注的部分：案主易在妹妹哭時讓步，導致教養不一致與哥哥被忽視的感受。"
+        ],
+        "suggestions": [
+          "💡 可以考慮每天只加入一項簡單規則，慢慢累積改變。",
+          "💡 具體做法：用視覺輪值表＋短暫分開冷靜，冷靜後單獨傾聽哥哥。"
+        ]
+      },
+      "latency_ms": 12694,
+      "session_reused": true,
+      "cost_data": {
+        "total_cost": 0.01,
+        "breakdown": {
+          "api_calls": 1,
+          "cost_per_call": 0.01,
+          "estimated_tokens": 0
+        },
+        "note": "Codeer pricing is estimated (actual pricing may vary)"
+      },
+      "timestamp": "2025-12-11T14:27:25.517044",
+      "quality_score": {
+        "total_score": 77.6,
+        "breakdown": {
+          "structure": 100.0,
+          "relevance": 50.0,
+          "professionalism": 82.0,
+          "completeness": 90.0
+        }
+      },
+      "duration_minutes": 9,
+      "topic": "手足衝突",
+      "test_number": 8
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "analysis": {
+        "summary": "案主對新的管教方式所需投入的時間感到擔憂，但仍願意嘗試改變。",
+        "alerts": [
+          "💡 同理案主對新方法可能耗費時間的顧慮，理解其教養的疲憊。",
+          "⚠️ 需關注案主在實踐過程中的挫折感，及時給予鼓勵與支持。"
+        ],
+        "suggestions": [
+          "💡 肯定案主願意嘗試的態度，並溫和地再次連結改變的長期益處。",
+          "💡 強調從小處著手，設定可達成的小目標，並預告後續會持續追蹤與討論。"
+        ]
+      },
+      "latency_ms": 8347,
+      "cache_hit": false,
+      "usage_metadata": {
+        "cached_content_token_count": 1477,
+        "prompt_token_count": 2328,
+        "candidates_token_count": 154,
+        "total_token_count": 3000
+      },
+      "cost_data": {
+        "total_cost": 0.000248,
+        "breakdown": {
+          "input_tokens": 2328,
+          "cached_tokens": 1477,
+          "output_tokens": 154,
+          "input_cost": 0.000175,
+          "cached_cost": 2.8e-05,
+          "output_cost": 4.6e-05
+        }
+      },
+      "timestamp": "2025-12-11T14:27:33.865759",
+      "quality_score": {
+        "total_score": 62.9,
+        "breakdown": {
+          "structure": 100.0,
+          "relevance": 30.0,
+          "professionalism": 53.0,
+          "completeness": 90.0
+        }
+      },
+      "duration_minutes": 10,
+      "topic": "手足衝突",
+      "test_number": 9
+    },
+    {
+      "provider": "codeer",
+      "model": "claude-sonnet",
+      "analysis": {
+        "summary": "案主願意嘗試建立輪流表來改善手足衝突，但對執行時間成本和效果仍有些疑慮。",
+        "alerts": [
+          "💡 案主已經理解公平對待的重要性，並展現出改變的意願",
+          "⚠️ 案主對方法的長期投入有些擔心，可能需要更多信心建立"
+        ],
+        "suggestions": [
+          "💡 肯定案主願意嘗試的勇氣，強調小步驟的改變就很棒",
+          "💡 提供簡單的追蹤方式，讓案主能看見進步，增強執行動力"
+        ]
+      },
+      "latency_ms": 7335,
+      "session_reused": true,
+      "cost_data": {
+        "total_cost": 0.01,
+        "breakdown": {
+          "api_calls": 1,
+          "cost_per_call": 0.01,
+          "estimated_tokens": 0
+        },
+        "note": "Codeer pricing is estimated (actual pricing may vary)"
+      },
+      "timestamp": "2025-12-11T14:27:41.203629",
+      "quality_score": {
+        "total_score": 62.3,
+        "breakdown": {
+          "structure": 100.0,
+          "relevance": 20.0,
+          "professionalism": 61.0,
+          "completeness": 90.0
+        }
+      },
+      "duration_minutes": 10,
+      "topic": "手足衝突",
+      "test_number": 10
+    },
+    {
+      "provider": "codeer",
+      "model": "gemini-flash",
+      "analysis": {
+        "summary": "案主對處理孩子們的衝突感到疲憊，並表達對新方法所需時間的擔憂，但仍願意嘗試。諮詢師則給予肯定並提供具體步驟。",
+        "alerts": [
+          "💡 理解案主面對孩子頻繁爭吵時感到煩躁與無力是人之常情。",
+          "⚠️ 案主雖願意嘗試，但對執行新策略所需時間和耐心仍有顧慮，需持續支持與鼓勵。"
+        ],
+        "suggestions": [
+          "💡 肯定案主願意嘗試的意願，並強調從小的改變開始，減輕其壓力。",
+          "💡 建議諮詢師可持續提供具體、易行的策略，並設定下次討論進展，給予案主持續的信心和支持。"
+        ]
+      },
+      "latency_ms": 6444,
+      "session_reused": true,
+      "cost_data": {
+        "total_cost": 0.01,
+        "breakdown": {
+          "api_calls": 1,
+          "cost_per_call": 0.01,
+          "estimated_tokens": 0
+        },
+        "note": "Codeer pricing is estimated (actual pricing may vary)"
+      },
+      "timestamp": "2025-12-11T14:27:47.648947",
+      "quality_score": {
+        "total_score": 64.1,
+        "breakdown": {
+          "structure": 100.0,
+          "relevance": 40.0,
+          "professionalism": 47.0,
+          "completeness": 90.0
+        }
+      },
+      "duration_minutes": 10,
+      "topic": "手足衝突",
+      "test_number": 11
+    },
+    {
+      "provider": "codeer",
+      "model": "gpt5-mini",
+      "analysis": {
+        "summary": "案主因小六哥哥與小三妹妹日常頻繁爭吵感到疲憊，過去多以責罵回應，願意嘗試建立規則緩解狀況。",
+        "alerts": [
+          "💡 我理解您面對每天的爭執感到心累、無力又想尋求改變。",
+          "⚠️ 需關注的部分：哥哥感到被忽視可能以挑釁行為吸引注意，家長有情緒疲乏風險。"
+        ],
+        "suggestions": [
+          "💡 核心建議：可以試著建立視覺化輪流規則並一致執行。",
+          "💡 具體做法：本週做輪值表，衝突先分開冷靜，再各自說一次。"
+        ]
+      },
+      "latency_ms": 13155,
+      "session_reused": true,
+      "cost_data": {
+        "total_cost": 0.01,
+        "breakdown": {
+          "api_calls": 1,
+          "cost_per_call": 0.01,
+          "estimated_tokens": 0
+        },
+        "note": "Codeer pricing is estimated (actual pricing may vary)"
+      },
+      "timestamp": "2025-12-11T14:28:00.805484",
+      "quality_score": {
+        "total_score": 74.6,
+        "breakdown": {
+          "structure": 100.0,
+          "relevance": 50.0,
+          "professionalism": 72.0,
+          "completeness": 90.0
+        }
+      },
+      "duration_minutes": 10,
+      "topic": "手足衝突",
+      "test_number": 12
+    }
+  ]
+}

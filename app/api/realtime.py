@@ -513,7 +513,7 @@ async def analyze_transcript(
             # Calculate latency
             latency_ms = int((time.time() - start_time) * 1000)
             provider_metadata = ProviderMetadata(
-                provider="gemini", latency_ms=latency_ms, model="gemini-2.0-flash-exp"
+                provider="gemini", latency_ms=latency_ms, model="gemini-2.5-flash"
             )
 
         # Build response

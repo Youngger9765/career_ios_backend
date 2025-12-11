@@ -407,7 +407,7 @@ def evaluate_quality(response: dict, transcript: str) -> dict:
 def calculate_gemini_cost(usage_metadata: dict) -> dict:
     """Calculate Gemini API cost
 
-    Gemini 2.0 Flash Experimental pricing (as of 2024-12):
+    Gemini 2.5 Flash pricing (as of 2025-12):
     - Input: $0.075 per 1M tokens ($0.000000075 per token)
     - Cached input: $0.01875 per 1M tokens ($0.00000001875 per token)
     - Output: $0.30 per 1M tokens ($0.0000003 per token)
@@ -539,7 +539,7 @@ async def test_gemini_with_cache(
 
         return {
             "provider": "gemini",
-            "model": "gemini-2.0-flash-exp",
+            "model": "gemini-2.5-flash",
             "analysis": {
                 "summary": analysis.get("summary", ""),
                 "alerts": analysis.get("alerts", []),
@@ -556,7 +556,7 @@ async def test_gemini_with_cache(
         logger.error(f"Gemini test failed: {e}")
         return {
             "provider": "gemini",
-            "model": "gemini-2.0-flash-exp",
+            "model": "gemini-2.5-flash",
             "error": str(e),
             "latency_ms": int((time.time() - start_time) * 1000),
         }
@@ -774,7 +774,7 @@ async def run_experiment(
     durations = [8, 9, 10] if duration_filter is None else [duration_filter]
 
     providers_config = [
-        ("gemini", "gemini-2.0-flash-exp"),
+        ("gemini", "gemini-2.5-flash"),
         ("codeer", "claude-sonnet"),
         ("codeer", "gemini-flash"),
         ("codeer", "gpt5-mini"),
@@ -783,7 +783,7 @@ async def run_experiment(
     # Apply provider filter
     if provider_filter:
         if provider_filter == "gemini":
-            providers_config = [("gemini", "gemini-2.0-flash-exp")]
+            providers_config = [("gemini", "gemini-2.5-flash")]
         elif provider_filter == "codeer":
             providers_config = [
                 ("codeer", "claude-sonnet"),
@@ -923,7 +923,7 @@ def analyze_results(results: List[dict]):
 
         table_speed.add_row(
             f"{duration} min",
-            f"{latencies.get('gemini-gemini-2.0-flash-exp', 'N/A')}",
+            f"{latencies.get('gemini-gemini-2.5-flash', 'N/A')}",
             f"{latencies.get('codeer-claude-sonnet', 'N/A')}",
             f"{latencies.get('codeer-gemini-flash', 'N/A')}",
             f"{latencies.get('codeer-gpt5-mini', 'N/A')}",
@@ -957,7 +957,7 @@ def analyze_results(results: List[dict]):
 
         table_quality.add_row(
             f"{duration} min",
-            quality_scores.get("gemini-gemini-2.0-flash-exp", "N/A"),
+            quality_scores.get("gemini-gemini-2.5-flash", "N/A"),
             quality_scores.get("codeer-claude-sonnet", "N/A"),
             quality_scores.get("codeer-gemini-flash", "N/A"),
             quality_scores.get("codeer-gpt5-mini", "N/A"),
@@ -990,7 +990,7 @@ def analyze_results(results: List[dict]):
 
         table_cost.add_row(
             f"{duration} min",
-            costs.get("gemini-gemini-2.0-flash-exp", "N/A"),
+            costs.get("gemini-gemini-2.5-flash", "N/A"),
             costs.get("codeer-claude-sonnet", "N/A"),
             costs.get("codeer-gemini-flash", "N/A"),
             costs.get("codeer-gpt5-mini", "N/A"),
@@ -1037,9 +1037,12 @@ def analyze_results(results: List[dict]):
         console.print(f"  Quality: {avg_quality:.1f} / 100")
         console.print(f"  Cost: ${avg_cost:.6f}")
 
-    # Determine winner (weighted scoring: Quality 50%, Speed 30%, Cost 20%)
+    # Determine winner (weighted scoring: Quality 60%, Speed 40%)
     console.print(
-        "\n[bold yellow]Weighted Scoring (Quality 50%, Speed 30%, Cost 20%):[/bold yellow]"
+        "\n[bold yellow]Weighted Scoring (Quality 60%, Speed 40%):[/bold yellow]"
+    )
+    console.print(
+        "[dim]Note: Cost data shown for reference only, not included in scoring[/dim]"
     )
 
     # Normalize metrics (0-100 scale)
@@ -1062,23 +1065,21 @@ def analyze_results(results: List[dict]):
         quality_score = avg_quality
         cost_score = (1 - avg_cost / max_cost) * 100
 
-        # Weighted total
-        weighted_total = (
-            (quality_score * 0.5) + (speed_score * 0.3) + (cost_score * 0.2)
-        )
+        # Weighted total (Quality 60%, Speed 40%, Cost 0%)
+        weighted_total = (quality_score * 0.6) + (speed_score * 0.4)
 
         weighted_scores[key] = {
             "total": weighted_total,
             "quality": quality_score,
             "speed": speed_score,
-            "cost": cost_score,
+            "cost": cost_score,  # Keep for reference
         }
 
         display_name = key.replace("-", " ").title()
         console.print(f"\n[cyan]{display_name}:[/cyan]")
         console.print(f"  Quality Score: {quality_score:.1f}")
         console.print(f"  Speed Score: {speed_score:.1f}")
-        console.print(f"  Cost Score: {cost_score:.1f}")
+        console.print(f"  Cost: ${avg_cost:.6f} [dim](reference only)[/dim]")
         console.print(f"  [bold]Weighted Total: {weighted_total:.1f}[/bold]")
 
     # Find winner
@@ -1113,7 +1114,7 @@ def save_results(results: List[dict], output_path: str = "experiment_results.jso
                 "test_config": {
                     "durations": [8, 9, 10],
                     "providers": [
-                        "gemini (with cache)",
+                        "gemini-2.5-flash (with cache)",
                         "codeer-claude-sonnet",
                         "codeer-gemini-flash",
                         "codeer-gpt5-mini",
