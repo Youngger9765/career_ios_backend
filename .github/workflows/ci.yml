@@ -56,6 +56,7 @@ jobs:
         CI_BRANCH: ${{ env.CI_BRANCH }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         CODEER_API_KEY: ${{ secrets.CODEER_API_KEY }}
+        CODEER_DEFAULT_AGENT: ${{ secrets.CODEER_DEFAULT_AGENT }}
         CODEER_AGENT_CLAUDE_SONNET: ${{ secrets.CODEER_AGENT_CLAUDE_SONNET }}
         CODEER_AGENT_GEMINI_FLASH: ${{ secrets.CODEER_AGENT_GEMINI_FLASH }}
         CODEER_AGENT_GPT5_MINI: ${{ secrets.CODEER_AGENT_GPT5_MINI }}
