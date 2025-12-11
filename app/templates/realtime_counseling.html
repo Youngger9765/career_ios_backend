@@ -2210,6 +2210,22 @@
                    </span>`
                 : '';
 
+            // Build token usage badge
+            let tokenUsageBadge = '';
+            if (analysis.cache_metadata) {
+                const cache = analysis.cache_metadata;
+                const totalTokens = cache.cached_tokens + cache.prompt_tokens;
+                tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium" title="Cache: ${cache.cached_tokens.toLocaleString()} | New: ${cache.prompt_tokens.toLocaleString()}">
+                    <span>🎯</span>
+                    <span>${totalTokens.toLocaleString()} tokens</span>
+                   </span>`;
+            } else if (analysis.provider_metadata && analysis.provider_metadata.provider === 'codeer') {
+                tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium" title="Codeer API 無回傳 token usage">
+                    <span>📊</span>
+                    <span>~1400 tokens</span>
+                   </span>`;
+            }
+
             card.innerHTML = `
                 <div class="flex items-start justify-between mb-3">
                     <div class="flex items-center gap-2 flex-wrap">
@@ -2223,6 +2239,7 @@
                             </span>
                         ` : ''}
                         ${modelBadge}
+                        ${tokenUsageBadge}
                     </div>
                     <span class="text-xs text-gray-400">${new Date(analysis.timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
