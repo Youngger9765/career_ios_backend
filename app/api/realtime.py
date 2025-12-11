@@ -471,7 +471,7 @@ async def analyze_transcript(
             provider_metadata = ProviderMetadata(
                 provider="codeer",
                 latency_ms=latency_ms,
-                model=f"親子專家 ({request.codeer_model})",
+                model=f"親子專家 (codeer-{request.codeer_model})",
                 codeer_token_usage=codeer_token_metadata,
             )
 
