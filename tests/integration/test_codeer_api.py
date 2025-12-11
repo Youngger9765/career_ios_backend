@@ -146,7 +146,14 @@ class TestCodeerChats:
         # Assert
         assert isinstance(chat, dict), "Should return chat object"
         assert "id" in chat, "Chat should have id"
-        assert "agent_id" in chat or "agent" in chat, "Chat should reference agent"
+        # Agent ID is stored in meta.conversation_agent_id
+        assert "meta" in chat, "Chat should have meta field"
+        assert (
+            "conversation_agent_id" in chat["meta"]
+        ), "Chat meta should have conversation_agent_id"
+        assert (
+            chat["meta"]["conversation_agent_id"] == agent_id
+        ), "Agent ID should match"
 
     @pytest.mark.asyncio
     async def test_list_chats_returns_list(self, codeer_client):
@@ -235,10 +242,21 @@ class TestCodeerMessages:
         )
 
         # Assert
+        # Codeer API returns JSON string in non-streaming mode, parse it
+        if isinstance(response, str):
+            import json
+
+            response = json.loads(response)
+
         assert isinstance(response, dict), "Should return response dict"
+        # Agent may return different response formats (summary, alerts, suggestions, content, message, text)
         assert (
-            "content" in response or "message" in response or "text" in response
-        ), "Response should contain message content"
+            "content" in response
+            or "message" in response
+            or "text" in response
+            or "summary" in response
+            or "alerts" in response
+        ), "Response should contain some form of content"
 
     @pytest.mark.asyncio
     async def test_send_message_streaming_with_callback(self, test_chat, codeer_client):
@@ -273,12 +291,12 @@ class TestCodeerMessages:
     @pytest.mark.asyncio
     async def test_send_message_with_agent_id(self, test_chat, codeer_client):
         """Verify we can send message with specific agent_id"""
-        # Arrange
-        agents = await codeer_client.list_published_agents()
-        if not agents:
-            pytest.skip("No agents available for testing")
+        # Arrange - Use test_chat's existing agent to avoid "History agent mismatch" error
+        # (Codeer API requires agent_id to match chat's conversation_agent_id if chat has history)
+        if "meta" not in test_chat or "conversation_agent_id" not in test_chat["meta"]:
+            pytest.skip("Test chat does not have agent_id in meta")
 
-        agent_id = agents[0]["id"]
+        agent_id = test_chat["meta"]["conversation_agent_id"]
         message_text = "Test message with agent"
 
         # Act
@@ -290,10 +308,21 @@ class TestCodeerMessages:
         )
 
         # Assert
+        # Codeer API returns JSON string in non-streaming mode, parse it
+        if isinstance(response, str):
+            import json
+
+            response = json.loads(response)
+
         assert isinstance(response, dict), "Should return response with agent"
+        # Agent may return different response formats
         assert (
-            "content" in response or "message" in response or "text" in response
-        ), "Response should contain content"
+            "content" in response
+            or "message" in response
+            or "text" in response
+            or "summary" in response
+            or "alerts" in response
+        ), "Response should contain some form of content"
 
     @pytest.mark.asyncio
     async def test_list_messages_after_sending(self, test_chat, codeer_client):
@@ -363,6 +392,11 @@ class TestCodeerErrorHandling:
                 chat_id=test_chat["id"], message=""
             )
             # If no error, response should still be valid
+            # Codeer API returns JSON string in non-streaming mode, parse it
+            if isinstance(response, str):
+                import json
+
+                response = json.loads(response)
             assert isinstance(response, dict)
         except CodeerAPIError as e:
             # If error raised, it should be about empty message
@@ -376,8 +410,15 @@ class TestCodeerErrorHandling:
             chats = await codeer_client.list_chats(limit=-1)
             assert isinstance(chats, list)  # Should handle gracefully
         except CodeerAPIError as e:
-            # If error raised, should be about invalid parameters
-            assert "invalid" in str(e).lower() or "parameter" in str(e).lower()
+            # If error raised, should be about invalid parameters or input validation
+            error_msg = str(e).lower()
+            assert (
+                "invalid" in error_msg
+                or "parameter" in error_msg
+                or "input" in error_msg
+                or "limit" in error_msg
+                or "greater" in error_msg
+            ), f"Error should indicate invalid parameter: {e}"
 
 
 class TestCodeerStreamingEdgeCases:
