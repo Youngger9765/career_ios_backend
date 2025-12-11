@@ -307,16 +307,28 @@ async def _analyze_with_codeer(
                 "token_usage": None,
             }
 
-        # Fetch token usage from the latest message
+        # Fetch token usage from the latest assistant message
         token_usage_data = None
         try:
-            # Call list_chat_messages with limit=1 to get the latest message
-            messages = await client.list_chat_messages(chat_id=chat["id"], limit=1)
+            # Fetch latest messages (limit=10 to ensure we get assistant response)
+            # The order is: [latest system, latest assistant, user, ...]
+            messages = await client.list_chat_messages(chat_id=chat["id"], limit=10)
             if messages and len(messages) > 0:
-                latest_message = messages[0]
-                # Extract token_usage from meta.token_usage
-                if "meta" in latest_message and "token_usage" in latest_message["meta"]:
-                    token_usage = latest_message["meta"]["token_usage"]
+                # Find the latest assistant message (role='assistant')
+                assistant_message = None
+                for msg in messages:
+                    if msg.get("role") == "assistant":
+                        assistant_message = msg
+                        break
+
+                # Extract token_usage from assistant message's meta.token_usage
+                if (
+                    assistant_message
+                    and "meta" in assistant_message
+                    and "token_usage" in assistant_message["meta"]
+                    and assistant_message["meta"]["token_usage"] is not None
+                ):
+                    token_usage = assistant_message["meta"]["token_usage"]
                     token_usage_data = {
                         "total_prompt_tokens": token_usage.get(
                             "total_prompt_tokens", 0
@@ -328,6 +340,10 @@ async def _analyze_with_codeer(
                         "total_calls": token_usage.get("total_calls", 0),
                     }
                     logger.info(f"Codeer token usage: {token_usage_data}")
+                else:
+                    logger.warning(
+                        "No assistant message found or token_usage not available"
+                    )
         except Exception as e:
             logger.warning(f"Failed to fetch Codeer token usage: {e}")
 

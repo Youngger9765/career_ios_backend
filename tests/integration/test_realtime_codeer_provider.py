@@ -66,6 +66,17 @@ class TestRealtimeCodeerProvider:
             assert data["provider_metadata"]["latency_ms"] > 0
             assert "親子專家" in data["provider_metadata"]["model"]
 
+            # Verify token usage is present and valid
+            assert "codeer_token_usage" in data["provider_metadata"]
+            token_usage = data["provider_metadata"]["codeer_token_usage"]
+            assert token_usage is not None, "Token usage should not be None"
+            assert "total_prompt_tokens" in token_usage
+            assert "total_completion_tokens" in token_usage
+            assert "total_tokens" in token_usage
+            assert "total_calls" in token_usage
+            assert token_usage["total_tokens"] > 0, "Should have non-zero token usage"
+            assert token_usage["total_calls"] >= 1, "Should have at least 1 API call"
+
             # Verify data types
             assert isinstance(data["summary"], str)
             assert isinstance(data["alerts"], list)
