@@ -2,7 +2,6 @@
 Integration tests for Codeer API Client
 TDD - RED Phase: These tests will fail until implementation is complete
 """
-import os
 
 import pytest
 
@@ -52,28 +51,19 @@ class TestCodeerClientBasics:
         # Any subsequent calls should fail gracefully
 
     @pytest.mark.asyncio
-    async def test_missing_api_key_raises_error(self):
-        """Verify that missing or invalid API key raises appropriate error"""
-        # Arrange - temporarily clear API key
-        original_key = os.environ.get("CODEER_API_KEY")
-        os.environ["CODEER_API_KEY"] = ""
+    async def test_invalid_api_key_raises_error(self):
+        """Verify that invalid API key raises appropriate error"""
+        # Act & Assert - pass invalid API key to test authentication failure
+        async with CodeerClient(api_key="invalid_key_12345") as client:
+            with pytest.raises(CodeerAPIError) as exc_info:
+                await client.list_published_agents()
 
-        try:
-            # Act & Assert
-            async with CodeerClient() as client:
-                with pytest.raises(CodeerAPIError) as exc_info:
-                    await client.list_published_agents()
-
-                # Verify error contains useful information
-                assert (
-                    "authentication" in str(exc_info.value).lower()
-                    or "api key" in str(exc_info.value).lower()
-                    or "unauthorized" in str(exc_info.value).lower()
-                )
-        finally:
-            # Cleanup - restore original key
-            if original_key:
-                os.environ["CODEER_API_KEY"] = original_key
+        # Verify error contains useful information
+        assert (
+            "authentication" in str(exc_info.value).lower()
+            or "api key" in str(exc_info.value).lower()
+            or "unauthorized" in str(exc_info.value).lower()
+        )
 
 
 class TestCodeerAgents:
