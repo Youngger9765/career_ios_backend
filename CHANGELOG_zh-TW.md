@@ -10,6 +10,14 @@
 ## [未發布]
 
 ### 新增
+- **Codeer AI API Client 整合** (2025-12-11)
+  - ✅ 完整的異步 CodeerClient 服務（使用 httpx）
+  - ✅ SSE (Server-Sent Events) 串流支援，實現即時聊天
+  - ✅ 全面的 API 覆蓋：聊天、串流、RAG、STT、TTS、網頁搜尋
+  - ✅ 27 個整合測試，涵蓋所有端點與情境
+  - ✅ 配置管理：API key、base URL、預設 agent
+  - ✅ 自動錯誤處理與重試機制
+  - ✅ 完整 TDD 實作（RED-GREEN-REFACTOR 流程）
 - **Gemini Explicit Context Caching Production 實作** (2025-12-10)
   - ✅ Cache Manager 服務採用 Strategy A（總是更新累積對話）
   - ✅ 多層清理機制（手動刪除 + TTL + 清理腳本）

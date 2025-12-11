@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Codeer AI API Client Integration** (2025-12-11)
+  - ✅ Complete async CodeerClient service with httpx
+  - ✅ SSE (Server-Sent Events) streaming support for real-time chat
+  - ✅ Comprehensive API coverage: Chat, Stream, RAG, STT, TTS, Web Search
+  - ✅ 27 integration tests covering all endpoints and scenarios
+  - ✅ Configuration management: API key, base URL, default agent
+  - ✅ Automatic error handling and retry mechanisms
+  - ✅ Full TDD implementation (RED-GREEN-REFACTOR workflow)
 - **Gemini Explicit Context Caching Production Implementation** (2025-12-10)
   - ✅ Cache Manager service with Strategy A (always update with accumulated transcript)
   - ✅ Multi-layer cleanup mechanism (manual delete + TTL + cleanup script)

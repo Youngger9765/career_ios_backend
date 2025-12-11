@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     GCS_BUCKET: Optional[str] = None
     GCS_PROJECT: Optional[str] = None
 
+    # Codeer API Configuration
+    CODEER_API_KEY: str = ""
+    CODEER_API_ROOT: str = "https://api.codeer.ai"
+    CODEER_DEFAULT_AGENT: Optional[str] = None
+
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
 

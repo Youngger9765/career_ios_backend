@@ -22,7 +22,22 @@
 
 ---
 
-## 當前可用功能 (2025-11-29)
+## 當前可用功能 (2025-12-11)
+
+### ✅ Codeer AI API 整合
+- **CodeerClient Service** - 完整的 Codeer AI API 客戶端
+  - 異步 HTTP 請求（httpx）
+  - SSE (Server-Sent Events) 串流支援
+  - 自動錯誤處理與重試機制
+- **支援的功能**:
+  - 📝 聊天對話（Chat）- 標準 JSON 回應
+  - 🌊 串流聊天（Stream Chat）- SSE 即時串流
+  - 📚 知識庫查詢（RAG Search）
+  - 🎙️ 語音轉文字（STT）
+  - 🔊 文字轉語音（TTS）
+  - 🌐 網頁搜尋（Web Search）
+- **測試覆蓋**: 27 個整合測試，100% 通過
+- **配置**: 支援自定義 API key、base URL、default agent
 
 ### ✅ 認證系統
 - `POST /api/auth/login` - JWT 登入（24h 有效期）
@@ -589,6 +604,6 @@ Input tokens = Σ(996 + 150×N) for N=1 to 60
 
 ---
 
-**版本**: v2.6
-**最後更新**: 2025-12-10
-**本次更新**: Gemini Explicit Context Caching 實作上線（Strategy A）、Cache 策略對比實驗、Critical Bug Fix
+**版本**: v2.7
+**最後更新**: 2025-12-11
+**本次更新**: Codeer AI API Client 整合（SSE 串流、27 整合測試、TDD 實作）
