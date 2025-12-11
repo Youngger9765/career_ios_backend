@@ -473,6 +473,89 @@ def calculate_codeer_cost(api_calls: int, estimated_tokens: int = 0) -> dict:
 
 
 # ============================================================================
+# RAG Search Helper
+# ============================================================================
+
+# Parenting keywords for RAG search
+PARENTING_KEYWORDS = [
+    "孩子",
+    "小孩",
+    "親子",
+    "教養",
+    "育兒",
+    "手足",
+    "兄弟",
+    "姊妹",
+    "家長",
+    "父母",
+]
+
+
+async def _search_rag_for_experiment(transcript: str) -> str:
+    """Search RAG knowledge base for parenting content
+
+    Args:
+        transcript: Transcript text to search
+
+    Returns:
+        Formatted RAG context string (empty if no results)
+    """
+    from app.core.database import SessionLocal
+    from app.services.openai_service import OpenAIService
+    from app.services.rag_chat_service import RAGChatService
+
+    # Detect parenting keywords
+    transcript_lower = transcript.lower()
+    has_parenting = any(kw in transcript_lower for kw in PARENTING_KEYWORDS)
+
+    if not has_parenting:
+        logger.info("No parenting keywords detected, skipping RAG")
+        return ""
+
+    logger.info("Parenting keywords detected, triggering RAG search")
+
+    # Search RAG (Supabase database)
+    db = SessionLocal()
+    try:
+        # Initialize services
+        rag_service = RAGChatService(db=db)
+        openai_service = OpenAIService()
+
+        # Generate embedding for transcript
+        query_embedding = await openai_service.create_embedding(transcript)
+
+        # Search similar chunks with parenting category filter
+        rows = await rag_service.search_similar_chunks(
+            query_embedding=query_embedding,
+            top_k=3,
+            similarity_threshold=0.7,
+            category="parenting",  # Filter for parenting documents only
+        )
+
+        if not rows:
+            logger.info("No RAG results found")
+            return ""
+
+        logger.info(f"Found {len(rows)} RAG results")
+
+        # Format RAG context
+        rag_parts = ["\n\n📚 相關親子教養知識庫內容（供參考）：\n"]
+        for idx, row in enumerate(rows, 1):
+            rag_parts.append(f"[{idx}] {row.document_title}: {row.text[:200]}...")
+
+        rag_context = "\n".join(rag_parts)
+        logger.info(f"RAG context length: {len(rag_context)} chars")
+
+        return rag_context
+
+    except Exception as e:
+        logger.error(f"RAG search failed: {e}", exc_info=True)
+        return ""
+    finally:
+        db.close()
+
+
+# ============================================================================
 # Test Functions
 # ============================================================================
 
@@ -509,13 +592,19 @@ async def test_gemini_with_cache(
             ttl_seconds=7200,
         )
 
+        # Search RAG knowledge base
+        rag_context = await _search_rag_for_experiment(transcript)
+        logger.info(
+            f"Gemini RAG enabled: {bool(rag_context)}, length: {len(rag_context)}"
+        )
+
         if cached_content is None:
             # Content too short, use standard analysis
             logger.info("Content too short for caching, using standard analysis")
             analysis = await gemini_service.analyze_realtime_transcript(
                 transcript=transcript,
                 speakers=speakers,
-                rag_context="",
+                rag_context=rag_context,
             )
 
             usage_metadata = {}
@@ -526,7 +615,7 @@ async def test_gemini_with_cache(
                 cached_content=cached_content,
                 transcript=transcript,
                 speakers=speakers,
-                rag_context="",
+                rag_context=rag_context,
             )
 
             usage_metadata = analysis.get("usage_metadata", {})
@@ -609,6 +698,7 @@ async def test_codeer_model(
 【Speaker 片段】
 {json.dumps(speakers, ensure_ascii=False, indent=2)}
 
+請使用 retrieve_context_source Tool 搜尋親子教養相關知識庫內容來輔助回答。
 請分析以上對話，提供 JSON 格式回應。
 """
 
