@@ -2378,7 +2378,9 @@
             }, 10);
 
             // REQUIREMENT 6: Mobile carousel implementation
-            if (mobileCarouselTrack && window.innerWidth < 768) {
+            // Always create mobile card (regardless of current screen size)
+            // This ensures cards persist when switching between desktop/mobile views
+            if (mobileCarouselTrack) {
                 // Hide instruction card when first analysis appears
                 if (instructionCard && mobileAnalysisCards.length === 0) {
                     instructionCard.style.display = 'none';
