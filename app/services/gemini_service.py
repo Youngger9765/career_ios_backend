@@ -192,9 +192,6 @@ class GeminiService:
         Returns:
             Dict with: summary, alerts, suggestions
         """
-        # Build speaker context
-        speaker_context = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
-
         # Detect suicide risk keywords for alerts
         suicide_keywords = ["自殺", "想死", "活著沒意義", "不想活", "結束生命"]
         has_suicide_risk = any(keyword in transcript for keyword in suicide_keywords)
@@ -251,7 +248,7 @@ class GeminiService:
 【輸出格式與範例】
 
 對話內容：
-{speaker_context}
+{transcript}
 {rag_context}
 
 【簡潔性要求】CRITICAL - 必須遵守：
@@ -409,16 +406,13 @@ class GeminiService:
         Returns:
             Dict with: summary, alerts, suggestions, and usage_metadata
         """
-        # Build speaker context
-        speaker_context = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
-
         # Detect suicide risk keywords for alerts
         suicide_keywords = ["自殺", "想死", "活著沒意義", "不想活", "結束生命"]
         has_suicide_risk = any(keyword in transcript for keyword in suicide_keywords)
 
         # Build user prompt (only the new content, not the accumulated transcript)
         user_prompt = f"""對話內容：
-{speaker_context}
+{transcript}
 {rag_context}
 
 {

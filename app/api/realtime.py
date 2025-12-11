@@ -264,11 +264,8 @@ async def _analyze_with_codeer(
 
 {rag_context if rag_context else ""}
 
-【最新對話逐字稿】
+【對話內容】
 {transcript}
-
-【Speaker 片段】
-{json.dumps(speakers, ensure_ascii=False, indent=2)}
 
 請分析以上對話，提供 JSON 格式回應。
 """
