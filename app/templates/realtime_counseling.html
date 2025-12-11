@@ -2213,17 +2213,27 @@
             // Build token usage badge
             let tokenUsageBadge = '';
             if (analysis.cache_metadata) {
+                // Gemini with cache - show actual token count
                 const cache = analysis.cache_metadata;
                 const totalTokens = cache.cached_tokens + cache.prompt_tokens;
                 tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium" title="Cache: ${cache.cached_tokens.toLocaleString()} | New: ${cache.prompt_tokens.toLocaleString()}">
                     <span>🎯</span>
                     <span>${totalTokens.toLocaleString()} tokens</span>
                    </span>`;
-            } else if (analysis.provider_metadata && analysis.provider_metadata.provider === 'codeer') {
-                tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium" title="Codeer API 無回傳 token usage">
-                    <span>📊</span>
-                    <span>~1400 tokens</span>
-                   </span>`;
+            } else if (analysis.provider_metadata) {
+                // Check provider type
+                if (analysis.provider_metadata.provider === 'codeer') {
+                    tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium" title="Codeer API 無回傳 token usage">
+                        <span>📊</span>
+                        <span>~1400 tokens</span>
+                       </span>`;
+                } else if (analysis.provider_metadata.provider === 'gemini') {
+                    // Gemini without cache (content too short)
+                    tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-600 rounded-full text-xs font-medium" title="對話較短，未啟用 cache">
+                        <span>💬</span>
+                        <span>無 cache</span>
+                       </span>`;
+                }
             }
 
             card.innerHTML = `
