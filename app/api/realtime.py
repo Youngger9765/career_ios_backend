@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.realtime import (
     CacheMetadata,
+    CodeerTokenMetadata,
     ProviderMetadata,
     RAGSource,
     RealtimeAnalyzeRequest,
@@ -303,7 +304,32 @@ async def _analyze_with_codeer(
                 "summary": "Codeer 分析失敗",
                 "alerts": [f"⚠️ API 錯誤: {str(api_error)}"],
                 "suggestions": ["💡 請檢查 Codeer API 連線或稍後再試"],
+                "token_usage": None,
             }
+
+        # Fetch token usage from the latest message
+        token_usage_data = None
+        try:
+            # Call list_chat_messages with limit=1 to get the latest message
+            messages = await client.list_chat_messages(chat_id=chat["id"], limit=1)
+            if messages and len(messages) > 0:
+                latest_message = messages[0]
+                # Extract token_usage from meta.token_usage
+                if "meta" in latest_message and "token_usage" in latest_message["meta"]:
+                    token_usage = latest_message["meta"]["token_usage"]
+                    token_usage_data = {
+                        "total_prompt_tokens": token_usage.get(
+                            "total_prompt_tokens", 0
+                        ),
+                        "total_completion_tokens": token_usage.get(
+                            "total_completion_tokens", 0
+                        ),
+                        "total_tokens": token_usage.get("total_tokens", 0),
+                        "total_calls": token_usage.get("total_calls", 0),
+                    }
+                    logger.info(f"Codeer token usage: {token_usage_data}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch Codeer token usage: {e}")
 
         # Parse Codeer response
         # Codeer returns dict with 'content', 'text', or 'message' field
@@ -342,6 +368,9 @@ async def _analyze_with_codeer(
             if "suggestions" not in analysis:
                 analysis["suggestions"] = []
 
+            # Add token usage to analysis result
+            analysis["token_usage"] = token_usage_data
+
             return analysis
 
         except json.JSONDecodeError as e:
@@ -353,6 +382,7 @@ async def _analyze_with_codeer(
                 "summary": "Codeer 回應解析失敗",
                 "alerts": [f"⚠️ 無法解析回應: {str(e)}"],
                 "suggestions": ["💡 請檢查 Codeer agent 設定"],
+                "token_usage": token_usage_data,
             }
 
     finally:
@@ -424,10 +454,25 @@ async def analyze_transcript(
 
             # Calculate latency
             latency_ms = int((time.time() - start_time) * 1000)
+
+            # Extract token usage from analysis result
+            codeer_token_metadata = None
+            if analysis.get("token_usage"):
+                token_data = analysis["token_usage"]
+                codeer_token_metadata = CodeerTokenMetadata(
+                    total_prompt_tokens=token_data.get("total_prompt_tokens", 0),
+                    total_completion_tokens=token_data.get(
+                        "total_completion_tokens", 0
+                    ),
+                    total_tokens=token_data.get("total_tokens", 0),
+                    total_calls=token_data.get("total_calls", 0),
+                )
+
             provider_metadata = ProviderMetadata(
                 provider="codeer",
                 latency_ms=latency_ms,
                 model=f"親子專家 ({request.codeer_model})",
+                codeer_token_usage=codeer_token_metadata,
             )
 
         # Default to Gemini

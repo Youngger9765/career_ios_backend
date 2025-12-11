@@ -2221,22 +2221,33 @@
                 // Gemini with cache - show actual token count
                 const cache = analysis.cache_metadata;
                 const totalTokens = cache.cached_tokens + cache.prompt_tokens;
-                tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium" title="Cache: ${cache.cached_tokens.toLocaleString()} | New: ${cache.prompt_tokens.toLocaleString()}">
+                const cachePercentage = totalTokens > 0 ? Math.round((cache.cached_tokens / totalTokens) * 100) : 0;
+                tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium" title="Cache: ${cache.cached_tokens.toLocaleString()} | New: ${cache.prompt_tokens.toLocaleString()} | Cache Hit: ${cachePercentage}%">
                     <span>🎯</span>
-                    <span>${totalTokens.toLocaleString()} tokens</span>
+                    <span>${cache.cached_tokens.toLocaleString()} by cache</span>
                    </span>`;
             } else if (analysis.provider_metadata) {
                 // Check provider type
                 if (analysis.provider_metadata.provider === 'codeer') {
-                    tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium" title="Codeer API 不提供 token usage 資料">
-                        <span>📊</span>
-                        <span>無資料</span>
-                       </span>`;
+                    // Codeer with real token usage
+                    if (analysis.provider_metadata.codeer_token_usage) {
+                        const tokens = analysis.provider_metadata.codeer_token_usage;
+                        tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium" title="Prompt: ${tokens.total_prompt_tokens.toLocaleString()} | Completion: ${tokens.total_completion_tokens.toLocaleString()} | Calls: ${tokens.total_calls}">
+                            <span>📊</span>
+                            <span>${tokens.total_tokens.toLocaleString()} tokens</span>
+                           </span>`;
+                    } else {
+                        // Fallback if token usage is not available
+                        tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium" title="Token usage unavailable">
+                            <span>📊</span>
+                            <span>無資料</span>
+                           </span>`;
+                    }
                 } else if (analysis.provider_metadata.provider === 'gemini') {
                     // Gemini without cache (content too short)
                     tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-600 rounded-full text-xs font-medium" title="對話較短，未啟用 cache">
                         <span>💬</span>
-                        <span>無 cache</span>
+                        <span>0 by cache</span>
                        </span>`;
                 }
             }

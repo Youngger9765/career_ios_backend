@@ -115,12 +115,26 @@ class CacheMetadata(BaseModel):
     message: str = Field(default="", description="狀態訊息（如有）")
 
 
+class CodeerTokenMetadata(BaseModel):
+    """Codeer token usage metadata"""
+
+    total_prompt_tokens: int = Field(default=0, description="Total prompt tokens used")
+    total_completion_tokens: int = Field(
+        default=0, description="Total completion tokens used"
+    )
+    total_tokens: int = Field(default=0, description="Total tokens used")
+    total_calls: int = Field(default=0, description="Total API calls")
+
+
 class ProviderMetadata(BaseModel):
     """Provider performance metadata"""
 
     provider: str = Field(..., description="LLM provider used")
     latency_ms: int = Field(..., description="Response latency in milliseconds")
     model: str = Field(default="", description="Model name")
+    codeer_token_usage: CodeerTokenMetadata | None = Field(
+        default=None, description="Codeer token usage (if provider='codeer')"
+    )
 
 
 class RealtimeAnalyzeResponse(BaseModel):
