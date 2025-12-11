@@ -6,6 +6,36 @@ Provides async HTTP client for interacting with Codeer AI API endpoints:
 - Chat creation and management
 - Message sending (streaming and non-streaming)
 - SSE (Server-Sent Events) streaming with callbacks
+
+MODEL SELECTION CAPABILITIES:
+---------------------------------
+IMPORTANT: Codeer uses AGENT-BASED selection, NOT direct model selection.
+
+- ✅ Agent selection via `agent_id` parameter (e.g., 親子專家)
+- ✅ Multiple agents can be listed via `list_published_agents()`
+- ✅ LLM model information visible in agent metadata (NEW: 2025-12-11)
+- ✅ Agent `llm_model` field shows underlying model (e.g., "openai/gpt-5-mini;gpt-5 mini")
+- ⚠️ Model selection is INDIRECT (create separate agents for different models)
+- ❌ NO direct model selection parameter (cannot choose GPT-4, Gemini, Grok)
+- ❌ NO runtime model switching within same agent
+
+Each agent has a pre-configured underlying model. Model information is now
+VISIBLE via the `llm_model` field in agent metadata, but you still cannot
+directly select models at runtime. To use different models, create separate
+agents in the Codeer platform (e.g., "親子專家 - GPT-4", "親子專家 - Gemini").
+
+Example:
+    # Correct: Select agent and see its model
+    client = CodeerClient()
+    agents = await client.list_published_agents()
+    print(f"Agent: {agents[0]['name']}")
+    print(f"Model: {agents[0]['llm_model']}")  # NEW: Shows "openai/gpt-5-mini;gpt-5 mini"
+    chat = await client.create_chat(name="Session", agent_id=agents[0]["id"])
+
+    # NOT POSSIBLE: Select model directly at runtime
+    # chat = await client.create_chat(name="Session", model="gpt-4")  # ❌ No such parameter
+
+For detailed comparison with Gemini, see: docs/LLM_PROVIDER_COMPARISON.md
 """
 
 import json
@@ -24,10 +54,16 @@ try:
     CODEER_API_KEY = settings.CODEER_API_KEY
     CODEER_API_ROOT = settings.CODEER_API_ROOT
     CODEER_DEFAULT_AGENT = settings.CODEER_DEFAULT_AGENT
+    CODEER_AGENT_CLAUDE_SONNET = settings.CODEER_AGENT_CLAUDE_SONNET
+    CODEER_AGENT_GEMINI_FLASH = settings.CODEER_AGENT_GEMINI_FLASH
+    CODEER_AGENT_GPT5_MINI = settings.CODEER_AGENT_GPT5_MINI
 except ImportError:
     CODEER_API_KEY = os.getenv("CODEER_API_KEY", "")
     CODEER_API_ROOT = os.getenv("CODEER_API_ROOT", "https://api.codeer.ai")
     CODEER_DEFAULT_AGENT = os.getenv("CODEER_DEFAULT_AGENT")
+    CODEER_AGENT_CLAUDE_SONNET = os.getenv("CODEER_AGENT_CLAUDE_SONNET", "")
+    CODEER_AGENT_GEMINI_FLASH = os.getenv("CODEER_AGENT_GEMINI_FLASH", "")
+    CODEER_AGENT_GPT5_MINI = os.getenv("CODEER_AGENT_GPT5_MINI", "")
 
 
 class CodeerAPIError(Exception):
@@ -49,6 +85,71 @@ class CodeerAPIError(Exception):
         if self.status_code:
             return f"[{self.status_code}] {self.message}"
         return self.message
+
+
+def get_codeer_agent_id(model: str = "gpt5-mini") -> str:
+    """
+    Get Codeer agent ID based on model name
+
+    Args:
+        model: Model identifier. Supported values:
+            - "claude-sonnet" or "claude": Claude Sonnet 4.5
+            - "gemini-flash" or "gemini": Gemini 2.5 Flash
+            - "gpt5-mini" or "gpt5" or "gpt": GPT-5 Mini (default)
+
+    Returns:
+        Agent ID string
+
+    Raises:
+        CodeerAPIError: If model is not supported or agent ID is not configured
+
+    Example:
+        agent_id = get_codeer_agent_id("claude-sonnet")
+        chat = await client.create_chat(name="Session", agent_id=agent_id)
+    """
+    # Normalize model name
+    model_lower = model.lower().strip()
+
+    # Map model names to agent IDs
+    if model_lower in ["claude-sonnet", "claude"]:
+        agent_id = CODEER_AGENT_CLAUDE_SONNET
+        if not agent_id:
+            raise CodeerAPIError(
+                "Claude Sonnet agent not configured. "
+                "Please set CODEER_AGENT_CLAUDE_SONNET in .env"
+            )
+        return agent_id
+
+    elif model_lower in ["gemini-flash", "gemini"]:
+        agent_id = CODEER_AGENT_GEMINI_FLASH
+        if not agent_id:
+            raise CodeerAPIError(
+                "Gemini Flash agent not configured. "
+                "Please set CODEER_AGENT_GEMINI_FLASH in .env"
+            )
+        return agent_id
+
+    elif model_lower in ["gpt5-mini", "gpt5", "gpt"]:
+        agent_id = CODEER_AGENT_GPT5_MINI or CODEER_DEFAULT_AGENT
+        if not agent_id:
+            raise CodeerAPIError(
+                "GPT-5 Mini agent not configured. "
+                "Please set CODEER_AGENT_GPT5_MINI in .env"
+            )
+        return agent_id
+
+    else:
+        # Fallback to default agent if available
+        if CODEER_DEFAULT_AGENT:
+            logger.warning(
+                f"Unknown model '{model}', using default agent: {CODEER_DEFAULT_AGENT}"
+            )
+            return CODEER_DEFAULT_AGENT
+
+        raise CodeerAPIError(
+            f"Unsupported model: {model}. "
+            f"Supported models: claude-sonnet, gemini-flash, gpt5-mini"
+        )
 
 
 class CodeerClient:
@@ -131,10 +232,23 @@ class CodeerClient:
 
     async def list_published_agents(self) -> List[Dict]:
         """
-        List all published agents
+        List all published agents (model selection alternative)
 
         Returns:
-            List of agent dictionaries with id, name, and other properties
+            List of agent dictionaries with id, name, llm_model, and other properties
+
+        Note:
+            This is the ONLY way to discover available "models" in Codeer.
+            Agents are pre-configured with specific LLM models. As of 2025-12-11,
+            the `llm_model` field is now available in agent metadata, showing
+            which underlying model (GPT, Gemini, etc.) each agent uses.
+
+        Example:
+            agents = await client.list_published_agents()
+            for agent in agents:
+                print(f"Agent: {agent['name']} (ID: {agent['id']})")
+                print(f"Model: {agent['llm_model']}")  # NEW: Shows model info
+                # Example: "openai/gpt-5-mini;gpt-5 mini"
 
         Raises:
             CodeerAPIError: If API request fails
@@ -156,12 +270,23 @@ class CodeerClient:
         Args:
             name: Chat name
             agent_id: Agent ID (required by API, uses default from settings if not provided)
+                     NOTE: This is AGENT selection, NOT model selection.
+                     Each agent has a pre-configured underlying LLM model.
+                     You cannot directly choose GPT-4, Gemini, Grok, etc.
 
         Returns:
             Chat object with id, name, and other properties
 
         Raises:
             CodeerAPIError: If API request fails or no agent_id available
+
+        Example:
+            # Use default parenting expert agent
+            chat = await client.create_chat(name="Session-123")
+
+            # Use different agent (if available)
+            agents = await client.list_published_agents()
+            chat = await client.create_chat(name="Session-123", agent_id=agents[0]["id"])
         """
         # agent_id is required by the API
         effective_agent_id = agent_id or self.default_agent

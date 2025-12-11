@@ -9,7 +9,33 @@
 
 ## [未發布]
 
+### 修復
+- **Codeer Agent 不匹配錯誤** (2025-12-11)
+  - 修復：Claude Sonnet 4.5 與 Gemini 2.5 Flash 模型現已完全運作
+  - 根本原因：realtime.py 中 agent_id 參數傳遞錯誤
+  - 解決方案：更新為從 codeer_model 參數使用正確的 agent ID
+  - 影響：所有三個 Codeer 模型（Claude、Gemini、GPT-5）現已在生產環境正常運作
+
+### 變更
+- **Codeer 模型推薦更新** (2025-12-11)
+  - **預設模型變更**：GPT-5 Mini → Gemini 2.5 Flash（最佳速度/品質平衡）
+  - **模型重新排序**：依效能排序（Gemini > Claude > GPT-5 Mini）
+  - **前端 UI 更新**：新增效能提示（~10.3s、~10.6s、~22.6s）與狀態標籤
+  - **文件更新**：移除「實驗性」狀態，新增已驗證的效能基準
+  - **效能數據**（實測結果）：
+    - Claude Sonnet 4.5：10.3s 延遲（最高品質）
+    - Gemini 2.5 Flash：10.6s 延遲（⭐ 推薦：最佳平衡）
+    - GPT-5 Mini：22.6s 延遲（穩定、專業知識）
+
 ### 新增
+- **Codeer 多模型支援 - 即時諮詢系統** (2025-12-11)
+  - ✅ 3 種 Codeer 模型可選：GPT-5 Mini（預設）、Claude Sonnet 4.5、Gemini 2.5 Flash
+  - ✅ Session pooling 優化（延遲降低 50%）
+  - ✅ 前端模型選擇器 UI（響應式設計，支援行動與桌面）
+  - ✅ 分析結果顯示使用的模型資訊
+  - ✅ API 參數 `codeer_model` 支援模型選擇
+  - ✅ 模型比較基準測試腳本（`scripts/test_all_codeer_models.py`）
+  - ✅ 文件更新包含資安最佳實踐
 - **Codeer AI API Client 整合** (2025-12-11)
   - ✅ 完整的異步 CodeerClient 服務（使用 httpx）
   - ✅ SSE (Server-Sent Events) 串流支援，實現即時聊天
@@ -42,12 +68,17 @@
   - 影響：AI 分析現在正確包含所有對話歷史
 
 ### 變更
+- **即時 API 增強** - 更新聊天創建使用 UUID 確保唯一性
+  - 新增微秒精度 + UUID 防止重複聊天名稱
+  - 改善 Codeer API 互動的錯誤處理
 - GCP Billing Monitor（AI 分析與 Email 報告，3 個新 API）
 - BigQuery 整合實現即時成本追蹤
 - Gemini AI 自動化帳單報告生成
 - Gemini 回應診斷詳細日誌
 - **即時 STT 諮詢系統**（Phase 2 前端完成）：AI 驅動的即時諮詢分析
   - TDD 方法論，11 個整合測試（後端 API 完成）
+
+### 註記
   - ElevenLabs Scribe v2 Realtime API 整合（支援中文）
   - 手動說話者切換（諮詢師/案主）適用 Demo 場景
   - 點擊即時分析，提供逐分鐘漸進式模擬

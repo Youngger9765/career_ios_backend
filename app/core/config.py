@@ -71,7 +71,13 @@ class Settings(BaseSettings):
     # Codeer API Configuration
     CODEER_API_KEY: str = ""
     CODEER_API_ROOT: str = "https://api.codeer.ai"
-    CODEER_DEFAULT_AGENT: Optional[str] = None
+    CODEER_DEFAULT_AGENT: Optional[str] = None  # Backward compatibility
+
+    # Codeer Agents - Multiple Models
+    # Each agent is pre-configured with a specific LLM model
+    CODEER_AGENT_CLAUDE_SONNET: str = ""  # Claude Sonnet 4.5 agent
+    CODEER_AGENT_GEMINI_FLASH: str = ""  # Gemini 2.5 Flash agent
+    CODEER_AGENT_GPT5_MINI: str = ""  # GPT-5 Mini agent (default)
 
     # CORS
     CORS_ORIGINS: List[str] = ["*"]

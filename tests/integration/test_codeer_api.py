@@ -103,6 +103,22 @@ class TestCodeerAgents:
             assert isinstance(agent["id"], str), "Agent id should be string"
             assert isinstance(agent["name"], str), "Agent name should be string"
 
+    @pytest.mark.asyncio
+    async def test_list_published_agents_shows_llm_model(self, codeer_client):
+        """Verify agent objects include llm_model field (NEW: 2025-12-11)"""
+        # Act
+        agents = await codeer_client.list_published_agents()
+
+        # Assert
+        if agents:  # If there are agents available
+            agent = agents[0]
+            assert "llm_model" in agent, "Agent should have llm_model field"
+            assert isinstance(
+                agent["llm_model"], str
+            ), "Agent llm_model should be string"
+            assert len(agent["llm_model"]) > 0, "Agent llm_model should not be empty"
+            # Example format: "openai/gpt-5-mini;gpt-5 mini" or similar
+
 
 class TestCodeerChats:
     """Test chat management endpoints"""
@@ -418,6 +434,158 @@ class TestCodeerStreamingEdgeCases:
         except CodeerAPIError:
             # Or raise CodeerAPIError wrapping the callback error
             pass  # Either behavior is acceptable
+
+
+class TestCodeerModelSelection:
+    """Test multi-model support via get_codeer_agent_id()"""
+
+    @pytest.mark.asyncio
+    async def test_get_agent_id_claude_sonnet(self):
+        """Verify claude-sonnet model returns correct agent ID"""
+        from app.core.config import settings
+        from app.services.codeer_client import get_codeer_agent_id
+
+        # Act
+        agent_id = get_codeer_agent_id("claude-sonnet")
+
+        # Assert
+        assert agent_id == settings.CODEER_AGENT_CLAUDE_SONNET
+        assert len(agent_id) > 0, "Agent ID should not be empty"
+
+    @pytest.mark.asyncio
+    async def test_get_agent_id_claude_alias(self):
+        """Verify 'claude' alias works for claude-sonnet"""
+        from app.core.config import settings
+        from app.services.codeer_client import get_codeer_agent_id
+
+        # Act
+        agent_id = get_codeer_agent_id("claude")
+
+        # Assert
+        assert agent_id == settings.CODEER_AGENT_CLAUDE_SONNET
+
+    @pytest.mark.asyncio
+    async def test_get_agent_id_gemini_flash(self):
+        """Verify gemini-flash model returns correct agent ID"""
+        from app.core.config import settings
+        from app.services.codeer_client import get_codeer_agent_id
+
+        # Act
+        agent_id = get_codeer_agent_id("gemini-flash")
+
+        # Assert
+        assert agent_id == settings.CODEER_AGENT_GEMINI_FLASH
+        assert len(agent_id) > 0, "Agent ID should not be empty"
+
+    @pytest.mark.asyncio
+    async def test_get_agent_id_gemini_alias(self):
+        """Verify 'gemini' alias works for gemini-flash"""
+        from app.core.config import settings
+        from app.services.codeer_client import get_codeer_agent_id
+
+        # Act
+        agent_id = get_codeer_agent_id("gemini")
+
+        # Assert
+        assert agent_id == settings.CODEER_AGENT_GEMINI_FLASH
+
+    @pytest.mark.asyncio
+    async def test_get_agent_id_gpt5_mini(self):
+        """Verify gpt5-mini model returns correct agent ID"""
+        from app.core.config import settings
+        from app.services.codeer_client import get_codeer_agent_id
+
+        # Act
+        agent_id = get_codeer_agent_id("gpt5-mini")
+
+        # Assert
+        assert agent_id == settings.CODEER_AGENT_GPT5_MINI
+        assert len(agent_id) > 0, "Agent ID should not be empty"
+
+    @pytest.mark.asyncio
+    async def test_get_agent_id_gpt5_alias(self):
+        """Verify 'gpt5' alias works for gpt5-mini"""
+        from app.core.config import settings
+        from app.services.codeer_client import get_codeer_agent_id
+
+        # Act
+        agent_id = get_codeer_agent_id("gpt5")
+
+        # Assert
+        assert agent_id == settings.CODEER_AGENT_GPT5_MINI
+
+    @pytest.mark.asyncio
+    async def test_get_agent_id_gpt_alias(self):
+        """Verify 'gpt' alias works for gpt5-mini"""
+        from app.core.config import settings
+        from app.services.codeer_client import get_codeer_agent_id
+
+        # Act
+        agent_id = get_codeer_agent_id("gpt")
+
+        # Assert
+        assert agent_id == settings.CODEER_AGENT_GPT5_MINI
+
+    @pytest.mark.asyncio
+    async def test_get_agent_id_case_insensitive(self):
+        """Verify model names are case-insensitive"""
+        from app.core.config import settings
+        from app.services.codeer_client import get_codeer_agent_id
+
+        # Act
+        agent_id_upper = get_codeer_agent_id("CLAUDE-SONNET")
+        agent_id_mixed = get_codeer_agent_id("Gemini-Flash")
+        agent_id_lower = get_codeer_agent_id("gpt5-mini")
+
+        # Assert
+        assert agent_id_upper == settings.CODEER_AGENT_CLAUDE_SONNET
+        assert agent_id_mixed == settings.CODEER_AGENT_GEMINI_FLASH
+        assert agent_id_lower == settings.CODEER_AGENT_GPT5_MINI
+
+    @pytest.mark.asyncio
+    async def test_get_agent_id_unsupported_model_with_default(self):
+        """Verify unsupported model falls back to default agent if available"""
+        from app.core.config import settings
+        from app.services.codeer_client import get_codeer_agent_id
+
+        # If default agent is configured, should fall back
+        if settings.CODEER_DEFAULT_AGENT:
+            # Act - should not raise error, use default
+            agent_id = get_codeer_agent_id("unsupported-model")
+
+            # Assert - should return default agent
+            assert agent_id == settings.CODEER_DEFAULT_AGENT
+        else:
+            # If no default agent, should raise error
+            from app.services.codeer_client import CodeerAPIError
+
+            with pytest.raises(CodeerAPIError) as exc_info:
+                get_codeer_agent_id("unsupported-model")
+
+            error_msg = str(exc_info.value).lower()
+            assert "unsupported" in error_msg or "not supported" in error_msg
+
+    @pytest.mark.asyncio
+    async def test_all_agent_ids_configured(self):
+        """Verify all three agent IDs are configured in .env"""
+        from app.core.config import settings
+
+        # Assert
+        assert (
+            settings.CODEER_AGENT_CLAUDE_SONNET
+        ), "CODEER_AGENT_CLAUDE_SONNET must be set"
+        assert (
+            settings.CODEER_AGENT_GEMINI_FLASH
+        ), "CODEER_AGENT_GEMINI_FLASH must be set"
+        assert settings.CODEER_AGENT_GPT5_MINI, "CODEER_AGENT_GPT5_MINI must be set"
+
+        # Verify they are different (each model has unique agent)
+        agents = {
+            settings.CODEER_AGENT_CLAUDE_SONNET,
+            settings.CODEER_AGENT_GEMINI_FLASH,
+            settings.CODEER_AGENT_GPT5_MINI,
+        }
+        assert len(agents) == 3, "All three agent IDs should be unique"
 
 
 # Integration test summary documentation

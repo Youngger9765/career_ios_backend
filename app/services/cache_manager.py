@@ -85,14 +85,25 @@ class CacheManager:
 
         try:
             # Step 1: Find and delete existing cache (if any)
-            existing_caches = caching.CachedContent.list()
-            for cache in existing_caches:
-                if cache.display_name == cache_display_name:
-                    logger.info(
-                        f"Found existing cache, deleting to update with new content: {cache.name}"
-                    )
-                    cache.delete()
-                    break
+            # Gracefully handle permission errors (e.g., missing cachedContents.list permission)
+            try:
+                existing_caches = caching.CachedContent.list()
+                for cache in existing_caches:
+                    if cache.display_name == cache_display_name:
+                        logger.info(
+                            f"Found existing cache, deleting to update with new content: {cache.name}"
+                        )
+                        cache.delete()
+                        break
+            except Exception as list_error:
+                # If list() fails (e.g., permission denied), skip deletion and proceed to create
+                # This is acceptable because:
+                # 1. For new sessions, there won't be existing caches anyway
+                # 2. Gemini will auto-expire old caches based on TTL
+                logger.warning(
+                    f"Cannot list existing caches (permission denied or API error): {list_error}. "
+                    f"Proceeding to create new cache without checking for existing ones."
+                )
 
             # Step 2: Check if content is long enough for caching
             combined_content = system_instruction + "\n\n" + accumulated_transcript
@@ -139,6 +150,9 @@ class CacheManager:
 
         Returns:
             Number of caches deleted
+
+        Raises:
+            Exception: If cache cleanup fails due to permission errors
         """
         self._ensure_initialized()
 
@@ -157,7 +171,8 @@ class CacheManager:
             return deleted_count
 
         except Exception as e:
-            logger.error(f"Failed to cleanup caches: {e}")
+            # Note: This requires cachedContents.list permission
+            logger.error(f"Failed to cleanup caches (permission denied?): {e}")
             raise
 
     async def delete_cache_by_session(self, session_id: str) -> bool:
@@ -169,6 +184,9 @@ class CacheManager:
 
         Returns:
             True if cache was deleted, False if not found
+
+        Raises:
+            Exception: If cache deletion fails due to permission errors
         """
         self._ensure_initialized()
 
@@ -188,7 +206,10 @@ class CacheManager:
             return False
 
         except Exception as e:
-            logger.error(f"Failed to delete cache for session {session_id}: {e}")
+            # Note: This requires cachedContents.list permission
+            logger.error(
+                f"Failed to delete cache for session {session_id} (permission denied?): {e}"
+            )
             raise
 
 

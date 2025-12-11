@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.realtime import (
     CacheMetadata,
+    ProviderMetadata,
     RAGSource,
     RealtimeAnalyzeRequest,
     RealtimeAnalyzeResponse,
@@ -210,6 +211,146 @@ async def _search_rag_knowledge(
         return []
 
 
+async def _analyze_with_codeer(
+    transcript: str,
+    speakers: List[dict],
+    rag_context: str,
+    db: Session,
+    session_id: str = "",
+    model: str = "gpt5-mini",
+) -> dict:
+    """Analyze transcript using Codeer 親子專家 agent.
+
+    Args:
+        transcript: Full transcript text
+        speakers: List of speaker segments
+        rag_context: RAG knowledge context
+        db: Database session
+        session_id: Session ID for session pooling (optional)
+        model: Codeer model selection (claude-sonnet, gemini-flash, or gpt5-mini)
+
+    Returns:
+        Dict with summary, alerts, suggestions
+    """
+    import json
+
+    from app.services.codeer_client import CodeerClient, get_codeer_agent_id
+    from app.services.codeer_session_pool import get_codeer_session_pool
+
+    # Get agent ID based on model selection
+    try:
+        agent_id = get_codeer_agent_id(model)
+        logger.info(f"Using Codeer model: {model}, agent_id: {agent_id}")
+    except Exception as e:
+        logger.error(f"Failed to get Codeer agent ID: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Create client with longer timeout for analysis
+    client = CodeerClient()
+    # Extend timeout to 60 seconds for LLM response
+    client.client.timeout = httpx.Timeout(60.0)
+
+    try:
+        # Build analysis prompt similar to Gemini's
+        # Format: system instruction + RAG context + transcript
+        prompt = f"""{CACHE_SYSTEM_INSTRUCTION}
+
+{rag_context if rag_context else ""}
+
+【最新對話逐字稿】
+{transcript}
+
+【Speaker 片段】
+{json.dumps(speakers, ensure_ascii=False, indent=2)}
+
+請分析以上對話，提供 JSON 格式回應。
+"""
+
+        # Create or reuse chat session with selected agent
+        if session_id:
+            # Use session pool for reuse
+            pool = get_codeer_session_pool()
+            chat = await pool.get_or_create_session(
+                session_id, client, agent_id=agent_id
+            )
+            logger.info(f"Using session pool for {session_id} with agent {agent_id}")
+        else:
+            # Fallback: create new chat with selected agent
+            # Use microsecond precision + model name to ensure unique chat names
+            import uuid
+
+            unique_suffix = (
+                f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+            )
+            chat = await client.create_chat(
+                name=f"Realtime-{model}-{unique_suffix}",
+                agent_id=agent_id,
+            )
+            logger.info(
+                f"Created new chat (no session_id) with agent {agent_id}: {chat['name']}"
+            )
+
+        # Send message to Codeer agent (non-streaming for now)
+        # CRITICAL: Must pass agent_id to match the agent used to create the chat
+        response = await client.send_message(
+            chat_id=chat["id"], message=prompt, stream=False, agent_id=agent_id
+        )
+
+        # Parse Codeer response
+        # Codeer returns dict with 'content', 'text', or 'message' field
+        try:
+            # Extract text from response
+            if isinstance(response, dict):
+                response_text = (
+                    response.get("content")
+                    or response.get("text")
+                    or response.get("message")
+                    or str(response)
+                )
+            else:
+                response_text = str(response)
+
+            # Extract JSON from response
+            if "```json" in response_text:
+                json_start = response_text.find("```json") + 7
+                json_end = response_text.find("```", json_start)
+                json_text = response_text[json_start:json_end].strip()
+            elif "{" in response_text:
+                json_start = response_text.find("{")
+                json_end = response_text.rfind("}") + 1
+                json_text = response_text[json_start:json_end]
+            else:
+                # Fallback: treat as plain text
+                json_text = response_text
+
+            analysis = json.loads(json_text)
+
+            # Ensure required fields exist
+            if "summary" not in analysis:
+                analysis["summary"] = "分析結果"
+            if "alerts" not in analysis:
+                analysis["alerts"] = []
+            if "suggestions" not in analysis:
+                analysis["suggestions"] = []
+
+            return analysis
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Codeer response as JSON: {e}")
+            logger.error(f"Response text: {response_text[:500]}")
+
+            # Fallback response
+            return {
+                "summary": "Codeer 回應解析失敗",
+                "alerts": [f"⚠️ 無法解析回應: {str(e)}"],
+                "suggestions": ["💡 請檢查 Codeer agent 設定"],
+            }
+
+    finally:
+        # Always close the client
+        await client.close()
+
+
 @router.post("/analyze", response_model=RealtimeAnalyzeResponse)
 async def analyze_transcript(
     request: RealtimeAnalyzeRequest, db: Session = Depends(get_db)
@@ -219,10 +360,15 @@ async def analyze_transcript(
     Returns summary, alerts, and suggestions for the counselor based on
     the conversation in the past 60 seconds.
 
-    Supports Gemini explicit context caching for improved performance.
+    Supports multiple LLM providers: Gemini (default) and Codeer.
+    Gemini supports explicit context caching for improved performance.
 
     This is a demo feature with no authentication required.
     """
+    import time
+
+    start_time = time.time()
+
     try:
         # Convert speakers to dict format for service
         speakers_dict = [
@@ -248,29 +394,100 @@ async def analyze_transcript(
                     )
                 rag_context = "\n".join(rag_context_parts)
 
-        # Initialize cache metadata
+        # Initialize variables
+        analysis = {}
         cache_metadata = None
+        provider_metadata = None
 
-        # Use cache if enabled and session_id is provided
-        if request.use_cache and request.session_id:
-            try:
-                logger.info(
-                    f"Cache enabled for session {request.session_id}, "
-                    f"attempting to get or create cache"
-                )
+        # Route to appropriate provider
+        if request.provider == "codeer":
+            logger.info(
+                f"Using Codeer provider for analysis (model: {request.codeer_model})"
+            )
+            analysis = await _analyze_with_codeer(
+                transcript=request.transcript,
+                speakers=speakers_dict,
+                rag_context=rag_context,
+                db=db,
+                session_id=request.session_id,
+                model=request.codeer_model,
+            )
 
-                # Get or create cache with accumulated transcript
-                cached_content, is_new = await cache_manager.get_or_create_cache(
-                    session_id=request.session_id,
-                    system_instruction=CACHE_SYSTEM_INSTRUCTION,
-                    accumulated_transcript=request.transcript,
-                    ttl_seconds=7200,  # 2 hours
-                )
+            # Calculate latency
+            latency_ms = int((time.time() - start_time) * 1000)
+            provider_metadata = ProviderMetadata(
+                provider="codeer",
+                latency_ms=latency_ms,
+                model=f"親子專家 ({request.codeer_model})",
+            )
 
-                # Check if content is too short for caching
-                if cached_content is None:
+        # Default to Gemini
+        else:
+            logger.info("Using Gemini provider for analysis")
+
+            # Use cache if enabled and session_id is provided
+            if request.use_cache and request.session_id:
+                try:
                     logger.info(
-                        "Content too short for caching, using standard analysis"
+                        f"Cache enabled for session {request.session_id}, "
+                        f"attempting to get or create cache"
+                    )
+
+                    # Get or create cache with accumulated transcript
+                    cached_content, is_new = await cache_manager.get_or_create_cache(
+                        session_id=request.session_id,
+                        system_instruction=CACHE_SYSTEM_INSTRUCTION,
+                        accumulated_transcript=request.transcript,
+                        ttl_seconds=7200,  # 2 hours
+                    )
+
+                    # Check if content is too short for caching
+                    if cached_content is None:
+                        logger.info(
+                            "Content too short for caching, using standard analysis"
+                        )
+                        analysis = await gemini_service.analyze_realtime_transcript(
+                            transcript=request.transcript,
+                            speakers=speakers_dict,
+                            rag_context=rag_context,
+                        )
+                        cache_metadata = CacheMetadata(
+                            cache_name="",
+                            cache_created=False,
+                            cached_tokens=0,
+                            prompt_tokens=0,
+                            message="對話內容較短，尚未啟用 cache（需 >= 1024 tokens）",
+                        )
+                    else:
+                        # Analyze with cache
+                        analysis = await gemini_service.analyze_with_cache(
+                            cached_content=cached_content,
+                            transcript=request.transcript,
+                            speakers=speakers_dict,
+                            rag_context=rag_context,
+                        )
+
+                        # Extract cache metadata from usage_metadata
+                        usage_metadata = analysis.get("usage_metadata", {})
+                        cache_metadata = CacheMetadata(
+                            cache_name=cached_content.name,
+                            cache_created=is_new,
+                            cached_tokens=usage_metadata.get(
+                                "cached_content_token_count", 0
+                            ),
+                            prompt_tokens=usage_metadata.get("prompt_token_count", 0),
+                        )
+
+                        logger.info(
+                            f"Cache analysis completed. Cache created: {is_new}, "
+                            f"Cached tokens: {cache_metadata.cached_tokens}, "
+                            f"Prompt tokens: {cache_metadata.prompt_tokens}"
+                        )
+
+                except Exception as cache_error:
+                    # Cache failed, fallback to non-cached analysis
+                    logger.warning(
+                        f"Cache analysis failed, falling back to non-cached: {cache_error}"
                     )
                     analysis = await gemini_service.analyze_realtime_transcript(
                         transcript=request.transcript,
@@ -282,58 +499,21 @@ async def analyze_transcript(
                         cache_created=False,
                         cached_tokens=0,
                         prompt_tokens=0,
-                        message="對話內容較短，尚未啟用 cache（需 >= 1024 tokens）",
+                        error=str(cache_error),
                     )
-                else:
-                    # Analyze with cache
-                    analysis = await gemini_service.analyze_with_cache(
-                        cached_content=cached_content,
-                        transcript=request.transcript,
-                        speakers=speakers_dict,
-                        rag_context=rag_context,
-                    )
-
-                    # Extract cache metadata from usage_metadata
-                    usage_metadata = analysis.get("usage_metadata", {})
-                    cache_metadata = CacheMetadata(
-                        cache_name=cached_content.name,
-                        cache_created=is_new,
-                        cached_tokens=usage_metadata.get(
-                            "cached_content_token_count", 0
-                        ),
-                        prompt_tokens=usage_metadata.get("prompt_token_count", 0),
-                    )
-
-                    logger.info(
-                        f"Cache analysis completed. Cache created: {is_new}, "
-                        f"Cached tokens: {cache_metadata.cached_tokens}, "
-                        f"Prompt tokens: {cache_metadata.prompt_tokens}"
-                    )
-
-            except Exception as cache_error:
-                # Cache failed, fallback to non-cached analysis
-                logger.warning(
-                    f"Cache analysis failed, falling back to non-cached: {cache_error}"
-                )
+            else:
+                # Cache disabled or no session_id, use standard analysis
+                logger.info("Cache disabled or no session_id, using standard analysis")
                 analysis = await gemini_service.analyze_realtime_transcript(
                     transcript=request.transcript,
                     speakers=speakers_dict,
                     rag_context=rag_context,
                 )
-                cache_metadata = CacheMetadata(
-                    cache_name="",
-                    cache_created=False,
-                    cached_tokens=0,
-                    prompt_tokens=0,
-                    error=str(cache_error),
-                )
-        else:
-            # Cache disabled or no session_id, use standard analysis
-            logger.info("Cache disabled or no session_id, using standard analysis")
-            analysis = await gemini_service.analyze_realtime_transcript(
-                transcript=request.transcript,
-                speakers=speakers_dict,
-                rag_context=rag_context,
+
+            # Calculate latency
+            latency_ms = int((time.time() - start_time) * 1000)
+            provider_metadata = ProviderMetadata(
+                provider="gemini", latency_ms=latency_ms, model="gemini-2.0-flash-exp"
             )
 
         # Build response
@@ -345,6 +525,7 @@ async def analyze_transcript(
             timestamp=datetime.now(timezone.utc).isoformat(),
             rag_sources=rag_sources,
             cache_metadata=cache_metadata,
+            provider_metadata=provider_metadata,
         )
     except Exception as e:
         logger.error(f"Realtime analysis failed: {e}")

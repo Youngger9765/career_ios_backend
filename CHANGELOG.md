@@ -9,7 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Codeer Agent Mismatch Error** (2025-12-11)
+  - Fixed: Claude Sonnet 4.5 and Gemini 2.5 Flash models now fully operational
+  - Root cause: Incorrect agent_id parameter passing in realtime.py
+  - Solution: Updated to use correct agent ID from codeer_model parameter
+  - Impact: All three Codeer models (Claude, Gemini, GPT-5) now working in production
+
+### Changed
+- **Codeer Model Recommendations** (2025-12-11)
+  - **Default model changed**: GPT-5 Mini → Gemini 2.5 Flash (best speed/quality balance)
+  - **Model reordering**: Prioritized by performance (Gemini > Claude > GPT-5 Mini)
+  - **Frontend UI updates**: Added performance hints (~10.3s, ~10.6s, ~22.6s) and status badges
+  - **Documentation updates**: Removed "experimental" status, added verified performance benchmarks
+  - **Performance data** (from real testing):
+    - Claude Sonnet 4.5: 10.3s latency (highest quality)
+    - Gemini 2.5 Flash: 10.6s latency (⭐ recommended: best balance)
+    - GPT-5 Mini: 22.6s latency (stable, specialized knowledge)
+
 ### Added
+- **Codeer Multi-Model Support for Realtime Counseling** (2025-12-11)
+  - ✅ 3 Codeer models available: GPT-5 Mini (default), Claude Sonnet 4.5, Gemini 2.5 Flash
+  - ✅ Session pooling optimization for Codeer provider (50% latency improvement)
+  - ✅ Frontend model selector UI with responsive design (mobile + desktop)
+  - ✅ Model metadata display in analysis results (shows which model was used)
+  - ✅ API parameter `codeer_model` for model selection
+  - ✅ Model comparison benchmark script (`scripts/test_all_codeer_models.py`)
+  - ✅ Documentation updates with security best practices
 - **Codeer AI API Client Integration** (2025-12-11)
   - ✅ Complete async CodeerClient service with httpx
   - ✅ SSE (Server-Sent Events) streaming support for real-time chat
@@ -42,12 +68,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Impact: AI analysis now correctly includes all conversation history
 
 ### Changed
+- **Realtime API Enhancement** - Updated chat creation to use UUID for uniqueness
+  - Added microsecond precision + UUID to prevent duplicate chat names
+  - Improved error handling for Codeer API interactions
 - GCP Billing Monitor with AI analysis and email reports (3 new APIs)
 - BigQuery integration for real-time cost tracking
 - Automated billing report generation with Gemini AI
 - Detailed logging for Gemini response diagnosis
 - **Realtime STT Counseling** (Phase 2 Frontend Complete): AI-powered realtime counseling analysis
   - TDD approach with 11 integration tests (Backend API complete)
+
+### Notes
   - ElevenLabs Scribe v2 Realtime API integration (Chinese support)
   - Manual speaker toggle (counselor/client) for demo simplicity
   - Click-to-analyze with progressive minute-by-minute simulation

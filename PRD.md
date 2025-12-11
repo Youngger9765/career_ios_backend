@@ -93,10 +93,15 @@
   - 中文繁體支援（language_code: `zh`）
   - < 100ms 低延遲
   - 手動說話者切換（諮詢師/案主）
-- ✅ **AI 即時分析**
-  - Gemini 2.5 Flash 驅動（Implicit Caching 優化）
+- ✅ **AI 即時分析 - 多模型支援** (2025-12-11)
+  - **Gemini 2.5 Flash** (預設) - Explicit Caching 優化，< 3s 延遲
+  - **Codeer 親子專家** - 專業親子教養 agent，支援 3 種模型（已驗證可用）：
+    - 🔮 **Gemini 2.5 Flash** (推薦) - 10.6s 延遲，最佳品質/速度平衡
+    - 🤖 **Claude Sonnet 4.5** - 10.3s 延遲，最高品質
+    - ⚡ **GPT-5 Mini** - 22.6s 延遲，穩定可靠
   - 每 60 秒自動分析對話內容
   - 提供：對話歸納、提醒事項、建議回應
+  - **前端模型選擇器** - 用戶可即時切換 AI 模型（含性能提示）
   - Cache 效能追蹤：usage_metadata 記錄（cached tokens, prompt tokens, output tokens）
 - ✅ **RAG 知識庫整合**
   - 7 種教養理論標籤（依附理論、正向教養、發展心理學等）
@@ -113,6 +118,16 @@
 | POST | `/api/v1/realtime/analyze` | AI 分析逐字稿（每 60 秒） |
 
 **技術選型**: ElevenLabs STT ($0.46/h) + Gemini Flash + Vanilla JS | 7種理論標籤（依附、正向教養、發展心理、家庭系統、認知行為、情緒教練、綜合）
+
+#### Codeer Model Performance Comparison (實測數據 2025-12-11)
+
+| Model | Latency | Best For | Recommended |
+|-------|---------|----------|-------------|
+| Gemini 2.5 Flash | ~10.6s | Speed + Quality | ⭐ Default |
+| Claude Sonnet 4.5 | ~10.3s | Complex reasoning | ✅ Production |
+| GPT-5 Mini | ~22.6s | Specialized knowledge | ✅ Production |
+
+**Recommendation**: Use Gemini 2.5 Flash as default for best balance of speed and quality.
 
 #### 🔬 Gemini Caching 技術細節與最佳實踐 (2025-12-10 實驗結論)
 
@@ -604,6 +619,6 @@ Input tokens = Σ(996 + 150×N) for N=1 to 60
 
 ---
 
-**版本**: v2.7
+**版本**: v2.8
 **最後更新**: 2025-12-11
-**本次更新**: Codeer AI API Client 整合（SSE 串流、27 整合測試、TDD 實作）
+**本次更新**: Codeer 多模型支援（GPT-5 Mini, Claude Sonnet 4.5, Gemini 2.5 Flash）+ Session Pooling 優化 + 前端模型選擇器

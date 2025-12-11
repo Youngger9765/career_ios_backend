@@ -36,6 +36,40 @@ class RealtimeAnalyzeRequest(BaseModel):
     time_range: str = Field(..., description="時間範圍（例如：0:00-1:00）")
     use_cache: bool = Field(default=True, description="是否使用 Gemini context caching")
     session_id: str = Field(default="", description="會談 session ID（用於 cache key）")
+    provider: str = Field(
+        default="gemini", description="LLM provider: 'gemini' or 'codeer'"
+    )
+    codeer_model: str = Field(
+        default="gpt5-mini",
+        description="Codeer model selection (when provider='codeer'): 'claude-sonnet', 'gemini-flash', or 'gpt5-mini'",
+    )
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, v: str) -> str:
+        """驗證 provider 只能是 gemini 或 codeer"""
+        if v not in ["gemini", "codeer"]:
+            raise ValueError("provider must be 'gemini' or 'codeer'")
+        return v
+
+    @field_validator("codeer_model")
+    @classmethod
+    def validate_codeer_model(cls, v: str) -> str:
+        """驗證 codeer_model 只能是支持的模型"""
+        valid_models = [
+            "claude-sonnet",
+            "claude",
+            "gemini-flash",
+            "gemini",
+            "gpt5-mini",
+            "gpt5",
+            "gpt",
+        ]
+        if v.lower() not in valid_models:
+            raise ValueError(
+                f"codeer_model must be one of: {', '.join(['claude-sonnet', 'gemini-flash', 'gpt5-mini'])}"
+            )
+        return v.lower()
 
     @field_validator("transcript")
     @classmethod
@@ -81,6 +115,14 @@ class CacheMetadata(BaseModel):
     message: str = Field(default="", description="狀態訊息（如有）")
 
 
+class ProviderMetadata(BaseModel):
+    """Provider performance metadata"""
+
+    provider: str = Field(..., description="LLM provider used")
+    latency_ms: int = Field(..., description="Response latency in milliseconds")
+    model: str = Field(default="", description="Model name")
+
+
 class RealtimeAnalyzeResponse(BaseModel):
     """即時分析回應（AI 督導建議）"""
 
@@ -94,6 +136,9 @@ class RealtimeAnalyzeResponse(BaseModel):
     )
     cache_metadata: CacheMetadata | None = Field(
         default=None, description="Cache 元數據（如有使用 cache）"
+    )
+    provider_metadata: ProviderMetadata | None = Field(
+        default=None, description="Provider performance metadata"
     )
 
     model_config = {
