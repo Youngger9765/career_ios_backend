@@ -1598,6 +1598,11 @@
         function switchSpeaker(speaker) {
             currentSpeaker = speaker;
 
+            // Guard: Skip UI updates if speaker buttons don't exist (e.g., in demo mode)
+            if (!speakerCounselorBtn || !speakerClientBtn) {
+                return;
+            }
+
             if (speaker === 'counselor') {
                 speakerCounselorBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300', 'shadow-sm');
                 speakerCounselorBtn.classList.add('bg-gradient-to-br', 'from-blue-500', 'to-indigo-600', 'text-white', 'shadow-md', 'hover:shadow-lg');
@@ -2007,9 +2012,21 @@
                     body: JSON.stringify(requestBody)
                 });
 
-                if (!response.ok) throw new Error('分析失敗');
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error(`API error ${response.status}:`, errorText);
+                    throw new Error(`分析失敗 (HTTP ${response.status})`);
+                }
 
                 const analysis = await response.json();
+
+                // Check if this is an error response (backend returned error structure)
+                if (analysis.summary && analysis.summary.includes('失敗')) {
+                    console.warn('Backend returned error analysis:', analysis);
+                    // Display error card with clear indication
+                    analysis.is_error = true;
+                }
+
                 // Add recording timestamp if not provided by API
                 if (!analysis.recording_timestamp) {
                     analysis.recording_timestamp = recordingTimestamp;
@@ -2019,31 +2036,15 @@
             } catch (error) {
                 console.error('Analysis error:', error);
 
-                // Don't show error to user for short transcripts or display mock data
-                // Only log warning for meaningful errors
-                if (error.message && !error.message.includes('too short')) {
-                    console.warn('分析暫時無法執行，將在下次嘗試');
-                }
+                // Show error message to user (don't silently fall back to mock data)
+                alert(`分析失敗: ${error.message}\n\n請檢查:\n1. Codeer API 連線是否正常\n2. 選擇的模型是否已設定\n3. 查看 Console 了解詳細錯誤`);
 
-                // Fallback to mock data if we have valid transcript
-                try {
-                    const transcriptText = transcriptSegments.map(s =>
-                        `${s.speaker === 'counselor' ? '諮詢師' : '案主'}：${s.text}`
-                    ).join('\n');
-
-                    if (transcriptText && transcriptText.trim().length >= 10) {
-                        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-                        const minutes = Math.floor(elapsed / 60);
-                        const seconds = elapsed % 60;
-                        const timeRange = `${Math.max(0, minutes - 1)}:00-${minutes}:00`;
-                        const recordingTimestamp = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
-                        const mockAnalysis = generateMockAnalysis(transcriptText, timeRange, recordingTimestamp);
-                        displayAnalysisCard(mockAnalysis);
-                    }
-                } catch (fallbackError) {
-                    console.error('Fallback mock data generation failed:', fallbackError);
-                }
+                // Log detailed error for debugging
+                console.warn('分析失敗，錯誤詳情:', {
+                    provider: currentProvider,
+                    model: currentCodeerModel,
+                    error: error.message
+                });
             } finally {
                 // Always restore button states, even if error occurs
                 setAnalyzeButtonsLoading(false);
@@ -2196,7 +2197,11 @@
             if (analysisEmpty) analysisEmpty.style.display = 'none';
 
             const card = document.createElement('div');
-            card.className = 'bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-4 md:p-5 border-l-4 border-purple-500 fade-in card-hover';
+
+            // Use error styling if this is an error response
+            const isError = analysis.is_error || (analysis.summary && analysis.summary.includes('失敗'));
+            const borderColor = isError ? 'border-red-500' : 'border-purple-500';
+            card.className = `bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-4 md:p-5 border-l-4 ${borderColor} fade-in card-hover`;
 
             // Determine severity for alerts
             const hasCritical = analysis.alerts.some(a => a.includes('🔴') || a.includes('高風險'));

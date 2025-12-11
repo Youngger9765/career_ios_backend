@@ -324,3 +324,23 @@ class TestElevenLabsTokenAPI:
 
             # Token should be non-empty string (ElevenLabs generates UUID-like tokens)
             assert data["token"].strip() != ""
+
+
+class TestRealtimeCounselingPage:
+    """Test Realtime Counseling HTML page loads without errors"""
+
+    def test_realtime_counseling_page_loads(self):
+        """Test GET /realtime-counseling - Page should load successfully"""
+        with TestClient(app) as client:
+            response = client.get("/realtime-counseling")
+
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "text/html; charset=utf-8"
+
+            # Verify essential content is present
+            html_content = response.text
+            assert "AI 即時親子諮詢分析" in html_content
+            assert "switchSpeaker" in html_content  # JavaScript function exists
+            assert (
+                "simulateTranscriptInput" in html_content
+            )  # Demo mode function exists

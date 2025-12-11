@@ -292,9 +292,18 @@ async def _analyze_with_codeer(
 
         # Send message to Codeer agent (non-streaming for now)
         # CRITICAL: Must pass agent_id to match the agent used to create the chat
-        response = await client.send_message(
-            chat_id=chat["id"], message=prompt, stream=False, agent_id=agent_id
-        )
+        try:
+            response = await client.send_message(
+                chat_id=chat["id"], message=prompt, stream=False, agent_id=agent_id
+            )
+        except Exception as api_error:
+            # Handle Codeer API errors (e.g., agent mismatch, timeout, rate limit)
+            logger.error(f"Codeer send_message failed: {api_error}")
+            return {
+                "summary": "Codeer 分析失敗",
+                "alerts": [f"⚠️ API 錯誤: {str(api_error)}"],
+                "suggestions": ["💡 請檢查 Codeer API 連線或稍後再試"],
+            }
 
         # Parse Codeer response
         # Codeer returns dict with 'content', 'text', or 'message' field
