@@ -2228,9 +2228,9 @@
             } else if (analysis.provider_metadata) {
                 // Check provider type
                 if (analysis.provider_metadata.provider === 'codeer') {
-                    tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium" title="Codeer API 無回傳 token usage">
+                    tokenUsageBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium" title="Codeer API 不提供 token usage 資料">
                         <span>📊</span>
-                        <span>~1400 tokens</span>
+                        <span>無資料</span>
                        </span>`;
                 } else if (analysis.provider_metadata.provider === 'gemini') {
                     // Gemini without cache (content too short)
