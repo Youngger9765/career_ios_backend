@@ -346,14 +346,14 @@
                 <!-- Modal Body -->
                 <div class="px-6 py-4 space-y-4">
                     <!-- AI Model Selection -->
-                    <div class="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-4 border border-purple-200">
+                    <div id="aiModelSectionMobile" class="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-4 border border-purple-200">
                         <label class="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
                             <span class="text-xl">🤖</span>
                             <span>AI 模型</span>
                         </label>
 
                         <!-- Provider Toggle -->
-                        <div class="flex items-center justify-between mb-3 pb-3 border-b border-purple-200">
+                        <div id="aiModelToggleRowMobile" class="flex items-center justify-between mb-3 pb-3 border-b border-purple-200">
                             <div class="flex items-center gap-2">
                                 <span class="text-sm text-gray-700" id="providerLabel">Gemini</span>
                             </div>
@@ -619,9 +619,9 @@
                     </div>
 
                     <!-- Provider Selection Toggle - Desktop -->
-                    <div class="mb-4">
+                    <div id="aiModelSectionDesktop" class="mb-4">
                         <div class="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
-                            <div class="flex items-center justify-between">
+                            <div id="aiModelToggleRowDesktop" class="flex items-center justify-between">
                                 <label class="text-sm font-bold text-gray-800 flex items-center gap-2">
                                     <span class="text-lg">🤖</span>
                                     <span>AI 模型</span>
@@ -794,6 +794,17 @@
     </div>
 
     <script>
+        // === Feature Flags ===
+        // Check URL parameter for Codeer feature flag
+        const urlParams = new URLSearchParams(window.location.search);
+        const SHOW_CODEER = urlParams.get('show_codeer') === 'true';
+
+        if (!SHOW_CODEER) {
+            console.log('🔒 Codeer models hidden (default). Use ?show_codeer=true to enable.');
+        } else {
+            console.log('🔓 Codeer models enabled via URL parameter');
+        }
+
         // === State Management ===
         let isRecording = false;
         let currentSpeaker = 'counselor';
@@ -805,7 +816,7 @@
         let analysisHistory = [];
         let isDemoMode = false; // Default to real recording, toggle switches to demo mode
         let isVoiceSimEnabled = false; // Voice simulation toggle state (demo mode only)
-        let currentProvider = 'gemini'; // 'gemini' or 'codeer'
+        let currentProvider = 'gemini'; // 'gemini' or 'codeer' - Force to 'gemini' if Codeer is hidden
         let currentCodeerModel = 'gemini-flash'; // Codeer model selection (default: Gemini 2.5 Flash - fastest + best quality balance)
 
         // === ElevenLabs Real-time STT State ===
@@ -949,6 +960,38 @@
         setupProviderToggle();
         setupCodeerModelSelector();
         updateProviderUI();
+
+        // Hide Codeer-related UI if feature flag is not set
+        if (!SHOW_CODEER) {
+            // Hide mobile AI model toggle (Gemini/Codeer buttons)
+            const aiModelToggleMobile = document.getElementById('aiModelToggleRowMobile');
+            if (aiModelToggleMobile) {
+                aiModelToggleMobile.style.display = 'none';
+            }
+
+            // Hide mobile Codeer sub-model selector
+            const codeerModelSelectorMobile = document.getElementById('codeerModelSelector');
+            if (codeerModelSelectorMobile) {
+                codeerModelSelectorMobile.style.display = 'none';
+            }
+
+            // Hide desktop AI model toggle (Gemini/Codeer buttons)
+            const aiModelToggleDesktop = document.getElementById('aiModelToggleRowDesktop');
+            if (aiModelToggleDesktop) {
+                aiModelToggleDesktop.style.display = 'none';
+            }
+
+            // Hide desktop Codeer sub-model selector
+            const codeerModelSelectorDesktop = document.getElementById('codeerModelSelectorDesktop');
+            if (codeerModelSelectorDesktop) {
+                codeerModelSelectorDesktop.style.display = 'none';
+            }
+
+            // Force provider to Gemini
+            currentProvider = 'gemini';
+
+            console.log('✅ Codeer UI elements hidden. Provider locked to Gemini.');
+        }
 
         // === ElevenLabs Real-time STT Functions ===
 

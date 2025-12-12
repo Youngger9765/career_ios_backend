@@ -1,34 +1,27 @@
 """
 Integration tests for Realtime API with Codeer provider
 Tests the new provider parameter and Codeer integration
-"""
 
-import os
+IMPORTANT: Codeer tests are DISABLED per Codeer's request.
+We do not want to hit their API in automated CI/CD testing.
+Only testing non-Codeer functionality (invalid provider, defaults).
+"""
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 
-
-def _check_codeer_credentials():
-    """Check if Codeer API key is available"""
-    api_key = os.getenv("CODEER_API_KEY")
-    return api_key is not None and len(api_key) > 0
-
-
-HAS_CODEER_API_KEY = _check_codeer_credentials()
-
-skip_without_codeer = pytest.mark.skipif(
-    not HAS_CODEER_API_KEY,
-    reason="Codeer API key not available (set CODEER_API_KEY in environment)",
+# CODEER TESTING DISABLED - Do not hit Codeer API in CI/CD
+skip_codeer_tests = pytest.mark.skip(
+    reason="Codeer API testing disabled per Codeer request - do not hit their API in CI/CD"
 )
 
 
 class TestRealtimeCodeerProvider:
     """Test Realtime Analysis API with Codeer provider"""
 
-    @skip_without_codeer
+    @skip_codeer_tests
     def test_analyze_with_codeer_provider(self):
         """Test POST /api/v1/realtime/analyze with provider=codeer"""
         with TestClient(app) as client:
@@ -87,7 +80,7 @@ class TestRealtimeCodeerProvider:
             assert len(data["alerts"]) >= 1
             assert len(data["suggestions"]) >= 1
 
-    @skip_without_codeer
+    @skip_codeer_tests
     def test_analyze_with_codeer_parenting_context(self):
         """Test Codeer provider with parenting-specific content"""
         with TestClient(app) as client:
@@ -168,7 +161,7 @@ class TestRealtimeCodeerProvider:
             # We're just testing that omitting provider is valid
             assert response.status_code in [200, 500]  # 500 if no GCP creds
 
-    @skip_without_codeer
+    @skip_codeer_tests
     def test_codeer_provider_performance(self):
         """Test that Codeer provider responds within acceptable time"""
         import time
@@ -202,7 +195,7 @@ class TestRealtimeCodeerProvider:
             assert data["provider_metadata"]["latency_ms"] > 0
             assert data["provider_metadata"]["latency_ms"] < 40000
 
-    @skip_without_codeer
+    @skip_codeer_tests
     def test_codeer_provider_with_cache_disabled(self):
         """Test Codeer provider with cache disabled (cache is Gemini-only)"""
         with TestClient(app) as client:
@@ -231,7 +224,7 @@ class TestRealtimeCodeerProvider:
 class TestRealtimeProviderComparison:
     """Compare Gemini and Codeer providers"""
 
-    @skip_without_codeer
+    @skip_codeer_tests
     def test_both_providers_same_input(self):
         """Test that both providers return valid responses for the same input"""
         test_input = {
