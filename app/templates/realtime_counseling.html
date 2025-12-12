@@ -712,9 +712,6 @@
                                 <span class="text-white text-lg">🤖</span>
                             </div>
                             <h2 class="text-lg md:text-xl font-bold text-gray-800">AI 即時分析</h2>
-                            <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full border border-purple-200">
-                                📚 RAG
-                            </span>
                         </div>
                         <div class="flex gap-2 flex-wrap">
                             <button id="triggerAnalysisBtn" class="btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-smooth shadow-md opacity-50 cursor-not-allowed flex items-center gap-1" disabled>
@@ -2255,6 +2252,22 @@
                 }
             }
 
+            // Build RAG badge based on actual usage
+            let ragBadge = '';
+            if (analysis.rag_sources && analysis.rag_sources.length > 0) {
+                // Has RAG sources - show green checkmark
+                ragBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium" title="使用知識庫：${analysis.rag_sources.length} 筆資料">
+                    <span>✅</span>
+                    <span>RAG</span>
+                   </span>`;
+            } else {
+                // No RAG sources - show gray X
+                ragBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium" title="未使用知識庫">
+                    <span>❌</span>
+                    <span>RAG</span>
+                   </span>`;
+            }
+
             card.innerHTML = `
                 <div class="flex items-start justify-between mb-3">
                     <div class="flex items-center gap-2 flex-wrap">
@@ -2269,6 +2282,7 @@
                         ` : ''}
                         ${modelBadge}
                         ${tokenUsageBadge}
+                        ${ragBadge}
                     </div>
                     <span class="text-xs text-gray-400">${new Date(analysis.timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
