@@ -14,10 +14,12 @@ from app.core.database import get_db
 from app.schemas.realtime import (
     CacheMetadata,
     CodeerTokenMetadata,
+    CounselingMode,
     ProviderMetadata,
     RAGSource,
     RealtimeAnalyzeRequest,
     RealtimeAnalyzeResponse,
+    RiskLevel,
 )
 from app.services.cache_manager import CacheManager
 from app.services.gemini_service import GeminiService
@@ -289,6 +291,158 @@ async def _search_rag_knowledge(
         return []
 
 
+def _assess_risk_level(transcript: str, speakers: List[dict]) -> RiskLevel:
+    """Assess risk level based on transcript content.
+
+    Risk levels:
+    - RED: Violent language, extreme emotions, crisis indicators
+    - YELLOW: Escalating conflict, frustration, raised emotions
+    - GREEN: Calm, positive interaction
+
+    Args:
+        transcript: The conversation transcript
+        speakers: List of speaker segments (not currently used, reserved for future)
+
+    Returns:
+        RiskLevel enum: red, yellow, or green
+    """
+    text_lower = transcript.lower()
+
+    # RED indicators (high risk) - violence, extreme emotions, crisis
+    red_keywords = [
+        "打死",
+        "滾",
+        "殺",
+        "恨死",
+        "暴力",
+        "打人",
+        "揍",
+        "受不了",
+        "不想活",
+        "去死",
+    ]
+    if any(keyword in text_lower for keyword in red_keywords):
+        logger.info("Risk level: RED detected (violent/extreme language)")
+        return RiskLevel.red
+
+    # YELLOW indicators (medium risk) - frustration, escalating conflict
+    yellow_keywords = [
+        "氣死",
+        "煩死",
+        "受夠",
+        "不聽話",
+        "說謊",
+        "快瘋",
+        "崩潰",
+        "發火",
+    ]
+    if any(keyword in text_lower for keyword in yellow_keywords):
+        logger.info("Risk level: YELLOW detected (frustration/conflict)")
+        return RiskLevel.yellow
+
+    # GREEN (safe/positive) - default if no risk indicators found
+    logger.info("Risk level: GREEN (calm/positive interaction)")
+    return RiskLevel.green
+
+
+def _build_emergency_prompt(transcript: str, rag_context: str) -> str:
+    """Build simplified prompt for emergency mode (~500 tokens).
+
+    Emergency mode is for urgent situations requiring immediate, actionable guidance.
+    Responses should be concise (≤2 sentences per suggestion).
+
+    Args:
+        transcript: The conversation transcript
+        rag_context: RAG knowledge context (if available)
+
+    Returns:
+        Simplified prompt for emergency situations
+    """
+    prompt = f"""你是親子諮詢 AI 督導。家長正在緊急情況中，需要立即可執行的建議。
+
+【情境】
+{transcript}
+
+【相關知識】
+{rag_context if rag_context else "（無相關知識庫內容）"}
+
+【CRITICAL 要求】緊急模式 - 極度簡化：
+1. summary: 1-2 句話描述情況（≤50字）
+2. alerts: 1-2 個最重要的警示（每個≤30字）
+3. suggestions: 2-3 個立即可做的建議（每個≤2句話，≤50字）
+
+【輸出格式】
+{{
+  "summary": "簡短描述情況",
+  "alerts": ["💡 最重要的事項"],
+  "suggestions": ["💡 立即可做的具體行動"]
+}}
+
+保持極簡、具體、可執行。不要冗長說明。"""
+
+    return prompt
+
+
+def _build_practice_prompt(transcript: str, rag_context: str) -> str:
+    """Build detailed prompt for practice mode (~1500 tokens).
+
+    Practice mode is for learning situations with detailed analysis and guidance.
+    Responses should be comprehensive and educational.
+
+    Args:
+        transcript: The conversation transcript
+        rag_context: RAG knowledge context (if available)
+
+    Returns:
+        Detailed prompt for practice/learning situations
+    """
+    # Use existing detailed prompt (same as CACHE_SYSTEM_INSTRUCTION style)
+    prompt = f"""你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
+
+【對話內容】
+{transcript}
+
+【相關親子教養知識庫】
+{rag_context if rag_context else "（無相關知識庫內容）"}
+
+【核心原則】同理優先、溫和引導、具體行動：
+
+1. **同理與理解為先**
+   - 永遠先理解與同理案主（家長）的感受和處境
+   - 認可教養壓力、情緒失控是正常的人性反應
+   - 避免批判、指責或讓案主感到被否定
+
+2. **溫和、非批判的語氣**
+   - ❌ 禁止用語：「表達出對孩子使用身體暴力的衝動」「可能造成傷害」「不當管教」
+   - ✅ 建議用語：「理解到在教養壓力下，父母有時會感到情緒失控是很正常的」
+   - ✅ 使用：「可以考慮」「或許」「試試看」等柔和引導詞
+
+3. **具體、實用的建議**
+   - 建議要具體可行
+   - 避免抽象概念，用具體做法
+   - 如果知識庫有相關內容，融入專業理論
+
+【輸出格式】請提供以下 JSON 格式：
+
+{{
+  "summary": "案主處境簡述（2-3 句）",
+  "alerts": [
+    "💡 同理案主感受",
+    "⚠️ 需關注的部分",
+    "✅ 正向的部分"
+  ],
+  "suggestions": [
+    "💡 核心建議（具體、溫和）",
+    "💡 進階策略（結合理論）",
+    "💡 反思提示（促進學習）"
+  ]
+}}
+
+【語氣要求】溫和、同理、專業，提供深度分析幫助家長學習成長。"""
+
+    return prompt
+
+
 async def _analyze_with_codeer(
     transcript: str,
     speakers: List[dict],
@@ -296,6 +450,7 @@ async def _analyze_with_codeer(
     db: Session,
     session_id: str = "",
     model: str = "gpt5-mini",
+    custom_prompt: str = "",
 ) -> dict:
     """Analyze transcript using Codeer 親子專家 agent.
 
@@ -329,9 +484,14 @@ async def _analyze_with_codeer(
     client.client.timeout = httpx.Timeout(60.0)
 
     try:
-        # Build analysis prompt similar to Gemini's
-        # Format: system instruction + RAG context + transcript
-        prompt = f"""{CACHE_SYSTEM_INSTRUCTION}
+        # Use custom prompt if provided (for mode-based routing)
+        # Otherwise, use default system instruction
+        if custom_prompt:
+            prompt = custom_prompt
+        else:
+            # Build analysis prompt similar to Gemini's
+            # Format: system instruction + RAG context + transcript
+            prompt = f"""{CACHE_SYSTEM_INSTRUCTION}
 
 {rag_context if rag_context else ""}
 
@@ -504,6 +664,10 @@ async def analyze_transcript(
             {"speaker": s.speaker, "text": s.text} for s in request.speakers
         ]
 
+        # Assess risk level based on transcript content
+        risk_level = _assess_risk_level(request.transcript, speakers_dict)
+        logger.info(f"Risk level assessed: {risk_level.value}")
+
         # Detect parenting keywords and trigger RAG if needed
         rag_sources = []
         rag_context = ""
@@ -523,6 +687,14 @@ async def analyze_transcript(
                     )
                 rag_context = "\n".join(rag_context_parts)
 
+        # Select prompt based on counseling mode
+        if request.mode == CounselingMode.emergency:
+            logger.info("Using EMERGENCY mode (simplified prompt)")
+            custom_prompt = _build_emergency_prompt(request.transcript, rag_context)
+        else:
+            logger.info("Using PRACTICE mode (detailed prompt)")
+            custom_prompt = _build_practice_prompt(request.transcript, rag_context)
+
         # Initialize variables
         analysis = {}
         cache_metadata = None
@@ -540,6 +712,7 @@ async def analyze_transcript(
                 db=db,
                 session_id=request.session_id,
                 model=request.codeer_model,
+                custom_prompt=custom_prompt,
             )
 
             # Calculate latency
@@ -594,6 +767,7 @@ async def analyze_transcript(
                             transcript=request.transcript,
                             speakers=speakers_dict,
                             rag_context=rag_context,
+                            custom_prompt=custom_prompt,
                         )
                         cache_metadata = CacheMetadata(
                             cache_name="",
@@ -609,6 +783,7 @@ async def analyze_transcript(
                             transcript=request.transcript,
                             speakers=speakers_dict,
                             rag_context=rag_context,
+                            custom_prompt=custom_prompt,
                         )
 
                         # Extract cache metadata from usage_metadata
@@ -637,6 +812,7 @@ async def analyze_transcript(
                         transcript=request.transcript,
                         speakers=speakers_dict,
                         rag_context=rag_context,
+                        custom_prompt=custom_prompt,
                     )
                     cache_metadata = CacheMetadata(
                         cache_name="",
@@ -652,6 +828,7 @@ async def analyze_transcript(
                     transcript=request.transcript,
                     speakers=speakers_dict,
                     rag_context=rag_context,
+                    custom_prompt=custom_prompt,
                 )
 
             # Calculate latency
@@ -662,6 +839,7 @@ async def analyze_transcript(
 
         # Build response
         return RealtimeAnalyzeResponse(
+            risk_level=risk_level,
             summary=analysis.get("summary", ""),
             alerts=analysis.get("alerts", []),
             suggestions=analysis.get("suggestions", []),

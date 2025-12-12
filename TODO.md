@@ -87,13 +87,41 @@
   - 偵測條件：溫和溝通、正向互動、有效策略
   - 顯示：綠色卡片、鼓勵與肯定
 
-**實作步驟**（TDD）:
-1. [ ] 更新 `app/schemas/realtime.py` - 新增 `mode` 和 `risk_level` 欄位
-2. [ ] 更新 `app/api/realtime.py` - 支援模式切換
-3. [ ] 實作風險評估邏輯（prompt engineering）
-4. [ ] 更新前端 UI（模式切換按鈕 + 紅黃綠燈顯示）
-5. [ ] 撰寫 integration tests
-6. [ ] 更新文檔與範例
+**實作步驟（TDD）**:
+
+**Phase 1: RED（測試先行）** 🔴 ✅ 完成
+1. [x] 撰寫 integration tests（定義預期行為）
+   - [x] `tests/integration/test_realtime_mode_switching.py`（完成）
+   - [x] 15 測試案例：emergency mode, practice mode, risk levels
+   - [x] 確認所有測試 FAIL（RED phase）
+
+**Phase 2: GREEN（實作代碼）** 🟢 ✅ 完成
+2. [x] 更新 `app/schemas/realtime.py` - 新增 enums 和欄位
+   - [x] `CounselingMode` enum (emergency, practice)
+   - [x] `RiskLevel` enum (red, yellow, green)
+   - [x] 新增到 Request/Response schemas
+3. [x] 更新 `app/api/realtime.py` - 實作模式切換邏輯
+   - [x] `_assess_risk_level()` - 風險評估函數
+   - [x] `_build_emergency_prompt()` - 簡化 prompt
+   - [x] `_build_practice_prompt()` - 完整 prompt
+   - [x] 更新 `analyze()` endpoint
+4. [x] 執行測試 - 確認所有測試 PASS（GREEN phase）
+
+**Phase 3: REFACTOR（重構優化）** ♻️ ✅ 完成
+5. [x] Code review 與重構
+6. [x] 更新文檔與註解
+
+**Phase 4: Frontend Integration** 🎨 ⏭️ 待前端整合
+7. [ ] 更新前端 UI（模式切換按鈕 + 紅黃綠燈顯示）
+
+**✅ Backend 實作完成** (2025-12-13)
+- 15 integration tests 全部通過
+- Mode switching (Emergency/Practice) 實作完成
+- Risk level indicators (Red/Yellow/Green) 實作完成
+- 向後相容（預設 mode = practice）
+- Emergency mode: ~500 token prompt (67% reduction)
+- Practice mode: ~1500 token prompt (detailed)
+- Commit: `feat: implement mode switching and risk level indicators for realtime API`
 
 **Deliverable**:
 - Mode 切換功能完成

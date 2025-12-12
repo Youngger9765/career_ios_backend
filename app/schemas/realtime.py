@@ -2,9 +2,25 @@
 Realtime STT Counseling Schemas
 用於即時語音轉文字諮詢輔助功能
 """
+from enum import Enum
 from typing import List
 
 from pydantic import BaseModel, Field, field_validator
+
+
+class CounselingMode(str, Enum):
+    """Counseling mode: emergency (simplified) or practice (detailed)"""
+
+    emergency = "emergency"
+    practice = "practice"
+
+
+class RiskLevel(str, Enum):
+    """Risk level indicator for parent-child interaction"""
+
+    red = "red"  # High risk: violent language, extreme emotions, crisis
+    yellow = "yellow"  # Medium risk: escalating conflict, frustration
+    green = "green"  # Safe: calm, positive interaction
 
 
 class SpeakerSegment(BaseModel):
@@ -31,6 +47,10 @@ class SpeakerSegment(BaseModel):
 class RealtimeAnalyzeRequest(BaseModel):
     """即時分析請求（每 60 秒觸發一次）"""
 
+    mode: CounselingMode = Field(
+        default=CounselingMode.practice,
+        description="Counseling mode: 'emergency' (simplified) or 'practice' (detailed, default)",
+    )
     transcript: str = Field(..., min_length=1, description="完整逐字稿（過去 1 分鐘）")
     speakers: List[SpeakerSegment] = Field(..., description="Speaker 片段列表")
     time_range: str = Field(..., description="時間範圍（例如：0:00-1:00）")
@@ -140,6 +160,9 @@ class ProviderMetadata(BaseModel):
 class RealtimeAnalyzeResponse(BaseModel):
     """即時分析回應（AI 督導建議）"""
 
+    risk_level: RiskLevel = Field(
+        ..., description="Risk level: red (high), yellow (medium), green (safe)"
+    )
     summary: str = Field(..., description="對話歸納（1-2 句）")
     alerts: List[str] = Field(..., description="提醒事項（3-5 點）")
     suggestions: List[str] = Field(..., description="建議回應（2-3 點）")
@@ -159,6 +182,7 @@ class RealtimeAnalyzeResponse(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
+                    "risk_level": "yellow",
                     "summary": "案主表達對工作的焦慮，提到「活著沒意義」，諮詢師開始評估風險",
                     "alerts": [
                         "⚠️ 案主提到「活著沒意義」，需立即評估自殺風險",

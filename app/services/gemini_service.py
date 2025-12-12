@@ -181,6 +181,7 @@ class GeminiService:
         transcript: str,
         speakers: List[Dict[str, str]],
         rag_context: str = "",
+        custom_prompt: str = "",
     ) -> Dict[str, Any]:
         """Analyze realtime counseling transcript for AI supervision.
 
@@ -188,6 +189,7 @@ class GeminiService:
             transcript: Full transcript text
             speakers: List of speaker segments with speaker role and text
             rag_context: Optional RAG knowledge base context
+            custom_prompt: Optional custom prompt (overrides default prompt)
 
         Returns:
             Dict with: summary, alerts, suggestions
@@ -196,7 +198,11 @@ class GeminiService:
         suicide_keywords = ["自殺", "想死", "活著沒意義", "不想活", "結束生命"]
         has_suicide_risk = any(keyword in transcript for keyword in suicide_keywords)
 
-        prompt = f"""你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
+        # Use custom prompt if provided, otherwise use default
+        if custom_prompt:
+            prompt = custom_prompt
+        else:
+            prompt = f"""你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
 
 【角色定義】CRITICAL - 必須嚴格遵守：
 - "counselor" = 諮詢師/輔導師（專業助人者，提供協助的一方）
@@ -394,6 +400,7 @@ class GeminiService:
         transcript: str,
         speakers: List[Dict[str, str]],
         rag_context: str = "",
+        custom_prompt: str = "",
     ) -> Dict[str, Any]:
         """Analyze realtime transcript using cached content.
 
@@ -402,6 +409,7 @@ class GeminiService:
             transcript: Full transcript text
             speakers: List of speaker segments with speaker role and text
             rag_context: Optional RAG knowledge base context
+            custom_prompt: Optional custom prompt (overrides default prompt)
 
         Returns:
             Dict with: summary, alerts, suggestions, and usage_metadata
@@ -410,8 +418,12 @@ class GeminiService:
         suicide_keywords = ["自殺", "想死", "活著沒意義", "不想活", "結束生命"]
         has_suicide_risk = any(keyword in transcript for keyword in suicide_keywords)
 
-        # Build user prompt (only the new content, not the accumulated transcript)
-        user_prompt = f"""對話內容：
+        # Use custom prompt if provided, otherwise build default prompt
+        if custom_prompt:
+            user_prompt = custom_prompt
+        else:
+            # Build user prompt (only the new content, not the accumulated transcript)
+            user_prompt = f"""對話內容：
 {transcript}
 {rag_context}
 
