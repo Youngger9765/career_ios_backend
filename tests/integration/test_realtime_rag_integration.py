@@ -324,7 +324,8 @@ class TestRealtimeRAGIntegration:
         """Test 8: Verify RAG respects similarity threshold
 
         Scenario: Only high-quality matches should be returned
-        Expected: All returned sources should have score >= 0.7 (similarity_threshold)
+        Expected: All returned sources should have score >= 0.5 (similarity_threshold)
+        Note: Threshold lowered from 0.7 to 0.5 based on production data analysis
         """
         with TestClient(app) as client:
             response = client.post(
@@ -349,5 +350,5 @@ class TestRealtimeRAGIntegration:
             # All returned sources should meet similarity threshold
             for source in data["rag_sources"]:
                 assert (
-                    source["score"] >= 0.7
+                    source["score"] >= 0.5
                 ), f"Source score below threshold: {source['score']}"

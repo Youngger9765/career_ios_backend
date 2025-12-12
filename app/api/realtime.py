@@ -91,7 +91,9 @@ CACHE_SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對�
 """
 
 # Parenting-related keywords that trigger RAG search
+# Keywords organized by category for better maintainability
 PARENTING_KEYWORDS = [
+    # === 基本詞彙 (Basic Terms) ===
     "親子",
     "孩子",
     "小孩",
@@ -100,23 +102,83 @@ PARENTING_KEYWORDS = [
     "教養",
     "育兒",
     "管教",
-    "溝通",
-    "情緒",
-    "行為",
-    "學習",
-    "發展",
-    "成長",
-    "叛逆",
-    "青春期",
-    "親職",
-    "家庭",
     "父母",
     "媽媽",
     "爸爸",
-    "教育",
+    "親職",
+    "家庭",
+    # === 情緒相關 (Emotions) ===
+    "情緒",
+    "生氣",
+    "憤怒",
+    "難過",
+    "傷心",
+    "害怕",
+    "焦慮",
+    "擔心",
+    "壓力",
+    "哭",
+    "哭泣",
+    "失望",
+    "挫折",
+    # === 行為問題 (Behavior Issues) ===
+    "行為",
+    "打人",
+    "攻擊",
+    "拒絕",
+    "發脾氣",
+    "叛逆",
+    "不聽話",
+    "頂嘴",
+    # === 日常場景 (Daily Situations) ===
+    "功課",
+    "作業",
+    "睡覺",
+    "睡眠",
+    "吃飯",
+    "用餐",
+    "收玩具",
+    "刷牙",
+    # === 人際關係 (Relationships) ===
+    "手足",
+    "兄弟",
+    "姊妹",
+    "朋友",
+    "同學",
+    "老師",
+    "衝突",
+    "爭吵",
+    # === 教養概念 (Parenting Concepts) ===
+    "溝通",
     "陪伴",
     "關係",
-    "衝突",
+    "鼓勵",
+    "讚美",
+    "處罰",
+    "獎勵",
+    "尊重",
+    "責任",
+    "界限",
+    "規則",
+    "選擇",
+    "後果",
+    "分享",
+    # === 發展相關 (Development) ===
+    "發展",
+    "成長",
+    "學習",
+    "青春期",
+    "教育",
+    "獨立",
+    "自律",
+    "自信",
+    "自尊",
+    # === 依附相關 (Attachment) ===
+    "依附",
+    "安全感",
+    "信任",
+    "分離",
+    "連結",
 ]
 
 
@@ -146,19 +208,25 @@ def _detect_parenting_theory(title: str) -> str:
     Returns:
         Theory name in Chinese (e.g., "正向教養", "情緒教養")
     """
-    # Theory keyword mappings (Chinese and English)
+    # Theory keyword mappings (Chinese, English, and file name patterns)
     theory_mappings = {
-        "正向教養": ["正向教養", "Positive Discipline"],
-        "情緒教養": ["情緒教養", "Emotional Coaching", "Emotion Coaching"],
-        "依附理論": ["依附理論", "Attachment Theory"],
-        "認知發展理論": ["認知發展", "Cognitive Development"],
-        "自我決定論": ["自我決定", "Self-Determination"],
+        "正向教養": ["正向教養", "Positive Discipline", "positive_discipline"],
+        "情緒教養": [
+            "情緒教養",
+            "Emotional Coaching",
+            "Emotion Coaching",
+            "emotional_coaching",
+        ],
+        "依附理論": ["依附理論", "Attachment Theory", "attachment_theory"],
+        "認知發展理論": ["認知發展", "Cognitive Development", "cognitive_development"],
+        "自我決定論": ["自我決定", "Self-Determination", "self_determination"],
     }
 
-    # Check each theory's keywords
+    # Check each theory's keywords (case-insensitive)
+    title_lower = title.lower()
     for theory_name, keywords in theory_mappings.items():
         for keyword in keywords:
-            if keyword in title:
+            if keyword.lower() in title_lower:
                 return theory_name
 
     # Default if no match found
@@ -166,7 +234,7 @@ def _detect_parenting_theory(title: str) -> str:
 
 
 async def _search_rag_knowledge(
-    transcript: str, db: Session, top_k: int = 3, similarity_threshold: float = 0.7
+    transcript: str, db: Session, top_k: int = 3, similarity_threshold: float = 0.5
 ) -> List[RAGSource]:
     """Search RAG knowledge base for relevant parenting content.
 
@@ -174,7 +242,10 @@ async def _search_rag_knowledge(
         transcript: The transcript text to search
         db: Database session
         top_k: Number of top results to return
-        similarity_threshold: Minimum similarity score
+        similarity_threshold: Minimum similarity score (default 0.5)
+            Note: Lowered from 0.7 to 0.5 based on production data analysis.
+            Real-world similarity scores for relevant content typically max out
+            at ~0.54-0.59, so 0.7 was too strict and prevented retrieval.
 
     Returns:
         List of RAG sources with title, content, and score
@@ -440,7 +511,7 @@ async def analyze_transcript(
         if _detect_parenting_keywords(request.transcript):
             logger.info("Parenting keywords detected, triggering RAG search")
             rag_sources = await _search_rag_knowledge(
-                transcript=request.transcript, db=db, top_k=3, similarity_threshold=0.7
+                transcript=request.transcript, db=db, top_k=3, similarity_threshold=0.5
             )
 
             # Build RAG context for Gemini prompt

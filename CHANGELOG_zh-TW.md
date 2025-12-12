@@ -10,6 +10,12 @@
 ## [未發布]
 
 ### 修復
+- **RAG 相似度門檻過高** (2025-12-13)
+  - 修復：RAG 知識檢索現已能正確運作於親子教養查詢
+  - 根本原因：similarity_threshold=0.7 設定過高；實際相似度分數最高約 0.54-0.59
+  - 解決方案：基於生產資料分析，將門檻從 0.7 降至 0.5
+  - 影響：RAG 現在能檢索到相關的親子教養知識，不再回傳空結果
+  - 更新檔案：`app/api/realtime.py`、`tests/integration/test_realtime_rag_integration.py`
 - **Codeer Agent 不匹配錯誤** (2025-12-11)
   - 修復：Claude Sonnet 4.5 與 Gemini 2.5 Flash 模型現已完全運作
   - 根本原因：realtime.py 中 agent_id 參數傳遞錯誤

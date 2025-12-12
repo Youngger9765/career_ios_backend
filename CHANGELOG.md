@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **RAG Similarity Threshold Too Strict** (2025-12-13)
+  - Fixed: RAG knowledge retrieval now working for parenting queries
+  - Root cause: similarity_threshold=0.7 was too high; real-world scores max at ~0.54-0.59
+  - Solution: Lowered threshold from 0.7 to 0.5 based on production data analysis
+  - Impact: RAG now retrieves relevant parenting knowledge instead of returning empty results
+  - Files updated: `app/api/realtime.py`, `tests/integration/test_realtime_rag_integration.py`
 - **Codeer Agent Mismatch Error** (2025-12-11)
   - Fixed: Claude Sonnet 4.5 and Gemini 2.5 Flash models now fully operational
   - Root cause: Incorrect agent_id parameter passing in realtime.py
