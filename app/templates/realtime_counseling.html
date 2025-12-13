@@ -885,7 +885,6 @@
         const liveIndicator = document.getElementById('liveIndicator');
         const transcriptEmpty = document.getElementById('transcriptEmpty');
         const analysisEmpty = document.getElementById('analysisEmpty');
-        const fabAnalyze = document.getElementById('fabAnalyze');
         const fabAnalyzeMobile = document.getElementById('fabAnalyzeMobile');
         const waveformContainer = document.getElementById('waveformContainer');
         const waveformContainerMobile = document.getElementById('waveformContainerMobile');
@@ -938,7 +937,6 @@
         if (stopBtnMobile) stopBtnMobile.addEventListener('click', stopSession);
         // Speaker buttons removed (AI auto-detects speakers)
         triggerAnalysisBtn.addEventListener('click', manuallyTriggerAnalysis);
-        fabAnalyze.addEventListener('click', manuallyTriggerAnalysis);
         if (fabAnalyzeMobile) fabAnalyzeMobile.addEventListener('click', manuallyTriggerAnalysis);
 
         // NEW: Carousel navigation
@@ -1591,10 +1589,6 @@
             transcriptEmpty.style.display = 'none';
 
             // REQUIREMENT 1: Enable bottom analyze button (remove disabled state)
-            fabAnalyze.disabled = false;
-            fabAnalyze.classList.remove('opacity-50', 'cursor-not-allowed');
-            fabAnalyze.classList.add('hover:shadow-xl');
-
             if (fabAnalyzeMobile) {
                 fabAnalyzeMobile.disabled = false;
                 fabAnalyzeMobile.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -1684,10 +1678,6 @@
             liveIndicator.classList.add('hidden');
 
             // REQUIREMENT 1: Disable bottom analyze button again
-            fabAnalyze.disabled = true;
-            fabAnalyze.classList.add('opacity-50', 'cursor-not-allowed');
-            fabAnalyze.classList.remove('hover:shadow-xl');
-
             if (fabAnalyzeMobile) {
                 fabAnalyzeMobile.disabled = true;
                 fabAnalyzeMobile.classList.add('opacity-50', 'cursor-not-allowed');
@@ -2188,7 +2178,7 @@
         // Helper function to set loading state for analyze buttons
         function setAnalyzeButtonsLoading(isLoading) {
             const buttons = [
-                { btn: fabAnalyze, icon: '⚡', text: '即時分析' },
+                { btn: fabAnalyzeMobile, icon: '⚡', text: '即時分析' },
                 { btn: triggerAnalysisBtn, icon: '⚡', text: '立即分析' }
             ];
 
@@ -2202,8 +2192,8 @@
                     btn.classList.remove('hover:shadow-xl');
 
                     // Update button content with spinner
-                    const isFab = btn.id === 'fabAnalyze';
-                    if (isFab) {
+                    const isFabMobile = btn.id === 'fabAnalyzeMobile';
+                    if (isFabMobile) {
                         btn.innerHTML = `
                             <span class="text-3xl spinner">⚙️</span>
                             <span class="text-lg tracking-wide">分析中...</span>
@@ -2220,14 +2210,11 @@
                     if (isRecording) {
                         btn.disabled = false;
                         btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                        if (btn.id === 'fabAnalyze') {
-                            btn.classList.add('hover:shadow-xl');
-                        }
                     }
 
                     // Restore original button content
-                    const isFab = btn.id === 'fabAnalyze';
-                    if (isFab) {
+                    const isFabMobile = btn.id === 'fabAnalyzeMobile';
+                    if (isFabMobile) {
                         btn.innerHTML = `
                             <span class="text-3xl">${icon}</span>
                             <span class="text-lg tracking-wide">${text}</span>
