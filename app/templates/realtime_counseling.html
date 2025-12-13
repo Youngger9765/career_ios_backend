@@ -479,14 +479,12 @@
             </div>
         </div>
 
-        <!-- BOTTOM BLOCK: Analysis Button (fixed height) -->
-        <div class="bg-white/95 ios-frosted border-t border-gray-200/50 ios-card-shadow safe-area-inset-bottom">
-            <div class="px-4 py-4">
-                <button id="fabAnalyze" class="haptic-feedback w-full h-16 bg-gradient-to-r from-purple-500 via-indigo-600 to-purple-600 text-white rounded-2xl font-bold ios-card-shadow flex items-center justify-center gap-3 transition-smooth active:scale-95 opacity-50 cursor-not-allowed" aria-label="Instant Analysis" disabled>
-                    <span class="text-3xl">⚡</span>
-                    <span class="text-lg tracking-wide">即時分析</span>
-                </button>
-            </div>
+        <!-- BOTTOM BLOCK: Analysis Button - HIDDEN (moved to bottom nav bar) -->
+        <div class="hidden">
+            <button id="fabAnalyze" class="haptic-feedback w-full h-16 bg-gradient-to-r from-purple-500 via-indigo-600 to-purple-600 text-white rounded-2xl font-bold ios-card-shadow flex items-center justify-center gap-3 transition-smooth active:scale-95 opacity-50 cursor-not-allowed" aria-label="Instant Analysis" disabled>
+                <span class="text-3xl">⚡</span>
+                <span class="text-lg tracking-wide">即時分析</span>
+            </button>
         </div>
     </div>
 
@@ -896,6 +894,7 @@
         const transcriptEmpty = document.getElementById('transcriptEmpty');
         const analysisEmpty = document.getElementById('analysisEmpty');
         const fabAnalyze = document.getElementById('fabAnalyze');
+        const fabAnalyzeMobile = document.getElementById('fabAnalyzeMobile');
         const waveformContainer = document.getElementById('waveformContainer');
         const waveformContainerMobile = document.getElementById('waveformContainerMobile');
         const recordingTimerDisplay = document.getElementById('recordingTimerDisplay');
@@ -948,6 +947,7 @@
         // Speaker buttons removed (AI auto-detects speakers)
         triggerAnalysisBtn.addEventListener('click', manuallyTriggerAnalysis);
         fabAnalyze.addEventListener('click', manuallyTriggerAnalysis);
+        if (fabAnalyzeMobile) fabAnalyzeMobile.addEventListener('click', manuallyTriggerAnalysis);
 
         // NEW: Carousel navigation
         if (carouselPrev) carouselPrev.addEventListener('click', () => navigateCarousel(-1));
@@ -1603,6 +1603,11 @@
             fabAnalyze.classList.remove('opacity-50', 'cursor-not-allowed');
             fabAnalyze.classList.add('hover:shadow-xl');
 
+            if (fabAnalyzeMobile) {
+                fabAnalyzeMobile.disabled = false;
+                fabAnalyzeMobile.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
             // REQUIREMENT 3: Hide instruction card when recording starts
             if (instructionCard) {
                 instructionCard.style.display = 'none';
@@ -1690,6 +1695,11 @@
             fabAnalyze.disabled = true;
             fabAnalyze.classList.add('opacity-50', 'cursor-not-allowed');
             fabAnalyze.classList.remove('hover:shadow-xl');
+
+            if (fabAnalyzeMobile) {
+                fabAnalyzeMobile.disabled = true;
+                fabAnalyzeMobile.classList.add('opacity-50', 'cursor-not-allowed');
+            }
 
             // REQUIREMENT 3: Show instruction card when recording stops
             if (instructionCard && mobileAnalysisCards.length === 0) {
@@ -2043,6 +2053,11 @@
 
         // === Transcript Management ===
         function addTranscriptLine(speaker, text) {
+            // Hide empty state on first transcript line
+            if (transcriptEmpty) {
+                transcriptEmpty.style.display = 'none';
+            }
+
             // Chat-style bubble
             const messageDiv = document.createElement('div');
             messageDiv.className = `flex items-start gap-2 mb-3 fade-in ${speaker === 'client' ? 'flex-row-reverse' : ''}`;
@@ -3082,7 +3097,8 @@
         let currentScript = demoScripts.workStress; // 預設使用工作壓力劇本
 
         function simulateTranscriptInput() {
-            if (!isRecording) return;
+            // Test mode: Allow manual transcript simulation
+            // Works independently of recording state - useful for testing UI
 
             // 循序播放劇本
             if (demoScriptIndex < currentScript.length) {
@@ -3095,9 +3111,11 @@
 
                 addTranscriptLine(line.speaker, line.text);
                 demoScriptIndex++;
+
+                console.log(`📝 Test mode: Added line ${demoScriptIndex}/${currentScript.length} - ${line.speaker}: ${line.text.substring(0, 30)}...`);
             } else {
                 // 劇本播完，重置或提示
-                console.log('Demo 劇本已播放完畢，按 R 鍵重新開始');
+                console.log('✅ Demo 劇本已播放完畢，按 R 鍵重新開始');
             }
         }
 
@@ -3451,6 +3469,10 @@
                 <button id="stopBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-red-500 to-rose-600 active:from-red-600 active:to-rose-700 text-white py-3 px-4 rounded-2xl font-bold opacity-50 cursor-not-allowed ios-card-shadow flex items-center justify-center gap-2 flex-1" disabled>
                     <span class="text-xl">⏹️</span>
                     <span class="text-base">結束</span>
+                </button>
+                <button id="fabAnalyzeMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 active:from-purple-600 active:to-indigo-700 text-white py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2 flex-1 opacity-50 cursor-not-allowed" disabled>
+                    <span class="text-xl">⚡</span>
+                    <span class="text-base">分析</span>
                 </button>
             </div>
         </div>
