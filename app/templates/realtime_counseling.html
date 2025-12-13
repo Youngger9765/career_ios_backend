@@ -943,8 +943,8 @@
         // === Event Listeners ===
         startBtn.addEventListener('click', startSession);
         stopBtn.addEventListener('click', stopSession);
-        startBtnMobile.addEventListener('click', startSession);
-        stopBtnMobile.addEventListener('click', stopSession);
+        if (startBtnMobile) startBtnMobile.addEventListener('click', startSession);
+        if (stopBtnMobile) stopBtnMobile.addEventListener('click', stopSession);
         // Speaker buttons removed (AI auto-detects speakers)
         triggerAnalysisBtn.addEventListener('click', manuallyTriggerAnalysis);
         fabAnalyze.addEventListener('click', manuallyTriggerAnalysis);
