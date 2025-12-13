@@ -29,8 +29,8 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "test-secret-key-CHANGE-IN-PRODUCTION"  # REQUIRED: Must be set in .env (generate with: openssl rand -hex 32)
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # 7 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 90  # 90 days (3 months)
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 90  # 90 days (3 months, match access token)
 
     # OpenAI (用於 Embeddings, Whisper STT, RAG Chat)
     OPENAI_API_KEY: Optional[str] = "sk-test-key-for-ci"  # Override in .env

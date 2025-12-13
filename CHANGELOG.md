@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Extended JWT Token Expiration** (2025-12-13)
+  - Access Token: 24 hours → 90 days (3 months)
+  - Refresh Token: 7 days → 90 days (3 months)
+  - Reason: Improve developer experience, reduce re-login frequency for prototype phase
+  - Impact: Both tokens now have consistent 90-day expiration
+
 ### Fixed
 - **RAG Similarity Threshold Too Strict** (2025-12-13)
   - Fixed: RAG knowledge retrieval now working for parenting queries

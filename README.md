@@ -92,7 +92,7 @@ Content-Type: application/json
 {
   "access_token": "eyJhbGci...",
   "token_type": "bearer",
-  "expires_in": 86400
+  "expires_in": 7776000
 }
 ```
 
