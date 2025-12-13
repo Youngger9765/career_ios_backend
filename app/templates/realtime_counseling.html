@@ -2412,7 +2412,8 @@
                     <span class="text-xs text-gray-400">${new Date(analysis.timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
-                <!-- Summary Section -->
+                <!-- Summary Section (Practice mode only) -->
+                ${analysis.alerts && analysis.alerts.length > 0 ? `
                 <div class="mb-4">
                     <div class="flex items-center gap-2 mb-2">
                         <div class="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
@@ -2424,7 +2425,8 @@
                 </div>
 
                 <!-- Alerts Section -->
-                ${analysis.alerts.length > 0 ? `
+                ` : ''}
+                ${analysis.alerts && analysis.alerts.length > 0 ? `
                     <div class="mb-4">
                         <div class="flex items-center gap-2 mb-2">
                             <div class="w-6 h-6 ${hasCritical ? 'bg-red-100' : 'bg-yellow-100'} rounded flex items-center justify-center">
@@ -2462,11 +2464,25 @@
                             <h3 class="font-bold text-sm md:text-base text-gray-800">建議</h3>
                         </div>
                         <div class="space-y-2 pl-8">
-                            ${analysis.suggestions.map(sug => `
-                                <div class="p-2 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-smooth cursor-pointer">
-                                    <p class="text-xs md:text-sm text-green-700 leading-relaxed">${sug}</p>
-                                </div>
-                            `).join('')}
+                            ${analysis.suggestions.map(sug => {
+                                // Check if suggestion has two-line format (Emergency mode: 心法\n具體做法)
+                                if (sug.includes('\\n')) {
+                                    const [title, action] = sug.split('\\n');
+                                    return `
+                                        <div class="p-3 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-smooth">
+                                            <div class="font-bold text-base md:text-lg text-green-800 mb-1">${title}</div>
+                                            <div class="text-sm md:text-base text-green-700">${action}</div>
+                                        </div>
+                                    `;
+                                } else {
+                                    // Practice mode: single paragraph
+                                    return `
+                                        <div class="p-2 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-smooth cursor-pointer">
+                                            <p class="text-xs md:text-sm text-green-700 leading-relaxed">${sug}</p>
+                                        </div>
+                                    `;
+                                }
+                            }).join('')}
                         </div>
                     </div>
                 ` : ''}
