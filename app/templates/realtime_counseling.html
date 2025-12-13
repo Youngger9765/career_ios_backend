@@ -969,17 +969,17 @@
         function setCounselingMode(mode) {
             counselingMode = mode;
 
-            // Update button styles
+            // Update button styles with consistent hover effects
             if (mode === 'emergency') {
-                emergencyModeBtn.classList.remove('bg-gray-200', 'text-gray-700');
-                emergencyModeBtn.classList.add('bg-red-500', 'text-white');
-                practiceModeBtn.classList.remove('bg-green-500', 'text-white');
-                practiceModeBtn.classList.add('bg-gray-200', 'text-gray-700');
+                emergencyModeBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                emergencyModeBtn.classList.add('bg-red-500', 'text-white', 'hover:bg-red-600');
+                practiceModeBtn.classList.remove('bg-green-500', 'text-white', 'hover:bg-green-600');
+                practiceModeBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
             } else {
-                practiceModeBtn.classList.remove('bg-gray-200', 'text-gray-700');
-                practiceModeBtn.classList.add('bg-green-500', 'text-white');
-                emergencyModeBtn.classList.remove('bg-red-500', 'text-white');
-                emergencyModeBtn.classList.add('bg-gray-200', 'text-gray-700');
+                practiceModeBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                practiceModeBtn.classList.add('bg-green-500', 'text-white', 'hover:bg-green-600');
+                emergencyModeBtn.classList.remove('bg-red-500', 'text-white', 'hover:bg-red-600');
+                emergencyModeBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
             }
 
             console.log(`✅ 切換諮詢模式: ${mode}`);
