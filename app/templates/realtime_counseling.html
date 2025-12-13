@@ -400,6 +400,26 @@
                         </div>
                         <span id="modeHint" class="text-xs text-gray-500 mt-2 block">開啟 = 真實錄音 / 關閉 = Demo 模式</span>
                     </div>
+
+                    <!-- Counseling Mode Toggle (Emergency/Practice) -->
+                    <div class="bg-gray-50 rounded-2xl p-4 border border-gray-200 mt-4">
+                        <label class="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
+                            <span class="text-xl">🎯</span>
+                            <span>諮詢模式</span>
+                        </label>
+                        <div class="flex gap-2">
+                            <button id="emergencyModeBtn" class="flex-1 px-3 py-2 rounded-lg bg-red-500 text-white font-semibold text-sm transition-all hover:bg-red-600">
+                                🚨 實戰
+                            </button>
+                            <button id="practiceModeBtn" class="flex-1 px-3 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold text-sm transition-all hover:bg-gray-300">
+                                🎓 練習
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            實戰：極簡建議（≤2句）<br>
+                            練習：完整分析
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Safe Area Bottom Padding -->
@@ -818,6 +838,7 @@
         let isVoiceSimEnabled = false; // Voice simulation toggle state (demo mode only)
         let currentProvider = 'gemini'; // 'gemini' or 'codeer' - Force to 'gemini' if Codeer is hidden
         let currentCodeerModel = 'gemini-flash'; // Codeer model selection (default: Gemini 2.5 Flash - fastest + best quality balance)
+        let counselingMode = 'emergency'; // 'emergency' or 'practice' - Default to emergency for real-time counseling
 
         // === ElevenLabs Real-time STT State ===
         let elevenLabsWs = null; // WebSocket connection
@@ -940,6 +961,32 @@
         // Mode Toggle (Demo/Real)
         modeToggle.addEventListener('click', toggleRecordingMode);
         if (modeToggleDesktop) modeToggleDesktop.addEventListener('click', toggleRecordingMode);
+
+        // Counseling Mode Toggle (Emergency/Practice)
+        const emergencyModeBtn = document.getElementById('emergencyModeBtn');
+        const practiceModeBtn = document.getElementById('practiceModeBtn');
+
+        function setCounselingMode(mode) {
+            counselingMode = mode;
+
+            // Update button styles
+            if (mode === 'emergency') {
+                emergencyModeBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                emergencyModeBtn.classList.add('bg-red-500', 'text-white');
+                practiceModeBtn.classList.remove('bg-green-500', 'text-white');
+                practiceModeBtn.classList.add('bg-gray-200', 'text-gray-700');
+            } else {
+                practiceModeBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                practiceModeBtn.classList.add('bg-green-500', 'text-white');
+                emergencyModeBtn.classList.remove('bg-red-500', 'text-white');
+                emergencyModeBtn.classList.add('bg-gray-200', 'text-gray-700');
+            }
+
+            console.log(`✅ 切換諮詢模式: ${mode}`);
+        }
+
+        emergencyModeBtn.addEventListener('click', () => setCounselingMode('emergency'));
+        practiceModeBtn.addEventListener('click', () => setCounselingMode('practice'));
 
         // Audio Player Controls
         if (audioPlayBtn) audioPlayBtn.addEventListener('click', toggleAudioPlayback);
@@ -2037,6 +2084,7 @@
 
                 // === 真實 API 呼叫（需要認證） ===
                 const requestBody = {
+                    mode: counselingMode,  // Emergency or Practice mode
                     transcript: transcriptText,
                     speakers: transcriptSegments,
                     time_range: timeRange,
@@ -2311,6 +2359,39 @@
                    </span>`;
             }
 
+            // Build Risk Level badge
+            let riskBadge = '';
+            if (analysis.risk_level) {
+                const riskConfig = {
+                    'red': {
+                        emoji: '🔴',
+                        label: '高風險',
+                        bgColor: 'bg-red-100',
+                        textColor: 'text-red-700',
+                        title: '高風險：需立即關注'
+                    },
+                    'yellow': {
+                        emoji: '💛',
+                        label: '注意',
+                        bgColor: 'bg-yellow-100',
+                        textColor: 'text-yellow-700',
+                        title: '中風險：需要注意'
+                    },
+                    'green': {
+                        emoji: '💚',
+                        label: '安全',
+                        bgColor: 'bg-green-100',
+                        textColor: 'text-green-700',
+                        title: '安全：溝通良好'
+                    }
+                };
+                const config = riskConfig[analysis.risk_level] || riskConfig['green'];
+                riskBadge = `<span class="inline-flex items-center gap-1 px-2 py-1 ${config.bgColor} ${config.textColor} rounded-full text-xs font-medium" title="${config.title}">
+                    <span>${config.emoji}</span>
+                    <span>${config.label}</span>
+                   </span>`;
+            }
+
             card.innerHTML = `
                 <div class="flex items-start justify-between mb-3">
                     <div class="flex items-center gap-2 flex-wrap">
@@ -2323,6 +2404,7 @@
                                 <span>${analysis.recording_timestamp}</span>
                             </span>
                         ` : ''}
+                        ${riskBadge}
                         ${modelBadge}
                         ${tokenUsageBadge}
                         ${ragBadge}
