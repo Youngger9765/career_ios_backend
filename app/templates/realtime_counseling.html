@@ -2515,9 +2515,9 @@
                                 if (sug.includes('\\n')) {
                                     const [title, action] = sug.split('\\n');
                                     return `
-                                        <div class="p-3 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-smooth">
-                                            <div class="font-bold text-base md:text-lg text-green-800 mb-1">${title}</div>
-                                            <div class="text-sm md:text-base text-green-700">${action}</div>
+                                        <div class="p-4 bg-green-50 border-2 border-green-300 rounded-xl hover:bg-green-100 transition-smooth shadow-sm">
+                                            <div class="font-bold text-xl md:text-2xl text-green-800 mb-2">${title}</div>
+                                            <div class="text-base md:text-lg text-green-700 font-medium">${action}</div>
                                         </div>
                                     `;
                                 } else {

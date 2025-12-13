@@ -358,43 +358,38 @@ def _build_emergency_prompt(transcript: str, rag_context: str) -> str:
     Returns:
         Simplified prompt for emergency situations
     """
-    prompt = f"""你是親子諮詢 AI 督導。緊急模式 - 極簡輸出！
+    prompt = f"""你是親子諮詢 AI 督導。緊急模式 - 只要 2 句話！
 
 【情境】
 {transcript}
 
-【相關知識】
-{rag_context if rag_context else "（無）"}
+【🚨 EMERGENCY - 嚴格限制 🚨】
 
-【🚨 EMERGENCY MODE - 格式要求 🚨】
+只輸出 2 句建議，每句 ≤ 20 字！
 
-每個建議分兩行：
-第1行：心法/提醒（大標，≤10字）
-第2行：具體做法（1句話，≤25字）
+格式：
+第1句：心法（≤10字）
+第2句：做法（≤20字）
 
 範例：
-穩住情緒再行動
-深呼吸5次，待心情平復後再與孩子對話。
-
-給予選擇權
-問孩子「先寫哪科？」讓他參與決策。
+穩住情緒
+深呼吸5次再對話。
 
 【輸出格式】
 {{
   "suggestions": [
-    "心法標題1\\n具體做法1（1句話）",
-    "心法標題2\\n具體做法2（1句話）"
+    "心法標題\\n具體做法"
   ]
 }}
 
-要求：
-- 2-3個建議
-- 每個建議用 \\n 分兩行
-- 第1行：心法（≤10字）
-- 第2行：做法（≤25字）
-- 不要 summary 欄位
+CRITICAL 規則：
+- 只能 1 個建議（2句話）
+- 用 \\n 分隔
+- 第1句 ≤ 10字
+- 第2句 ≤ 20字
+- 禁止超過！
 
-CRITICAL: 嚴格遵守格式！每個建議只有2行！"""
+YOU MUST output ONLY 1 suggestion with 2 lines!"""
 
     return prompt
 
