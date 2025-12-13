@@ -349,7 +349,7 @@ def _build_emergency_prompt(transcript: str, rag_context: str) -> str:
     """Build simplified prompt for emergency mode (~500 tokens).
 
     Emergency mode is for urgent situations requiring immediate, actionable guidance.
-    Responses should be ULTRA concise (1 sentence per suggestion, max 25 words).
+    Format: 心法（標題）+ 具體做法（1句話）
 
     Args:
         transcript: The conversation transcript
@@ -358,7 +358,7 @@ def _build_emergency_prompt(transcript: str, rag_context: str) -> str:
     Returns:
         Simplified prompt for emergency situations
     """
-    prompt = f"""你是親子諮詢 AI 督導。緊急模式 - 必須極度精簡！
+    prompt = f"""你是親子諮詢 AI 督導。緊急模式 - 極簡輸出！
 
 【情境】
 {transcript}
@@ -366,34 +366,35 @@ def _build_emergency_prompt(transcript: str, rag_context: str) -> str:
 【相關知識】
 {rag_context if rag_context else "（無）"}
 
-【🚨 EMERGENCY MODE - 嚴格限制 🚨】
-YOU MUST follow these STRICT limits:
+【🚨 EMERGENCY MODE - 格式要求 🚨】
 
-1. summary: 1句話（≤25字）
-2. suggestions: 2-3個建議，每個【只能1句話】【≤25字】
+每個建議分兩行：
+第1行：心法/提醒（大標，≤10字）
+第2行：具體做法（1句話，≤25字）
 
-❌ 禁止：
-- 多句描述
-- 冗長說明
-- 理論解釋
-- 超過25字
+範例：
+穩住情緒再行動
+深呼吸5次，待心情平復後再與孩子對話。
 
-✅ 要求：
-- 直接、具體
-- 立即可做
-- 1句話完成
+給予選擇權
+問孩子「先寫哪科？」讓他參與決策。
 
 【輸出格式】
 {{
-  "summary": "一句話描述（≤25字）",
   "suggestions": [
-    "具體行動1（≤25字）",
-    "具體行動2（≤25字）",
-    "具體行動3（≤25字）"
+    "心法標題1\\n具體做法1（1句話）",
+    "心法標題2\\n具體做法2（1句話）"
   ]
 }}
 
-CRITICAL: 每個建議不可超過25字！一句話說完！"""
+要求：
+- 2-3個建議
+- 每個建議用 \\n 分兩行
+- 第1行：心法（≤10字）
+- 第2行：做法（≤25字）
+- 不要 summary 欄位
+
+CRITICAL: 嚴格遵守格式！每個建議只有2行！"""
 
     return prompt
 
