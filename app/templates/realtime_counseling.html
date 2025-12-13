@@ -478,6 +478,30 @@
                 </div>
             </div>
         </div>
+
+        <!-- MOBILE-ONLY: Fixed Bottom Navigation Bar -->
+        <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 ios-frosted border-t border-gray-200/50 ios-card-shadow safe-area-inset-bottom z-50">
+            <div class="px-4 py-3">
+                <div class="flex gap-2">
+                    <button id="settingsBtnMobile" class="haptic-feedback btn-touch bg-gray-100 active:bg-gray-200 text-gray-700 py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2 flex-1">
+                        <span class="text-xl">⚙️</span>
+                        <span class="text-base">設定</span>
+                    </button>
+                    <button id="startBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-green-500 to-emerald-600 active:from-green-600 active:to-emerald-700 text-white py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2 flex-1">
+                        <span class="text-xl">▶️</span>
+                        <span class="text-base">開始</span>
+                    </button>
+                    <button id="stopBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-red-500 to-rose-600 active:from-red-600 active:to-rose-700 text-white py-3 px-4 rounded-2xl font-bold opacity-50 cursor-not-allowed ios-card-shadow flex items-center justify-center gap-2 flex-1" disabled>
+                        <span class="text-xl">⏹️</span>
+                        <span class="text-base">結束</span>
+                    </button>
+                    <button id="fabAnalyzeMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 active:from-purple-600 active:to-indigo-700 text-white py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2 flex-1 opacity-50 cursor-not-allowed" disabled>
+                        <span class="text-xl">⚡</span>
+                        <span class="text-base">分析</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- DESKTOP LAYOUT (unchanged) -->
@@ -3432,29 +3456,5 @@
         console.log('💡 Demo 模式：模擬即時對話，說話者自動切換');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     </script>
-
-    <!-- MOBILE-ONLY: Fixed Bottom Navigation Bar -->
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 ios-frosted border-t border-gray-200/50 ios-card-shadow safe-area-inset-bottom z-50">
-        <div class="px-4 py-3">
-            <div class="flex gap-2">
-                <button id="settingsBtnMobile" class="haptic-feedback btn-touch bg-gray-100 active:bg-gray-200 text-gray-700 py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2 flex-1">
-                    <span class="text-xl">⚙️</span>
-                    <span class="text-base">設定</span>
-                </button>
-                <button id="startBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-green-500 to-emerald-600 active:from-green-600 active:to-emerald-700 text-white py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2 flex-1">
-                    <span class="text-xl">▶️</span>
-                    <span class="text-base">開始</span>
-                </button>
-                <button id="stopBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-red-500 to-rose-600 active:from-red-600 active:to-rose-700 text-white py-3 px-4 rounded-2xl font-bold opacity-50 cursor-not-allowed ios-card-shadow flex items-center justify-center gap-2 flex-1" disabled>
-                    <span class="text-xl">⏹️</span>
-                    <span class="text-base">結束</span>
-                </button>
-                <button id="fabAnalyzeMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 active:from-purple-600 active:to-indigo-700 text-white py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2 flex-1 opacity-50 cursor-not-allowed" disabled>
-                    <span class="text-xl">⚡</span>
-                    <span class="text-base">分析</span>
-                </button>
-            </div>
-        </div>
-    </div>
 </body>
 </html>
