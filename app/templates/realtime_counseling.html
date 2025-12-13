@@ -702,6 +702,28 @@
                         </div>
                     </div>
 
+                    <!-- Counseling Mode Toggle - Desktop -->
+                    <div class="mb-4">
+                        <div class="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-4 border border-orange-200">
+                            <label class="text-sm font-bold text-gray-800 flex items-center gap-2 mb-3">
+                                <span class="text-lg">🎯</span>
+                                <span>諮詢模式</span>
+                            </label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button id="emergencyModeBtnDesktop" class="px-4 py-3 rounded-lg bg-red-500 text-white font-bold text-sm transition-all hover:bg-red-600 shadow-md hover:shadow-lg">
+                                    🚨 實戰
+                                </button>
+                                <button id="practiceModeBtnDesktop" class="px-4 py-3 rounded-lg bg-gray-200 text-gray-700 font-bold text-sm transition-all hover:bg-gray-300">
+                                    🎓 練習
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-600 mt-3">
+                                實戰：極簡建議（心法+做法）<br>
+                                練習：完整分析（摘要+警示+建議）
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Status Indicator - Enhanced -->
                     <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
                         <div class="flex items-center justify-between text-sm mb-2">
@@ -965,28 +987,52 @@
         // Counseling Mode Toggle (Emergency/Practice)
         const emergencyModeBtn = document.getElementById('emergencyModeBtn');
         const practiceModeBtn = document.getElementById('practiceModeBtn');
+        const emergencyModeBtnDesktop = document.getElementById('emergencyModeBtnDesktop');
+        const practiceModeBtnDesktop = document.getElementById('practiceModeBtnDesktop');
 
         function setCounselingMode(mode) {
             counselingMode = mode;
 
-            // Update button styles with consistent hover effects
-            if (mode === 'emergency') {
-                emergencyModeBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-                emergencyModeBtn.classList.add('bg-red-500', 'text-white', 'hover:bg-red-600');
-                practiceModeBtn.classList.remove('bg-green-500', 'text-white', 'hover:bg-green-600');
-                practiceModeBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-            } else {
-                practiceModeBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-                practiceModeBtn.classList.add('bg-green-500', 'text-white', 'hover:bg-green-600');
-                emergencyModeBtn.classList.remove('bg-red-500', 'text-white', 'hover:bg-red-600');
-                emergencyModeBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            // Update mobile button styles with consistent hover effects
+            if (emergencyModeBtn && practiceModeBtn) {
+                if (mode === 'emergency') {
+                    emergencyModeBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                    emergencyModeBtn.classList.add('bg-red-500', 'text-white', 'hover:bg-red-600');
+                    practiceModeBtn.classList.remove('bg-green-500', 'text-white', 'hover:bg-green-600');
+                    practiceModeBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                } else {
+                    practiceModeBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                    practiceModeBtn.classList.add('bg-green-500', 'text-white', 'hover:bg-green-600');
+                    emergencyModeBtn.classList.remove('bg-red-500', 'text-white', 'hover:bg-red-600');
+                    emergencyModeBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                }
+            }
+
+            // Update desktop button styles
+            if (emergencyModeBtnDesktop && practiceModeBtnDesktop) {
+                if (mode === 'emergency') {
+                    emergencyModeBtnDesktop.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                    emergencyModeBtnDesktop.classList.add('bg-red-500', 'text-white', 'hover:bg-red-600');
+                    practiceModeBtnDesktop.classList.remove('bg-green-500', 'text-white', 'hover:bg-green-600');
+                    practiceModeBtnDesktop.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                } else {
+                    practiceModeBtnDesktop.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                    practiceModeBtnDesktop.classList.add('bg-green-500', 'text-white', 'hover:bg-green-600');
+                    emergencyModeBtnDesktop.classList.remove('bg-red-500', 'text-white', 'hover:bg-red-600');
+                    emergencyModeBtnDesktop.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                }
             }
 
             console.log(`✅ 切換諮詢模式: ${mode}`);
         }
 
-        emergencyModeBtn.addEventListener('click', () => setCounselingMode('emergency'));
-        practiceModeBtn.addEventListener('click', () => setCounselingMode('practice'));
+        // Mobile buttons
+        if (emergencyModeBtn) emergencyModeBtn.addEventListener('click', () => setCounselingMode('emergency'));
+        if (practiceModeBtn) practiceModeBtn.addEventListener('click', () => setCounselingMode('practice'));
+
+        // Desktop buttons
+        if (emergencyModeBtnDesktop) emergencyModeBtnDesktop.addEventListener('click', () => setCounselingMode('emergency'));
+        if (practiceModeBtnDesktop) practiceModeBtnDesktop.addEventListener('click', () => setCounselingMode('practice'));
 
         // Audio Player Controls
         if (audioPlayBtn) audioPlayBtn.addEventListener('click', toggleAudioPlayback);
