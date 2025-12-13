@@ -435,7 +435,7 @@
                                 <span class="text-green-600 font-bold mt-0.5">3.</span>
                                 <span>或點擊下方「即時分析」立即取得建議</span>
                             </p>
-                            <p class="flex items-start gap-2">
+                            <p id="demoModeHintMobile" class="flex items-start gap-2" style="display: none;">
                                 <span class="text-purple-600 font-bold mt-0.5">💡</span>
                                 <span class="font-semibold">測試模式：按 <kbd class="bg-white px-2 py-0.5 rounded border shadow-sm font-mono text-xs">T</kbd> 鍵可模擬對話</span>
                             </p>
@@ -721,8 +721,8 @@
                         </div>
                     </div>
 
-                    <!-- Demo Mode Hint - Enhanced -->
-                    <div class="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                    <!-- Demo Mode Hint - Enhanced (hidden by default) -->
+                    <div id="demoModeHintDesktop" class="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl" style="display: none;">
                         <p class="text-xs md:text-sm text-blue-700 leading-relaxed">
                             💡 <strong>測試模式</strong>：點擊上方「播放對話」按鈕，或按 <kbd class="bg-blue-200 px-2 py-1 rounded font-mono text-xs">T</kbd> 鍵手動播放下一句
                         </p>
@@ -1783,6 +1783,12 @@
                     hintElem.textContent = '關閉 = Demo';
                 }
             });
+
+            // Show/Hide demo mode hints
+            const demoHintMobile = document.getElementById('demoModeHintMobile');
+            const demoHintDesktop = document.getElementById('demoModeHintDesktop');
+            if (demoHintMobile) demoHintMobile.style.display = isDemoMode ? '' : 'none';
+            if (demoHintDesktop) demoHintDesktop.style.display = isDemoMode ? '' : 'none';
 
             // Log mode change
             console.log(`🔄 Mode switched to: ${isDemoMode ? 'Demo' : 'Real Recording'}`);
