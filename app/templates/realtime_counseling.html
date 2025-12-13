@@ -549,10 +549,9 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            <!-- Left Panel: Recording Controls -->
-            <div class="space-y-4 hidden md:block">
+        <!-- Recording Controls - Full Width -->
+        <div class="max-w-2xl mx-auto mb-6">
+            <div class="space-y-4">
                 <!-- Recording Controls - Enhanced -->
                 <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
                     <div class="flex items-center gap-2 mb-4">
@@ -744,38 +743,38 @@
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Right Panel: AI Analysis Cards -->
-            <div class="space-y-4">
-                <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
-                    <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                                <span class="text-white text-lg">🤖</span>
-                            </div>
-                            <h2 class="text-lg md:text-xl font-bold text-gray-800">AI 即時分析</h2>
+        <!-- AI Analysis Section - Full Width at Bottom -->
+        <div class="mt-6">
+            <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 card-hover border border-gray-100">
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                            <span class="text-white text-lg">🤖</span>
                         </div>
-                        <div class="flex gap-2 flex-wrap">
-                            <button id="triggerAnalysisBtn" class="btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-smooth shadow-md opacity-50 cursor-not-allowed flex items-center gap-1" disabled>
-                                <span>⚡</span>
-                                <span class="hidden sm:inline">立即分析</span>
-                                <span class="sm:hidden">分析</span>
-                            </button>
-                        </div>
+                        <h2 class="text-lg md:text-xl font-bold text-gray-800">AI 即時分析</h2>
                     </div>
+                    <div class="flex gap-2 flex-wrap">
+                        <button id="triggerAnalysisBtn" class="btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-smooth shadow-md opacity-50 cursor-not-allowed flex items-center gap-1" disabled>
+                            <span>⚡</span>
+                            <span class="hidden sm:inline">立即分析</span>
+                            <span class="sm:hidden">分析</span>
+                        </button>
+                    </div>
+                </div>
 
-                    <!-- Analysis Cards Container -->
-                    <div id="analysisCards" class="space-y-4 max-h-[600px] md:max-h-[800px] overflow-y-auto custom-scrollbar">
-                        <!-- Empty State -->
-                        <div class="flex flex-col items-center justify-center py-12 text-center" id="analysisEmpty">
-                            <div class="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center mb-4">
-                                <span class="text-3xl md:text-4xl">💡</span>
-                            </div>
-                            <h3 class="text-base md:text-lg font-bold text-gray-800 mb-2">等待分析</h3>
-                            <p class="text-gray-600 text-xs md:text-sm max-w-xs">
-                                點擊「立即分析」查看 AI 督導建議
-                            </p>
+                <!-- Analysis Cards Container -->
+                <div id="analysisCards" class="space-y-4 max-h-[600px] md:max-h-[800px] overflow-y-auto custom-scrollbar">
+                    <!-- Empty State -->
+                    <div class="flex flex-col items-center justify-center py-12 text-center" id="analysisEmpty">
+                        <div class="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center mb-4">
+                            <span class="text-3xl md:text-4xl">💡</span>
                         </div>
+                        <h3 class="text-base md:text-lg font-bold text-gray-800 mb-2">等待分析</h3>
+                        <p class="text-gray-600 text-xs md:text-sm max-w-xs">
+                            點擊「立即分析」查看 AI 督導建議
+                        </p>
                     </div>
                 </div>
             </div>
