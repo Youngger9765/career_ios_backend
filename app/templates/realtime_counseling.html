@@ -2338,6 +2338,37 @@
         }
 
         function displayAnalysisCard(analysis) {
+            // Build Risk Level configuration (for card background and header)
+            let riskConfig = {
+                'red': {
+                    emoji: '🔴',
+                    label: '高風險',
+                    cardBg: 'bg-red-50',
+                    borderColor: 'border-red-300',
+                    headerBg: 'bg-red-100',
+                    textColor: 'text-red-700',
+                    title: '高風險：需立即關注'
+                },
+                'yellow': {
+                    emoji: '💛',
+                    label: '注意',
+                    cardBg: 'bg-yellow-50',
+                    borderColor: 'border-yellow-300',
+                    headerBg: 'bg-yellow-100',
+                    textColor: 'text-yellow-700',
+                    title: '中風險：需要注意'
+                },
+                'green': {
+                    emoji: '💚',
+                    label: '安全',
+                    cardBg: 'bg-green-50',
+                    borderColor: 'border-green-300',
+                    headerBg: 'bg-green-100',
+                    textColor: 'text-green-700',
+                    title: '安全：溝通良好'
+                }
+            };
+
             // Clear placeholder/empty state
             if (analysisEmpty) analysisEmpty.style.display = 'none';
 
@@ -2345,7 +2376,7 @@
 
             // Use error styling if this is an error response
             const isError = analysis.is_error || (analysis.summary && analysis.summary.includes('失敗'));
-            // Set card background and border based on risk level (comes after riskConfig definition)
+            // Set card background and border based on risk level
             const cardBgColor = analysis.risk_level ? (riskConfig[analysis.risk_level]?.cardBg || 'bg-white') : 'bg-white';
             const cardBorderColor = analysis.risk_level ? (riskConfig[analysis.risk_level]?.borderColor || 'border-gray-300') : 'border-gray-300';
             card.className = `${cardBgColor} rounded-xl shadow-md hover:shadow-lg transition-shadow p-4 md:p-5 border-2 ${cardBorderColor} fade-in card-hover`;
@@ -2415,36 +2446,6 @@
                    </span>`;
             }
 
-            // Build Risk Level configuration (for card background and header)
-            let riskConfig = {
-                'red': {
-                    emoji: '🔴',
-                    label: '高風險',
-                    cardBg: 'bg-red-50',
-                    borderColor: 'border-red-300',
-                    headerBg: 'bg-red-100',
-                    textColor: 'text-red-700',
-                    title: '高風險：需立即關注'
-                },
-                'yellow': {
-                    emoji: '💛',
-                    label: '注意',
-                    cardBg: 'bg-yellow-50',
-                    borderColor: 'border-yellow-300',
-                    headerBg: 'bg-yellow-100',
-                    textColor: 'text-yellow-700',
-                    title: '中風險：需要注意'
-                },
-                'green': {
-                    emoji: '💚',
-                    label: '安全',
-                    cardBg: 'bg-green-50',
-                    borderColor: 'border-green-300',
-                    headerBg: 'bg-green-100',
-                    textColor: 'text-green-700',
-                    title: '安全：溝通良好'
-                }
-            };
             const currentRisk = riskConfig[analysis.risk_level] || riskConfig['green'];
 
             card.innerHTML = `
