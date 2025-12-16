@@ -12,7 +12,7 @@
 
 ## 📋 目錄
 
-1. [認證 APIs](#認證-apis) (1-3)
+1. [認證 APIs](#認證-apis) (0-3)
 2. [個案管理 APIs](#個案管理-apis) (4-9)
 3. [會談記錄管理 APIs](#會談記錄管理-apis) (10-17)
 4. [諮詢師反思 APIs](#諮詢師反思-apis) (18-19)
@@ -22,9 +22,29 @@
 
 ---
 
-## 🎉 最新更新 (2025-11-29) ⭐️ NEW
+## 🎉 最新更新 (2025-12-15) ⭐️ NEW
 
-### 0. 🔍 Session 關鍵字分析 APIs
+### 0. 🔐 註冊功能 (Register API)
+
+**新增 API:** `POST /api/auth/register`
+
+**功能說明:**
+- 支援新諮詢師註冊帳號
+- 註冊後自動登入並返回 JWT token
+- 支援多租戶（email + tenant_id 唯一性）
+- 自動檢查 username 和 email+tenant_id 的唯一性
+
+**使用場景:**
+- 首次使用系統時註冊新帳號
+- 註冊成功後可直接使用返回的 token 進行後續操作
+
+**詳細文件:** 請參閱本文件「認證 APIs」章節
+
+---
+
+## 🎉 最新更新 (2025-11-29)
+
+### 1. 🔍 Session 關鍵字分析 APIs
 
 **新功能:** 即時逐字稿關鍵字分析 + 分析歷程記錄管理
 
@@ -466,9 +486,10 @@ func deleteClientCase(token: String, caseId: UUID) async throws -> DeleteRespons
 3. GET /api/v1/ui/field-schemas/case - 獲取 Case schema
 
 ### 👤 認證 APIs
-4. POST /api/auth/login - 登入
-5. GET /api/auth/me - 取得諮詢師資訊
-6. PATCH /api/auth/me - 更新諮詢師資訊
+0. POST /api/auth/register - 註冊帳號 ⭐️ NEW
+1. POST /api/auth/login - 登入
+2. GET /api/auth/me - 取得諮詢師資訊
+3. PATCH /api/auth/me - 更新諮詢師資訊
 
 ### 👥 個案管理 APIs
 4. POST /api/v1/clients - 建立個案
@@ -698,7 +719,163 @@ Authorization: Bearer {access_token}
 
 ## 🔐 認證 APIs
 
-### 4. 登入
+### 0. 註冊帳號 ⭐️ NEW
+
+**Endpoint:** `POST /api/auth/register`
+
+**描述:** 註冊新的諮詢師帳號，註冊成功後自動登入並返回 JWT token。
+
+**Request:**
+```json
+{
+  "email": "newuser@example.com",
+  "username": "newuser",
+  "password": "password123",
+  "full_name": "新用戶",
+  "tenant_id": "career",
+  "role": "counselor"
+}
+```
+
+**欄位說明:**
+- `email` (必填): 電子郵件地址，需符合 Email 格式
+- `username` (必填): 用戶名，3-50 個字元，全系統唯一
+- `password` (必填): 密碼，至少 8 個字元
+- `full_name` (必填): 全名
+- `tenant_id` (必填): 租戶 ID（如 "career" 或 "island"）
+- `role` (選填): 角色，預設為 "counselor"，可選值：counselor, supervisor, admin
+
+**唯一性檢查:**
+- `email + tenant_id` 組合必須唯一（同一 email 可在不同 tenant 註冊）
+- `username` 必須全系統唯一
+
+**Response (201):**
+```json
+{
+  "access_token": "eyJhbGc...",
+  "token_type": "bearer",
+  "expires_in": 7776000
+}
+```
+
+**錯誤回應:**
+
+**400 Bad Request - Email 已存在於該租戶:**
+```json
+{
+  "detail": "Email 'newuser@example.com' already exists for tenant 'career'"
+}
+```
+
+**400 Bad Request - Username 已存在:**
+```json
+{
+  "detail": "Username 'newuser' already exists"
+}
+```
+
+**422 Unprocessable Entity - 驗證錯誤:**
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "password"],
+      "msg": "ensure this value has at least 8 characters",
+      "type": "value_error.any_str.min_length"
+    }
+  ]
+}
+```
+
+**Swift 範例:**
+```swift
+struct RegisterRequest: Codable {
+    let email: String
+    let username: String
+    let password: String
+    let full_name: String
+    let tenant_id: String
+    let role: String?
+
+    enum CodingKeys: String, CodingKey {
+        case email
+        case username
+        case password
+        case full_name
+        case tenant_id
+        case role
+    }
+}
+
+struct RegisterResponse: Codable {
+    let access_token: String
+    let token_type: String
+    let expires_in: Int
+}
+
+func register(
+    email: String,
+    username: String,
+    password: String,
+    fullName: String,
+    tenantId: String,
+    role: String? = "counselor"
+) async throws -> String {
+    let url = URL(string: "\(baseURL)/api/auth/register")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = RegisterRequest(
+        email: email,
+        username: username,
+        password: password,
+        full_name: fullName,
+        tenant_id: tenantId,
+        role: role
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw URLError(.badServerResponse)
+    }
+
+    if httpResponse.statusCode == 201 {
+        let registerResponse = try JSONDecoder().decode(RegisterResponse.self, from: data)
+        return registerResponse.access_token
+    } else {
+        // 處理錯誤
+        let errorData = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let errorMessage = errorData?["detail"] as? String ?? "註冊失敗"
+        throw NSError(domain: "RegisterError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+    }
+}
+```
+
+**使用範例:**
+```swift
+// 註冊新帳號
+do {
+    let token = try await register(
+        email: "newuser@example.com",
+        username: "newuser",
+        password: "password123",
+        fullName: "新用戶",
+        tenantId: "career",
+        role: "counselor"
+    )
+    // 註冊成功，token 已返回，可直接使用
+    print("註冊成功，Token: \(token)")
+} catch {
+    print("註冊失敗: \(error.localizedDescription)")
+}
+```
+
+---
+
+### 1. 登入
 
 **Endpoint:** `POST /api/auth/login`
 

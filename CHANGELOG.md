@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **User Registration API** (2025-12-15)
+  - ✅ New endpoint: `POST /api/auth/register` for counselor account registration
+  - ✅ Auto-login after registration (returns JWT token immediately)
+  - ✅ Multi-tenant support (email + tenant_id uniqueness check)
+  - ✅ Username uniqueness validation across all tenants
+  - ✅ Password validation (minimum 8 characters)
+  - ✅ Default role assignment (counselor if not specified)
+  - ✅ Registration form added to `/console` page
+  - ✅ Complete TDD test coverage (6 test cases, all passing)
+  - ✅ Updated iOS API documentation with Swift examples
+
 ### Changed
 - **Extended JWT Token Expiration** (2025-12-13)
   - Access Token: 24 hours → 90 days (3 months)

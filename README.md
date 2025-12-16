@@ -66,9 +66,41 @@ MOCK_MODE=true poetry run uvicorn app.main:app --reload
 - **[iOS API Guide](IOS_API_GUIDE.md)** - iOS 開發完整指南（包含 Client & Case Management）
 - **[PRD 產品需求文件](PRD.md)** - 系統概述與功能規格
 
-### 🔑 測試帳號
+### 🔑 認證與測試帳號
 
 **Staging 環境**: `https://your-api-staging.example.com` （請向技術團隊索取實際 URL）
+
+#### 註冊新帳號 ⭐️ NEW
+
+**註冊 API**:
+```bash
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "email": "newuser@example.com",
+  "username": "newuser",
+  "password": "password123",
+  "full_name": "新用戶",
+  "tenant_id": "career",
+  "role": "counselor"
+}
+```
+
+**回應 (201)**:
+```json
+{
+  "access_token": "eyJhbGci...",
+  "token_type": "bearer",
+  "expires_in": 7776000
+}
+```
+
+> 💡 **提示**: 註冊成功後會自動登入並返回 token，可直接使用。
+
+#### 登入現有帳號
+
+**測試帳號**:
 
 | Tenant | Email | Password | 用途 |
 |--------|-------|----------|------|
@@ -87,7 +119,7 @@ Content-Type: application/json
 }
 ```
 
-**回應**:
+**回應 (200)**:
 ```json
 {
   "access_token": "eyJhbGci...",
