@@ -253,3 +253,182 @@ class TestAuthAPI:
             )
 
             assert response.status_code == 401
+
+    def test_register_success(self, db_session: Session):
+        """Test successful registration returns access token"""
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/auth/register",
+                json={
+                    "email": "newuser@example.com",
+                    "username": "newuser",
+                    "password": "password123",
+                    "full_name": "New User",
+                    "tenant_id": "career",
+                    "role": "counselor",
+                },
+            )
+
+            assert response.status_code == 201
+            data = response.json()
+            assert "access_token" in data
+            assert data["token_type"] == "bearer"
+            assert "expires_in" in data
+            assert isinstance(data["access_token"], str)
+            assert len(data["access_token"]) > 0
+
+            # Verify counselor was created in database
+            from sqlalchemy import select
+
+            result = db_session.execute(
+                select(Counselor).where(
+                    Counselor.email == "newuser@example.com",
+                    Counselor.tenant_id == "career",
+                )
+            )
+            counselor = result.scalar_one_or_none()
+            assert counselor is not None
+            assert counselor.username == "newuser"
+            assert counselor.full_name == "New User"
+            assert counselor.is_active is True
+
+    def test_register_duplicate_email_tenant(self, db_session: Session):
+        """Test registration with duplicate email+tenant_id returns 400"""
+        # Create existing counselor
+        counselor = Counselor(
+            id=uuid4(),
+            email="existing@example.com",
+            username="existing",
+            full_name="Existing User",
+            hashed_password=hash_password("password123"),
+            tenant_id="career",
+            role="counselor",
+            is_active=True,
+        )
+        db_session.add(counselor)
+        db_session.commit()
+
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/auth/register",
+                json={
+                    "email": "existing@example.com",
+                    "username": "newusername",
+                    "password": "password123",
+                    "full_name": "New User",
+                    "tenant_id": "career",
+                    "role": "counselor",
+                },
+            )
+
+            assert response.status_code == 400
+            assert "already exists" in response.json()["detail"].lower()
+
+    def test_register_duplicate_username(self, db_session: Session):
+        """Test registration with duplicate username returns 400"""
+        # Create existing counselor
+        counselor = Counselor(
+            id=uuid4(),
+            email="user1@example.com",
+            username="taken_username",
+            full_name="User One",
+            hashed_password=hash_password("password123"),
+            tenant_id="career",
+            role="counselor",
+            is_active=True,
+        )
+        db_session.add(counselor)
+        db_session.commit()
+
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/auth/register",
+                json={
+                    "email": "user2@example.com",
+                    "username": "taken_username",
+                    "password": "password123",
+                    "full_name": "User Two",
+                    "tenant_id": "career",
+                    "role": "counselor",
+                },
+            )
+
+            assert response.status_code == 400
+            assert "username" in response.json()["detail"].lower()
+            assert "already exists" in response.json()["detail"].lower()
+
+    def test_register_same_email_different_tenant(self, db_session: Session):
+        """Test registration with same email but different tenant_id succeeds"""
+        # Create counselor in career tenant
+        counselor = Counselor(
+            id=uuid4(),
+            email="shared@example.com",
+            username="career_user",
+            full_name="Career User",
+            hashed_password=hash_password("password123"),
+            tenant_id="career",
+            role="counselor",
+            is_active=True,
+        )
+        db_session.add(counselor)
+        db_session.commit()
+
+        with TestClient(app) as client:
+            # Register same email in different tenant should succeed
+            response = client.post(
+                "/api/auth/register",
+                json={
+                    "email": "shared@example.com",
+                    "username": "island_user",
+                    "password": "password123",
+                    "full_name": "Island User",
+                    "tenant_id": "island",
+                    "role": "counselor",
+                },
+            )
+
+            assert response.status_code == 201
+            data = response.json()
+            assert "access_token" in data
+
+    def test_register_default_role(self, db_session: Session):
+        """Test registration without role defaults to counselor"""
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/auth/register",
+                json={
+                    "email": "defaultrole@example.com",
+                    "username": "defaultrole",
+                    "password": "password123",
+                    "full_name": "Default Role User",
+                    "tenant_id": "career",
+                },
+            )
+
+            assert response.status_code == 201
+
+            # Verify role is set to counselor by default
+            from sqlalchemy import select
+
+            result = db_session.execute(
+                select(Counselor).where(Counselor.email == "defaultrole@example.com")
+            )
+            counselor = result.scalar_one_or_none()
+            assert counselor is not None
+            assert counselor.role.value == "counselor"
+
+    def test_register_password_min_length(self, db_session: Session):
+        """Test registration with password less than 8 characters returns 422"""
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/auth/register",
+                json={
+                    "email": "shortpass@example.com",
+                    "username": "shortpass",
+                    "password": "short",  # Less than 8 characters
+                    "full_name": "Short Pass User",
+                    "tenant_id": "career",
+                },
+            )
+
+            assert response.status_code == 422  # Validation error

@@ -1,4 +1,124 @@
         const steps = {
+            register: {
+                title: '註冊帳號',
+                subtitle: 'POST /auth/register',
+                renderForm: () => `
+                    <div class="form-group">
+                        <label>Tenant ID</label>
+                        <select id="register_tenant_id">
+                            <option value="career">career</option>
+                            <option value="island">island</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" id="register_email" placeholder="user@example.com" />
+                    </div>
+                    <div class="form-group">
+                        <label>Username *</label>
+                        <input type="text" id="register_username" placeholder="username" />
+                    </div>
+                    <div class="form-group">
+                        <label>Full Name *</label>
+                        <input type="text" id="register_full_name" placeholder="Full Name" />
+                    </div>
+                    <div class="form-group">
+                        <label>Password * (至少 8 個字元)</label>
+                        <input type="password" id="register_password" placeholder="password" />
+                    </div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select id="register_role">
+                            <option value="counselor">Counselor</option>
+                            <option value="supervisor">Supervisor</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="executeRegister()">註冊</button>
+                `,
+                execute: async () => {
+                    const tenant_id = document.getElementById('register_tenant_id').value;
+                    const email = document.getElementById('register_email').value;
+                    const username = document.getElementById('register_username').value;
+                    const full_name = document.getElementById('register_full_name').value;
+                    const password = document.getElementById('register_password').value;
+                    const role = document.getElementById('register_role').value;
+
+                    if (!email || !username || !full_name || !password) {
+                        return {
+                            response: { ok: false, status: 400 },
+                            data: { detail: '請填寫所有必填欄位' }
+                        };
+                    }
+
+                    if (password.length < 8) {
+                        return {
+                            response: { ok: false, status: 400 },
+                            data: { detail: '密碼長度至少需要 8 個字元' }
+                        };
+                    }
+
+                    const response = await fetch(`${BASE_URL}/api/auth/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tenant_id, email, username, full_name, password, role })
+                    });
+
+                    const data = await response.json();
+                    if (response.ok) {
+                        state.token = data.access_token;
+                        localStorage.setItem('token', state.token);
+
+                        // 自動獲取當前用戶資訊
+                        try {
+                            const meResponse = await fetch(`${BASE_URL}/api/auth/me`, {
+                                headers: { 'Authorization': `Bearer ${state.token}` }
+                            });
+                            if (meResponse.ok) {
+                                const userData = await meResponse.json();
+                                state.currentUser = userData;
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch user info:', error);
+                        }
+
+                        // 自動載入 field schemas
+                        await loadFieldSchemas();
+                    }
+                    return { response, data };
+                },
+                renderPreview: (data) => {
+                    if (!data || data.detail) {
+                        return `
+                            <div class="info-card" style="background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444;">
+                                <h3>❌ 註冊失敗</h3>
+                                <p style="color: #ef4444;">${data?.detail || '未知錯誤'}</p>
+                            </div>
+                        `;
+                    }
+                    return `
+                        <div class="info-card">
+                            <h3>✅ 註冊成功</h3>
+                            <div class="info-row">
+                                <span class="info-label">Token Type</span>
+                                <span class="info-value">${data.token_type}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Expires In</span>
+                                <span class="info-value">${data.expires_in}s</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Access Token</span>
+                                <span class="info-value" style="font-size: 11px; word-break: break-all;">${data.access_token.substring(0, 40)}...</span>
+                            </div>
+                            <div class="info-row" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1);">
+                                <span class="info-label">提示</span>
+                                <span class="info-value" style="color: #0ea5e9;">已自動登入，Token 已儲存</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
             login: {
                 title: '登入驗證',
                 subtitle: 'POST /auth/login',
@@ -5534,6 +5654,7 @@ Cl: 我開始用你上次建議的方法，先確認主管的需求再開始做�
         };
 
         // Step execution functions
+        window.executeRegister = () => executeStep('register');
         window.executeLogin = () => executeStep('login');
         window.executeMe = () => executeStep('me');
         window.executeGetClientFieldSchema = () => executeStep('get-client-field-schema');

@@ -10,12 +10,101 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.database import get_db
 from app.core.deps import get_current_user
-from app.core.security import create_access_token, verify_password
+from app.core.security import create_access_token, hash_password, verify_password
 from app.models.counselor import Counselor
-from app.schemas.auth import CounselorInfo, CounselorUpdate, LoginRequest, TokenResponse
+from app.schemas.auth import (
+    CounselorInfo,
+    CounselorUpdate,
+    LoginRequest,
+    RegisterRequest,
+    TokenResponse,
+)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 settings = Settings()
+
+
+@router.post(
+    "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
+)
+def register(
+    register_data: RegisterRequest,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    """
+    Register a new counselor account
+
+    Args:
+        register_data: Registration information (email, username, password, etc.)
+        db: Database session
+
+    Returns:
+        TokenResponse with access_token (auto-login after registration)
+
+    Raises:
+        HTTPException: 400 if email+tenant_id or username already exists
+    """
+    # Check if email + tenant_id combination already exists
+    result = db.execute(
+        select(Counselor).where(
+            Counselor.email == register_data.email,
+            Counselor.tenant_id == register_data.tenant_id,
+        )
+    )
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Email '{register_data.email}' already exists for tenant '{register_data.tenant_id}'",
+        )
+
+    # Check if username already exists
+    result = db.execute(
+        select(Counselor).where(Counselor.username == register_data.username)
+    )
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Username '{register_data.username}' already exists",
+        )
+
+    try:
+        # Create new counselor
+        counselor = Counselor(
+            email=register_data.email,
+            username=register_data.username,
+            full_name=register_data.full_name,
+            hashed_password=hash_password(register_data.password),
+            tenant_id=register_data.tenant_id,
+            role=register_data.role,
+            is_active=True,
+        )
+
+        db.add(counselor)
+        db.commit()
+        db.refresh(counselor)
+
+        # Auto-login: Create access token
+        token_data = {
+            "sub": counselor.email,
+            "tenant_id": counselor.tenant_id,
+            "role": counselor.role.value,
+        }
+        access_token = create_access_token(token_data)
+
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to register: {str(e)}",
+        )
 
 
 @router.post("/login", response_model=TokenResponse)

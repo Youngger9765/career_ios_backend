@@ -5,7 +5,9 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+
+from app.models.counselor import CounselorRole
 
 
 class LoginRequest(BaseModel):
@@ -14,6 +16,17 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
     tenant_id: str
+
+
+class RegisterRequest(BaseModel):
+    """Registration request"""
+
+    email: EmailStr
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=8)
+    full_name: str = Field(..., min_length=1)
+    tenant_id: str
+    role: CounselorRole = CounselorRole.COUNSELOR
 
 
 class TokenResponse(BaseModel):
