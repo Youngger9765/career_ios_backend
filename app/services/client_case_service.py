@@ -105,17 +105,24 @@ class ClientCaseService:
     def list_client_cases(
         self,
         tenant_id: str,
+        counselor_id: UUID,
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[Dict[str, Any]], int]:
         """
         List all client-cases with session statistics.
 
+        Args:
+            tenant_id: Tenant ID for multi-tenant isolation
+            counselor_id: Counselor ID for counselor-level isolation
+            skip: Pagination offset
+            limit: Items per page
+
         Returns:
             Tuple of (items, total_count)
         """
         # Build query using helper
-        query, count_query = build_client_case_list_query(tenant_id)
+        query, count_query = build_client_case_list_query(tenant_id, counselor_id)
 
         # Get total count
         total = self.db.execute(count_query).scalar() or 0
@@ -137,13 +144,16 @@ class ClientCaseService:
 
         return items, total
 
-    def get_client_case_detail(self, case_id: UUID, tenant_id: str) -> Dict[str, Any]:
+    def get_client_case_detail(
+        self, case_id: UUID, tenant_id: str, counselor_id: UUID
+    ) -> Dict[str, Any]:
         """
         Get detailed client-case information.
 
         Args:
             case_id: Case UUID
             tenant_id: Tenant ID
+            counselor_id: Counselor ID for counselor-level isolation
 
         Returns:
             Dict with client and case details
@@ -159,6 +169,7 @@ class ClientCaseService:
             .where(
                 Case.id == case_id,
                 Case.tenant_id == tenant_id,
+                Case.counselor_id == counselor_id,
                 Case.deleted_at.is_(None),
             )
         ).scalar_one_or_none()
@@ -169,6 +180,10 @@ class ClientCaseService:
         client = case.client
         if not client or client.deleted_at is not None:
             raise ValueError(f"Client for case {case_id} not found")
+
+        # Double-check client belongs to counselor
+        if client.counselor_id != counselor_id:
+            raise ValueError(f"Case {case_id} not found")
 
         status_value, _ = normalize_case_status(case.status)
         status_labels = {
@@ -215,6 +230,7 @@ class ClientCaseService:
         self,
         case_id: UUID,
         tenant_id: str,
+        counselor_id: UUID,
         client_updates: Optional[Dict[str, Any]] = None,
         case_updates: Optional[Dict[str, Any]] = None,
     ) -> Tuple[Client, Case]:
@@ -224,6 +240,7 @@ class ClientCaseService:
         Args:
             case_id: Case UUID
             tenant_id: Tenant ID
+            counselor_id: Counselor ID for counselor-level isolation
             client_updates: Optional dict of client fields to update
             case_updates: Optional dict of case fields to update
 
@@ -238,6 +255,7 @@ class ClientCaseService:
             select(Case).where(
                 Case.id == case_id,
                 Case.tenant_id == tenant_id,
+                Case.counselor_id == counselor_id,
                 Case.deleted_at.is_(None),
             )
         ).scalar_one_or_none()
@@ -250,6 +268,7 @@ class ClientCaseService:
             select(Client).where(
                 Client.id == case.client_id,
                 Client.tenant_id == tenant_id,
+                Client.counselor_id == counselor_id,
                 Client.deleted_at.is_(None),
             )
         ).scalar_one_or_none()

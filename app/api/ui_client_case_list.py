@@ -121,6 +121,7 @@ def get_client_case_list(
     service = ClientCaseService(db)
     items_data, total = service.list_client_cases(
         tenant_id=tenant_id,
+        counselor_id=current_user.id,
         skip=skip,
         limit=limit,
     )
@@ -146,7 +147,9 @@ def get_client_case_detail(
     """Get single client-case detail"""
     try:
         service = ClientCaseService(db)
-        detail = service.get_client_case_detail(case_id=case_id, tenant_id=tenant_id)
+        detail = service.get_client_case_detail(
+            case_id=case_id, tenant_id=tenant_id, counselor_id=current_user.id
+        )
         return ClientCaseDetailResponse(**detail)
     except ValueError as e:
         raise HTTPException(
@@ -209,6 +212,7 @@ def update_client_and_case(
         client, case = service.update_client_and_case(
             case_id=case_id,
             tenant_id=tenant_id,
+            counselor_id=current_user.id,
             client_updates=client_updates if client_updates else None,
             case_updates=case_updates if case_updates else None,
         )

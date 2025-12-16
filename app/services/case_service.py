@@ -52,6 +52,7 @@ class CaseService:
     def list_cases(
         self,
         tenant_id: str,
+        counselor_id: UUID,
         skip: int = 0,
         limit: int = 100,
         client_id: Optional[UUID] = None,
@@ -60,6 +61,7 @@ class CaseService:
 
         Args:
             tenant_id: Tenant ID
+            counselor_id: Counselor ID for counselor-level isolation
             skip: Pagination offset
             limit: Number of items per page
             client_id: Optional client ID filter
@@ -69,6 +71,7 @@ class CaseService:
         """
         query = select(Case).where(
             Case.tenant_id == tenant_id,
+            Case.counselor_id == counselor_id,
             Case.deleted_at.is_(None),
         )
 
@@ -79,7 +82,12 @@ class CaseService:
 
         # Get total count
         count_query = (
-            select(func.count()).select_from(Case).where(Case.tenant_id == tenant_id)
+            select(func.count())
+            .select_from(Case)
+            .where(
+                Case.tenant_id == tenant_id,
+                Case.counselor_id == counselor_id,
+            )
         )
         if client_id:
             count_query = count_query.where(Case.client_id == client_id)
@@ -165,12 +173,14 @@ class CaseService:
         self,
         case_id: UUID,
         tenant_id: str,
+        counselor_id: UUID,
     ) -> Optional[Case]:
         """Get case by ID
 
         Args:
             case_id: Case UUID
             tenant_id: Tenant ID
+            counselor_id: Counselor ID for counselor-level isolation
 
         Returns:
             Case or None if not found
@@ -179,6 +189,7 @@ class CaseService:
             select(Case).where(
                 Case.id == case_id,
                 Case.tenant_id == tenant_id,
+                Case.counselor_id == counselor_id,
                 Case.deleted_at.is_(None),
             )
         )
@@ -189,6 +200,7 @@ class CaseService:
         case_id: UUID,
         update_data: dict,
         tenant_id: str,
+        counselor_id: UUID,
     ) -> Case:
         """Update a case
 
@@ -196,6 +208,7 @@ class CaseService:
             case_id: Case UUID
             update_data: Updated case information
             tenant_id: Tenant ID
+            counselor_id: Counselor ID for counselor-level isolation
 
         Returns:
             Updated case
@@ -203,7 +216,7 @@ class CaseService:
         Raises:
             HTTPException: If case not found or case number conflict
         """
-        case = self.get_case_by_id(case_id, tenant_id)
+        case = self.get_case_by_id(case_id, tenant_id, counselor_id)
 
         if not case:
             raise HTTPException(

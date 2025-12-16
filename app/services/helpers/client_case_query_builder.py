@@ -4,6 +4,7 @@ Complex SQLAlchemy query building logic extracted from ClientCaseService
 """
 from datetime import datetime, timezone
 from typing import Any, Dict, List
+from uuid import UUID
 
 from sqlalchemy import func, select
 
@@ -17,14 +18,18 @@ from app.services.helpers.client_case_helpers import (
 )
 
 
-def build_client_case_list_query(tenant_id: str):
+def build_client_case_list_query(tenant_id: str, counselor_id: UUID):
     """
     Build complex query for client-case list with session statistics.
+
+    Args:
+        tenant_id: Tenant ID for multi-tenant isolation
+        counselor_id: Counselor ID for counselor-level isolation
 
     Returns:
         Tuple of (main_query, count_query)
     """
-    # Subquery: first case per client
+    # Subquery: first case per client (only for this counselor)
     case_subquery = (
         select(
             Case.client_id,
@@ -32,6 +37,7 @@ def build_client_case_list_query(tenant_id: str):
         )
         .where(
             Case.tenant_id == tenant_id,
+            Case.counselor_id == counselor_id,
             Case.deleted_at.is_(None),
         )
         .group_by(Case.client_id)
@@ -45,7 +51,10 @@ def build_client_case_list_query(tenant_id: str):
             func.count(SessionModel.id).label("total_sessions"),
             func.max(SessionModel.session_date).label("last_session_date"),
         )
-        .where(SessionModel.deleted_at.is_(None))
+        .where(
+            SessionModel.tenant_id == tenant_id,
+            SessionModel.deleted_at.is_(None),
+        )
         .group_by(SessionModel.case_id)
         .subquery()
     )
@@ -68,6 +77,7 @@ def build_client_case_list_query(tenant_id: str):
         .outerjoin(session_stats_subquery, Case.id == session_stats_subquery.c.case_id)
         .where(
             Client.tenant_id == tenant_id,
+            Client.counselor_id == counselor_id,
             Client.deleted_at.is_(None),
         )
     )
@@ -78,6 +88,7 @@ def build_client_case_list_query(tenant_id: str):
         .join(case_subquery, Client.id == case_subquery.c.client_id)
         .where(
             Client.tenant_id == tenant_id,
+            Client.counselor_id == counselor_id,
             Client.deleted_at.is_(None),
         )
         .subquery()

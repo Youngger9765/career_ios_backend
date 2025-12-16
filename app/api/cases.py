@@ -28,6 +28,7 @@ def list_cases(
     service = CaseService(db)
     cases, total = service.list_cases(
         tenant_id=tenant_id,
+        counselor_id=current_user.id,
         skip=skip,
         limit=limit,
         client_id=client_id,
@@ -80,7 +81,9 @@ def get_case(
 ) -> CaseResponse:
     """Get a specific case by ID"""
     service = CaseService(db)
-    case = service.get_case_by_id(case_id=case_id, tenant_id=tenant_id)
+    case = service.get_case_by_id(
+        case_id=case_id, tenant_id=tenant_id, counselor_id=current_user.id
+    )
 
     if not case:
         raise HTTPException(
@@ -108,6 +111,7 @@ def update_case(
             case_id=case_id,
             update_data=update_data,
             tenant_id=tenant_id,
+            counselor_id=current_user.id,
         )
 
         return CaseResponse.model_validate(updated_case)
