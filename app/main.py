@@ -33,6 +33,7 @@ from app.api import (
     sessions_keywords,
     ui_client_case_list,
 )
+from app.api.v1 import admin_credits
 from app.core.config import settings
 
 # Templates
@@ -58,6 +59,9 @@ app.add_middleware(
 
 # Include auth routes
 app.include_router(auth.router, prefix="/api")
+
+# Include admin credit management routes
+app.include_router(admin_credits.router, prefix="/api/v1")
 
 # Include client routes
 app.include_router(clients.router)

@@ -63,3 +63,4 @@ class Session(Base, BaseModel):
     case = relationship("Case", back_populates="sessions")
     jobs = relationship("Job", back_populates="session")
     reports = relationship("Report", back_populates="session")
+    credit_logs = relationship("CreditLog", back_populates="session")

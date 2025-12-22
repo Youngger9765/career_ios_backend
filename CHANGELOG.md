@@ -10,6 +10,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Universal Credit/Payment System - Admin Backend (Phase 1)** (2025-12-20)
+  - ✅ Database schema extensions:
+    - Extended `counselors` table with credit fields (phone, total_credits, credits_used, subscription_expires_at)
+    - New `credit_rates` table for configurable billing rules with versioning support
+    - New `credit_logs` table for transaction audit trail with raw data preservation
+  - ✅ Service layer implementation:
+    - `CreditBillingService` with flexible credit calculation (per_second, per_minute, tiered pricing)
+    - `get_active_rate()`, `calculate_credits()`, `add_credits()`, `get_counselor_balance()` methods
+    - Raw seconds storage for future recalculation flexibility
+  - ✅ Admin API endpoints (`/api/v1/admin/credits/*`):
+    - `GET /members` - List all counselors with credit info (supports tenant filtering)
+    - `POST /members/{id}/add` - Add/remove credits (purchase, admin_adjustment, refund)
+    - `GET /logs` - View transaction history (filterable by counselor, type, with pagination)
+    - `POST /rates` - Create/update billing rates (automatic versioning)
+    - `GET /rates` - List all billing rates (filterable by rule name, active status)
+  - ✅ Multi-tenant support:
+    - Universal credit mechanism for ALL tenants (career, island, island_parents)
+    - island_parents dynamic form configurations added (child-focused client form, case form)
+  - ✅ Security & access control:
+    - Admin-only endpoints with role-based access control
+    - Complete audit trail for all transactions
+  - ✅ Testing:
+    - 21 integration tests covering all admin endpoints, RBAC, cross-tenant functionality
+    - TDD approach (tests written first, implementation follows)
+  - ✅ Database migration: `20251220_1829_5ae92c306158` applied successfully
+  - ⚠️ Phase 2 pending: Automatic credit deduction on session end
 - **User Registration API** (2025-12-15)
   - ✅ New endpoint: `POST /api/auth/register` for counselor account registration
   - ✅ Auto-login after registration (returns JWT token immediately)

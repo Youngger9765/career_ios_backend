@@ -356,6 +356,140 @@ ISLAND_CASE_SECTIONS = [
 
 
 # ============================================================================
+# ISLAND PARENTS TENANT - Client Form Configuration
+# ============================================================================
+
+ISLAND_PARENTS_CLIENT_SECTIONS = [
+    FieldSection(
+        title="孩子基本資料",
+        description="孩子的基本資訊",
+        order=1,
+        fields=[
+            FieldSchema(
+                key="name",
+                label="孩子姓名",
+                type=FieldType.TEXT,
+                required=True,
+                placeholder="請輸入孩子姓名",
+                help_text="孩子的真實姓名或代號",
+                order=1,
+            ),
+            FieldSchema(
+                key="grade",
+                label="年級",
+                type=FieldType.SINGLE_SELECT,
+                required=True,
+                options=[
+                    "1 (小一)",
+                    "2 (小二)",
+                    "3 (小三)",
+                    "4 (小四)",
+                    "5 (小五)",
+                    "6 (小六)",
+                    "7 (國一)",
+                    "8 (國二)",
+                    "9 (國三)",
+                    "10 (高一)",
+                    "11 (高二)",
+                    "12 (高三)",
+                ],
+                help_text="選擇孩子的年級",
+                order=2,
+            ),
+            FieldSchema(
+                key="birth_date",
+                label="出生日期",
+                type=FieldType.DATE,
+                required=False,
+                help_text="孩子的出生日期",
+                validation_rules={"min_year": 2000, "max_year": 2025},
+                order=3,
+            ),
+            FieldSchema(
+                key="gender",
+                label="性別",
+                type=FieldType.SINGLE_SELECT,
+                required=False,
+                options=["男", "女", "其他", "不願透露"],
+                order=4,
+            ),
+            FieldSchema(
+                key="notes",
+                label="備註",
+                type=FieldType.TEXTAREA,
+                required=False,
+                placeholder="其他需要記錄的資訊",
+                help_text="家長備註或特殊需求",
+                validation_rules={"max_length": 1000},
+                order=5,
+            ),
+        ],
+    ),
+]
+
+
+# ============================================================================
+# ISLAND PARENTS TENANT - Case Form Configuration
+# ============================================================================
+
+ISLAND_PARENTS_CASE_SECTIONS = [
+    FieldSection(
+        title="個案資訊",
+        description="個案編號、狀態與諮詢內容",
+        order=1,
+        fields=[
+            FieldSchema(
+                key="case_number",
+                label="個案編號",
+                type=FieldType.TEXT,
+                required=True,
+                placeholder="自動生成",
+                help_text="系統自動生成，格式：CASE0001",
+                order=1,
+            ),
+            FieldSchema(
+                key="status",
+                label="個案狀態",
+                type=FieldType.SINGLE_SELECT,
+                required=True,
+                options=["0", "1", "2"],
+                default_value="0",
+                help_text="0=未開始(NOT_STARTED), 1=進行中(IN_PROGRESS), 2=已完成(COMPLETED)",
+                order=2,
+            ),
+            FieldSchema(
+                key="problem_description",
+                label="問題敘述",
+                type=FieldType.TEXTAREA,
+                required=False,
+                placeholder="請描述孩子的問題與諮詢目的",
+                help_text="用於理解本次諮詢重點",
+                order=3,
+            ),
+            FieldSchema(
+                key="goals",
+                label="預期收穫",
+                type=FieldType.TEXTAREA,
+                required=False,
+                placeholder="本次諮詢的預期收穫",
+                help_text="家長期望達成的目標",
+                order=4,
+            ),
+            FieldSchema(
+                key="summary",
+                label="個案摘要",
+                type=FieldType.TEXTAREA,
+                required=False,
+                placeholder="個案整體情況摘要",
+                help_text="個案的整體情況描述",
+                order=5,
+            ),
+        ],
+    ),
+]
+
+
+# ============================================================================
 # Configuration Registry
 # ============================================================================
 
@@ -382,6 +516,18 @@ FIELD_CONFIGS = {
             form_type="case",
             tenant_id="island",
             sections=ISLAND_CASE_SECTIONS,
+        ),
+    },
+    "island_parents": {
+        "client": FormSchema(
+            form_type="client",
+            tenant_id="island_parents",
+            sections=ISLAND_PARENTS_CLIENT_SECTIONS,
+        ),
+        "case": FormSchema(
+            form_type="case",
+            tenant_id="island_parents",
+            sections=ISLAND_PARENTS_CASE_SECTIONS,
         ),
     },
 }

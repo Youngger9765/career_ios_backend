@@ -1,10 +1,1119 @@
-# TODO - Week of 2025-12-13
+# TODO - Week of 2025-12-20
 
-基於 2025-12-13 產品會議討論，本週待辦事項規劃。
+基於 2025-12-20 產品會議討論，本週待辦事項規劃。
+
+**上週成果 (Week 50)**:
+- ✅ 完成 Realtime V2 技術規格（4 份文檔，86KB）
+- ✅ 修復 RAG Threshold 問題（0.7 → 0.5）
+- ✅ 擴充 RAG 關鍵字（24 → 78 個）
+- ✅ 實作模式切換與紅黃綠燈功能（15 integration tests 全通過）
 
 ---
 
-## 🎯 本週優先目標
+## 🎯 本週優先目標 (Week 51: 2025-12-20 ~ 2025-12-26)
+
+### 📌 三大核心任務（Backend）
+
+---
+
+## 任務一：Web 改版（Web Realtime Console）
+
+### 1.1 紅綠燈卡片機制（視覺化風險等級）
+**優先級**: 🔴 P0
+**預估時間**: 4-6 小時
+**負責**: Backend API + Frontend UI
+
+**需求說明**:
+- **紅燈（嚴重錯誤）**：家長說了很不該說的話
+  - 視覺：紅色卡片 + 大字凸顯
+  - 觸發頻率：縮短為 **15 秒一張卡片**（緊急機制）
+  - 範例：威脅、辱罵、情緒失控
+
+- **黃燈（有點不合適）**：可以接受但需注意
+  - 視覺：黃色卡片
+  - 觸發頻率：**30 秒一張卡片**
+  - 範例：語氣不當、急躁、施壓
+
+- **綠燈（表現不錯）**：溝通良好
+  - 視覺：綠色卡片 + 鼓勵訊息
+  - 觸發頻率：**60 秒一張卡片**（正常）
+  - 範例：溫和、同理、有效策略
+
+**Backend 開發**:
+- [ ] 更新 `POST /api/v1/realtime/analyze` response schema
+  ```json
+  {
+    "risk_level": "red" | "yellow" | "green",
+    "severity": 1 | 2 | 3,  // 1=綠, 2=黃, 3=紅
+    "display_text": "要顯示的一段話（簡潔版）",
+    "action_suggestion": "立即可做的行動句",
+    "suggested_interval_seconds": 15 | 30 | 60,  // 建議 Frontend 調整 Timer
+    "keywords": [...],
+    "categories": [...]
+  }
+  ```
+- [ ] 移除 `confidence` 欄位（改用 severity）
+- [ ] 實作風險等級判斷邏輯（Prompt 調整）
+- [ ] 10+ integration tests
+
+**Frontend 需配合**:
+- 根據 `suggested_interval_seconds` 動態調整 Timer
+- Timer 不等 API 回來，以「送出時間」為基準
+- 紅黃綠視覺化（顏色、大小、動畫）
+
+---
+
+### 1.2 卡片合併邏輯（減少重複卡片）
+**優先級**: 🟡 P1
+**預估時間**: 4-5 小時
+**負責**: Backend
+
+**問題描述**:
+- 家長對話又臭又長 😅
+- 每 60 秒一張卡片，內容常常重複
+- 一場對話結束後累積很多張，但內容大致相同
+
+**解決方案**:
+- [ ] **卡片相似度計算**
+  - Backend 比較「前一張卡片」與「當前卡片」的相似度
+  - 使用 embedding cosine similarity
+  - 相似度閾值：> 80% 視為重複
+
+- [ ] **API Response 新增欄位**
+  ```json
+  {
+    "should_merge": true | false,  // 是否建議合併
+    "similarity_score": 0.85,      // 與前一張卡片的相似度
+    "merge_reason": "內容重複，建議保留原卡片"
+  }
+  ```
+
+- [ ] **卡片歷史追蹤**
+  - Session-level cache：儲存最近 5 張卡片的 embedding
+  - 每次分析時，計算與前一張的相似度
+  - 若相似度高，回傳 `should_merge: true`
+
+- [ ] **Frontend 行為**
+  - 收到 `should_merge: true` → 保留原卡片或合併顯示
+  - 收到 `should_merge: false` → 正常顯示新卡片
+
+**Deliverable**:
+- 相似度計算邏輯
+- 5+ integration tests
+- API 文檔更新
+
+---
+
+### 1.3 覆盤統整簡化
+**優先級**: 🟢 P2
+**預估時間**: 2-3 小時
+**負責**: Backend
+
+**需求**:
+- 使用既有格式（最大程度簡化）
+- 不新增複雜邏輯
+- 參考現有 `POST /api/v1/reports/generate`
+
+**開發**:
+- [ ] 確認現有報告格式適用
+- [ ] 若需調整，僅做最小修改
+- [ ] 不新增額外欄位或邏輯
+
+---
+
+## 任務二：付費版方案二 - 會員白名單系統（Web 行政人員）
+
+**優先級**: 🔴 P0（最優先）
+**預估時間**: 6-8 小時
+**負責**: Backend
+**參考**: 「浮島 App 付費機制」規劃文件
+
+### 2.1 會員白名單 API（給行政人員管理）
+
+**使用情境**:
+- 行政人員在後台管理有效會員
+- 付費 → 加入名單
+- 到期 → Disable
+- App/Web 每次啟動打 Backend 確認狀態
+
+**API 設計**:
+
+- [ ] **POST /api/v1/admin/whitelist/members** - 新增會員（admin only）
+  ```json
+  Request:
+  {
+    "email": "parent@example.com",
+    "phone": "+886912345678",  // optional
+    "expires_at": "2026-06-30T23:59:59Z",  // 到期時間
+    "notes": "逗點教室家長-小明媽媽"
+  }
+
+  Response 201:
+  {
+    "member_id": "uuid",
+    "email": "parent@example.com",
+    "status": "active",
+    "activated_at": "2025-12-20T10:00:00Z",
+    "expires_at": "2026-06-30T23:59:59Z"
+  }
+  ```
+
+- [ ] **GET /api/v1/admin/whitelist/members** - 查詢會員清單（admin only）
+  ```json
+  Query Parameters:
+  - status: active | suspended | expired
+  - limit: 20 (default)
+  - offset: 0 (default)
+
+  Response 200:
+  {
+    "total": 156,
+    "members": [
+      {
+        "member_id": "uuid",
+        "email": "...",
+        "status": "active",
+        "expires_at": "..."
+      }
+    ]
+  }
+  ```
+
+- [ ] **PATCH /api/v1/admin/whitelist/members/:member_id** - 更新狀態（admin only）
+  ```json
+  Request:
+  {
+    "status": "suspended",  // active | suspended
+    "expires_at": "2026-12-31T23:59:59Z"  // 延長或縮短
+  }
+  ```
+
+- [ ] **DELETE /api/v1/admin/whitelist/members/:member_id** - 移除會員（admin only）
+
+- [ ] **GET /api/v1/auth/verify-membership** - 驗證會員狀態（用戶端）
+  ```json
+  Headers:
+  Authorization: Bearer <JWT>
+
+  Response 200:
+  {
+    "is_member": true,
+    "status": "active",
+    "expires_at": "2026-06-30T23:59:59Z",
+    "days_remaining": 192
+  }
+
+  Response 403 (非會員或已過期):
+  {
+    "is_member": false,
+    "message": "會員資格已過期，請聯繫行政人員"
+  }
+  ```
+
+### 2.2 資料模型
+
+- [ ] **Whitelist Model**
+  ```python
+  class Whitelist(Base, BaseModel):
+      __tablename__ = "whitelist_members"
+
+      id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+
+      # 會員資訊
+      counselor_id = Column(GUID(), ForeignKey("counselors.id"), unique=True, index=True)
+      email = Column(String, unique=True, index=True, nullable=False)
+      phone = Column(String, nullable=True)
+
+      # 狀態管理
+      status = Column(String(20), default="active", nullable=False)
+      # active: 有效會員
+      # suspended: 暫停（例如欠費）
+      # expired: 已過期
+
+      # 時間管理
+      activated_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+      expires_at = Column(DateTime(timezone=True), nullable=True)
+      last_verified_at = Column(DateTime(timezone=True), nullable=True)
+
+      # 行政備註
+      notes = Column(Text, nullable=True)
+      created_by = Column(GUID(), ForeignKey("counselors.id"), nullable=True)
+
+      # Multi-tenant
+      tenant_id = Column(String, default="island_parents", index=True)
+  ```
+
+- [ ] **DB Migration**
+  - 建立 `whitelist_members` table
+  - 索引：`email`, `counselor_id`, `status`, `tenant_id`
+
+### 2.3 權限控制
+
+- [ ] **Admin 權限檢查**
+  - 只有 `role = "admin"` 的 counselor 可以管理白名單
+  - 使用 FastAPI Depends 實作權限裝飾器
+
+- [ ] **Middleware 整合**
+  - 在 Session Create/Update API 前檢查會員狀態
+  - 若非有效會員 → 403 Forbidden
+
+### 2.4 行政後台 UI（可選，優先級低）
+
+- [ ] 簡易 HTML 頁面（類似 console.html）
+- [ ] 會員清單顯示
+- [ ] 新增/編輯/停權按鈕
+- [ ] 搜尋功能（email, phone）
+
+**Deliverable**:
+- 5 個 API endpoints
+- Whitelist model + migration
+- 15+ integration tests
+- API 文檔
+
+---
+
+## 任務三：iOS API 改版 - island_parents 租戶
+
+**優先級**: 🔴 P0
+**預估時間**: 10-12 小時
+**負責**: Backend
+**參考**: 會議紀錄 + 「浮島 App Pivot」文件
+
+### 3.1 Multi-Tenant 架構擴充
+
+**現有 Tenants**:
+1. `counselor` - 諮商師（現有系統）
+2. `speak_ai` - SpeakAI（現有系統）
+3. **`island_parents`** - 浮島家長版（新增）✨
+
+**Tenant 隔離策略**:
+- [ ] 所有 table 都有 `tenant_id` 欄位
+- [ ] API 自動注入 `tenant_id`（基於 JWT）
+- [ ] Query 自動過濾 tenant（避免跨租戶資料洩漏）
+
+---
+
+### 3.2 Client 物件簡化（island_parents 專用）
+
+**問題**:
+- 現有 `clients` table 的 required 欄位太多：
+  - email, phone, gender, birth_date, address, emergency_contact...
+  - 不適合「家長建立孩子資料」的情境
+
+**解決方案**:
+
+**Option 1: 新增 tenant-specific schema（推薦）** ✅
+
+- [ ] **island_parents 的 Client 只需兩個 required 欄位**:
+  - `name` (String, required) - 孩子姓名或代號
+  - `grade` (Integer, required) - 年級（1-12）
+    - 1 = 小一, 6 = 小六, 7 = 國一, 10 = 高一, 12 = 高三
+    - UI 負責顯示轉換（例如：10 → "高一"）
+
+- [ ] **Optional 欄位**（App 動態顯示）:
+  - `birth_date` (Date, optional)
+  - `gender` (String, optional)
+  - `notes` (Text, optional) - 家長備註（例如：「容易生氣、拒絕寫作業」）
+
+- [ ] **DB Schema 調整**:
+  ```python
+  class Client(Base, BaseModel):
+      # 現有欄位保持不變（counselor tenant）
+
+      # 新增欄位（island_parents 專用）
+      grade = Column(Integer, nullable=True)  # 1-12
+
+      # 既有欄位改為 nullable（向後相容）
+      email = Column(String, nullable=True)  # 改為 optional
+      phone = Column(String, nullable=True)  # 改為 optional
+      gender = Column(String, nullable=True)  # 改為 optional
+      birth_date = Column(Date, nullable=True)  # 改為 optional
+  ```
+
+- [ ] **Schema Validation（Pydantic）**:
+  ```python
+  class ClientCreateIslandParents(BaseModel):
+      """island_parents 租戶專用的簡化 schema"""
+      name: str  # required
+      grade: int  # required, 1-12
+      birth_date: Optional[date] = None
+      gender: Optional[str] = None
+      notes: Optional[str] = None
+
+      @validator('grade')
+      def validate_grade(cls, v):
+          if not 1 <= v <= 12:
+              raise ValueError('年級必須在 1-12 之間')
+          return v
+  ```
+
+- [ ] **API 路由分離**:
+  ```python
+  # 既有 API（counselor tenant）
+  POST /api/v1/clients  # 需要完整欄位
+
+  # 新增 API（island_parents tenant）
+  POST /api/v1/island/clients  # 只需 name + grade
+  ```
+
+**Deliverable**:
+- DB migration（新增 `grade` 欄位，既有欄位改 nullable）
+- 新增 `ClientCreateIslandParents` schema
+- 5+ integration tests
+
+---
+
+### 3.3 Session 資料結構調整
+
+**新增欄位**:
+
+- [ ] **scenario_topic** (String, optional)
+  - 用途：事前練習時，使用者填寫「這次要練習什麼情境」
+  - 範例：「孩子不寫作業」、「兄弟姊妹吵架」、「睡前拖延」
+  - DB Migration：新增欄位到 `sessions` table
+
+- [ ] **mode** (String, required)
+  - `practice` - 事前練習模式
+  - `emergency` - 事中實戰模式
+  - 預設：`emergency`
+
+- [ ] **partial_segments** (JSONB, default=[])
+  - 儲存 partial 分析的逐字稿片段
+  - 格式：
+    ```json
+    [
+      {
+        "timestamp": "2025-12-20T10:01:00Z",
+        "text": "第一分鐘的逐字稿...",
+        "duration_seconds": 60
+      },
+      {
+        "timestamp": "2025-12-20T10:02:00Z",
+        "text": "第二分鐘的逐字稿...",
+        "duration_seconds": 60
+      }
+    ]
+    ```
+
+- [ ] **partial_last_updated_at** (DateTime, nullable)
+  - 最後一次 partial 更新時間
+
+**DB Migration**:
+```sql
+ALTER TABLE sessions
+ADD COLUMN scenario_topic VARCHAR(255),
+ADD COLUMN mode VARCHAR(20) DEFAULT 'emergency',
+ADD COLUMN partial_segments JSONB DEFAULT '[]'::jsonb,
+ADD COLUMN partial_last_updated_at TIMESTAMP WITH TIME ZONE;
+
+CREATE INDEX idx_sessions_mode ON sessions(mode);
+```
+
+---
+
+### 3.4 自動存檔功能（三段式 API）
+
+**問題**:
+- 現況：錄音結束後才 Create/Update Session
+- 風險：API 失敗 → 後端沒有 session → **資料消失** 💀
+
+**解法（三段式存檔）**:
+
+#### Phase 1: 開始錄音 - Create 空 Session
+
+- [ ] **POST /api/v1/island/sessions** - 建立空 Session
+  ```json
+  Request:
+  {
+    "client_id": "uuid",
+    "case_id": "uuid",  // 可選（現階段只有一個 Case）
+    "mode": "emergency" | "practice",
+    "scenario_topic": "孩子不寫作業",  // practice mode 需填
+    "started_at": "2025-12-20T10:00:00Z"
+  }
+
+  Response 201:
+  {
+    "session_id": "uuid",
+    "client_id": "uuid",
+    "mode": "emergency",
+    "scenario_topic": "孩子不寫作業",
+    "started_at": "2025-12-20T10:00:00Z",
+    "status": "in_progress"
+  }
+  ```
+
+- [ ] **行為**:
+  - 建立空 session（只有 `started_at`）
+  - `transcript` 為空
+  - `status = "in_progress"`
+  - 回傳 `session_id` 給 App
+
+---
+
+#### Phase 2: 錄音中 - Partial 分析 API
+
+- [ ] **POST /api/v1/island/sessions/:session_id/analyze-partial** - Partial 分析
+  ```json
+  Request:
+  {
+    "transcript_segment": "最近這 60 秒的逐字稿",
+    "timestamp": "2025-12-20T10:01:00Z",
+    "duration_seconds": 60
+  }
+
+  Response 200:
+  {
+    "risk_level": "yellow",
+    "severity": 2,
+    "display_text": "家長語氣有點急躁",
+    "action_suggestion": "深呼吸 3 次，放慢語速",
+    "suggested_interval_seconds": 30,  // 建議改 30 秒
+    "should_merge": false,
+    "keywords": ["急躁", "作業"],
+    "categories": ["情緒管理"]
+  }
+  ```
+
+- [ ] **行為**:
+  1. 儲存 partial segment 到 `partial_segments` JSONB 欄位
+  2. 執行即時分析（紅黃綠燈判斷）
+  3. 計算與前一張卡片的相似度
+  4. 回傳分析結果（含 `should_merge`）
+  5. 更新 `partial_last_updated_at`
+
+- [ ] **Backup 機制**:
+  - 每次 partial 都儲存到 DB
+  - 若最後 Update 失敗，可用 partial_segments 重建完整逐字稿
+
+---
+
+#### Phase 3: 結束錄音 - Update 完整逐字稿
+
+- [ ] **PATCH /api/v1/island/sessions/:session_id/complete** - 完成 Session
+  ```json
+  Request:
+  {
+    "full_transcript": "完整逐字稿（App 端整合好的）",
+    "ended_at": "2025-12-20T10:30:00Z"
+  }
+
+  Response 200:
+  {
+    "session_id": "uuid",
+    "status": "completed",
+    "started_at": "2025-12-20T10:00:00Z",
+    "ended_at": "2025-12-20T10:30:00Z",
+    "duration_seconds": 1800,
+    "transcript_length": 5432,
+    "partial_segments_count": 30  // 備份了 30 個片段
+  }
+  ```
+
+- [ ] **行為**:
+  1. 更新 `transcript` 為完整逐字稿
+  2. 更新 `ended_at` 和 `status = "completed"`
+  3. 計算 `duration_seconds`
+  4. 若 `full_transcript` 為空或失敗，使用 `partial_segments` 拼接（fallback）
+
+- [ ] **Fallback 機制**:
+  ```python
+  def get_transcript_with_fallback(session):
+      if session.transcript:
+          return session.transcript
+      else:
+          # 拼接 partial_segments
+          segments = session.partial_segments or []
+          return "\n\n".join([seg["text"] for seg in segments])
+  ```
+
+---
+
+#### 補充：結束時補齊最後一段
+
+- [ ] **App 端行為**:
+  - 使用者按「結束錄音」時
+  - 立即觸發最後一個 `analyze-partial`（不等 timer）
+  - 確保最後一段也被儲存
+
+**Deliverable**:
+- 3 個 API endpoints（Create / Partial / Complete）
+- Session model 更新（新增 4 個欄位）
+- Fallback 機制實作
+- 20+ integration tests（正常流程 + 失敗 fallback）
+
+---
+
+### 3.5 即時分析 API 改版
+
+**參考**: 任務一的 Web 改版（紅黃綠燈機制）
+
+- [ ] 使用相同的 response schema
+- [ ] island_parents 租戶專用的 Prompt 調整
+- [ ] RAG 知識庫：使用親子教養相關知識（而非諮商專業）
+
+---
+
+### 3.6 Case 管理簡化
+
+**現階段**:
+- **Only One Case**（固定大目標）
+- 每次談話：新的 Session（不同小主題）
+
+**實作**:
+
+- [ ] **預設 Case 自動建立**
+  - 當 island_parents 租戶第一次建立 Client 時
+  - 自動建立一個預設 Case：「親子溝通成長」
+  - `case_id` 自動關聯到所有 Session
+
+- [ ] **API 簡化**
+  - App 不需要自己建立 Case
+  - Create Session 時，若 `case_id` 為空，自動使用預設 Case
+
+**Deliverable**:
+- 預設 Case 自動建立邏輯
+- 3+ integration tests
+
+---
+
+## 📊 本週 KPI（更新版）
+
+### 開發進度
+- 🎯 完成 3 大任務（Web 改版 + 付費版 + iOS API）
+- 🎯 40+ integration tests 新增
+- 🎯 4+ DB migrations
+
+### API 交付
+- 🎯 Web 改版：2 APIs（即時分析改版 + 卡片合併）
+- 🎯 付費版：5 APIs（白名單管理）
+- 🎯 iOS API：3 APIs（Create / Partial / Complete）
+
+### 性能目標
+- 🎯 即時分析 API：< 10 秒（含紅黃綠判斷）
+- 🎯 Partial 分析 API：< 5 秒
+- 🎯 卡片相似度計算：< 1 秒
+
+### 品質目標
+- 🎯 Test coverage：> 80%（新代碼）
+- 🎯 Ruff check：0 errors
+- 🎯 所有 integration tests：100% 通過
+
+---
+
+## ✅ 本週完成檢查清單（更新版）
+
+### 必須完成（P0）- 優先順序由高到低
+
+#### 任務二：付費版（最優先）
+- [ ] 會員白名單 API（5 endpoints）
+- [ ] Whitelist model + migration
+- [ ] 權限控制實作
+- [ ] 15+ integration tests
+
+#### 任務三：iOS API 改版
+- [ ] Client 簡化（name + grade）
+- [ ] Session 新增欄位（scenario_topic, mode, partial_segments）
+- [ ] 自動存檔三段式 API（Create / Partial / Complete）
+- [ ] 預設 Case 自動建立
+- [ ] 20+ integration tests
+- [ ] 2+ DB migrations
+
+#### 任務一：Web 改版
+- [ ] 即時分析 API 改版（紅黃綠燈 + 動態頻率）
+- [ ] 卡片合併邏輯（相似度計算）
+- [ ] 10+ integration tests
+
+### 建議完成（P1）
+- [ ] 行政後台 UI（簡易版）
+- [ ] 覆盤統整簡化
+- [ ] API 文檔完整更新
+
+### 可選完成（P2）
+- [ ] 增量傳輸優化實驗
+- [ ] Frontend 整合測試
+- [ ] 監控儀表板設計
+
+---
+
+## 📝 會議決策記錄（2025-12-20）- 更新版
+
+### 技術決策
+1. **Timer 由 Client 端主控** - 不等 API 回來，避免被延遲拖慢
+2. **三個 tenant_id** - counselor, speak_ai, **island_parents**（新增）
+3. **自動存檔機制** - 三段式（Create → Partial → Complete），防資料遺失
+4. **付費機制優先順序** - 會員白名單（方案二）> 兌換碼（方案一）
+5. **卡片合併** - 用 embedding 相似度（> 80%）判斷
+6. **Client 簡化** - island_parents 只需 name + grade
+
+### 產品決策
+1. **紅黃綠燈動態頻率** - 紅 15s / 黃 30s / 綠 60s
+2. **卡片互動** - 減少重複卡片，相似內容合併或保留原卡片
+3. **覆盤統整** - 使用既有格式，不新增複雜邏輯
+4. **Case 管理** - 現階段只有一個預設 Case（自動建立）
+
+### 待討論
+- [ ] 卡片相似度閾值（80%？85%？）
+- [ ] Partial segments 保存多久？（7 天 / 30 天）
+- [ ] 會員白名單匯入流程（CSV？API？手動？）
+- [ ] island_parents 的 RAG 知識庫內容範圍
+
+---
+
+## 🔄 下週預覽（Week 52: 2025-12-27 ~ 2026-01-02）
+
+### 前端整合
+- 完成 Web Realtime 紅黃綠燈 UI
+- 卡片合併視覺化
+- 動態 Timer 測試
+
+### iOS App 整合
+- 三段式自動存檔測試
+- 簡化 Client 建立流程
+- Partial 分析流程測試
+
+### 行政後台上線
+- 會員白名單管理系統
+- Admin 權限測試
+- Staging 部署
+
+---
+
+### 🚨 核心功能開發（基於 2025-12-20 會議）
+
+#### 1. 即時分析 API 改版（紅黃綠燈機制 + 動態 Timer）
+**優先級**: 🔴 P0（最高優先）
+**預估時間**: 6-8 小時
+**參考**: 會議紀錄「重點整理」第 1-6 點
+
+**核心需求**:
+- [ ] **Timer 動態調整（Client 端主控）**
+  - 預設：60 秒發送一次
+  - 紅燈：15 秒
+  - 黃燈：30 秒
+  - 綠燈：60 秒
+  - ⚠️ Timer 不等 API 回來，以「送出時間」為基準
+
+- [ ] **API Response 結構調整**
+  - 修改 `POST /api/v1/sessions/:session_id/analyze-keywords`
+  - 移除：`confidence` 欄位
+  - 新增：`risk_level` (red|yellow|green)
+  - 新增：`severity` (1/2/3，對應綠黃紅)
+  - 新增：`display_text` (要顯示的一段話)
+  - 新增：`action_suggestion` (行動句)
+  - 保留：`keywords`, `categories`, `counselor_insights`
+
+- [ ] **增量傳輸優化（成本優化）**
+  - Phase 1 (MVP): 整段上下文傳輸（先求效果）
+  - Phase 2 (優化): 只送新增片段，後端累積
+  - 後端：累積 partial segments 成完整逐字稿
+
+- [ ] **紅黃綠判斷邏輯（避免「紅燈永遠紅」）**
+  - 考慮上一次警訊的時效性
+  - 實驗：提供「diff」給模型（舊稿 + 新增稿）
+  - 讓模型判斷警訊是否仍然成立
+
+**Deliverable**:
+- 更新 API response schema
+- 實作風險等級判斷邏輯
+- 10+ integration tests 通過
+
+---
+
+#### 2. Session 資料結構調整（事前/事中模式）
+**優先級**: 🔴 P0
+**預估時間**: 4-6 小時
+**參考**: 會議紀錄「重點整理」第 7 點
+
+- [ ] **Session 新增「情境主題」欄位**
+  - 欄位名稱：`scenario_topic` (String)
+  - 用途：事前練習時，使用者填寫「這次要練習什麼情境」
+  - 範例：「孩子不寫作業」、「兄弟姊妹吵架」、「睡前拖延」
+  - DB Migration：新增欄位到 `sessions` table
+  - Schema：更新 `SessionCreate` / `SessionUpdate`
+
+- [ ] **Case / Session 關係釐清**
+  - 現階段：**Only One Case**（固定大目標）
+  - 每次談話：新的 Session（不同小主題）
+  - Session 開始前：填寫 `scenario_topic`
+
+- [ ] **事前/事中 API 參數設計**
+  - Create Session 時指定 `mode`: "practice" | "emergency"
+  - Practice mode: 需填 `scenario_topic`
+  - Emergency mode: `scenario_topic` optional
+
+**Deliverable**:
+- Migration script
+- 更新 Session schemas
+- API 支援 `scenario_topic`
+
+---
+
+#### 3. IslandParent 租戶 - Client (孩子) 物件簡化
+**優先級**: 🟡 P1
+**預估時間**: 4-5 小時
+**參考**: 會議紀錄「重點整理」第 8-9 點
+
+- [ ] **新增 IslandParent tenant schema**
+  - 避免破壞現有 counselor tenant
+  - 使用獨立的 Client schema（簡化版）
+
+- [ ] **Client Required 欄位最小化**
+  - `name` (String, required) - 姓名或代號
+  - `grade` (Integer, required) - 年級（1-12）
+    - 1 = 小一, 6 = 小六, 7 = 國一, 12 = 高三
+    - UI 負責轉換顯示文字（例如：10 → "高一"）
+  - 其他欄位 (optional)：
+    - `email`, `phone`, `gender`, `birth_date` 等
+
+- [ ] **動態 Form 表單設計（App 端考量）**
+  - 如果 optional 欄位存在，動態顯示 form
+  - 否則，只需填 `name` + `grade`
+
+- [ ] **DB Migration**
+  - 修改 `clients` table：
+    - `grade` (Integer, nullable=True) 新增欄位
+    - 既有欄位改為 nullable（向後相容）
+  - 或建立新 table：`island_parent_clients`
+
+**Deliverable**:
+- Migration script
+- 簡化版 Client schema
+- 2+ integration tests
+
+---
+
+#### 4. 自動存檔功能（防止資料遺失）
+**優先級**: 🔴 P0（關鍵可靠性）
+**預估時間**: 6-8 小時
+**參考**: 會議紀錄「重點整理」第 10-11 點
+
+**問題**:
+- 現況：錄音結束後才 Create/Update Session
+- 風險：API 失敗 → 後端沒有 session → 資料消失
+
+**解法（三段式存檔）**:
+
+- [ ] **Phase 1: 開始錄音 - Create 空 Session**
+  ```
+  POST /api/v1/sessions
+  {
+    "client_id": "xxx",
+    "case_id": "xxx",
+    "mode": "emergency",
+    "scenario_topic": "",  # 可選
+    "started_at": "2025-12-20T10:00:00Z"
+  }
+  ```
+  - 建立空 session（只有 `started_at`）
+  - 回傳 `session_id` 給 App
+
+- [ ] **Phase 2: 錄音中 - Partial 分析 API**
+  ```
+  POST /api/v1/sessions/:session_id/analyze-partial
+  {
+    "transcript_segment": "最近這 60 秒的逐字稿",
+    "accumulated_transcript": "從開始到現在的完整逐字稿"  # 可選
+  }
+  ```
+  - 後端累積 `partial_segments`（JSONB array）
+  - 同時執行即時分析（紅黃綠燈）
+  - 儲存分析結果
+
+- [ ] **Phase 3: 結束錄音 - Update 完整逐字稿**
+  ```
+  PATCH /api/v1/sessions/:session_id
+  {
+    "full_transcript": "完整逐字稿",
+    "ended_at": "2025-12-20T10:30:00Z",
+    "status": "completed"
+  }
+  ```
+  - 更新 session 狀態
+  - 若失敗：使用 `partial_segments` 重建逐字稿（fallback）
+
+- [ ] **結束時補齊最後一段**
+  - App 按「結束」時，立即觸發最後一個 partial
+  - 不等下一個 timer 週期
+
+- [ ] **Backup 機制**
+  - Session table 新增：`partial_segments` (JSONB)
+  - 每次 partial 都儲存
+  - 若 `full_transcript` 為空，產報告時用 partial 拼接
+
+**DB Schema 更新**:
+```python
+class Session(Base):
+    # 新增欄位
+    partial_segments = Column(JSON, default=list)
+    # [
+    #   {"timestamp": "10:01:00", "text": "..."},
+    #   {"timestamp": "10:02:00", "text": "..."}
+    # ]
+    partial_last_updated_at = Column(DateTime(timezone=True))
+```
+
+**Deliverable**:
+- 3 個 API endpoints（Create / Partial / Update）
+- Migration script
+- 15+ integration tests（正常流程 + 失敗 fallback）
+
+---
+
+#### 5. 浮島 App 付費機制（兌換碼系統）
+**優先級**: 🟡 P1（下週可開始）
+**預估時間**: 8-10 小時
+**參考**: 「浮島 App 付費機制」規劃文件
+
+**方案一：App 外收款 + 兌換碼驗證**
+
+- [ ] **兌換碼管理 API**
+  - `POST /api/v1/redeem-codes/generate` - 產生兌換碼
+  - `POST /api/v1/redeem-codes/verify` - 驗證兌換碼
+  - `GET /api/v1/redeem-codes/:code` - 查詢兌換碼狀態
+  - `PATCH /api/v1/redeem-codes/:code/revoke` - 停權
+
+- [ ] **兌換碼資料模型**
+  ```python
+  class RedeemCode(Base):
+      code = Column(String(16), unique=True, index=True)  # XXXX-XXXX-XXXX
+      hours_quota = Column(Integer, default=60)  # 60 小時額度
+      hours_used = Column(Integer, default=0)
+      status = Column(String(20), default="active")  # active/revoked/expired
+      expires_at = Column(DateTime(timezone=True))
+      created_by = Column(String)  # admin user
+      redeemed_by = Column(GUID(), ForeignKey("counselors.id"))
+      redeemed_at = Column(DateTime(timezone=True))
+  ```
+
+- [ ] **使用限制機制**
+  - 每日上限：例如 3 小時/天
+  - 每月上限：例如 20 小時/月
+  - 總時數上限：60 小時
+  - 超過上限：API 回傳 403 Forbidden
+
+- [ ] **Session 使用時數計算**
+  - Session 結束時，計算 `duration_seconds`
+  - 扣除對應 `RedeemCode.hours_used`
+  - 檢查是否超過額度
+
+**方案二：會員白名單（既有學員）**
+
+- [ ] **會員白名單 API**
+  - `POST /api/v1/whitelist/add` - 新增會員（admin only）
+  - `DELETE /api/v1/whitelist/:counselor_id` - 移除會員
+  - `GET /api/v1/whitelist/verify` - 驗證會員狀態
+
+- [ ] **會員白名單資料模型**
+  ```python
+  class Whitelist(Base):
+      counselor_id = Column(GUID(), ForeignKey("counselors.id"), unique=True)
+      email = Column(String, unique=True, index=True)
+      status = Column(String(20), default="active")  # active/suspended
+      activated_at = Column(DateTime(timezone=True))
+      expires_at = Column(DateTime(timezone=True), nullable=True)
+  ```
+
+**Deliverable**:
+- 兌換碼系統 API（4 endpoints）
+- 會員白名單 API（3 endpoints）
+- 使用限制邏輯
+- 10+ integration tests
+
+---
+
+#### 6. 個案報告改版 -「育兒談話分析」
+**優先級**: 🟢 P2（下下週）
+**預估時間**: 6-8 小時
+**參考**: 會議紀錄「重點整理」第 3 點
+
+- [ ] **新增「育兒談話分析」API**
+  ```
+  POST /api/v1/reports/parenting-analysis
+  {
+    "session_id": "xxx",
+    "mode": "practice" | "emergency"
+  }
+  ```
+
+- [ ] **事前/事中參數差異**
+  - Practice mode:
+    - 完整分析：摘要、警示、建議、反思提示
+    - 理論引用（RAG 來源）
+    - 學習重點
+  - Emergency mode:
+    - 簡化分析：關鍵事件、快速建議
+    - 行動檢核清單
+
+- [ ] **報告格式設計**
+  - 使用既有格式（最大程度簡化）
+  - 不新增複雜邏輯
+  - 參考現有 `Generate Report` API
+
+**Deliverable**:
+- 新 API endpoint
+- 報告模板（Markdown）
+- 5+ integration tests
+
+---
+
+#### 7. Web 改版需求（UI 優化）
+**優先級**: 🟡 P1（前端協作）
+**預估時間**: 6-8 小時（前後端合計）
+**參考**: 「Web 改版」需求
+
+- [ ] **紅黃綠燈卡片視覺化**
+  - 紅燈：嚴重錯誤，紅色卡片 + 大字凸顯
+  - 黃燈：有點不合適，黃色卡片
+  - 綠燈：表現不錯，綠色卡片 + 鼓勵訊息
+
+- [ ] **卡片合併邏輯（減少重複）**
+  - 問題：60 秒一張卡片，內容常重複
+  - 解法：
+    - Backend 判斷「前後兩張卡片相似度」
+    - 若相似度 > 80%，回傳 `merge: true`
+    - Frontend 保留原卡片或合併顯示
+  - 實作：使用 embedding cosine similarity
+
+- [ ] **覆盤統整簡化**
+  - 使用既有格式（不新增邏輯）
+  - 最大程度簡化
+  - 參考現有 Session Summary API
+
+**Frontend 需配合**:
+- 動態 Timer 調整（紅 15s / 黃 30s / 綠 60s）
+- 卡片視覺化（顏色、大小、動畫）
+- 卡片合併 UI
+
+**Deliverable**:
+- Backend: 相似度計算 API
+- Frontend: 卡片 UI 更新
+- E2E 測試
+
+---
+
+### 🧪 測試計劃（本週）
+
+#### Integration Tests（新增 30+ tests）
+- [ ] `test_analyze_api_risk_level_red` - 紅燈判斷
+- [ ] `test_analyze_api_risk_level_yellow` - 黃燈判斷
+- [ ] `test_analyze_api_risk_level_green` - 綠燈判斷
+- [ ] `test_session_auto_save_create` - 自動存檔（建立）
+- [ ] `test_session_partial_analysis` - Partial 分析
+- [ ] `test_session_update_full_transcript` - 更新完整逐字稿
+- [ ] `test_session_fallback_partial_segments` - Fallback 機制
+- [ ] `test_redeem_code_generate` - 兌換碼產生
+- [ ] `test_redeem_code_verify` - 兌換碼驗證
+- [ ] `test_usage_quota_daily_limit` - 每日上限
+- [ ] `test_usage_quota_total_limit` - 總時數上限
+- [ ] `test_client_island_parent_simple` - 簡化 Client 建立
+- [ ] `test_card_similarity_merge` - 卡片合併邏輯
+
+---
+
+## 📊 本週目標 KPI
+
+### 開發進度
+- 🎯 完成 7 個核心功能（即時分析改版、自動存檔、付費機制等）
+- 🎯 30+ integration tests 新增
+- 🎯 3+ DB migrations
+
+### 性能目標
+- 🎯 即時分析 API：< 10 秒（含紅黃綠判斷）
+- 🎯 Partial 分析 API：< 5 秒
+- 🎯 卡片相似度計算：< 1 秒
+
+### 品質目標
+- 🎯 Test coverage：> 80%（新代碼）
+- 🎯 Ruff check：0 errors
+- 🎯 所有 integration tests：100% 通過
+
+---
+
+## 🔄 下週預覽（Week 52: 2025-12-27 ~ 2026-01-02）
+
+### 前端整合
+- 完成 Web Realtime 紅黃綠燈 UI
+- 卡片合併視覺化
+- 動態 Timer 測試
+
+### 浮島 App 付費上線
+- 兌換碼系統測試
+- 會員白名單導入
+- Staging 部署
+
+### 個案報告改版
+- 育兒談話分析 API 上線
+- 報告模板優化
+
+---
+
+## 📝 會議決策記錄（2025-12-20）
+
+### 技術決策
+1. **Timer 由 Client 端主控** - 不等 API 回來，避免被延遲拖慢
+2. **增量傳輸分階段** - 先整段（求效果），再優化（省成本）
+3. **紅黃綠時效性** - 避免「紅燈永遠紅」，考慮警訊時效
+4. **自動存檔機制** - 三段式（Create → Partial → Update），防資料遺失
+5. **付費機制優先順序** - App 外收款 + 兌換碼（最快上線）
+
+### 產品決策
+1. **卡片互動** - 減少重複卡片，相似內容合併
+2. **覆盤統整** - 使用既有格式，不新增複雜邏輯
+3. **孩子資料** - 最小化 required 欄位（name + grade）
+4. **Case/Session 關係** - 現階段只有一個 Case
+
+### 待討論
+- [ ] 卡片相似度閾值（多少 % 算相似？）
+- [ ] Partial segments 保存多久？（7 天 / 30 天）
+- [ ] 兌換碼格式（XXXX-XXXX-XXXX？）
+- [ ] 會員白名單匯入流程（CSV？API？）
+
+---
+
+## ✅ 完成檢查清單（本週）
+
+### 必須完成（P0）
+- [ ] 即時分析 API 改版（紅黃綠燈 + 新欄位）
+- [ ] Session 新增 `scenario_topic` 欄位
+- [ ] 自動存檔三段式 API（Create / Partial / Update）
+- [ ] 15+ integration tests 通過
+- [ ] 2+ DB migrations
+
+### 建議完成（P1）
+- [ ] IslandParent Client 簡化
+- [ ] 兌換碼系統 API
+- [ ] 會員白名單 API
+- [ ] 卡片合併邏輯
+
+### 可選完成（P2）
+- [ ] 育兒談話分析 API
+- [ ] 增量傳輸優化實驗
+- [ ] Frontend 整合測試
+
+---
+
+## 📚 參考文件
+
+### 會議紀錄
+- 2025-12-20 產品會議重點整理（1500 字）
+- 浮島 App 付費機制規劃
+- Web 改版需求
+
+### 技術規格
+- `docs/TECH_SPEC_PARENTING_REALTIME_V2.md`
+- `docs/ARCHITECTURE_PARENTING_REALTIME_V2.md`
+
+---
+
+**版本**: Week 51 (2025-12-20)
+**最後更新**: 2025-12-20 10:00
+**下次更新**: 2025-12-27（下週檢討會議後）
+
+---
+
+<details>
+<summary><strong>⬇️ 上週完成事項（Week 50: 2025-12-13 ~ 2025-12-19）</strong></summary>
 
 ### 1. 完成親子即時諮詢 V2 架構規劃 ✅
 **狀態**: 已完成（2025-12-13）
