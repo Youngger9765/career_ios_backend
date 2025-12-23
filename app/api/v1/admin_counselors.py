@@ -287,6 +287,42 @@ async def update_counselor(
     return counselor
 
 
+@router.patch("/{counselor_id}/password")
+async def change_counselor_password(
+    counselor_id: UUID,
+    request: dict,
+    db: Session = Depends(get_db),
+    current_admin: Optional[Counselor] = Depends(require_admin),
+):
+    """
+    Change counselor password.
+    Admin only. Automatically filtered by admin's tenant.
+    """
+    counselor = db.execute(
+        select(Counselor).where(
+            Counselor.id == counselor_id,
+            Counselor.deleted_at.is_(None),
+            Counselor.tenant_id == current_admin.tenant_id,
+        )
+    ).scalar_one_or_none()
+
+    if not counselor:
+        raise HTTPException(status_code=404, detail="Counselor not found")
+
+    password = request.get("password")
+    if not password or len(password) < 6:
+        raise HTTPException(
+            status_code=400, detail="Password must be at least 6 characters"
+        )
+
+    # Update password
+    counselor.hashed_password = hash_password(password)
+    counselor.updated_at = datetime.now(timezone.utc)
+    db.commit()
+
+    return {"success": True, "message": "Password changed successfully"}
+
+
 @router.delete("/{counselor_id}", response_model=CounselorDeleteResponse)
 async def delete_counselor(
     counselor_id: UUID,
@@ -364,16 +400,14 @@ async def create_counselor(
             detail=f"Email '{request.email}' already exists in your tenant",
         )
 
-    # Generate temporary password
-    temp_password = generate_temporary_password()
-
+    # Use password set by admin (no longer auto-generating)
     # Create new counselor with admin's tenant_id
     counselor = Counselor(
         email=request.email,
         username=request.username,
         full_name=request.full_name,
         phone=request.phone,
-        hashed_password=hash_password(temp_password),
+        hashed_password=hash_password(request.password),
         tenant_id=target_tenant_id,  # Use admin's tenant_id
         role=CounselorRole(request.role),
         is_active=True,
@@ -388,5 +422,5 @@ async def create_counselor(
 
     return CounselorCreateResponse(
         counselor=CounselorDetailResponse.model_validate(counselor),
-        temporary_password=temp_password,
+        temporary_password=None,  # No longer returning temporary password
     )

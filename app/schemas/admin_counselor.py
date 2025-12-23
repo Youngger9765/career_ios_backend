@@ -96,6 +96,7 @@ class CounselorCreateRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     full_name: str = Field(..., max_length=255)
     phone: Optional[str] = Field(None, max_length=50)
+    password: str = Field(..., min_length=6, description="Password set by admin")
     tenant_id: str = Field(..., description="Tenant ID: career, island, island_parents")
     role: str = Field(
         default="counselor", description="Role: counselor, supervisor, admin"
@@ -110,6 +111,7 @@ class CounselorCreateRequest(BaseModel):
                 "username": "newuser",
                 "full_name": "New User",
                 "phone": "+886912345678",
+                "password": "secure_password_123",
                 "tenant_id": "island_parents",
                 "role": "counselor",
                 "total_credits": 500,
@@ -123,8 +125,8 @@ class CounselorCreateResponse(BaseModel):
     """Response after creating counselor"""
 
     counselor: CounselorDetailResponse
-    temporary_password: str = Field(
-        ..., description="Auto-generated temporary password for first login"
+    temporary_password: Optional[str] = Field(
+        None, description="Temporary password (deprecated, now set by admin)"
     )
 
 

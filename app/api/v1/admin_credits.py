@@ -5,9 +5,12 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user, get_db
+from app.core.config import settings
+from app.core.deps import get_db
 from app.models.counselor import Counselor, CounselorRole
 from app.models.credit_log import CreditLog
 from app.models.credit_rate import CreditRate
@@ -23,11 +26,97 @@ from app.services.credit_billing import CreditBillingService
 
 router = APIRouter(prefix="/admin/credits", tags=["admin-credits"])
 
+# Optional security for debug mode
+optional_security = HTTPBearer(auto_error=False)
 
-def require_admin(current_user: Counselor = Depends(get_current_user)) -> Counselor:
-    """Verify current user is admin"""
+
+def require_admin(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
+    tenant_id: Optional[str] = Query(None, description="Tenant ID (DEBUG mode only)"),
+    db: Session = Depends(get_db),
+) -> Optional[Counselor]:
+    """
+    Verify current user is admin.
+
+    In DEBUG mode without credentials, returns a mock admin.
+    The tenant_id can be specified via query parameter for testing multi-tenant scenarios.
+    In production or with credentials, requires valid admin authentication.
+
+    NOTE: The tenant_id query parameter is ONLY used in DEBUG mode without credentials.
+    In production mode or with authentication, the tenant_id from the JWT token is used.
+    """
+    # DEBUG MODE: Allow access without credentials
+    if settings.DEBUG and credentials is None:
+        # Use tenant_id from query parameter or default to 'career'
+        # This allows frontend tenant switcher to work in debug mode
+        mock_tenant_id = tenant_id or "career"
+
+        # Return a mock admin counselor for the specified tenant
+        # This is ONLY for local development/testing
+        # Using a simple object instead of Counselor model to avoid DB dependencies
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            id="00000000-0000-0000-0000-000000000000",
+            email=f"debug@admin.{mock_tenant_id}",
+            username="debug_admin",
+            full_name=f"Debug Admin ({mock_tenant_id})",
+            tenant_id=mock_tenant_id,  # Dynamic tenant_id from query parameter
+            role=CounselorRole.ADMIN,
+            is_active=True,
+            hashed_password="",
+            total_credits=0,
+            credits_used=0,
+        )
+
+    # PRODUCTION MODE or with credentials: Require authentication
+    # NOTE: tenant_id query parameter is IGNORED in production mode
+    # The tenant_id from the JWT token is always used for authenticated requests
+    if credentials is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Authenticate user
+    from app.core.security import decode_token
+
+    token = credentials.credentials
+    payload = decode_token(token)
+
+    if payload is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    email: Optional[str] = payload.get("sub")
+    token_tenant_id: Optional[str] = payload.get("tenant_id")
+
+    if email is None or token_tenant_id is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token payload",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    current_user = db.execute(
+        select(Counselor).where(
+            Counselor.email == email, Counselor.tenant_id == token_tenant_id
+        )
+    ).scalar_one_or_none()
+
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    if not current_user.is_active:
+        raise HTTPException(status_code=403, detail="Inactive user account")
+
     if current_user.role != CounselorRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admin access required")
+
     return current_user
 
 
@@ -50,7 +139,7 @@ def resolve_tenant_id(
 async def list_members_with_credits(
     tenant_id: Optional[str] = Query(None, description="Filter by tenant ID"),
     db: Session = Depends(get_db),
-    current_admin: Counselor = Depends(require_admin),
+    current_admin: Optional[Counselor] = Depends(require_admin),
 ):
     """
     List all counselors with credit information.
@@ -79,12 +168,49 @@ async def list_members_with_credits(
     ]
 
 
+@router.get("/members/{counselor_id}", response_model=CounselorCreditInfo)
+async def get_member_credit_info(
+    counselor_id: UUID,
+    db: Session = Depends(get_db),
+    current_admin: Optional[Counselor] = Depends(require_admin),
+):
+    """
+    Get single counselor credit information.
+    Admin only. Automatically filtered by admin's tenant.
+    """
+    # Verify counselor belongs to admin's tenant
+    counselor = (
+        db.query(Counselor)
+        .filter(
+            Counselor.id == counselor_id, Counselor.tenant_id == current_admin.tenant_id
+        )
+        .first()
+    )
+
+    if not counselor:
+        raise HTTPException(
+            status_code=404, detail="Counselor not found in your tenant"
+        )
+
+    return CounselorCreditInfo(
+        id=counselor.id,
+        email=counselor.email,
+        full_name=counselor.full_name,
+        phone=counselor.phone,
+        tenant_id=counselor.tenant_id,
+        total_credits=counselor.total_credits,
+        credits_used=counselor.credits_used,
+        available_credits=counselor.available_credits,
+        subscription_expires_at=counselor.subscription_expires_at,
+    )
+
+
 @router.post("/members/{counselor_id}/add", response_model=AdminAddCreditsResponse)
 async def add_credits_to_member(
     counselor_id: UUID,
     request: AdminAddCreditsRequest,
     db: Session = Depends(get_db),
-    current_admin: Counselor = Depends(require_admin),
+    current_admin: Optional[Counselor] = Depends(require_admin),
 ):
     """
     Add credits to a counselor account.
@@ -143,7 +269,7 @@ async def get_credit_logs(
     limit: int = Query(100, le=1000, description="Maximum number of logs to return"),
     offset: int = Query(0, description="Number of logs to skip"),
     db: Session = Depends(get_db),
-    current_admin: Counselor = Depends(require_admin),
+    current_admin: Optional[Counselor] = Depends(require_admin),
 ):
     """
     Get credit transaction history.
@@ -173,7 +299,7 @@ async def get_credit_logs(
 async def create_billing_rate(
     request: CreditRateCreate,
     db: Session = Depends(get_db),
-    current_admin: Counselor = Depends(require_admin),
+    current_admin: Optional[Counselor] = Depends(require_admin),
 ):
     """
     Create or update a billing rate (creates new version).
@@ -225,7 +351,7 @@ async def list_billing_rates(
     rule_name: Optional[str] = Query(None, description="Filter by rule name"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     db: Session = Depends(get_db),
-    current_admin: Counselor = Depends(require_admin),
+    current_admin: Optional[Counselor] = Depends(require_admin),
 ):
     """
     List billing rates.
