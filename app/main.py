@@ -33,7 +33,7 @@ from app.api import (
     sessions_keywords,
     ui_client_case_list,
 )
-from app.api.v1 import admin_credits
+from app.api.v1 import admin_counselors, admin_credits
 from app.core.config import settings
 
 # Templates
@@ -62,6 +62,9 @@ app.include_router(auth.router, prefix="/api")
 
 # Include admin credit management routes
 app.include_router(admin_credits.router, prefix="/api/v1")
+
+# Include admin counselor management routes
+app.include_router(admin_counselors.router, prefix="/api/v1")
 
 # Include client routes
 app.include_router(clients.router)
@@ -175,6 +178,12 @@ async def rag_report_page(request: Request) -> Response:
 async def console_page(request: Request) -> Response:
     """Counseling System Debug Console - All API testing in one place"""
     return templates.TemplateResponse("console.html", {"request": request})
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request) -> Response:
+    """Admin Portal - Multi-Tenant Management"""
+    return templates.TemplateResponse("admin.html", {"request": request})
 
 
 @app.get("/realtime-counseling", response_class=HTMLResponse)

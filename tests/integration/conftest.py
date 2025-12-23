@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
+from starlette.testclient import TestClient
 
 from app.core.database import Base, get_db
 from app.main import app
@@ -36,6 +37,12 @@ from app.models.refresh_token import RefreshToken  # noqa: F401
 from app.models.reminder import Reminder  # noqa: F401
 from app.models.report import Report  # noqa: F401
 from app.models.session import Session as SessionModel  # noqa: F401
+
+
+@pytest.fixture
+def client():
+    """Create a test client for integration tests"""
+    return TestClient(app)
 
 
 @pytest.fixture

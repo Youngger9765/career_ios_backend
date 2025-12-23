@@ -421,8 +421,12 @@ def admin_token(client, db_session):
 
     # Login to get token
     response = client.post(
-        "/api/v1/auth/login",
-        json={"username": "admin", "password": "admin123"},
+        "/api/auth/login",
+        json={
+            "email": "admin@test.com",
+            "password": "admin123",
+            "tenant_id": "career",
+        },
     )
     return response.json()["access_token"]
 
@@ -446,8 +450,12 @@ def counselor_token(client, db_session):
     db_session.commit()
 
     response = client.post(
-        "/api/v1/auth/login",
-        json={"username": "counselor", "password": "counselor123"},
+        "/api/auth/login",
+        json={
+            "email": "counselor@test.com",
+            "password": "counselor123",
+            "tenant_id": "career",
+        },
     )
     return response.json()["access_token"]
 

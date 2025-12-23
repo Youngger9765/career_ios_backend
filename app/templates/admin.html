@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal - Multi-Tenant Management</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 28px; }
+        .tenant-selector {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .tabs {
+            display: flex;
+            background: #f7f9fc;
+            border-bottom: 2px solid #e1e8ed;
+        }
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            color: #657786;
+            border-bottom: 3px solid transparent;
+        }
+        .tab.active {
+            color: #1da1f2;
+            background: white;
+            border-bottom-color: #1da1f2;
+        }
+        .tab-content { display: none; padding: 30px; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .search-box { flex: 1; min-width: 250px; }
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary { background: #1da1f2; color: white; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid #f7f9fc;
+        }
+        th { background: #f7f9fc; font-weight: 600; }
+        .tenant-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .tenant-career { background: #fff3cd; color: #856404; }
+        .tenant-island { background: #d1ecf1; color: #0c5460; }
+        .tenant-island_parents { background: #f8d7da; color: #721c24; }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 0;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s ease;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .close {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .close:hover {
+            transform: rotate(90deg);
+        }
+
+        .modal-content form {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group input:disabled {
+            background: #f7f9fc;
+            cursor: not-allowed;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 30px;
+        }
+
+        .btn-secondary {
+            background: #e1e8ed;
+            color: #657786;
+        }
+
+        .btn-secondary:hover {
+            background: #d1d8dd;
+        }
+
+        .btn-primary:hover {
+            background: #1a8cd8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(29, 161, 242, 0.3);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Admin Portal - Multi-Tenant</h1>
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <select id="tenantSelector" class="tenant-selector" onchange="switchTenant()">
+                    <option value="career">Career</option>
+                    <option value="island">Island</option>
+                    <option value="island_parents">Island Parents</option>
+                </select>
+                <span id="adminName" style="opacity: 0.9;">Loading...</span>
+                <button onclick="logout()" class="btn btn-primary">Logout</button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('members')">👥 Members</div>
+            <div class="tab" onclick="switchTab('credits')">💳 Credits</div>
+        </div>
+
+        <div id="membersTab" class="tab-content active">
+            <div class="controls">
+                <div class="search-box">
+                    <input type="text" id="memberSearch" placeholder="🔍 Search..." oninput="loadMembers()">
+                </div>
+                <button class="btn btn-primary" onclick="addMember()">➕ Add</button>
+            </div>
+            <div id="memberStats" style="margin-bottom: 20px; font-size: 14px; color: #657786;">
+                Loading statistics...
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Tenant</th>
+                        <th>Role</th>
+                        <th>Credits</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="membersBody">
+                    <tr><td colspan="7" style="text-align: center; padding: 40px;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="creditsTab" class="tab-content">
+            <div class="controls">
+                <div class="search-box">
+                    <input type="text" id="creditsSearch" placeholder="🔍 Search..." oninput="loadCredits()">
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Tenant</th>
+                        <th>Total</th>
+                        <th>Used</th>
+                        <th>Available</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="creditsBody">
+                    <tr><td colspan="6" style="text-align: center; padding: 40px;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div id="addMemberModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>➕ 新增會員</h2>
+                <span class="close" onclick="closeModal('addMemberModal')">&times;</span>
+            </div>
+            <form id="addMemberForm" onsubmit="submitAddMember(event)">
+                <div class="form-group">
+                    <label for="newEmail">Email *</label>
+                    <input type="email" id="newEmail" required placeholder="user@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="newUsername">Username *</label>
+                    <input type="text" id="newUsername" required placeholder="username">
+                </div>
+                <div class="form-group">
+                    <label for="newFullName">Full Name *</label>
+                    <input type="text" id="newFullName" required placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label for="newPhone">Phone</label>
+                    <input type="tel" id="newPhone" placeholder="+886 912 345 678">
+                </div>
+                <div class="form-group">
+                    <label for="newTenantId">Tenant ID *</label>
+                    <select id="newTenantId" required>
+                        <option value="career">Career</option>
+                        <option value="island">Island</option>
+                        <option value="island_parents">Island Parents</option>
+                    </select>
+                    <small style="color: #657786;">
+                        系統會自動產生臨時密碼<br>
+                        <strong style="color: #f59e0b;">⚠️ Tenant ID 會自動使用您的租戶（後端會忽略此選項）</strong>
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="newRole">Role *</label>
+                    <select id="newRole" required>
+                        <option value="counselor">Counselor</option>
+                        <option value="supervisor">Supervisor</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addMemberModal')">取消</button>
+                    <button type="submit" class="btn btn-primary">建立會員</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Member Modal -->
+    <div id="editMemberModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✏️ 編輯會員</h2>
+                <span class="close" onclick="closeModal('editMemberModal')">&times;</span>
+            </div>
+            <form id="editMemberForm" onsubmit="submitEditMember(event)">
+                <input type="hidden" id="editMemberId">
+                <div class="form-group">
+                    <label for="editEmail">Email</label>
+                    <input type="email" id="editEmail" disabled>
+                    <small style="color: #657786;">Email 無法修改</small>
+                </div>
+                <div class="form-group">
+                    <label for="editFullName">Full Name</label>
+                    <input type="text" id="editFullName" placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label for="editPhone">Phone</label>
+                    <input type="tel" id="editPhone" placeholder="+886 912 345 678">
+                </div>
+                <div class="form-group">
+                    <label for="editRole">Role</label>
+                    <select id="editRole">
+                        <option value="counselor">Counselor</option>
+                        <option value="supervisor">Supervisor</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="editIsActive" style="width: auto;">
+                        <span>帳號啟用</span>
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editMemberModal')">取消</button>
+                    <button type="submit" class="btn btn-primary">儲存變更</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Member Modal -->
+    <div id="deleteMemberModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                <h2>🗑️ 刪除會員</h2>
+                <span class="close" onclick="closeModal('deleteMemberModal')">&times;</span>
+            </div>
+            <div style="padding: 30px;">
+                <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
+                    確定要刪除此會員嗎？
+                </p>
+                <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 20px;">
+                    <p style="margin: 0; color: #991b1b;">
+                        <strong id="deleteEmail"></strong>
+                    </p>
+                    <p style="margin: 5px 0 0 0; color: #991b1b; font-size: 14px;">
+                        此操作為軟刪除，資料會保留但無法登入。
+                    </p>
+                </div>
+                <input type="hidden" id="deleteMemberId">
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('deleteMemberModal')">取消</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDelete()">確認刪除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let token = localStorage.getItem('token');
+        let currentTenant = 'career';
+
+        window.onload = function() {
+            // TODO: Re-enable authentication later
+            // if (!token) {
+            //     window.location.href = '/console.html';
+            //     return;
+            // }
+            // checkAuth();
+            document.getElementById('adminName').textContent = 'Admin (Debug Mode)';
+            loadMembers();
+        };
+
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/v1/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Unauthorized');
+                const data = await res.json();
+                if (data.role !== 'ADMIN') {
+                    alert('Admin access required');
+                    window.location.href = '/console.html';
+                }
+                document.getElementById('adminName').textContent = data.email;
+            } catch {
+                window.location.href = '/console.html';
+            }
+        }
+
+        function switchTenant() {
+            currentTenant = document.getElementById('tenantSelector').value;
+            loadMembers();
+            loadCredits();
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Tab').classList.add('active');
+            if (tab === 'credits') loadCredits();
+        }
+
+        async function loadMembers() {
+            try {
+                let url = '/api/v1/admin/counselors';
+                const params = new URLSearchParams();
+                if (currentTenant) params.append('tenant_id', currentTenant);
+                const search = document.getElementById('memberSearch').value;
+                if (search) params.append('search', search);
+                if (params.toString()) url += '?' + params.toString();
+
+                const headers = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                const res = await fetch(url, { headers });
+                const data = await res.json();
+
+                const tbody = document.getElementById('membersBody');
+                if (!data.counselors || data.counselors.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;">No members found</td></tr>';
+                    document.getElementById('memberStats').textContent = 'No data';
+                    return;
+                }
+
+                tbody.innerHTML = data.counselors.map(m => `
+                    <tr>
+                        <td>${m.email}</td>
+                        <td>${m.full_name || '-'}</td>
+                        <td>${m.phone || '-'}</td>
+                        <td><span class="tenant-badge tenant-${m.tenant_id}">${m.tenant_id}</span></td>
+                        <td>${m.role}</td>
+                        <td>${m.total_credits || 0}</td>
+                        <td>
+                            <button class="btn btn-primary" onclick="openEditModal('${m.id}', '${m.email}', '${(m.full_name || '').replace(/'/g, "\\'")}', '${(m.phone || '').replace(/'/g, "\\'")}', '${m.role}', ${m.is_active})" style="padding:6px 12px;font-size:12px;margin-right:5px;">✏️ Edit</button>
+                            <button class="btn btn-danger" onclick="openDeleteModal('${m.id}', '${m.email}')" style="padding:6px 12px;font-size:12px;">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('memberStats').textContent =
+                    `Total: ${data.total || data.counselors.length} | ` +
+                    `Tenant: ${currentTenant}`;
+            } catch (e) {
+                console.error('Failed to load members:', e);
+                document.getElementById('membersBody').innerHTML =
+                    '<tr><td colspan="7" style="text-align:center;color:red;">Failed to load</td></tr>';
+            }
+        }
+
+        async function loadCredits() {
+            try {
+                let url = '/api/v1/admin/credits/members';
+                const params = new URLSearchParams();
+                if (currentTenant) params.append('tenant_id', currentTenant);
+                if (params.toString()) url += '?' + params.toString();
+
+                const headers = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                const res = await fetch(url, { headers });
+                const data = await res.json();
+
+                const tbody = document.getElementById('creditsBody');
+                if (!Array.isArray(data) || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">No data</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map(c => `
+                    <tr>
+                        <td>${c.email}</td>
+                        <td><span class="tenant-badge tenant-${c.tenant_id}">${c.tenant_id}</span></td>
+                        <td>${c.total_credits}</td>
+                        <td>${c.credits_used}</td>
+                        <td>${c.available_credits}</td>
+                        <td><button class="btn btn-primary" onclick="manageCredits('${c.id}', '${c.email}', ${c.total_credits})" style="padding:6px 12px;font-size:12px;">Manage</button></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Failed to load credits:', e);
+            }
+        }
+
+        // Modal Control Functions
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // Add Member Modal
+        function addMember() {
+            document.getElementById('addMemberModal').style.display = 'block';
+            document.getElementById('addMemberForm').reset();
+        }
+
+        async function submitAddMember(event) {
+            event.preventDefault();
+
+            const data = {
+                email: document.getElementById('newEmail').value,
+                username: document.getElementById('newUsername').value,
+                full_name: document.getElementById('newFullName').value,
+                phone: document.getElementById('newPhone').value || undefined,
+                tenant_id: document.getElementById('newTenantId').value,
+                role: document.getElementById('newRole').value
+            };
+
+            await createCounselor(data);
+            closeModal('addMemberModal');
+        }
+
+        async function createCounselor(data) {
+            try {
+                const headers = {'Content-Type': 'application/json'};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                console.log('Creating counselor with data:', data);
+                console.log('Headers:', headers);
+
+                const res = await fetch('/api/v1/admin/counselors', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(data)
+                });
+
+                console.log('Response status:', res.status);
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    console.error('Error response:', error);
+
+                    // Extract error message properly
+                    let errorMessage = '';
+                    if (error.detail) {
+                        // FastAPI error format
+                        if (typeof error.detail === 'string') {
+                            errorMessage = error.detail;
+                        } else if (Array.isArray(error.detail)) {
+                            // Validation errors
+                            errorMessage = error.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join('\n');
+                        } else {
+                            errorMessage = JSON.stringify(error.detail, null, 2);
+                        }
+                    } else {
+                        errorMessage = JSON.stringify(error, null, 2);
+                    }
+
+                    alert('❌ 建立失敗\n\n錯誤代碼: ' + res.status + '\n詳細訊息:\n' + errorMessage);
+                    return;
+                }
+
+                const result = await res.json();
+                console.log('Success response:', result);
+                alert('✅ 建立成功！\n\n臨時密碼: ' + result.temporary_password + '\n\n請記下此密碼，稍後無法再次查看。');
+                loadMembers();
+            } catch (e) {
+                console.error('Exception:', e);
+                alert('❌ 錯誤: ' + e.message);
+            }
+        }
+
+        // Edit Member Modal
+        function openEditModal(id, email, fullName, phone, role, isActive) {
+            document.getElementById('editMemberId').value = id;
+            document.getElementById('editEmail').value = email;
+            document.getElementById('editFullName').value = fullName;
+            document.getElementById('editPhone').value = phone;
+            document.getElementById('editRole').value = role;
+            document.getElementById('editIsActive').checked = isActive;
+            document.getElementById('editMemberModal').style.display = 'block';
+        }
+
+        async function submitEditMember(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('editMemberId').value;
+            const data = {
+                full_name: document.getElementById('editFullName').value || undefined,
+                phone: document.getElementById('editPhone').value || undefined,
+                role: document.getElementById('editRole').value,
+                is_active: document.getElementById('editIsActive').checked
+            };
+
+            await updateCounselor(id, data);
+            closeModal('editMemberModal');
+        }
+
+        async function updateCounselor(id, data) {
+            try {
+                const headers = {'Content-Type': 'application/json'};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const res = await fetch(`/api/v1/admin/counselors/${id}`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify(data)
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    let errorMessage = '';
+                    if (error.detail) {
+                        if (typeof error.detail === 'string') {
+                            errorMessage = error.detail;
+                        } else if (Array.isArray(error.detail)) {
+                            errorMessage = error.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join('\n');
+                        } else {
+                            errorMessage = JSON.stringify(error.detail, null, 2);
+                        }
+                    } else {
+                        errorMessage = 'Unknown error';
+                    }
+                    alert('❌ 更新失敗\n\n錯誤代碼: ' + res.status + '\n詳細訊息:\n' + errorMessage);
+                    return;
+                }
+
+                alert('✅ 更新成功！');
+                loadMembers();
+            } catch (e) {
+                alert('❌ 錯誤: ' + e.message);
+            }
+        }
+
+        // Delete Member Modal
+        function openDeleteModal(id, email) {
+            document.getElementById('deleteMemberId').value = id;
+            document.getElementById('deleteEmail').textContent = email;
+            document.getElementById('deleteMemberModal').style.display = 'block';
+        }
+
+        async function confirmDelete() {
+            const id = document.getElementById('deleteMemberId').value;
+
+            try {
+                const headers = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const res = await fetch(`/api/v1/admin/counselors/${id}`, {
+                    method: 'DELETE',
+                    headers
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    let errorMessage = '';
+                    if (error.detail) {
+                        if (typeof error.detail === 'string') {
+                            errorMessage = error.detail;
+                        } else if (Array.isArray(error.detail)) {
+                            errorMessage = error.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join('\n');
+                        } else {
+                            errorMessage = JSON.stringify(error.detail, null, 2);
+                        }
+                    } else {
+                        errorMessage = 'Unknown error';
+                    }
+                    alert('❌ 刪除失敗\n\n錯誤代碼: ' + res.status + '\n詳細訊息:\n' + errorMessage);
+                    return;
+                }
+
+                alert('✅ 刪除成功！（軟刪除）');
+                closeModal('deleteMemberModal');
+                loadMembers();
+            } catch (e) {
+                alert('❌ 錯誤: ' + e.message);
+            }
+        }
+
+        function manageCredits(counselorId, email, currentCredits) {
+            const input = prompt(`Manage credits for ${email}\nCurrent: ${currentCredits}\n\nEnter amount (positive to add, negative to deduct):`);
+            if (!input) return;
+
+            const amount = parseInt(input);
+            if (isNaN(amount)) {
+                alert('Invalid number');
+                return;
+            }
+
+            const reason = prompt('Reason:') || 'Manual adjustment';
+            addCredits(counselorId, amount, reason);
+        }
+
+        async function addCredits(counselorId, amount, reason) {
+            try {
+                const headers = {'Content-Type': 'application/json'};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const res = await fetch(`/api/v1/admin/credits/members/${counselorId}/add`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        credits_delta: amount,
+                        reason: reason,
+                        transaction_type: 'admin_adjustment'
+                    })
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    let errorMessage = '';
+                    if (error.detail) {
+                        if (typeof error.detail === 'string') {
+                            errorMessage = error.detail;
+                        } else if (Array.isArray(error.detail)) {
+                            errorMessage = error.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join('\n');
+                        } else {
+                            errorMessage = JSON.stringify(error.detail, null, 2);
+                        }
+                    } else {
+                        errorMessage = 'Unknown error';
+                    }
+                    alert('❌ 操作失敗\n\n錯誤代碼: ' + res.status + '\n詳細訊息:\n' + errorMessage);
+                    return;
+                }
+
+                alert('Credits updated successfully!');
+                loadCredits(); // Reload credits list
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/console.html';
+        }
+    </script>
+</body>
+</html>

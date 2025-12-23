@@ -31,21 +31,38 @@ def require_admin(current_user: Counselor = Depends(get_current_user)) -> Counse
     return current_user
 
 
+def resolve_tenant_id(
+    current_admin: Counselor,
+    requested_tenant_id: Optional[str],
+) -> str:
+    """Resolve and validate tenant_id for admin access."""
+    if requested_tenant_id is None:
+        return current_admin.tenant_id
+    if requested_tenant_id != current_admin.tenant_id:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Admin not allowed to access tenant '{requested_tenant_id}'",
+        )
+    return requested_tenant_id
+
+
 @router.get("/members", response_model=List[CounselorCreditInfo])
 async def list_members_with_credits(
     tenant_id: Optional[str] = Query(None, description="Filter by tenant ID"),
     db: Session = Depends(get_db),
-    _admin: Counselor = Depends(require_admin),
+    current_admin: Counselor = Depends(require_admin),
 ):
     """
     List all counselors with credit information.
-    Admin only.
+    Admin only. Filtered by tenant if authorized.
     """
-    query = db.query(Counselor)
-    if tenant_id:
-        query = query.filter(Counselor.tenant_id == tenant_id)
+    target_tenant_id = resolve_tenant_id(current_admin, tenant_id)
 
-    counselors = query.all()
+    # Automatically filter by admin's tenant_id
+    counselors = (
+        db.query(Counselor).filter(Counselor.tenant_id == target_tenant_id).all()
+    )
+
     return [
         CounselorCreditInfo(
             id=c.id,
@@ -67,14 +84,28 @@ async def add_credits_to_member(
     counselor_id: UUID,
     request: AdminAddCreditsRequest,
     db: Session = Depends(get_db),
-    _admin: Counselor = Depends(require_admin),
+    current_admin: Counselor = Depends(require_admin),
 ):
     """
     Add credits to a counselor account.
-    Admin only.
+    Admin only. Automatically filtered by admin's tenant.
 
     Supports positive (add credits) and negative (remove credits) values.
     """
+    # Verify counselor belongs to admin's tenant
+    counselor = (
+        db.query(Counselor)
+        .filter(
+            Counselor.id == counselor_id, Counselor.tenant_id == current_admin.tenant_id
+        )
+        .first()
+    )
+
+    if not counselor:
+        raise HTTPException(
+            status_code=404, detail="Counselor not found in your tenant"
+        )
+
     billing_service = CreditBillingService(db)
 
     try:
@@ -105,21 +136,29 @@ async def add_credits_to_member(
 @router.get("/logs", response_model=List[CreditLogResponse])
 async def get_credit_logs(
     counselor_id: Optional[UUID] = Query(None, description="Filter by counselor ID"),
+    tenant_id: Optional[str] = Query(None, description="Filter by tenant ID"),
     transaction_type: Optional[str] = Query(
         None, description="Filter by transaction type"
     ),
     limit: int = Query(100, le=1000, description="Maximum number of logs to return"),
     offset: int = Query(0, description="Number of logs to skip"),
     db: Session = Depends(get_db),
-    _admin: Counselor = Depends(require_admin),
+    current_admin: Counselor = Depends(require_admin),
 ):
     """
     Get credit transaction history.
-    Admin only.
+    Admin only. Filtered by tenant if authorized.
 
     Supports filtering by counselor_id and transaction_type.
     """
-    query = db.query(CreditLog)
+    target_tenant_id = resolve_tenant_id(current_admin, tenant_id)
+
+    # Join with Counselor to filter by tenant_id
+    query = (
+        db.query(CreditLog)
+        .join(Counselor, CreditLog.counselor_id == Counselor.id)
+        .filter(Counselor.tenant_id == target_tenant_id)
+    )
 
     if counselor_id:
         query = query.filter(CreditLog.counselor_id == counselor_id)
@@ -134,15 +173,19 @@ async def get_credit_logs(
 async def create_billing_rate(
     request: CreditRateCreate,
     db: Session = Depends(get_db),
-    _admin: Counselor = Depends(require_admin),
+    current_admin: Counselor = Depends(require_admin),
 ):
     """
     Create or update a billing rate (creates new version).
-    Admin only.
+    Admin only. Automatically filtered by admin's tenant.
 
     If a rate with the same rule_name exists, creates a new version
     and deactivates the old version.
     """
+    # Note: CreditRate is global (not tenant-specific) in current schema
+    # This endpoint remains unchanged but renamed parameter for consistency
+    # If tenant-specific rates are needed, CreditRate model needs tenant_id column
+
     # Check if rule exists
     existing = (
         db.query(CreditRate)
@@ -182,14 +225,18 @@ async def list_billing_rates(
     rule_name: Optional[str] = Query(None, description="Filter by rule name"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     db: Session = Depends(get_db),
-    _admin: Counselor = Depends(require_admin),
+    current_admin: Counselor = Depends(require_admin),
 ):
     """
     List billing rates.
-    Admin only.
+    Admin only. Automatically filtered by admin's tenant.
 
     Supports filtering by rule_name and is_active.
     """
+    # Note: CreditRate is global (not tenant-specific) in current schema
+    # This endpoint remains unchanged but renamed parameter for consistency
+    # If tenant-specific rates are needed, CreditRate model needs tenant_id column
+
     query = db.query(CreditRate)
 
     if rule_name:
