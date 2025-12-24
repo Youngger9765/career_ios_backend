@@ -446,7 +446,7 @@ class TestAdminCreateCounselor:
     """Test POST /api/v1/admin/counselors - Create new counselor (Optional feature)"""
 
     def test_create_counselor_success(self, client, admin_token):
-        """Admin can create new counselor without password"""
+        """Admin can create new counselor with password"""
         from datetime import datetime, timedelta
 
         request_data = {
@@ -454,6 +454,7 @@ class TestAdminCreateCounselor:
             "username": "newuser",
             "full_name": "New User",
             "phone": "+886912345678",
+            "password": "test_password_123",
             "tenant_id": "career",
             "role": "counselor",
             "total_credits": 500,
@@ -471,7 +472,6 @@ class TestAdminCreateCounselor:
         assert response.status_code == 200
         data = response.json()
         assert "counselor" in data
-        assert "temporary_password" in data
         assert data["counselor"]["email"] == "newuser@test.com"
         assert data["counselor"]["username"] == "newuser"
         assert data["counselor"]["tenant_id"] == "career"
@@ -485,6 +485,7 @@ class TestAdminCreateCounselor:
             "email": "another@test.com",
             "username": "test_career",  # Already exists
             "full_name": "Another User",
+            "password": "test_password_123",
             "tenant_id": "career",
             "role": "counselor",
         }
@@ -505,6 +506,7 @@ class TestAdminCreateCounselor:
             "email": "test_career@test.com",  # Already exists in career tenant
             "username": "newusername",
             "full_name": "Another User",
+            "password": "test_password_123",
             "tenant_id": "career",
             "role": "counselor",
         }
@@ -523,6 +525,7 @@ class TestAdminCreateCounselor:
             "email": "shared@test.com",
             "username": "user_island",
             "full_name": "User Island",
+            "password": "test_password_123",
             "tenant_id": "island",
             "role": "counselor",
         }

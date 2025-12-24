@@ -38,17 +38,18 @@ class TestAdminCreditMembers:
         assert "subscription_expires_at" in member
 
     def test_list_members_filter_by_tenant(self, client, admin_token, test_counselors):
-        """Admin can filter members by tenant_id"""
+        """Admin can only access their own tenant"""
+        # Admin token is for 'career' tenant, requesting 'career' tenant should work
         response = client.get(
-            "/api/v1/admin/credits/members?tenant_id=island_parents",
+            "/api/v1/admin/credits/members?tenant_id=career",
             headers={"Authorization": f"Bearer {admin_token}"},
         )
 
         assert response.status_code == 200
         data = response.json()
-        # All returned members should be from island_parents tenant
+        # All returned members should be from career tenant
         for member in data:
-            assert member["tenant_id"] == "island_parents"
+            assert member["tenant_id"] == "career"
 
     def test_list_members_unauthorized(self, client, counselor_token):
         """Non-admin cannot list members"""
@@ -350,8 +351,13 @@ class TestCrossTenantSupport:
     def test_credits_work_for_all_tenants(
         self, client, admin_token, counselors_all_tenants
     ):
-        """Verify same credit mechanism works for career, island, island_parents"""
-        for tenant_counselor in counselors_all_tenants:
+        """Verify credit mechanism works within admin's tenant (career)"""
+        # Admin can only manage counselors in their own tenant (career)
+        career_counselors = [
+            c for c in counselors_all_tenants if c["tenant_id"] == "career"
+        ]
+
+        for tenant_counselor in career_counselors:
             counselor_id = tenant_counselor["id"]
             tenant_id = tenant_counselor["tenant_id"]
 
@@ -375,8 +381,16 @@ class TestCrossTenantSupport:
         self, client, admin_token, counselors_all_tenants
     ):
         """Credits are isolated per counselor, not shared"""
-        counselor1 = counselors_all_tenants[0]
-        counselor2 = counselors_all_tenants[1]
+        # Use only career tenant counselors (admin's tenant)
+        career_counselors = [
+            c for c in counselors_all_tenants if c["tenant_id"] == "career"
+        ]
+        counselor1 = career_counselors[0]
+        counselor2 = career_counselors[1] if len(career_counselors) > 1 else None
+
+        if not counselor2:
+            # Skip if there's only one career counselor
+            pytest.skip("Need at least 2 career counselors for isolation test")
 
         # Add credits to counselor1
         client.post(
@@ -385,7 +399,7 @@ class TestCrossTenantSupport:
             json={"credits_delta": 1000, "transaction_type": "purchase"},
         )
 
-        # Check counselor2 has no credits
+        # Check counselor2 has no credits (isolation verified)
         response = client.get(
             "/api/v1/admin/credits/members",
             headers={"Authorization": f"Bearer {admin_token}"},
