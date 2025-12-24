@@ -90,6 +90,74 @@
         }
         .tab-content { display: none; padding: 28px; }
         .tab-content.active { display: block; }
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(24, 33, 54, 0.08);
+            padding: 28px;
+            margin-top: 20px;
+        }
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .member-cards {
+            display: none;
+            gap: 12px;
+        }
+        .member-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 6px 14px rgba(24, 33, 54, 0.06);
+        }
+        .member-card h4 {
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+        .member-card .muted {
+            color: var(--muted);
+            font-size: 12px;
+        }
+        .member-meta {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            margin: 12px 0 14px;
+            font-size: 13px;
+        }
+        .member-meta span {
+            display: inline-flex;
+            gap: 6px;
+            align-items: center;
+            color: var(--ink);
+        }
+        .member-meta strong {
+            font-weight: 700;
+        }
+        .member-card .card-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .member-card .card-actions .btn {
+            width: 100%;
+            justify-content: center;
+        }
+        .card-more {
+            display: none;
+            margin-top: 10px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #f9fcfa;
+            padding: 10px;
+            gap: 8px;
+        }
+        .card-more.active { display: grid; }
+        .card-more .btn {
+            width: 100%;
+        }
         .controls {
             display: flex;
             gap: 12px;
@@ -538,6 +606,59 @@
         .actions-menu-item.delete:hover {
             background: #fef2f2;
         }
+
+        @media (max-width: 1024px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+            .content-card { padding: 22px; }
+            table { min-width: 720px; }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .container { border-radius: 14px; }
+            .header h1 { font-size: 20px; }
+            .header-actions { flex-direction: column; align-items: stretch; }
+            .tenant-selector { width: 100%; }
+            .controls { flex-direction: column; }
+            .btn { width: 100%; }
+            .table-wrap { display: none; }
+            .member-cards { display: grid; }
+            .content-card { padding: 18px; }
+            .modal-content {
+                width: 100%;
+                max-width: none;
+                height: 100%;
+                border-radius: 0;
+                margin: 0;
+            }
+            .modal-content form,
+            .modal-content > div {
+                padding: 20px;
+            }
+            .credit-summary {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .member-meta { grid-template-columns: 1fr; }
+            .member-card .card-actions { grid-template-columns: 1fr; }
+            .login-card {
+                max-width: 100%;
+                border-radius: 14px;
+            }
+            .login-header h1 { font-size: 22px; }
+        }
     </style>
 </head>
 <body>
@@ -584,7 +705,7 @@
     <div class="container">
         <div class="header">
             <h1>🛡️ Admin Portal - Multi-Tenant</h1>
-            <div style="display: flex; gap: 16px; align-items: center;">
+            <div class="header-actions" style="display: flex; gap: 16px; align-items: center;">
                 <select id="tenantSelector" class="tenant-selector" onchange="switchTenant()">
                     <option value="career">職游</option>
                     <option value="island">浮島</option>
@@ -598,7 +719,7 @@
             </div>
         </div>
 
-        <div style="background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); padding: 28px; margin-top: 20px;">
+        <div class="content-card">
             <div class="controls">
                 <div class="search-box">
                     <input type="text" id="memberSearch" placeholder="🔍 Search..." oninput="loadMembers()">
@@ -608,21 +729,24 @@
             <div id="memberStats" style="margin-bottom: 20px; font-size: 14px; color: #657786;">
                 Loading statistics...
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Email</th>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Role</th>
-                        <th>Available</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="membersBody">
-                    <tr><td colspan="6" style="text-align: center; padding: 40px;">Loading...</td></tr>
-                </tbody>
-            </table>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Role</th>
+                            <th>Available</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="membersBody">
+                        <tr><td colspan="6" style="text-align: center; padding: 40px;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="membersCards" class="member-cards"></div>
         </div>
 
     </div>
@@ -980,6 +1104,10 @@
             return res;
         }
 
+        function escapeForOnclick(value) {
+            return (value || '').replace(/'/g, "\\'");
+        }
+
         function switchTenant() {
             currentTenant = document.getElementById('tenantSelector').value;
             loadMembers();
@@ -998,8 +1126,10 @@
                 const data = await res.json();
 
                 const tbody = document.getElementById('membersBody');
+                const cards = document.getElementById('membersCards');
                 if (!data.counselors || data.counselors.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">No members found</td></tr>';
+                    cards.innerHTML = '<div class="member-card"><div class="muted">No members found</div></div>';
                     document.getElementById('memberStats').textContent = 'No data';
                     return;
                 }
@@ -1040,6 +1170,28 @@
                     </tr>
                 `).join('');
 
+                cards.innerHTML = data.counselors.map((m, index) => `
+                    <div class="member-card">
+                        <h4>${m.full_name || '未填姓名'}</h4>
+                        <div class="muted">${m.email}</div>
+                        <div class="member-meta">
+                            <span>📞 <strong>${m.phone || '-'}</strong></span>
+                            <span>👤 <strong>${m.role}</strong></span>
+                            <span>⭐ <strong>${m.available_credits || 0}</strong></span>
+                            <span>🏷️ <strong>${m.tenant_id || currentTenant}</strong></span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn btn-primary" onclick="openEditModal('${m.id}', '${escapeForOnclick(m.email)}', '${escapeForOnclick(m.full_name)}', '${escapeForOnclick(m.phone)}', '${m.role}', ${m.is_active})">Edit</button>
+                            <button class="btn btn-secondary" onclick="toggleCardMore(${index})">更多</button>
+                        </div>
+                        <div class="card-more" id="cardMore-${index}">
+                            <button class="btn btn-secondary" onclick="showCreditDetails('${m.id}', '${escapeForOnclick(m.email)}')">Credit</button>
+                            <button class="btn btn-secondary" onclick="showChangePasswordModal('${m.id}', '${escapeForOnclick(m.email)}')">Password</button>
+                            <button class="btn btn-danger" onclick="openDeleteModal('${m.id}', '${escapeForOnclick(m.email)}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+
                 document.getElementById('memberStats').textContent =
                     `Total: ${data.total || data.counselors.length} | ` +
                     `Tenant: ${currentTenant}`;
@@ -1047,6 +1199,8 @@
                 console.error('Failed to load members:', e);
                 document.getElementById('membersBody').innerHTML =
                     '<tr><td colspan="6" style="text-align:center;color:red;">Failed to load</td></tr>';
+                document.getElementById('membersCards').innerHTML =
+                    '<div class="member-card"><div class="muted">Failed to load</div></div>';
             }
         }
 
@@ -1473,6 +1627,18 @@
                 menu.classList.remove('active');
                 menu.parentElement.querySelector('.actions-trigger').classList.remove('active');
             });
+        }
+
+        function toggleCardMore(index) {
+            document.querySelectorAll('.card-more.active').forEach(panel => {
+                if (panel.id !== `cardMore-${index}`) {
+                    panel.classList.remove('active');
+                }
+            });
+            const panel = document.getElementById(`cardMore-${index}`);
+            if (panel) {
+                panel.classList.toggle('active');
+            }
         }
 
         // Close dropdown when clicking outside
