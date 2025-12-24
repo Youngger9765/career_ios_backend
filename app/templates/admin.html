@@ -143,19 +143,30 @@
             margin-top: 16px;
             background: var(--surface);
             border-radius: 14px;
-            overflow: hidden;
+            overflow: visible;
         }
         th, td {
             padding: 14px 12px;
             text-align: left;
             border-bottom: 1px solid #edf3ee;
+            position: relative;
         }
         th {
             background: #f3faf5;
             font-weight: 700;
             color: #4f6b61;
         }
-        tbody tr:hover { background: #f6fbf7; }
+        tbody {
+            position: relative;
+            z-index: 1;
+        }
+        tbody tr {
+            position: relative;
+        }
+        tbody tr:hover {
+            background: #f6fbf7;
+            z-index: 5;
+        }
         .tenant-badge {
             display: inline-block;
             padding: 4px 10px;
@@ -402,6 +413,7 @@
         .actions-dropdown {
             position: relative;
             display: inline-block;
+            z-index: 10;
         }
 
         .actions-trigger {
@@ -453,7 +465,7 @@
             visibility: hidden;
             transform: translateY(-10px) scale(0.95);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 1000;
+            z-index: 9999;
             overflow: hidden;
         }
 
