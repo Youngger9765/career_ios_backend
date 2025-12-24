@@ -183,7 +183,9 @@ async def console_page(request: Request) -> Response:
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request) -> Response:
     """Admin Portal - Multi-Tenant Management"""
-    return templates.TemplateResponse("admin.html", {"request": request})
+    return templates.TemplateResponse(
+        "admin.html", {"request": request, "debug_mode": settings.DEBUG}
+    )
 
 
 @app.get("/realtime-counseling", response_class=HTMLResponse)
