@@ -6,16 +6,16 @@
     <title>Admin Portal - Multi-Tenant Management</title>
     <style>
         :root {
-            --ink: #1f2a44;
-            --muted: #6b7280;
-            --paper: #fffdf7;
+            --ink: #1f2b2a;
+            --muted: #5f6f6a;
+            --paper: #f6faf7;
             --surface: #ffffff;
-            --brand: #ff7a59;
-            --brand-dark: #e85f3f;
-            --accent: #2aa198;
-            --accent-dark: #1f8078;
-            --line: #e9e2d0;
-            --tab: #fff3da;
+            --brand: #7dbf9b;
+            --brand-dark: #5ea67f;
+            --accent: #9fd2b3;
+            --accent-dark: #6aa28a;
+            --line: #dfe9e1;
+            --tab: #edf5f0;
             --tab-active: #ffffff;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -23,9 +23,9 @@
             font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
             color: var(--ink);
             background:
-                radial-gradient(900px 400px at 10% -10%, #fff2c8 0%, transparent 60%),
-                radial-gradient(600px 300px at 90% 0%, #d9f3ff 0%, transparent 65%),
-                repeating-linear-gradient(135deg, #fffaf0 0 12px, #fff6e4 12px 24px);
+                radial-gradient(900px 400px at 10% -10%, #e8f6ee 0%, transparent 60%),
+                radial-gradient(600px 300px at 90% 0%, #e6f1ff 0%, transparent 65%),
+                repeating-linear-gradient(135deg, #f7fbf8 0 14px, #f0f6f2 14px 28px);
             min-height: 100vh;
             padding: 24px;
         }
@@ -35,11 +35,11 @@
             background: var(--surface);
             border-radius: 18px;
             box-shadow: 0 18px 45px rgba(24, 33, 54, 0.2);
-            border: 2px solid #fff2cc;
+            border: 2px solid #e4efe7;
             animation: fadeIn 0.35s ease;
         }
         .header {
-            background: linear-gradient(135deg, #ffb14a 0%, #ff7a59 45%, #ff6f91 100%);
+            background: linear-gradient(135deg, #8bd1a8 0%, #7dbf9b 45%, #6fb1a1 100%);
             color: white;
             padding: 28px 32px;
             display: flex;
@@ -48,7 +48,7 @@
             border-radius: 16px 16px 0 0;
         }
         .header h1 {
-            font-size: 26px;
+            font-size: 24px;
             letter-spacing: 0.2px;
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
@@ -75,7 +75,7 @@
             text-align: center;
             cursor: pointer;
             font-weight: 700;
-            color: #7a5a3a;
+            color: #4f6b61;
             border-radius: 12px;
             background: rgba(255,255,255,0.65);
             border: 2px solid transparent;
@@ -85,8 +85,8 @@
         .tab.active {
             color: var(--ink);
             background: var(--tab-active);
-            border-color: #ffd39b;
-            box-shadow: 0 8px 18px rgba(255, 177, 74, 0.18);
+            border-color: #bfe4cd;
+            box-shadow: 0 8px 18px rgba(125, 191, 155, 0.18);
         }
         .tab-content { display: none; padding: 28px; }
         .tab-content.active { display: block; }
@@ -107,8 +107,8 @@
         }
         .search-box input:focus {
             outline: none;
-            border-color: #ffd39b;
-            box-shadow: 0 0 0 3px rgba(255, 209, 155, 0.35);
+            border-color: #bfe4cd;
+            box-shadow: 0 0 0 3px rgba(191, 228, 205, 0.45);
         }
         .btn {
             padding: 10px 20px;
@@ -119,24 +119,24 @@
             transition: transform 0.15s ease, box-shadow 0.2s ease;
         }
         .btn-primary {
-            background: linear-gradient(135deg, var(--brand) 0%, #ff935e 100%);
+            background: linear-gradient(135deg, var(--brand) 0%, #8bd6ad 100%);
             color: white;
-            box-shadow: 0 8px 18px rgba(255, 122, 89, 0.3);
+            box-shadow: 0 8px 18px rgba(125, 191, 155, 0.3);
         }
         .btn-primary:hover {
-            background: linear-gradient(135deg, var(--brand-dark) 0%, #ff8453 100%);
+            background: linear-gradient(135deg, var(--brand-dark) 0%, #74c999 100%);
             transform: translateY(-1px);
         }
         .btn-secondary {
-            background: #ffe9c7;
-            color: #7a5a3a;
+            background: #e4f3ea;
+            color: #4f6b61;
         }
-        .btn-secondary:hover { background: #ffdba0; }
+        .btn-secondary:hover { background: #d5ecdf; }
         .btn-danger {
-            background: #ff5c7c;
+            background: #e67a8f;
             color: white;
         }
-        .btn-danger:hover { background: #f04568; }
+        .btn-danger:hover { background: #d96880; }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -148,14 +148,14 @@
         th, td {
             padding: 14px 12px;
             text-align: left;
-            border-bottom: 1px solid #f3ead8;
+            border-bottom: 1px solid #edf3ee;
         }
         th {
-            background: #fff6e5;
+            background: #f3faf5;
             font-weight: 700;
-            color: #7a5a3a;
+            color: #4f6b61;
         }
-        tbody tr:hover { background: #fffdf4; }
+        tbody tr:hover { background: #f6fbf7; }
         .tenant-badge {
             display: inline-block;
             padding: 4px 10px;
@@ -164,9 +164,9 @@
             font-weight: 700;
             letter-spacing: 0.2px;
         }
-        .tenant-career { background: #ffe7b0; color: #8a5a00; }
-        .tenant-island { background: #d8f4f1; color: #0f6b65; }
-        .tenant-island_parents { background: #ffd8e2; color: #8b2240; }
+        .tenant-career { background: #e3f2ea; color: #2f6b4f; }
+        .tenant-island { background: #dff1f5; color: #2b6a73; }
+        .tenant-island_parents { background: #eef3e2; color: #5e6a2b; }
 
         /* Modal Styles */
         .modal {
@@ -195,7 +195,7 @@
         }
 
         .modal-header {
-            background: linear-gradient(135deg, #ffb14a 0%, #ff7a59 100%);
+            background: linear-gradient(135deg, #8bd1a8 0%, #7dbf9b 100%);
             color: white;
             padding: 20px 30px;
             border-radius: 12px 12px 0 0;
@@ -249,8 +249,8 @@
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #ffd39b;
-            box-shadow: 0 0 0 3px rgba(255, 209, 155, 0.35);
+            border-color: #bfe4cd;
+            box-shadow: 0 0 0 3px rgba(191, 228, 205, 0.45);
         }
 
         .form-group input:disabled {
@@ -271,16 +271,7 @@
             margin-top: 30px;
         }
 
-        .btn-secondary {
-            background: #e1e8ed;
-            color: #657786;
-        }
-
-        .btn-secondary:hover {
-            background: #d1d8dd;
-        }
-
-        .btn-primary:hover { box-shadow: 0 10px 20px rgba(255, 122, 89, 0.35); }
+        .btn-primary:hover { box-shadow: 0 10px 20px rgba(125, 191, 155, 0.35); }
 
         @keyframes fadeIn {
             from { opacity: 0; }
@@ -297,19 +288,300 @@
                 transform: translateY(0);
             }
         }
+
+        /* Login Page Styles */
+        #loginContainer {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .login-card {
+            background: var(--surface);
+            border-radius: 18px;
+            box-shadow: 0 18px 45px rgba(24, 33, 54, 0.2);
+            border: 2px solid #e4efe7;
+            max-width: 450px;
+            width: 100%;
+            overflow: hidden;
+            animation: fadeIn 0.35s ease;
+        }
+
+        .login-header {
+            background: linear-gradient(135deg, #8bd1a8 0%, #7dbf9b 45%, #6fb1a1 100%);
+            color: white;
+            padding: 32px 28px;
+            text-align: center;
+        }
+
+        .login-header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            letter-spacing: 0.2px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .login-header p {
+            font-size: 14px;
+            opacity: 0.95;
+            margin: 0;
+        }
+
+        .login-body {
+            padding: 32px 28px;
+        }
+
+        .login-form .form-group {
+            margin-bottom: 20px;
+        }
+
+        .login-form label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .login-form input,
+        .login-form select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--line);
+            border-radius: 12px;
+            font-size: 14px;
+            background: var(--paper);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .login-form input:focus,
+        .login-form select:focus {
+            outline: none;
+            border-color: #bfe4cd;
+            box-shadow: 0 0 0 3px rgba(191, 228, 205, 0.45);
+        }
+
+        .login-error {
+            display: none;
+            background: #fee;
+            border: 1px solid #fcc;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+            color: #c33;
+            font-size: 14px;
+        }
+
+        .login-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .btn-debug {
+            background: #f3f4f6;
+            color: #6b7280;
+            border: 2px dashed #d1d5db;
+        }
+
+        .btn-debug:hover {
+            background: #e5e7eb;
+        }
+
+        /* Dropdown Menu Styles */
+        .actions-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .actions-trigger {
+            padding: 10px 18px;
+            background: linear-gradient(135deg, var(--brand) 0%, #8bd6ad 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(125, 191, 155, 0.25);
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        .actions-trigger:hover {
+            background: linear-gradient(135deg, var(--brand-dark) 0%, #74c999 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(125, 191, 155, 0.35);
+        }
+
+        .actions-trigger:active {
+            transform: translateY(0);
+        }
+
+        .actions-trigger .chevron {
+            font-size: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        .actions-trigger.active .chevron {
+            transform: rotate(180deg);
+        }
+
+        .actions-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+            min-width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px) scale(0.95);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .actions-menu.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        .actions-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: var(--ink);
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border: none;
+            width: 100%;
+            text-align: left;
+            background: none;
+            font-size: 14px;
+            font-weight: 600;
+            border-bottom: 1px solid #f0f4f1;
+        }
+
+        .actions-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .actions-menu-item:hover {
+            background: #f6faf7;
+        }
+
+        .actions-menu-item .icon {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .actions-menu-item.credit {
+            color: #3B82F6;
+        }
+
+        .actions-menu-item.credit:hover {
+            background: #eff6ff;
+        }
+
+        .actions-menu-item.password {
+            color: #F59E0B;
+        }
+
+        .actions-menu-item.password:hover {
+            background: #fffbeb;
+        }
+
+        .actions-menu-item.edit {
+            color: #6B7280;
+        }
+
+        .actions-menu-item.edit:hover {
+            background: #f9fafb;
+        }
+
+        .actions-menu-item.delete {
+            color: #EF4444;
+        }
+
+        .actions-menu-item.delete:hover {
+            background: #fef2f2;
+        }
     </style>
 </head>
 <body>
+    <!-- Login Page -->
+    <div id="loginContainer">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>Admin Portal</h1>
+                <p>Multi-Tenant Management System</p>
+            </div>
+            <div class="login-body">
+                <div id="loginError" class="login-error"></div>
+                <form class="login-form" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label for="loginTenant">Tenant</label>
+                        <select id="loginTenant" required>
+                            <option value="career">Career</option>
+                            <option value="island">Island</option>
+                            <option value="island_parents">Island Parents</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" placeholder="admin@example.com" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password">
+                    </div>
+                    <div class="login-actions">
+                        <button type="submit" class="btn btn-primary btn-login">Login</button>
+                        {% if debug_mode %}
+                        <button type="button" class="btn btn-debug btn-login" onclick="skipLoginDebug()">
+                            Skip Login (Debug Mode)
+                        </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Portal (Main Content) -->
     <div class="container">
         <div class="header">
             <h1>🛡️ Admin Portal - Multi-Tenant</h1>
-            <div style="display: flex; gap: 20px; align-items: center;">
+            <div style="display: flex; gap: 16px; align-items: center;">
                 <select id="tenantSelector" class="tenant-selector" onchange="switchTenant()">
-                    <option value="career">Career</option>
-                    <option value="island">Island</option>
-                    <option value="island_parents">Island Parents</option>
+                    <option value="career">職游</option>
+                    <option value="island">浮島</option>
+                    <option value="island_parents">浮島-親子</option>
                 </select>
-                <span id="adminName" style="opacity: 0.9;">Loading...</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
+                    <span id="adminName" style="opacity: 0.9; font-weight: 700;">Loading...</span>
+                    <span id="adminEmail" style="opacity: 0.8; font-size: 12px;">--</span>
+                </div>
                 <button onclick="logout()" class="btn btn-primary">Logout</button>
             </div>
         </div>
@@ -330,14 +602,13 @@
                         <th>Email</th>
                         <th>Name</th>
                         <th>Phone</th>
-                        <th>Tenant</th>
                         <th>Role</th>
                         <th>Available</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="membersBody">
-                    <tr><td colspan="7" style="text-align: center; padding: 40px;">Loading...</td></tr>
+                    <tr><td colspan="6" style="text-align: center; padding: 40px;">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -559,35 +830,142 @@
     </div>
 
     <script>
-        let token = localStorage.getItem('token');
-        let currentTenant = 'career';
+        let token = localStorage.getItem('admin_token');
+        let currentTenant = localStorage.getItem('admin_tenant') || 'career';
+        let currentUser = null;
+        const DEBUG_MODE = {{ 'true' if debug_mode else 'false' }};
 
         window.onload = function() {
-            // TODO: Re-enable authentication later
-            // if (!token) {
-            //     window.location.href = '/console.html';
-            //     return;
-            // }
-            // checkAuth();
-            document.getElementById('adminName').textContent = 'Admin (Debug Mode)';
-            loadMembers();
+            // Authentication check
+            if (!DEBUG_MODE && !token) {
+                showLoginPage();
+                return;
+            }
+
+            // Update tenant selector
+            document.getElementById('tenantSelector').value = currentTenant;
+
+            if (DEBUG_MODE && !token) {
+                setAdminDisplay('Debug Admin', 'debug@admin.local');
+                loadMembers();
+            } else {
+                checkAuth();
+            }
         };
+
+        function showLoginPage() {
+            document.querySelector('.container').style.display = 'none';
+            document.getElementById('loginContainer').style.display = 'flex';
+        }
+
+        function hideLoginPage() {
+            document.getElementById('loginContainer').style.display = 'none';
+            document.querySelector('.container').style.display = 'block';
+        }
 
         async function checkAuth() {
             try {
-                const res = await fetch('/api/v1/auth/me', {
+                const res = await fetch('/api/auth/me', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (!res.ok) throw new Error('Unauthorized');
-                const data = await res.json();
-                if (data.role !== 'ADMIN') {
-                    alert('Admin access required');
-                    window.location.href = '/console.html';
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        // Token expired or invalid
+                        handleLogout();
+                        return;
+                    }
+                    throw new Error('Unauthorized');
                 }
-                document.getElementById('adminName').textContent = data.email;
-            } catch {
-                window.location.href = '/console.html';
+                const data = await res.json();
+                currentUser = data;
+                setAdminDisplay(data.full_name || 'Admin', data.email || '--');
+                currentTenant = data.tenant_id;
+                localStorage.setItem('admin_tenant', currentTenant);
+                document.getElementById('tenantSelector').value = currentTenant;
+                loadMembers();
+            } catch (e) {
+                console.error('Auth check failed:', e);
+                handleLogout();
             }
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const tenant_id = document.getElementById('loginTenant').value;
+            const errorDiv = document.getElementById('loginError');
+
+            errorDiv.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, tenant_id })
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    errorDiv.textContent = error.detail || 'Login failed';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                const data = await res.json();
+                token = data.access_token;
+                localStorage.setItem('admin_token', token);
+                localStorage.setItem('admin_tenant', tenant_id);
+                currentTenant = tenant_id;
+
+                hideLoginPage();
+                await checkAuth();
+            } catch (e) {
+                console.error('Login error:', e);
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_tenant');
+            token = null;
+            currentUser = null;
+            setAdminDisplay('未登入', '--');
+            showLoginPage();
+        }
+
+        function skipLoginDebug() {
+            token = null;
+            currentUser = null;
+            setAdminDisplay('Debug Admin', 'debug@admin.local');
+            hideLoginPage();
+            loadMembers();
+        }
+
+        function setAdminDisplay(name, email) {
+            document.getElementById('adminName').textContent = name || 'Admin';
+            document.getElementById('adminEmail').textContent = email || '--';
+        }
+
+        // Helper function for API calls with automatic logout on 401
+        async function fetchWithAuth(url, options = {}) {
+            const headers = options.headers || {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            options.headers = headers;
+
+            const res = await fetch(url, options);
+
+            if (res.status === 401 && token) {
+                handleLogout();
+                throw new Error('Session expired');
+            }
+
+            return res;
         }
 
         function switchTenant() {
@@ -604,32 +982,47 @@
                 if (search) params.append('search', search);
                 if (params.toString()) url += '?' + params.toString();
 
-                const headers = {};
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-                const res = await fetch(url, { headers });
+                const res = await fetchWithAuth(url);
                 const data = await res.json();
 
                 const tbody = document.getElementById('membersBody');
                 if (!data.counselors || data.counselors.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;">No members found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">No members found</td></tr>';
                     document.getElementById('memberStats').textContent = 'No data';
                     return;
                 }
 
-                tbody.innerHTML = data.counselors.map(m => `
+                tbody.innerHTML = data.counselors.map((m, index) => `
                     <tr>
                         <td>${m.email}</td>
                         <td>${m.full_name || '-'}</td>
                         <td>${m.phone || '-'}</td>
-                        <td><span class="tenant-badge tenant-${m.tenant_id}">${m.tenant_id}</span></td>
                         <td>${m.role}</td>
                         <td><strong>${m.available_credits || 0}</strong></td>
-                        <td style="min-width: 180px;">
-                            <div style="display: flex; flex-direction: column; gap: 5px;">
-                                <button class="btn btn-primary" onclick="showCreditDetails('${m.id}', '${m.email}')" style="padding:8px 12px;font-size:12px;background:#27ae60;width:100%;">💳 管理 Credit</button>
-                                <button class="btn btn-primary" onclick="showChangePasswordModal('${m.id}', '${m.email}')" style="padding:8px 12px;font-size:12px;background:#f59e0b;width:100%;">🔑 變更密碼</button>
-                                <button class="btn btn-primary" onclick="openEditModal('${m.id}', '${m.email}', '${(m.full_name || '').replace(/'/g, "\\'")}', '${(m.phone || '').replace(/'/g, "\\'")}', '${m.role}', ${m.is_active})" style="padding:8px 12px;font-size:12px;width:100%;">✏️ 編輯</button>
-                                <button class="btn btn-danger" onclick="openDeleteModal('${m.id}', '${m.email}')" style="padding:8px 12px;font-size:12px;width:100%;">🗑️ 刪除</button>
+                        <td>
+                            <div class="actions-dropdown" id="dropdown-${index}">
+                                <button class="actions-trigger" onclick="toggleActionsMenu(event, ${index})">
+                                    Actions
+                                    <span class="chevron">▼</span>
+                                </button>
+                                <div class="actions-menu">
+                                    <button class="actions-menu-item credit" onclick="showCreditDetails('${m.id}', '${m.email}'); closeActionsMenu(${index})">
+                                        <span class="icon">💳</span>
+                                        <span>Credit</span>
+                                    </button>
+                                    <button class="actions-menu-item password" onclick="showChangePasswordModal('${m.id}', '${m.email}'); closeActionsMenu(${index})">
+                                        <span class="icon">🔑</span>
+                                        <span>Password</span>
+                                    </button>
+                                    <button class="actions-menu-item edit" onclick="openEditModal('${m.id}', '${m.email}', '${(m.full_name || '').replace(/'/g, "\\'")}', '${(m.phone || '').replace(/'/g, "\\'")}', '${m.role}', ${m.is_active}); closeActionsMenu(${index})">
+                                        <span class="icon">✏️</span>
+                                        <span>Edit</span>
+                                    </button>
+                                    <button class="actions-menu-item delete" onclick="openDeleteModal('${m.id}', '${m.email}'); closeActionsMenu(${index})">
+                                        <span class="icon">🗑️</span>
+                                        <span>Delete</span>
+                                    </button>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -641,7 +1034,7 @@
             } catch (e) {
                 console.error('Failed to load members:', e);
                 document.getElementById('membersBody').innerHTML =
-                    '<tr><td colspan="7" style="text-align:center;color:red;">Failed to load</td></tr>';
+                    '<tr><td colspan="6" style="text-align:center;color:red;">Failed to load</td></tr>';
             }
         }
 
@@ -682,15 +1075,11 @@
 
         async function createCounselor(data) {
             try {
-                const headers = {'Content-Type': 'application/json'};
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-
                 console.log('Creating counselor with data:', data);
-                console.log('Headers:', headers);
 
-                const res = await fetch('/api/v1/admin/counselors', {
+                const res = await fetchWithAuth('/api/v1/admin/counselors', {
                     method: 'POST',
-                    headers,
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(data)
                 });
 
@@ -758,12 +1147,9 @@
 
         async function updateCounselor(id, data) {
             try {
-                const headers = {'Content-Type': 'application/json'};
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-
-                const res = await fetch(`/api/v1/admin/counselors/${id}`, {
+                const res = await fetchWithAuth(`/api/v1/admin/counselors/${id}`, {
                     method: 'PATCH',
-                    headers,
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(data)
                 });
 
@@ -803,12 +1189,8 @@
             const id = document.getElementById('deleteMemberId').value;
 
             try {
-                const headers = {};
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-
-                const res = await fetch(`/api/v1/admin/counselors/${id}`, {
-                    method: 'DELETE',
-                    headers
+                const res = await fetchWithAuth(`/api/v1/admin/counselors/${id}`, {
+                    method: 'DELETE'
                 });
 
                 if (!res.ok) {
@@ -858,14 +1240,9 @@
             }
 
             try {
-                const headers = {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                };
-
-                const res = await fetch(`/api/v1/admin/counselors/${counselorId}/password`, {
+                const res = await fetchWithAuth(`/api/v1/admin/counselors/${counselorId}/password`, {
                     method: 'PATCH',
-                    headers,
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ password: newPassword })
                 });
 
@@ -893,11 +1270,8 @@
                 document.getElementById('currentCounselorId').value = counselorId;
                 document.getElementById('creditCounselorEmail').textContent = email;
 
-                const headers = {};
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-
                 // Load credit summary
-                const res = await fetch(`/api/v1/admin/credits/members/${counselorId}`, { headers });
+                const res = await fetchWithAuth(`/api/v1/admin/credits/members/${counselorId}`);
                 if (!res.ok) throw new Error('Failed to load credit details');
 
                 const data = await res.json();
@@ -906,7 +1280,7 @@
                 document.getElementById('totalCredits').textContent = data.total_credits || 0;
 
                 // Load transaction history
-                const logsRes = await fetch(`/api/v1/admin/credits/logs?counselor_id=${counselorId}&limit=50`, { headers });
+                const logsRes = await fetchWithAuth(`/api/v1/admin/credits/logs?counselor_id=${counselorId}&limit=50`);
                 if (logsRes.ok) {
                     const logs = await logsRes.json();
                     renderTransactionHistory(logs);
@@ -962,14 +1336,9 @@
             const description = document.getElementById('newCreditDescription').value || '管理員新增';
 
             try {
-                const headers = {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                };
-
-                const res = await fetch(`/api/v1/admin/credits/members/${counselorId}/add`, {
+                const res = await fetchWithAuth(`/api/v1/admin/credits/members/${counselorId}/add`, {
                     method: 'POST',
-                    headers,
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         credits_delta: amount,
                         reason: description,
@@ -1018,12 +1387,9 @@
 
         async function addCredits(counselorId, amount, reason) {
             try {
-                const headers = {'Content-Type': 'application/json'};
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-
-                const res = await fetch(`/api/v1/admin/credits/members/${counselorId}/add`, {
+                const res = await fetchWithAuth(`/api/v1/admin/credits/members/${counselorId}/add`, {
                     method: 'POST',
-                    headers,
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         credits_delta: amount,
                         reason: reason,
@@ -1057,9 +1423,59 @@
         }
 
         function logout() {
-            localStorage.removeItem('token');
-            window.location.href = '/console.html';
+            handleLogout();
         }
+
+        // Dropdown Menu Functions
+        function toggleActionsMenu(event, index) {
+            event.stopPropagation();
+            const dropdown = document.getElementById(`dropdown-${index}`);
+            const menu = dropdown.querySelector('.actions-menu');
+            const trigger = dropdown.querySelector('.actions-trigger');
+
+            // Close all other menus
+            document.querySelectorAll('.actions-menu.active').forEach(m => {
+                if (m !== menu) {
+                    m.classList.remove('active');
+                    m.parentElement.querySelector('.actions-trigger').classList.remove('active');
+                }
+            });
+
+            // Toggle current menu
+            menu.classList.toggle('active');
+            trigger.classList.toggle('active');
+        }
+
+        function closeActionsMenu(index) {
+            const dropdown = document.getElementById(`dropdown-${index}`);
+            if (dropdown) {
+                const menu = dropdown.querySelector('.actions-menu');
+                const trigger = dropdown.querySelector('.actions-trigger');
+                menu.classList.remove('active');
+                trigger.classList.remove('active');
+            }
+        }
+
+        function closeAllActionsMenus() {
+            document.querySelectorAll('.actions-menu.active').forEach(menu => {
+                menu.classList.remove('active');
+                menu.parentElement.querySelector('.actions-trigger').classList.remove('active');
+            });
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.actions-dropdown')) {
+                closeAllActionsMenus();
+            }
+        });
+
+        // Close dropdown when pressing Escape
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeAllActionsMenus();
+            }
+        });
     </script>
 </body>
 </html>
