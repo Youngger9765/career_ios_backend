@@ -477,134 +477,70 @@
             background: #e5e7eb;
         }
 
-        /* Dropdown Menu Styles */
-        .actions-dropdown {
-            position: relative;
-            display: inline-block;
-            z-index: 10;
-        }
-
-        .actions-trigger {
-            padding: 10px 18px;
-            background: linear-gradient(135deg, var(--brand) 0%, #8bd6ad 100%);
+        /* Manage Button Styles */
+        .btn-manage {
+            background: #3B82F6;
             color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
             border: none;
-            border-radius: 10px;
-            font-weight: 700;
-            font-size: 14px;
             cursor: pointer;
-            display: flex;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 200ms, transform 150ms;
+            display: inline-flex;
             align-items: center;
-            gap: 8px;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(125, 191, 155, 0.25);
-            min-width: 120px;
-            justify-content: center;
+            gap: 6px;
         }
 
-        .actions-trigger:hover {
-            background: linear-gradient(135deg, var(--brand-dark) 0%, #74c999 100%);
+        .btn-manage:hover {
+            background: #2563EB;
             transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(125, 191, 155, 0.35);
         }
 
-        .actions-trigger:active {
+        .btn-manage:active {
             transform: translateY(0);
         }
 
-        .actions-trigger .chevron {
-            font-size: 10px;
-            transition: transform 0.2s ease;
-        }
+        /* ========== Credit Modal Mobile Optimization ========== */
 
-        .actions-trigger.active .chevron {
-            transform: rotate(180deg);
-        }
-
-        .actions-menu {
-            position: absolute;
-            top: calc(100% + 8px);
-            right: 0;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
-            min-width: 200px;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-10px) scale(0.95);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 9999;
-            overflow: hidden;
-        }
-
-        .actions-menu.active {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0) scale(1);
-        }
-
-        .actions-menu-item {
+        /* Add Credit Form Styles */
+        .add-credit-form {
             display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            color: var(--ink);
-            text-decoration: none;
-            cursor: pointer;
-            transition: background 0.15s ease;
-            border: none;
-            width: 100%;
-            text-align: left;
-            background: none;
-            font-size: 14px;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .add-credit-form .form-group {
+            margin-bottom: 0;
+        }
+
+        .add-credit-form .form-group label {
+            display: block;
             font-weight: 600;
-            border-bottom: 1px solid #f0f4f1;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
         }
 
-        .actions-menu-item:last-child {
-            border-bottom: none;
+        .add-credit-form .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
         }
 
-        .actions-menu-item:hover {
-            background: #f6faf7;
+        .add-credit-form .form-input:focus {
+            outline: none;
+            border-color: #bfe4cd;
+            box-shadow: 0 0 0 3px rgba(191, 228, 205, 0.45);
         }
 
-        .actions-menu-item .icon {
-            font-size: 16px;
-            width: 20px;
-            text-align: center;
-        }
-
-        .actions-menu-item.credit {
-            color: #3B82F6;
-        }
-
-        .actions-menu-item.credit:hover {
-            background: #eff6ff;
-        }
-
-        .actions-menu-item.password {
-            color: #F59E0B;
-        }
-
-        .actions-menu-item.password:hover {
-            background: #fffbeb;
-        }
-
-        .actions-menu-item.edit {
-            color: #6B7280;
-        }
-
-        .actions-menu-item.edit:hover {
-            background: #f9fafb;
-        }
-
-        .actions-menu-item.delete {
-            color: #EF4444;
-        }
-
-        .actions-menu-item.delete:hover {
-            background: #fef2f2;
+        .add-credit-form .btn-submit {
+            height: 44px;
+            white-space: nowrap;
         }
 
         @media (max-width: 1024px) {
@@ -648,6 +584,111 @@
             .credit-summary {
                 grid-template-columns: 1fr !important;
             }
+
+            /* ========== Credit Modal Mobile Optimization ========== */
+
+            /* Credit Modal specific adjustments */
+            #creditModal .modal-content {
+                width: 100%;
+                max-width: none;
+                padding: 0;
+                max-height: 100vh;
+                overflow-y: auto;
+            }
+
+            #creditModal .modal-content > div {
+                padding: 20px;
+            }
+
+            /* Add Credit Form - Mobile Layout */
+            .add-credit-form {
+                flex-direction: column;
+                gap: 16px;
+                align-items: stretch;
+            }
+
+            .add-credit-form .form-group {
+                margin-bottom: 16px;
+            }
+
+            /* Input fields - Touch-friendly */
+            .add-credit-form .form-group label {
+                font-size: 16px;
+                font-weight: 600;
+                margin-bottom: 8px;
+            }
+
+            .add-credit-form .form-input {
+                min-height: 48px;
+                font-size: 16px;
+                padding: 12px 16px;
+                border-width: 2px;
+            }
+
+            /* Submit button - Touch-friendly */
+            .add-credit-form .btn-submit {
+                min-height: 48px;
+                width: 100%;
+                font-size: 16px;
+                padding: 14px 24px;
+            }
+
+            /* Form Actions - Mobile */
+            #creditModal .form-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                margin-top: 24px;
+            }
+
+            #creditModal .form-actions .btn {
+                width: 100%;
+                min-height: 48px;
+                font-size: 16px;
+                padding: 14px 24px;
+            }
+
+            /* ========== All Modals Mobile Optimization ========== */
+
+            /* Optimize all modal inputs and buttons for mobile */
+            .modal-content .form-group label {
+                font-size: 16px;
+                font-weight: 600;
+                margin-bottom: 8px;
+            }
+
+            .modal-content .form-group input,
+            .modal-content .form-group select,
+            .modal-content .form-group textarea {
+                min-height: 48px;
+                font-size: 16px;
+                padding: 12px 16px;
+                border-width: 2px;
+            }
+
+            .modal-content .form-group textarea {
+                min-height: 80px;
+            }
+
+            /* Optimize all modal buttons */
+            .modal-content .btn,
+            .modal-content button {
+                min-height: 48px;
+                font-size: 16px;
+                padding: 14px 24px;
+            }
+
+            /* Form Actions - Stack buttons vertically on mobile */
+            .modal-content .form-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                margin-top: 24px;
+            }
+
+            .modal-content .form-actions .btn {
+                width: 100%;
+            }
         }
 
         @media (max-width: 480px) {
@@ -658,6 +699,410 @@
                 border-radius: 14px;
             }
             .login-header h1 { font-size: 22px; }
+        }
+
+        /* Side Panel Styles */
+        .side-panel-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .side-panel-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .side-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 600px;
+            height: 100vh;
+            background: #FFFFFF;
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            display: none;
+        }
+
+        .side-panel.active {
+            display: block;
+            transform: translateX(0);
+        }
+
+        .side-panel-header {
+            background: #F9FAFB;
+            padding: 20px 24px;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .side-panel-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #111827;
+            font-weight: 700;
+        }
+
+        .side-panel-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #6B7280;
+            cursor: pointer;
+            padding: 4px 8px;
+            line-height: 1;
+            transition: color 0.2s, transform 0.2s;
+        }
+
+        .side-panel-close:hover {
+            color: #111827;
+            transform: rotate(90deg);
+        }
+
+        .side-panel-body {
+            padding: 0;
+        }
+
+        .side-panel-section {
+            padding: 20px 24px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .side-panel-section:last-child {
+            border-bottom: none;
+        }
+
+        .side-panel-section h4 {
+            margin: 0 0 16px 0;
+            font-size: 14px;
+            color: #6B7280;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .user-info-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .user-info-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .user-info-item .icon {
+            font-size: 16px;
+            margin-top: 2px;
+        }
+
+        .user-info-item .content {
+            flex: 1;
+        }
+
+        .user-info-item .label {
+            font-size: 12px;
+            color: #6B7280;
+            margin-bottom: 2px;
+        }
+
+        .user-info-item .value {
+            font-size: 14px;
+            color: #111827;
+            font-weight: 500;
+        }
+
+        .credit-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .credit-stat {
+            background: #F9FAFB;
+            padding: 16px 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .credit-stat.total {
+            background: #FEF3C7;
+        }
+
+        .credit-stat.used {
+            background: #FEE2E2;
+        }
+
+        .credit-stat.available {
+            background: #D1FAE5;
+        }
+
+        .credit-stat .label {
+            font-size: 11px;
+            color: #6B7280;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .credit-stat .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .credit-stat.total .value {
+            color: #F59E0B;
+        }
+
+        .credit-stat.used .value {
+            color: #EF4444;
+        }
+
+        .credit-stat.available .value {
+            color: #10B981;
+        }
+
+        .panel-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .danger-zone {
+            margin-top: 24px;
+            padding: 16px;
+            background: #FEF2F2;
+            border: 2px solid #FCA5A5;
+            border-radius: 8px;
+        }
+
+        .danger-zone h4 {
+            color: #DC2626 !important;
+            font-size: 14px !important;
+            margin-bottom: 12px !important;
+        }
+
+        .btn-delete-danger {
+            width: 100%;
+            background: #EF4444;
+            color: white;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-delete-danger:hover {
+            background: #DC2626;
+            transform: translateY(-1px);
+        }
+
+        .danger-warning {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #6B7280;
+            text-align: center;
+        }
+
+        .panel-btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .panel-btn-primary {
+            background: linear-gradient(135deg, var(--brand) 0%, #8bd6ad 100%);
+            color: white;
+        }
+
+        .panel-btn-primary:hover {
+            background: linear-gradient(135deg, var(--brand-dark) 0%, #74c999 100%);
+            transform: translateY(-1px);
+        }
+
+        .panel-btn-secondary {
+            background: #F3F4F6;
+            color: #4B5563;
+        }
+
+        .panel-btn-secondary:hover {
+            background: #E5E7EB;
+        }
+
+        .panel-btn-warning {
+            background: #FEF3C7;
+            color: #D97706;
+        }
+
+        .panel-btn-warning:hover {
+            background: #FDE68A;
+        }
+
+        .panel-btn-danger {
+            background: #FEE2E2;
+            color: #DC2626;
+        }
+
+        .panel-btn-danger:hover {
+            background: #FECACA;
+        }
+
+        .transactions-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #F3F4F6;
+        }
+
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+
+        .transaction-info {
+            flex: 1;
+        }
+
+        .transaction-type {
+            font-size: 13px;
+            color: #111827;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .transaction-date {
+            font-size: 11px;
+            color: #6B7280;
+        }
+
+        .transaction-amount {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .transaction-amount.positive {
+            color: #10B981;
+        }
+
+        .transaction-amount.negative {
+            color: #EF4444;
+        }
+
+        .view-all-link {
+            display: inline-block;
+            margin-top: 12px;
+            color: var(--brand);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .view-all-link:hover {
+            color: var(--brand-dark);
+            text-decoration: underline;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+
+        .status-badge.active {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .status-badge.inactive {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        /* Responsive Side Panel */
+        @media (max-width: 1023px) {
+            .side-panel {
+                width: 60%;
+                min-width: 450px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .side-panel {
+                width: 100%;
+                min-width: auto;
+            }
+        }
+
+        /* Loading State */
+        .side-panel-loading {
+            padding: 40px 24px;
+            text-align: center;
+            color: #6B7280;
+        }
+
+        .side-panel-loading::after {
+            content: '...';
+            animation: loadingDots 1.5s infinite;
+        }
+
+        @keyframes loadingDots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        /* Clickable rows */
+        tbody tr {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #F9FAFB;
         }
     </style>
 </head>
@@ -738,7 +1183,7 @@
                             <th>Phone</th>
                             <th>Role</th>
                             <th>Available</th>
-                            <th>Actions</th>
+                            <th>管理</th>
                         </tr>
                     </thead>
                     <tbody id="membersBody">
@@ -945,21 +1390,147 @@
                 </div>
 
                 <h3 style="margin-bottom: 15px; color: #333;">➕ 新增點數</h3>
-                <form id="addCreditForm" onsubmit="submitAddCredit(event)" style="display: flex; gap: 10px; align-items: flex-end;">
+                <form id="addCreditForm" onsubmit="submitAddCredit(event)" class="add-credit-form">
                     <input type="hidden" id="currentCounselorId">
-                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <div class="form-group" style="flex: 1;">
                         <label for="newCreditAmount">點數 *</label>
-                        <input type="number" id="newCreditAmount" required min="1" placeholder="輸入點數">
+                        <input type="number" id="newCreditAmount" class="form-input" required min="1" placeholder="輸入點數">
                     </div>
-                    <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                    <div class="form-group" style="flex: 2;">
                         <label for="newCreditDescription">說明</label>
-                        <input type="text" id="newCreditDescription" placeholder="例：購買套餐、系統補償">
+                        <input type="text" id="newCreditDescription" class="form-input" placeholder="例：購買套餐、系統補償">
                     </div>
-                    <button type="submit" class="btn btn-primary" style="height: 44px;">新增</button>
+                    <button type="submit" class="btn btn-primary btn-submit">新增</button>
                 </form>
 
                 <div class="form-actions" style="margin-top: 20px;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('creditModal')">關閉</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Panel Overlay -->
+    <div id="sidePanelOverlay" class="side-panel-overlay" onclick="closeSidePanel()"></div>
+
+    <!-- Side Panel -->
+    <div id="sidePanel" class="side-panel">
+        <div class="side-panel-header">
+            <h3 id="sidePanelTitle">User Details</h3>
+            <button class="side-panel-close" onclick="closeSidePanel()">&times;</button>
+        </div>
+        <div class="side-panel-body">
+            <!-- Loading State -->
+            <div id="sidePanelLoading" class="side-panel-loading">Loading</div>
+
+            <!-- Content (hidden until loaded) -->
+            <div id="sidePanelContent" style="display: none;">
+                <!-- Basic Information Section -->
+                <div class="side-panel-section">
+                    <h4>Basic Information</h4>
+                    <div class="user-info-grid">
+                        <div class="user-info-item">
+                            <span class="icon">📧</span>
+                            <div class="content">
+                                <div class="label">Email</div>
+                                <div class="value" id="panelEmail">-</div>
+                            </div>
+                        </div>
+                        <div class="user-info-item">
+                            <span class="icon">👤</span>
+                            <div class="content">
+                                <div class="label">Name</div>
+                                <div class="value" id="panelName">-</div>
+                            </div>
+                        </div>
+                        <div class="user-info-item">
+                            <span class="icon">📞</span>
+                            <div class="content">
+                                <div class="label">Phone</div>
+                                <div class="value" id="panelPhone">-</div>
+                            </div>
+                        </div>
+                        <div class="user-info-item">
+                            <span class="icon">🏷️</span>
+                            <div class="content">
+                                <div class="label">Tenant</div>
+                                <div class="value" id="panelTenant">-</div>
+                            </div>
+                        </div>
+                        <div class="user-info-item">
+                            <span class="icon">🔑</span>
+                            <div class="content">
+                                <div class="label">Role</div>
+                                <div class="value" id="panelRole">-</div>
+                            </div>
+                        </div>
+                        <div class="user-info-item">
+                            <span class="icon">⚡</span>
+                            <div class="content">
+                                <div class="label">Status</div>
+                                <div class="value" id="panelStatus">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Credit Information Section -->
+                <div class="side-panel-section">
+                    <h4>Credit Information</h4>
+                    <div class="credit-stats">
+                        <div class="credit-stat total">
+                            <div class="label">Total</div>
+                            <div class="value" id="panelTotalCredits">0</div>
+                        </div>
+                        <div class="credit-stat used">
+                            <div class="label">Used</div>
+                            <div class="value" id="panelUsedCredits">0</div>
+                        </div>
+                        <div class="credit-stat available">
+                            <div class="label">Available</div>
+                            <div class="value" id="panelAvailableCredits">0</div>
+                        </div>
+                    </div>
+                    <button class="panel-btn panel-btn-primary" onclick="openAddCreditFromPanel()" style="width: 100%;">
+                        <span>➕</span>
+                        <span>Add Credits</span>
+                    </button>
+                </div>
+
+                <!-- Actions Section -->
+                <div class="side-panel-section">
+                    <h4>Actions</h4>
+                    <div class="panel-actions">
+                        <button class="panel-btn panel-btn-warning" onclick="openChangePasswordFromPanel()">
+                            <span>🔑</span>
+                            <span>Change Password</span>
+                        </button>
+                        <button class="panel-btn panel-btn-secondary" onclick="openEditFromPanel()">
+                            <span>✏️</span>
+                            <span>Edit</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Transaction History Section -->
+                <div class="side-panel-section">
+                    <h4>Recent Transactions</h4>
+                    <div class="transactions-list" id="panelTransactionsList">
+                        <div style="text-align: center; padding: 20px; color: #9CA3AF;">No transactions</div>
+                    </div>
+                    <a class="view-all-link" onclick="viewAllTransactions()">View All Transactions</a>
+                </div>
+
+                <!-- Danger Zone Section -->
+                <div class="side-panel-section danger-zone">
+                    <h4>危險操作</h4>
+                    <button class="btn-delete-danger" onclick="openDeleteFromPanel()">
+                        <span>🗑️</span>
+                        <span>刪除帳號</span>
+                    </button>
+                    <p class="danger-warning">
+                        ⚠️ 此操作無法復原，刪除後資料將永久移除
+                    </p>
                 </div>
             </div>
         </div>
@@ -970,6 +1541,10 @@
         let currentTenant = localStorage.getItem('admin_tenant') || 'career';
         let currentUser = null;
         const DEBUG_MODE = {{ 'true' if debug_mode else 'false' }};
+
+        // Side Panel State
+        let currentPanelUserId = null;
+        let currentPanelUserData = null;
 
         window.onload = function() {
             // Authentication check
@@ -1135,37 +1710,16 @@
                 }
 
                 tbody.innerHTML = data.counselors.map((m, index) => `
-                    <tr>
+                    <tr onclick="openSidePanel('${m.id}'); event.stopPropagation();">
                         <td>${m.email}</td>
                         <td>${m.full_name || '-'}</td>
                         <td>${m.phone || '-'}</td>
                         <td>${m.role}</td>
                         <td><strong>${m.available_credits || 0}</strong></td>
-                        <td>
-                            <div class="actions-dropdown" id="dropdown-${index}">
-                                <button class="actions-trigger" onclick="toggleActionsMenu(event, ${index})">
-                                    Actions
-                                    <span class="chevron">▼</span>
-                                </button>
-                                <div class="actions-menu">
-                                    <button class="actions-menu-item credit" onclick="showCreditDetails('${m.id}', '${m.email}'); closeActionsMenu(${index})">
-                                        <span class="icon">💳</span>
-                                        <span>Credit</span>
-                                    </button>
-                                    <button class="actions-menu-item password" onclick="showChangePasswordModal('${m.id}', '${m.email}'); closeActionsMenu(${index})">
-                                        <span class="icon">🔑</span>
-                                        <span>Password</span>
-                                    </button>
-                                    <button class="actions-menu-item edit" onclick="openEditModal('${m.id}', '${m.email}', '${(m.full_name || '').replace(/'/g, "\\'")}', '${(m.phone || '').replace(/'/g, "\\'")}', '${m.role}', ${m.is_active}); closeActionsMenu(${index})">
-                                        <span class="icon">✏️</span>
-                                        <span>Edit</span>
-                                    </button>
-                                    <button class="actions-menu-item delete" onclick="openDeleteModal('${m.id}', '${m.email}'); closeActionsMenu(${index})">
-                                        <span class="icon">🗑️</span>
-                                        <span>Delete</span>
-                                    </button>
-                                </div>
-                            </div>
+                        <td onclick="event.stopPropagation();">
+                            <button class="btn-manage" onclick="openSidePanel('${m.id}')">
+                                管理
+                            </button>
                         </td>
                     </tr>
                 `).join('');
@@ -1592,43 +2146,7 @@
             handleLogout();
         }
 
-        // Dropdown Menu Functions
-        function toggleActionsMenu(event, index) {
-            event.stopPropagation();
-            const dropdown = document.getElementById(`dropdown-${index}`);
-            const menu = dropdown.querySelector('.actions-menu');
-            const trigger = dropdown.querySelector('.actions-trigger');
-
-            // Close all other menus
-            document.querySelectorAll('.actions-menu.active').forEach(m => {
-                if (m !== menu) {
-                    m.classList.remove('active');
-                    m.parentElement.querySelector('.actions-trigger').classList.remove('active');
-                }
-            });
-
-            // Toggle current menu
-            menu.classList.toggle('active');
-            trigger.classList.toggle('active');
-        }
-
-        function closeActionsMenu(index) {
-            const dropdown = document.getElementById(`dropdown-${index}`);
-            if (dropdown) {
-                const menu = dropdown.querySelector('.actions-menu');
-                const trigger = dropdown.querySelector('.actions-trigger');
-                menu.classList.remove('active');
-                trigger.classList.remove('active');
-            }
-        }
-
-        function closeAllActionsMenus() {
-            document.querySelectorAll('.actions-menu.active').forEach(menu => {
-                menu.classList.remove('active');
-                menu.parentElement.querySelector('.actions-trigger').classList.remove('active');
-            });
-        }
-
+        // Card More Toggle Function
         function toggleCardMore(index) {
             document.querySelectorAll('.card-more.active').forEach(panel => {
                 if (panel.id !== `cardMore-${index}`) {
@@ -1641,19 +2159,276 @@
             }
         }
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-            if (!event.target.closest('.actions-dropdown')) {
-                closeAllActionsMenus();
+        // Close side panel when pressing Escape
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeSidePanel();
             }
         });
 
-        // Close dropdown when pressing Escape
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeAllActionsMenus();
+        // ========== Side Panel Functions ==========
+
+        /**
+         * Open side panel and load user details
+         */
+        async function openSidePanel(userId) {
+            const panel = document.getElementById('sidePanel');
+            const overlay = document.getElementById('sidePanelOverlay');
+            const loading = document.getElementById('sidePanelLoading');
+            const content = document.getElementById('sidePanelContent');
+
+            // Show panel and overlay
+            overlay.classList.add('active');
+            panel.classList.add('active');
+
+            // Show loading state
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            // Store current user ID
+            currentPanelUserId = userId;
+
+            try {
+                await loadUserDetails(userId);
+            } catch (e) {
+                console.error('Error loading user details:', e);
+                closeSidePanel();
+                alert('Failed to load user details: ' + e.message);
             }
-        });
+        }
+
+        /**
+         * Close side panel
+         */
+        function closeSidePanel() {
+            const panel = document.getElementById('sidePanel');
+            const overlay = document.getElementById('sidePanelOverlay');
+
+            panel.classList.remove('active');
+            overlay.classList.remove('active');
+
+            // Reset state after animation
+            setTimeout(() => {
+                currentPanelUserId = null;
+                currentPanelUserData = null;
+            }, 300);
+        }
+
+        /**
+         * Load user details from API
+         */
+        async function loadUserDetails(userId) {
+            try {
+                // Load basic user info
+                const userRes = await fetchWithAuth(`/api/v1/admin/counselors/${userId}`);
+                if (!userRes.ok) throw new Error('Failed to load user info');
+                const userData = await userRes.json();
+
+                // Load credit info
+                const creditRes = await fetchWithAuth(`/api/v1/admin/credits/members/${userId}`);
+                if (!creditRes.ok) throw new Error('Failed to load credit info');
+                const creditData = await creditRes.json();
+
+                // Load recent transactions (limit to 5)
+                const logsRes = await fetchWithAuth(`/api/v1/admin/credits/logs?counselor_id=${userId}&limit=5`);
+                let transactions = [];
+                if (logsRes.ok) {
+                    transactions = await logsRes.json();
+                }
+
+                // Store data
+                currentPanelUserData = {
+                    ...userData,
+                    creditInfo: creditData,
+                    transactions: transactions
+                };
+
+                // Update panel UI
+                updatePanelContent(currentPanelUserData);
+
+                // Hide loading, show content
+                document.getElementById('sidePanelLoading').style.display = 'none';
+                document.getElementById('sidePanelContent').style.display = 'block';
+            } catch (e) {
+                throw e;
+            }
+        }
+
+        /**
+         * Update side panel content with user data
+         */
+        function updatePanelContent(data) {
+            // Update title
+            document.getElementById('sidePanelTitle').textContent = data.full_name || data.email;
+
+            // Update basic info
+            document.getElementById('panelEmail').textContent = data.email || '-';
+            document.getElementById('panelName').textContent = data.full_name || '-';
+            document.getElementById('panelPhone').textContent = data.phone || '-';
+            document.getElementById('panelTenant').textContent = data.tenant_id || currentTenant;
+            document.getElementById('panelRole').textContent = data.role || '-';
+
+            // Update status badge
+            const statusHtml = data.is_active
+                ? '<span class="status-badge active">Active</span>'
+                : '<span class="status-badge inactive">Inactive</span>';
+            document.getElementById('panelStatus').innerHTML = statusHtml;
+
+            // Update credit info
+            if (data.creditInfo) {
+                document.getElementById('panelTotalCredits').textContent = data.creditInfo.total_credits || 0;
+                document.getElementById('panelUsedCredits').textContent = data.creditInfo.credits_used || 0;
+                document.getElementById('panelAvailableCredits').textContent = data.creditInfo.available_credits || 0;
+            }
+
+            // Update transactions
+            renderPanelTransactions(data.transactions || []);
+        }
+
+        /**
+         * Render transaction list in side panel
+         */
+        function renderPanelTransactions(transactions) {
+            const container = document.getElementById('panelTransactionsList');
+
+            if (!transactions || transactions.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #9CA3AF;">No transactions</div>';
+                return;
+            }
+
+            container.innerHTML = transactions.map(tx => {
+                const date = new Date(tx.created_at).toLocaleString('zh-TW', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                const amount = tx.credits_delta || 0;
+                const amountClass = amount >= 0 ? 'positive' : 'negative';
+                const amountPrefix = amount >= 0 ? '+' : '';
+
+                return `
+                    <div class="transaction-item">
+                        <div class="transaction-info">
+                            <div class="transaction-type">${tx.transaction_type || 'Unknown'}</div>
+                            <div class="transaction-date">${date}</div>
+                        </div>
+                        <div class="transaction-amount ${amountClass}">
+                            ${amountPrefix}${amount}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * Switch to another user (smooth transition)
+         */
+        async function switchUser(userId) {
+            if (userId === currentPanelUserId) return;
+
+            const loading = document.getElementById('sidePanelLoading');
+            const content = document.getElementById('sidePanelContent');
+
+            // Show loading
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            currentPanelUserId = userId;
+
+            try {
+                await loadUserDetails(userId);
+            } catch (e) {
+                console.error('Error switching user:', e);
+                alert('Failed to load user details: ' + e.message);
+            }
+        }
+
+        /**
+         * Open add credit modal from panel
+         */
+        function openAddCreditFromPanel() {
+            if (!currentPanelUserData) return;
+            showCreditDetails(currentPanelUserId, currentPanelUserData.email);
+        }
+
+        /**
+         * Open change password modal from panel
+         */
+        function openChangePasswordFromPanel() {
+            if (!currentPanelUserData) return;
+            showChangePasswordModal(currentPanelUserId, currentPanelUserData.email);
+        }
+
+        /**
+         * Open edit modal from panel
+         */
+        function openEditFromPanel() {
+            if (!currentPanelUserData) return;
+            const data = currentPanelUserData;
+            openEditModal(
+                currentPanelUserId,
+                data.email,
+                data.full_name || '',
+                data.phone || '',
+                data.role,
+                data.is_active
+            );
+        }
+
+        /**
+         * Open delete modal from panel
+         */
+        function openDeleteFromPanel() {
+            if (!currentPanelUserData) return;
+            openDeleteModal(currentPanelUserId, currentPanelUserData.email);
+        }
+
+        /**
+         * View all transactions (opens full credit modal)
+         */
+        function viewAllTransactions() {
+            if (!currentPanelUserData) return;
+            showCreditDetails(currentPanelUserId, currentPanelUserData.email);
+        }
+
+        /**
+         * Refresh side panel data after updates
+         */
+        async function refreshSidePanel() {
+            if (currentPanelUserId) {
+                try {
+                    await loadUserDetails(currentPanelUserId);
+                } catch (e) {
+                    console.error('Error refreshing side panel:', e);
+                }
+            }
+        }
+
+        // Override existing modal close handlers to refresh side panel
+        const originalSubmitEditMember = submitEditMember;
+        submitEditMember = async function(event) {
+            await originalSubmitEditMember(event);
+            await refreshSidePanel();
+        };
+
+        const originalSubmitChangePassword = submitChangePassword;
+        submitChangePassword = async function(event) {
+            await originalSubmitChangePassword(event);
+            await refreshSidePanel();
+        };
+
+        const originalConfirmDelete = confirmDelete;
+        confirmDelete = async function() {
+            await originalConfirmDelete();
+            closeSidePanel(); // Close panel after delete
+        };
+
+        const originalSubmitAddCredit = submitAddCredit;
+        submitAddCredit = async function(event) {
+            await originalSubmitAddCredit(event);
+            await refreshSidePanel();
+        };
     </script>
 </body>
 </html>
