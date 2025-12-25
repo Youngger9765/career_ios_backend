@@ -2,12 +2,12 @@
 親子溝通專家建議集（200 句）
 
 用於 Realtime 分析 API，提供即時回饋建議。
-依照三色燈號系統分類（綠 70 / 橘 65 / 紅 65）。
+依照三色燈號系統分類（綠 70 / 黃 65 / 紅 65）。
 
 使用方式：
     from app.config.parenting_suggestions import (
         GREEN_SUGGESTIONS,
-        ORANGE_SUGGESTIONS,
+        YELLOW_SUGGESTIONS,
         RED_SUGGESTIONS,
         ALL_SUGGESTIONS
     )
@@ -88,9 +88,9 @@ GREEN_SUGGESTIONS = [
     "這段對話是安全的",
 ]
 
-# 🟠 橘色｜需要調整（65 句）
+# 🟡 黃色｜需要調整（65 句）
 # 目的：指出可改善點，提供替代說法
-ORANGE_SUGGESTIONS = [
+YELLOW_SUGGESTIONS = [
     "這句話可能讓孩子開始防衛",
     "你有點太快進入說理",
     "孩子的感受還沒被接住",
@@ -231,15 +231,15 @@ RED_SUGGESTIONS = [
 # 所有建議（用於統計和驗證）
 ALL_SUGGESTIONS = {
     "green": GREEN_SUGGESTIONS,
-    "orange": ORANGE_SUGGESTIONS,
+    "yellow": YELLOW_SUGGESTIONS,
     "red": RED_SUGGESTIONS,
 }
 
 # 統計資訊
 STATS = {
-    "total": len(GREEN_SUGGESTIONS) + len(ORANGE_SUGGESTIONS) + len(RED_SUGGESTIONS),
+    "total": len(GREEN_SUGGESTIONS) + len(YELLOW_SUGGESTIONS) + len(RED_SUGGESTIONS),
     "green": len(GREEN_SUGGESTIONS),
-    "orange": len(ORANGE_SUGGESTIONS),
+    "yellow": len(YELLOW_SUGGESTIONS),
     "red": len(RED_SUGGESTIONS),
 }
 
@@ -269,13 +269,13 @@ def validate_suggestions() -> dict:
     # 檢查數量
     if len(GREEN_SUGGESTIONS) != 70:
         errors.append(f"綠色建議數量錯誤：{len(GREEN_SUGGESTIONS)} (應為 70)")
-    if len(ORANGE_SUGGESTIONS) != 65:
-        errors.append(f"橘色建議數量錯誤：{len(ORANGE_SUGGESTIONS)} (應為 65)")
+    if len(YELLOW_SUGGESTIONS) != 65:
+        errors.append(f"黃色建議數量錯誤：{len(YELLOW_SUGGESTIONS)} (應為 65)")
     if len(RED_SUGGESTIONS) != 65:
         errors.append(f"紅色建議數量錯誤：{len(RED_SUGGESTIONS)} (應為 65)")
 
     # 檢查重複
-    all_sug_list = GREEN_SUGGESTIONS + ORANGE_SUGGESTIONS + RED_SUGGESTIONS
+    all_sug_list = GREEN_SUGGESTIONS + YELLOW_SUGGESTIONS + RED_SUGGESTIONS
     if len(all_sug_list) != len(set(all_sug_list)):
         errors.append("存在重複的建議句")
 
@@ -294,7 +294,7 @@ if __name__ == "__main__":
     print("=" * 60)
     print(f"總句數：{result['stats']['total']}")
     print(f"綠色：{result['stats']['green']} 句")
-    print(f"橘色：{result['stats']['orange']} 句")
+    print(f"黃色：{result['stats']['yellow']} 句")
     print(f"紅色：{result['stats']['red']} 句")
     print("-" * 60)
 

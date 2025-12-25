@@ -346,68 +346,110 @@ def _assess_risk_level(transcript: str, speakers: List[dict]) -> RiskLevel:
 
 
 def _build_emergency_prompt(transcript: str, rag_context: str) -> str:
-    """Build simplified prompt for emergency mode (~500 tokens).
+    """Build simplified prompt for emergency mode using 200 expert suggestions.
 
-    Emergency mode is for urgent situations requiring immediate, actionable guidance.
-    Format: 心法（標題）+ 具體做法（1句話）
+    Emergency mode: Select 1-2 suggestions from expert pool, organized with Bridge technique.
+    Bridge structure for RED scenarios: 穩住 → 同理 → 修正
 
     Args:
         transcript: The conversation transcript
         rag_context: RAG knowledge context (if available)
 
     Returns:
-        Simplified prompt for emergency situations
+        Simplified prompt for emergency situations with expert suggestions
     """
-    prompt = f"""你是親子諮詢 AI 督導。緊急模式 - 只要 2 句話！
+    from app.config.parenting_suggestions import (
+        GREEN_SUGGESTIONS,
+        RED_SUGGESTIONS,
+        YELLOW_SUGGESTIONS,
+    )
+
+    # Format suggestion lists for prompt
+    green_list = "\n".join([f"  - {s}" for s in GREEN_SUGGESTIONS])
+    yellow_list = "\n".join([f"  - {s}" for s in YELLOW_SUGGESTIONS])
+    red_list = "\n".join([f"  - {s}" for s in RED_SUGGESTIONS])
+
+    prompt = f"""你是親子諮詢 AI 督導。緊急模式 - 從專家建議中選 1-2 句！
 
 【情境】
 {transcript}
 
-【🚨 EMERGENCY - 嚴格限制 🚨】
+【專家建議句庫】請從以下 200 句專家建議中選擇最符合當前對話的：
 
-只輸出 2 句建議，每句 ≤ 20 字！
+🟢 綠色｜對話安全（選 1-2 句）：
+{green_list}
 
-格式：
-第1句：心法（≤10字）
-第2句：做法（≤20字）
+🟡 黃色｜需要調整（選 1-2 句）：
+{yellow_list}
 
-範例：
-穩住情緒
-深呼吸5次再對話。
+🔴 紅色｜立刻修正（選 1-2 句）：
+{red_list}
 
-【輸出格式】
+【分析步驟】：
+1. 判斷對話安全等級（green/yellow/red）
+   - green: 正向互動，家長有同理心，語氣溫和尊重
+   - yellow: 有挫折感但仍可控，語氣開始緊繃或帶防衛
+   - red: 威脅、暴力語言、極端情緒、可能造成傷害
+2. 從對應顏色的建議句中選出最符合的 1-2 句
+3. 建議必須是原句，不要改寫或自創
+
+【Bridge 技巧】請按照以下結構組織回饋：
+- 🟢 綠色：讚美 → 橋樑 → 延伸
+- 🟡 黃色：肯定 → 提醒 → 替代
+- 🔴 紅色：穩住 → 同理 → 修正（最重要！）
+
+【紅色燈號的三階段設計】：
+1. 先穩住：「理解在教養壓力下，情緒失控是很正常的」
+2. 降低防衛：「你一定也很辛苦，想要孩子好但不知道怎麼做」
+3. 再提醒：「這句話可能會讓孩子感到害怕，我們可以試試這樣說...」
+
+【輸出格式】JSON 格式，必須包含以下欄位：
 {{
+  "safety_level": "green|yellow|red",
   "suggestions": [
-    "心法標題\\n具體做法"
+    "從專家建議中選的句子1",
+    "從專家建議中選的句子2"
   ]
 }}
 
 CRITICAL 規則：
-- 只能 1 個建議（2句話）
-- 用 \\n 分隔
-- 第1句 ≤ 10字
-- 第2句 ≤ 20字
-- 禁止超過！
+- 只能選 1-2 個建議（從 200 句專家建議中選）
+- 每句建議必須是原本的專家建議句，逐字照抄，不要自己改寫或創作
+- 根據對話危險程度選擇對應顏色的建議
+- 必須回傳 safety_level: "green" | "yellow" | "red"（此欄位必須存在）
+- safety_level 和 suggestions 的顏色必須一致
+- Emergency 模式重點：快速、精準、可立即執行
 
-YOU MUST output ONLY 1 suggestion with 2 lines!"""
+YOU MUST select 1-2 suggestions from the 200 expert suggestions above!
+YOU MUST return safety_level field in JSON response!"""
 
     return prompt
 
 
 def _build_practice_prompt(transcript: str, rag_context: str) -> str:
-    """Build detailed prompt for practice mode (~1500 tokens).
+    """Build detailed prompt for practice mode using 200 expert suggestions.
 
-    Practice mode is for learning situations with detailed analysis and guidance.
-    Responses should be comprehensive and educational.
+    Practice mode: Select 3-4 suggestions from expert pool, organized with Bridge technique.
+    Bridge structure varies by safety level (讚美→橋樑→延伸 for green, etc.)
 
     Args:
         transcript: The conversation transcript
         rag_context: RAG knowledge context (if available)
 
     Returns:
-        Detailed prompt for practice/learning situations
+        Detailed prompt for practice/learning situations with expert suggestions
     """
-    # Use existing detailed prompt (same as CACHE_SYSTEM_INSTRUCTION style)
+    from app.config.parenting_suggestions import (
+        GREEN_SUGGESTIONS,
+        RED_SUGGESTIONS,
+        YELLOW_SUGGESTIONS,
+    )
+
+    # Format suggestion lists for prompt
+    green_list = "\n".join([f"  - {s}" for s in GREEN_SUGGESTIONS])
+    yellow_list = "\n".join([f"  - {s}" for s in YELLOW_SUGGESTIONS])
+    red_list = "\n".join([f"  - {s}" for s in RED_SUGGESTIONS])
+
     prompt = f"""你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
 
 【對話內容】
@@ -415,6 +457,35 @@ def _build_practice_prompt(transcript: str, rag_context: str) -> str:
 
 【相關親子教養知識庫】
 {rag_context if rag_context else "（無相關知識庫內容）"}
+
+【專家建議句庫】請從以下 200 句專家建議中選擇 3-4 句最符合當前對話的：
+
+🟢 綠色｜對話安全（選 3-4 句）：
+{green_list}
+
+🟡 黃色｜需要調整（選 3-4 句）：
+{yellow_list}
+
+🔴 紅色｜立刻修正（選 3-4 句）：
+{red_list}
+
+【分析步驟】：
+1. 判斷對話安全等級（green/yellow/red）
+   - green: 正向互動，家長有同理心，語氣溫和尊重
+   - yellow: 有挫折感但仍可控，語氣開始緊繃或帶防衛
+   - red: 威脅、暴力語言、極端情緒、可能造成傷害
+2. 從對應顏色的建議句中選出最符合的 3-4 句
+3. 建議必須是原句，不要改寫或自創
+
+【Bridge 技巧】請按照以下結構組織回饋：
+- 🟢 綠色：讚美 → 橋樑 → 延伸
+- 🟡 黃色：肯定 → 提醒 → 替代
+- 🔴 紅色：穩住 → 同理 → 修正（最重要！）
+
+【紅色燈號的三階段設計】：
+1. 先穩住：「理解在教養壓力下，情緒失控是很正常的」
+2. 降低防衛：「你一定也很辛苦，想要孩子好但不知道怎麼做」
+3. 再提醒：「這句話可能會讓孩子感到害怕，我們可以試試這樣說...」
 
 【核心原則】同理優先、溫和引導、具體行動：
 
@@ -429,13 +500,14 @@ def _build_practice_prompt(transcript: str, rag_context: str) -> str:
    - ✅ 使用：「可以考慮」「或許」「試試看」等柔和引導詞
 
 3. **具體、實用的建議**
-   - 建議要具體可行
+   - 從 200 句專家建議中選擇最符合的
    - 避免抽象概念，用具體做法
    - 如果知識庫有相關內容，融入專業理論
 
-【輸出格式】請提供以下 JSON 格式：
+【輸出格式】JSON 格式，必須包含以下欄位：
 
 {{
+  "safety_level": "green|yellow|red",
   "summary": "案主處境簡述（2-3 句）",
   "alerts": [
     "💡 同理案主感受",
@@ -443,13 +515,25 @@ def _build_practice_prompt(transcript: str, rag_context: str) -> str:
     "✅ 正向的部分"
   ],
   "suggestions": [
-    "💡 核心建議（具體、溫和）",
-    "💡 進階策略（結合理論）",
-    "💡 反思提示（促進學習）"
+    "從專家建議中選的句子1",
+    "從專家建議中選的句子2",
+    "從專家建議中選的句子3",
+    "從專家建議中選的句子4"
   ]
 }}
 
-【語氣要求】溫和、同理、專業，提供深度分析幫助家長學習成長。"""
+CRITICAL 規則：
+- 必須選 3-4 個建議（從 200 句專家建議中選）
+- 每句建議必須是原本的專家建議句，逐字照抄，不要自己改寫或創作
+- 根據對話危險程度選擇對應顏色的建議
+- 必須回傳 safety_level: "green" | "yellow" | "red"（此欄位必須存在）
+- safety_level 和 suggestions 的顏色必須一致
+- Practice 模式重點：深度分析、促進學習成長
+
+【語氣要求】溫和、同理、專業，提供深度分析幫助家長學習成長。
+
+YOU MUST select 3-4 suggestions from the 200 expert suggestions above!
+YOU MUST return safety_level field in JSON response!"""
 
     return prompt
 
@@ -848,9 +932,20 @@ async def analyze_transcript(
                 provider="gemini", latency_ms=latency_ms, model="gemini-2.5-flash"
             )
 
+        # Extract safety_level from LLM response, default to "green" if not present
+        safety_level = analysis.get("safety_level", "green")
+
+        # Validate safety_level (must be green, yellow, or red)
+        if safety_level not in ["green", "yellow", "red"]:
+            logger.warning(
+                f"Invalid safety_level '{safety_level}' from LLM, defaulting to 'green'"
+            )
+            safety_level = "green"
+
         # Build response
         return RealtimeAnalyzeResponse(
             risk_level=risk_level,
+            safety_level=safety_level,
             summary=analysis.get("summary", ""),
             alerts=analysis.get("alerts", []),
             suggestions=analysis.get("suggestions", []),

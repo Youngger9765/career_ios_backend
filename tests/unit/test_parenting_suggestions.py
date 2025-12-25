@@ -9,9 +9,9 @@ import pytest
 from app.config.parenting_suggestions import (
     ALL_SUGGESTIONS,
     GREEN_SUGGESTIONS,
-    ORANGE_SUGGESTIONS,
     RED_SUGGESTIONS,
     STATS,
+    YELLOW_SUGGESTIONS,
     get_suggestions_by_level,
     validate_suggestions,
 )
@@ -26,11 +26,11 @@ class TestSuggestionsData:
             len(GREEN_SUGGESTIONS) == 70
         ), f"Expected 70 green suggestions, got {len(GREEN_SUGGESTIONS)}"
 
-    def test_orange_suggestions_count(self):
-        """橘色建議應該有 65 句"""
+    def test_yellow_suggestions_count(self):
+        """黃色建議應該有 65 句"""
         assert (
-            len(ORANGE_SUGGESTIONS) == 65
-        ), f"Expected 65 orange suggestions, got {len(ORANGE_SUGGESTIONS)}"
+            len(YELLOW_SUGGESTIONS) == 65
+        ), f"Expected 65 yellow suggestions, got {len(YELLOW_SUGGESTIONS)}"
 
     def test_red_suggestions_count(self):
         """紅色建議應該有 65 句"""
@@ -40,18 +40,18 @@ class TestSuggestionsData:
 
     def test_total_suggestions_count(self):
         """總建議數應該是 200 句"""
-        total = len(GREEN_SUGGESTIONS) + len(ORANGE_SUGGESTIONS) + len(RED_SUGGESTIONS)
+        total = len(GREEN_SUGGESTIONS) + len(YELLOW_SUGGESTIONS) + len(RED_SUGGESTIONS)
         assert total == 200, f"Expected 200 total suggestions, got {total}"
 
     def test_no_empty_suggestions(self):
         """所有建議都不應該是空字串"""
-        all_suggestions = GREEN_SUGGESTIONS + ORANGE_SUGGESTIONS + RED_SUGGESTIONS
+        all_suggestions = GREEN_SUGGESTIONS + YELLOW_SUGGESTIONS + RED_SUGGESTIONS
         for i, sug in enumerate(all_suggestions):
             assert sug.strip() != "", f"Suggestion at index {i} is empty"
 
     def test_no_duplicate_suggestions(self):
         """建議句不應該有重複"""
-        all_suggestions = GREEN_SUGGESTIONS + ORANGE_SUGGESTIONS + RED_SUGGESTIONS
+        all_suggestions = GREEN_SUGGESTIONS + YELLOW_SUGGESTIONS + RED_SUGGESTIONS
         unique_suggestions = set(all_suggestions)
         assert len(all_suggestions) == len(
             unique_suggestions
@@ -59,7 +59,7 @@ class TestSuggestionsData:
 
     def test_suggestions_are_strings(self):
         """所有建議都應該是字串"""
-        all_suggestions = GREEN_SUGGESTIONS + ORANGE_SUGGESTIONS + RED_SUGGESTIONS
+        all_suggestions = GREEN_SUGGESTIONS + YELLOW_SUGGESTIONS + RED_SUGGESTIONS
         for i, sug in enumerate(all_suggestions):
             assert isinstance(
                 sug, str
@@ -72,14 +72,14 @@ class TestAllSuggestions:
     def test_all_suggestions_structure(self):
         """ALL_SUGGESTIONS 應該包含三個 key"""
         assert "green" in ALL_SUGGESTIONS
-        assert "orange" in ALL_SUGGESTIONS
+        assert "yellow" in ALL_SUGGESTIONS
         assert "red" in ALL_SUGGESTIONS
         assert len(ALL_SUGGESTIONS) == 3
 
     def test_all_suggestions_values(self):
         """ALL_SUGGESTIONS 的值應該等於各個建議列表"""
         assert ALL_SUGGESTIONS["green"] == GREEN_SUGGESTIONS
-        assert ALL_SUGGESTIONS["orange"] == ORANGE_SUGGESTIONS
+        assert ALL_SUGGESTIONS["yellow"] == YELLOW_SUGGESTIONS
         assert ALL_SUGGESTIONS["red"] == RED_SUGGESTIONS
 
 
@@ -90,14 +90,14 @@ class TestStats:
         """STATS 應該包含正確的 key"""
         assert "total" in STATS
         assert "green" in STATS
-        assert "orange" in STATS
+        assert "yellow" in STATS
         assert "red" in STATS
 
     def test_stats_values(self):
         """STATS 的值應該正確"""
         assert STATS["total"] == 200
         assert STATS["green"] == 70
-        assert STATS["orange"] == 65
+        assert STATS["yellow"] == 65
         assert STATS["red"] == 65
 
 
@@ -110,10 +110,10 @@ class TestGetSuggestionsByLevel:
         assert suggestions == GREEN_SUGGESTIONS
         assert len(suggestions) == 70
 
-    def test_get_orange_suggestions(self):
-        """取得橘色建議"""
-        suggestions = get_suggestions_by_level("orange")
-        assert suggestions == ORANGE_SUGGESTIONS
+    def test_get_yellow_suggestions(self):
+        """取得黃色建議"""
+        suggestions = get_suggestions_by_level("yellow")
+        assert suggestions == YELLOW_SUGGESTIONS
         assert len(suggestions) == 65
 
     def test_get_red_suggestions(self):
@@ -126,7 +126,7 @@ class TestGetSuggestionsByLevel:
         """應該不區分大小寫"""
         assert get_suggestions_by_level("GREEN") == GREEN_SUGGESTIONS
         assert get_suggestions_by_level("Green") == GREEN_SUGGESTIONS
-        assert get_suggestions_by_level("ORANGE") == ORANGE_SUGGESTIONS
+        assert get_suggestions_by_level("YELLOW") == YELLOW_SUGGESTIONS
         assert get_suggestions_by_level("RED") == RED_SUGGESTIONS
 
     def test_get_suggestions_invalid_level(self):
@@ -181,7 +181,7 @@ class TestValidateSuggestions:
         result = validate_suggestions()
         assert result["stats"]["total"] == 200
         assert result["stats"]["green"] == 70
-        assert result["stats"]["orange"] == 65
+        assert result["stats"]["yellow"] == 65
         assert result["stats"]["red"] == 65
 
 
@@ -193,7 +193,7 @@ class TestSuggestionsContent:
         建議句不應該過長（雖然移除了字數限制，但仍應該簡潔）
         設定上限為 50 字，避免過長的建議
         """
-        all_suggestions = GREEN_SUGGESTIONS + ORANGE_SUGGESTIONS + RED_SUGGESTIONS
+        all_suggestions = GREEN_SUGGESTIONS + YELLOW_SUGGESTIONS + RED_SUGGESTIONS
         for i, sug in enumerate(all_suggestions):
             assert (
                 len(sug) <= 50
@@ -201,7 +201,7 @@ class TestSuggestionsContent:
 
     def test_suggestions_meaningful(self):
         """建議句應該有意義（至少 4 個字）"""
-        all_suggestions = GREEN_SUGGESTIONS + ORANGE_SUGGESTIONS + RED_SUGGESTIONS
+        all_suggestions = GREEN_SUGGESTIONS + YELLOW_SUGGESTIONS + RED_SUGGESTIONS
         for i, sug in enumerate(all_suggestions):
             assert (
                 len(sug) >= 4
@@ -243,7 +243,7 @@ class TestSuggestionsContent:
 @pytest.fixture(scope="module")
 def all_suggestions_list():
     """Fixture: 提供所有建議的列表"""
-    return GREEN_SUGGESTIONS + ORANGE_SUGGESTIONS + RED_SUGGESTIONS
+    return GREEN_SUGGESTIONS + YELLOW_SUGGESTIONS + RED_SUGGESTIONS
 
 
 @pytest.fixture(scope="module")
@@ -251,6 +251,6 @@ def suggestions_by_level():
     """Fixture: 提供按等級分類的建議"""
     return {
         "green": GREEN_SUGGESTIONS,
-        "orange": ORANGE_SUGGESTIONS,
+        "yellow": YELLOW_SUGGESTIONS,
         "red": RED_SUGGESTIONS,
     }

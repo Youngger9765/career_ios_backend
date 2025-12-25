@@ -163,6 +163,10 @@ class RealtimeAnalyzeResponse(BaseModel):
     risk_level: RiskLevel = Field(
         ..., description="Risk level: red (high), yellow (medium), green (safe)"
     )
+    safety_level: str = Field(
+        ...,
+        description="Safety level: 'green' (safe), 'yellow' (needs adjustment), 'red' (urgent correction)",
+    )
     summary: str = Field(..., description="對話歸納（1-2 句）")
     alerts: List[str] = Field(..., description="提醒事項（3-5 點）")
     suggestions: List[str] = Field(..., description="建議回應（2-3 點）")
