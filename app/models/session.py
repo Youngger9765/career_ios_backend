@@ -53,7 +53,7 @@ class Session(Base, BaseModel):
     # - categories: 分類列表
     # - confidence: 信心分數 (0.0-1.0)
     # - counselor_insights: 諮詢師洞見
-    # - risk_level: 風險等級 (low/medium/high)
+    # - safety_level: 安全等級 (red/yellow/green)
     # - risk_indicators: 風險指標列表
     # - risk_alert: 風險警示訊息
     # - counselor_id: 執行分析的諮詢師 ID
