@@ -501,19 +501,20 @@ Realtime API 分析完成
 - ✅ 安全等級分布（10 分鐘測試）：70% Red, 20% Yellow, 10% Green
 - ✅ 每次請求快取節省：$0.000075
 
-##### 1.4 前端調整（`app/templates/realtime_counseling.html`）
+##### 1.4 前端調整（簡化方案）
 
-- [ ] **移除兩行格式判斷**
-  - [ ] 移除 Line 2533-2542 的 `if (sug.includes('\n'))` 判斷
-  - [ ] 統一使用單行格式顯示
+**使用者需求**：
+1. **只顯示最後一張卡片**（新卡片直接覆蓋舊卡片，不累積多張）
+2. **移除手動分析按鈕**（練習模式和實戰模式都移除）
+3. **結束時自動分析**：按下「結束對話」時觸發最後一次分析
 
-- [ ] **卡片視覺反應（根據燈號）**
-  - [ ] 🟢 **綠燈卡片**：`bg-green-50 border-green-200 text-green-700`
-  - [ ] 🟠 **黃燈卡片**：`bg-yellow-50 border-yellow-200 text-yellow-700`
-  - [ ] 🔴 **紅燈卡片**：`bg-red-50 border-red-200 text-red-700`
-  - [ ] 實作邏輯：
+**前端調整（`app/templates/realtime_counseling.html`）**：
+
+- [ ] **卡片顯示邏輯（覆蓋模式）**
+  - [ ] 只顯示最後一張卡片（新卡片直接覆蓋舊卡片）
+  - [ ] 不累積多張卡片
+  - [ ] 卡片顏色根據燈號變化（綠/黃/紅）
     ```javascript
-    // 根據 API 回傳的 safety_level 動態設定卡片樣式
     const cardStyles = {
       green: 'bg-green-50 border-2 border-green-200 text-green-700',
       yellow: 'bg-yellow-50 border-2 border-yellow-200 text-yellow-700',
@@ -521,16 +522,29 @@ Realtime API 分析完成
     };
     ```
 
-- [ ] **更新前端說明**
-  - [ ] Line 404: 改成「實戰：極簡建議（1-2 句）」
-  - [ ] Line 720: 改成「實戰：極簡建議（1-2 句）」
-  - [ ] Line 405, 721: 改成「練習：完整分析（3-4 句）」
+- [ ] **移除手動分析按鈕**
+  - [ ] 練習模式：移除「立即分析」按鈕（UI + 事件處理）
+  - [ ] 實戰模式：移除「立即分析」按鈕（UI + 事件處理）
+  - [ ] 只保留定時自動分析（每 60 秒）
 
-- [ ] **測試前端顯示**
-  - [ ] Emergency 模式：顯示 1-2 個大卡片
-  - [ ] Practice 模式：顯示 3-4 個大卡片
-  - [ ] 確認大字顯示正常（text-xl md:text-2xl）
-  - [ ] 確認燈號顏色正確（綠/黃/紅）
+- [ ] **結束時自動分析**
+  - [ ] 按下「結束對話」按鈕時觸發最後一次分析
+  - [ ] 發送分析請求並等待回應
+  - [ ] 顯示最終建議卡片
+  - [ ] 完成後結束 session
+
+- [ ] **前端邏輯調整**
+  - [ ] Line 2533-2542: 移除兩行格式判斷（統一單行格式）
+  - [ ] 實作卡片覆蓋邏輯（replace instead of append）
+  - [ ] 移除手動分析按鈕的 UI 和事件處理
+  - [ ] 在結束對話函數中加入最後分析邏輯
+
+**測試項目**：
+- [ ] 測試定時分析（60 秒）正常觸發
+- [ ] 測試新卡片覆蓋舊卡片（不累積）
+- [ ] 測試卡片顏色根據燈號正確變化（綠/黃/紅）
+- [ ] 測試結束時自動分析並顯示最終建議
+- [ ] 確認手動分析按鈕已完全移除
 
 ##### 1.5 測試
 
@@ -566,75 +580,14 @@ Realtime API 分析完成
   - similarity_threshold: 0.5 → 0.3-0.4
   - 移除 200 字內容截斷
 
-##### 2.2 前端智能化
-
-- [ ] **動態調整分析頻率（根據燈號）**
-  - [ ] 🟢 **綠燈**（對話安全）：60 秒觸發一次
-    - 當前狀態良好，維持正常監控頻率
-  - [ ] 🟡 **黃燈**（需要調整）：30 秒觸發一次
-    - 對話出現警訊，提高監控密度
-  - [ ] 🔴 **紅燈**（立刻修正）：15 秒觸發一次
-    - 危險狀況，最高監控頻率
-  - [ ] 實作邏輯：
-    ```javascript
-    // 根據上次分析的 safety_level 動態調整
-    let analysisInterval = 60; // 預設
-    if (lastSafetyLevel === 'red') analysisInterval = 15;
-    else if (lastSafetyLevel === 'yellow') analysisInterval = 30;
-    else analysisInterval = 60;
-
-    // Line 2036: 改成動態判斷
-    if (elapsed > 0 && elapsed % analysisInterval === 0) {
-        analyzeTranscript();
-    }
-    ```
-  - [ ] 前端顯示倒數計時（下次分析還有 X 秒）
-  - [ ] 燈號變化時即時調整間隔
-
-- [ ] **卡片去重邏輯（避免重複建議）**
-  - [ ] 問題：60 秒內對話沒變化 → 收到相同建議卡片
-  - [ ] 解決方案：比較新舊卡片內容相似度
-    ```javascript
-    // 計算兩句建議的相似度（簡單方式：Levenshtein distance or 字串比對）
-    function isSimilarSuggestion(newSug, oldSug) {
-      // 方法 1：完全相同
-      if (newSug === oldSug) return true;
-
-      // 方法 2：相似度 > 80%（使用簡單字串比對）
-      const similarity = calculateSimilarity(newSug, oldSug);
-      return similarity > 0.8;
-    }
-
-    // 過濾重複建議
-    const newSuggestions = apiResponse.suggestions.filter(newSug => {
-      return !lastSuggestions.some(oldSug => isSimilarSuggestion(newSug, oldSug));
-    });
-
-    // 如果沒有新建議，保留舊卡片（不更新）
-    if (newSuggestions.length === 0) {
-      console.log('建議內容與上次相同，保留原卡片');
-      return;
-    }
-    ```
-  - [ ] 實作細節：
-    - [ ] 儲存上次的建議內容（`lastSuggestions = []`）
-    - [ ] 每次 API 回傳後比對新舊建議
-    - [ ] 相似度 > 80% 視為重複
-    - [ ] 只顯示新的、不重複的建議
-    - [ ] 如果完全沒有新建議，保留原卡片不變
-  - [ ] 測試場景：
-    - [ ] 對話持續進行 → 新建議正常顯示
-    - [ ] 對話停頓/無變化 → 不顯示重複建議
-    - [ ] 60 秒後對話改變 → 顯示新建議
-
-##### 2.3 測試
+##### 2.2 測試
 
 - [ ] **Integration Tests**
   - 測試 Practice mode 建議從 200 句中選擇
   - 測試燈號判斷正確性
   - 測試 GBQ 寫入
-  - 測試動態分析頻率切換
-  - 測試卡片去重邏輯
+  - 測試前端卡片覆蓋邏輯
+  - 測試結束時自動分析
 
 ---
 
@@ -649,8 +602,9 @@ Realtime API 分析完成
 
 **使用者體驗**：
 - 建議相關性：老師/家長反饋「有用」
-- 對話品質改善：燈號變化趨勢（紅→橘→綠）
-- 卡片去重：避免連續顯示相同建議
+- 對話品質改善：燈號變化趨勢（紅→黃→綠）
+- 卡片顯示：只顯示最後一張卡片（覆蓋模式）
+- 分析時機：60 秒定時 + 結束時自動分析
 
 ### 測試方法
 
@@ -706,7 +660,7 @@ Realtime API 分析完成
 2. ✅ 修改 Emergency/Practice Mode Prompt（已完成 - Phase 1.2）
 3. ✅ 修正交通號誌系統（orange → yellow）（已完成 - Phase 1.2）
 4. ✅ 建立 GBQ Table 並實作非同步寫入（已完成 - Phase 1.3）
-5. ⏳ 前端調整（卡片顏色、去重邏輯）（待開始 - Phase 1.4）
+5. ⏳ 前端調整（簡化方案）（待開始 - Phase 1.4）
 
 **成功標準**：
 - ✅ 200 句建議檔案建立並驗證通過（28/28 unit tests passed）
@@ -715,7 +669,9 @@ Realtime API 分析完成
 - ✅ 使用紅黃綠交通號誌系統（已修正）
 - ✅ 分析結果存入 GBQ（tenant_id = "island_parents"）（5/5 GBQ tests passed）
 - ⏳ 卡片顏色根據燈號變化（綠/黃/紅）
-- ⏳ 避免重複顯示相同建議
+- ⏳ 只顯示最後一張卡片（覆蓋模式，不累積）
+- ⏳ 移除手動分析按鈕
+- ⏳ 結束時自動分析
 
 ---
 

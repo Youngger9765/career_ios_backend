@@ -495,7 +495,8 @@
                         <span class="text-xl">⏹️</span>
                         <span class="text-base">結束</span>
                     </button>
-                    <button id="fabAnalyzeMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 active:from-purple-600 active:to-indigo-700 text-white py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2 flex-1 opacity-50 cursor-not-allowed" disabled>
+                    <!-- Phase 1.4: Hide mobile FAB analyze button -->
+                    <button id="fabAnalyzeMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 active:from-purple-600 active:to-indigo-700 text-white py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2 flex-1 opacity-50 cursor-not-allowed" disabled style="display: none;">
                         <span class="text-xl">⚡</span>
                         <span class="text-base">分析</span>
                     </button>
@@ -755,7 +756,8 @@
                         <h2 class="text-lg md:text-xl font-bold text-gray-800">AI 即時分析</h2>
                     </div>
                     <div class="flex gap-2 flex-wrap">
-                        <button id="triggerAnalysisBtn" class="btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-smooth shadow-md opacity-50 cursor-not-allowed flex items-center gap-1" disabled>
+                        <!-- Phase 1.4: Hide manual analysis button - only keep 60s auto-analysis -->
+                        <button id="triggerAnalysisBtn" class="btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-smooth shadow-md opacity-50 cursor-not-allowed flex items-center gap-1" disabled style="display: none;">
                             <span>⚡</span>
                             <span class="hidden sm:inline">立即分析</span>
                             <span class="sm:hidden">分析</span>
@@ -1656,7 +1658,7 @@
             updateNextAnalysisCountdown();
         }
 
-        function stopSession() {
+        async function stopSession() {
             isRecording = false;
 
             // Stop inactivity monitoring
@@ -1667,8 +1669,8 @@
                 stopRealRecording();
             }
 
-            // Final analysis
-            analyzeTranscript();
+            // Phase 1.4: End-time auto-analysis - wait for final analysis to complete
+            await analyzeTranscript();
 
             // Stop audio playback and speech (demo mode)
             if (audioSimulation.isPlaying) {
@@ -2530,24 +2532,12 @@
                         </div>
                         <div class="space-y-2 pl-8">
                             ${analysis.suggestions.map(sug => {
-                                // Check if suggestion has two-line format (Emergency mode: 心法\n具體做法)
-                                // Check for both real newline and escaped newline
-                                if (sug.includes('\n') || sug.includes('\\n')) {
-                                    const [title, action] = sug.split(/\\n|\n/);
-                                    return `
-                                        <div class="py-6 md:py-8 px-0 mx-0 bg-green-50 border-2 border-green-300 rounded-xl hover:bg-green-100 transition-smooth shadow-sm text-center">
-                                            <div style="font-size: xxx-large;" class="font-bold text-green-800 mb-4 leading-relaxed mx-0 px-0">${title}</div>
-                                            <div style="font-size: xxx-large;" class="text-green-700 font-semibold leading-relaxed mx-0 px-0">${action}</div>
-                                        </div>
-                                    `;
-                                } else {
-                                    // Practice mode: single paragraph - ENLARGED for better readability
-                                    return `
-                                        <div class="p-4 md:p-6 bg-green-50 border-2 border-green-200 rounded-lg hover:bg-green-100 transition-smooth cursor-pointer">
-                                            <p class="text-xl md:text-2xl text-green-700 leading-relaxed font-semibold">${sug}</p>
-                                        </div>
-                                    `;
-                                }
+                                // Phase 1.4: Unified single-line format (removed two-line detection)
+                                return `
+                                    <div class="p-4 md:p-6 bg-green-50 border-2 border-green-200 rounded-lg hover:bg-green-100 transition-smooth cursor-pointer">
+                                        <p class="text-xl md:text-2xl text-green-700 leading-relaxed font-semibold">${sug}</p>
+                                    </div>
+                                `;
                             }).join('')}
                         </div>
                     </div>
@@ -2616,10 +2606,13 @@
                 console.log(`Provider: ${meta.provider}, Latency: ${meta.latency_ms}ms, Model: ${meta.model}`);
             }
 
-            // Desktop: Animate card entrance
+            // Phase 1.4: Replace card instead of append (Overlay Mode)
+            // Desktop: Clear old card and show only the latest one
+            analysisCards.innerHTML = '';
+
             card.style.opacity = '0';
             card.style.transform = 'translateY(20px)';
-            analysisCards.insertBefore(card, analysisCards.firstChild);
+            analysisCards.appendChild(card);
 
             setTimeout(() => {
                 card.style.transition = 'all 0.3s ease-out';
@@ -2627,9 +2620,7 @@
                 card.style.transform = 'translateY(0)';
             }, 10);
 
-            // REQUIREMENT 6: Mobile carousel implementation
-            // Always create mobile card (regardless of current screen size)
-            // This ensures cards persist when switching between desktop/mobile views
+            // Phase 1.4: Mobile - Replace card instead of carousel append
             if (mobileCarouselTrack) {
                 // Hide instruction card when first analysis appears
                 if (instructionCard && mobileAnalysisCards.length === 0) {
@@ -2641,22 +2632,34 @@
                     mobileCarousel.classList.remove('hidden');
                 }
 
+                // Clear old mobile cards (only show latest)
+                mobileCarouselTrack.innerHTML = '';
+                mobileAnalysisCards = []; // Reset array
+
                 // Create mobile card (full width and height for carousel)
                 const mobileCard = document.createElement('div');
-                mobileCard.className = 'flex-shrink-0 w-full h-full bg-white rounded-2xl shadow-md p-5 border-l-4 border-purple-500 overflow-y-auto';
+
+                // Phase 1.4: Apply card color based on risk_level
+                const cardStyles = {
+                    green: 'bg-green-50 border-2 border-green-200',
+                    yellow: 'bg-yellow-50 border-2 border-yellow-200',
+                    red: 'bg-red-50 border-2 border-red-200'
+                };
+                const cardStyle = cardStyles[analysis.risk_level] || 'bg-white border-2 border-purple-200';
+
+                mobileCard.className = `flex-shrink-0 w-full h-full rounded-2xl shadow-md p-5 ${cardStyle} overflow-y-auto`;
                 mobileCard.innerHTML = card.innerHTML;
 
-                // Add to carousel track (append to maintain chronological order)
-                // Index 0 = oldest (1/4), Index length-1 = newest (4/4)
+                // Add single card
                 mobileCarouselTrack.appendChild(mobileCard);
                 mobileAnalysisCards.push(analysis);
 
-                // Jump to newest card (last index)
-                currentCarouselIndex = mobileAnalysisCards.length - 1;
+                // Show the only card
+                currentCarouselIndex = 0;
                 updateCarousel();
             }
 
-            // Save to history
+            // Save to history (keep all for history purposes)
             analysisHistory.push(analysis);
         }
 
