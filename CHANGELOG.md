@@ -74,6 +74,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ✅ Updated iOS API documentation with Swift examples
 
 ### Changed
+- **Documentation Reorganization** (2025-12-26)
+  - Moved safety transition testing docs to `docs/testing/` directory:
+    - `SAFETY_TRANSITIONS_SUMMARY.md` - Test plan overview and design decisions
+    - `SAFETY_TRANSITIONS_MANUAL_TEST_GUIDE.md` - Step-by-step testing procedures
+    - `SAFETY_TRANSITIONS_TEST_FINDINGS.md` - Sticky behavior analysis and trade-offs
+    - `SAFETY_TRANSITIONS_TEST_RESULTS_TABLE.md` - Expected results and keyword detection
+    - `SLIDING_WINDOW_SAFETY_ASSESSMENT.md` - Algorithm details and cost savings
+  - Updated PRD.md with references to testing documentation
+  - Cleaned up 7 experiment JSON files (data already documented in PRD.md):
+    - Removed cache_strategy_comparison.json, experiment_results*.json, strategy_*.json
+  - Reason: Better organization, separate concerns (PRD vs testing docs)
+  - Impact: Cleaner root directory, easier navigation, preserved test documentation
 - **Extended JWT Token Expiration** (2025-12-13)
   - Access Token: 24 hours → 90 days (3 months)
   - Refresh Token: 7 days → 90 days (3 months)

@@ -239,6 +239,13 @@ ANNOTATED_SAFETY_WINDOW_TURNS = 5  # AI 評估用（標註最近 5 句話）
 - `tests/integration/test_annotated_safety_window.py` - 15 comprehensive tests
 - `tests/unit/test_safety_assessment_sliding_window.py` - Unit tests for backend validation
 
+**測試文檔** (詳細測試計劃與分析):
+- 📋 [測試總覽](docs/testing/SAFETY_TRANSITIONS_SUMMARY.md) - 測試計劃、設計決策、測試結果
+- 📝 [手動測試指南](docs/testing/SAFETY_TRANSITIONS_MANUAL_TEST_GUIDE.md) - 逐步測試程序、視覺指標驗證
+- 🔍 [測試發現分析](docs/testing/SAFETY_TRANSITIONS_TEST_FINDINGS.md) - Sticky 行為分析、設計權衡
+- 📊 [預期結果表格](docs/testing/SAFETY_TRANSITIONS_TEST_RESULTS_TABLE.md) - 關鍵字檢測、API 回應範例
+- 🔄 [滑動窗口實現](docs/testing/SLIDING_WINDOW_SAFETY_ASSESSMENT.md) - 算法細節、成本節省分析
+
 **參考實作**: `app/api/realtime.py` (lines 406-448, 809-819)
 
 ---

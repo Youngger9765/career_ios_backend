@@ -48,6 +48,18 @@
   - ✅ 更新 iOS API 文檔，包含 Swift 範例
 
 ### 變更
+- **文檔重組** (2025-12-26)
+  - 將安全等級轉換測試文檔移至 `docs/testing/` 目錄：
+    - `SAFETY_TRANSITIONS_SUMMARY.md` - 測試計劃總覽與設計決策
+    - `SAFETY_TRANSITIONS_MANUAL_TEST_GUIDE.md` - 逐步測試程序
+    - `SAFETY_TRANSITIONS_TEST_FINDINGS.md` - Sticky 行為分析與權衡
+    - `SAFETY_TRANSITIONS_TEST_RESULTS_TABLE.md` - 預期結果與關鍵字檢測
+    - `SLIDING_WINDOW_SAFETY_ASSESSMENT.md` - 演算法細節與成本節省
+  - 更新 PRD.md 新增測試文檔參考連結
+  - 清理 7 個實驗 JSON 檔案（資料已整理進 PRD.md）：
+    - 移除 cache_strategy_comparison.json、experiment_results*.json、strategy_*.json
+  - 原因：更好的組織結構，分離關注點（PRD vs 測試文檔）
+  - 影響：根目錄更整潔、更易導航、保留測試文檔
 - **延長 JWT Token 有效期限** (2025-12-13)
   - Access Token：24 小時 → 90 天（3 個月）
   - Refresh Token：7 天 → 90 天（3 個月）
