@@ -406,9 +406,9 @@ Realtime API 分析完成
 - ❌ **PostgreSQL 寫入**（Web 版暫不做）：Web 無 session 概念，等 iOS 版再實作
 - 🏷️ **tenant_id 固定**：`"island_parents"`（浮島親子）
 
-- [ ] **建立 GBQ Table Schema**
-  - [ ] Table 名稱：`realtime_analysis_logs`
-  - [ ] 欄位設計：
+- [x] **建立 GBQ Table Schema**
+  - [x] Table 名稱：`realtime_analysis_logs`
+  - [x] 欄位設計：
     ```sql
     CREATE TABLE realtime_analysis_logs (
       id STRING,                          -- UUID
@@ -426,10 +426,10 @@ Realtime API 分析完成
     CLUSTER BY tenant_id, safety_level;
     ```
 
-- [ ] **實作 GBQ 寫入（非同步）**
-  - [ ] 在 `realtime.py` 加入 GBQ 寫入邏輯
-  - [ ] 使用 `asyncio.create_task()` 或 FastAPI BackgroundTasks
-  - [ ] 資料格式：
+- [x] **實作 GBQ 寫入（非同步）**
+  - [x] 在 `realtime.py` 加入 GBQ 寫入邏輯
+  - [x] 使用 FastAPI BackgroundTasks
+  - [x] 資料格式：
     ```python
     {
       "id": str(uuid.uuid4()),
@@ -445,15 +445,26 @@ Realtime API 分析完成
     }
     ```
 
-- [ ] **錯誤處理**
-  - [ ] GBQ 寫入失敗不影響 API 回應（catch exception）
-  - [ ] 記錄錯誤到 logging（不要 silent fail）
-  - [ ] 如果 GBQ unavailable，API 仍然正常回傳
+- [x] **錯誤處理**
+  - [x] GBQ 寫入失敗不影響 API 回應（catch exception）
+  - [x] 記錄錯誤到 logging（不要 silent fail）
+  - [x] 如果 GBQ unavailable，API 仍然正常回傳
 
-- [ ] **測試 GBQ 寫入**
-  - [ ] 測試資料成功寫入 GBQ
-  - [ ] 測試非同步執行不阻塞 API 回應
-  - [ ] 測試錯誤處理（GBQ 寫入失敗時）
+- [x] **測試 GBQ 寫入**
+  - [x] 測試資料成功寫入 GBQ
+  - [x] 測試非同步執行不阻塞 API 回應
+  - [x] 測試錯誤處理（GBQ 寫入失敗時）
+
+**Phase 1.3 完成**（2025-12-25）：
+- ✅ 建立 GBQ Service 模組（`app/services/gbq_service.py`）
+- ✅ 實作 lazy client initialization（避免 CI 環境 auth 錯誤）
+- ✅ 整合 FastAPI BackgroundTasks（非同步寫入）
+- ✅ 實作 `write_to_gbq_async()` wrapper（錯誤處理）
+- ✅ 修改 `analyze_transcript()` 加入 GBQ 資料準備和背景任務
+- ✅ 建立 integration tests（TDD RED → GREEN）
+- ✅ **所有測試通過（5/5 GBQ persistence tests）**
+- ✅ tenant_id 固定為 "island_parents"（Web 版）
+- ✅ session_id 固定為 None（Web 版無 session 概念）
 
 ##### 1.4 前端調整（`app/templates/realtime_counseling.html`）
 
@@ -659,7 +670,7 @@ Realtime API 分析完成
 1. ✅ 建立 200 句建議檔案（已完成 - Phase 1.1）
 2. ✅ 修改 Emergency/Practice Mode Prompt（已完成 - Phase 1.2）
 3. ✅ 修正交通號誌系統（orange → yellow）（已完成 - Phase 1.2）
-4. ⏳ 建立 GBQ Table 並實作非同步寫入（進行中 - Phase 1.3）
+4. ✅ 建立 GBQ Table 並實作非同步寫入（已完成 - Phase 1.3）
 5. ⏳ 前端調整（卡片顏色、去重邏輯）（待開始 - Phase 1.4）
 
 **成功標準**：
@@ -667,7 +678,7 @@ Realtime API 分析完成
 - ✅ Emergency/Practice 建議從 200 句中選擇（9/9 integration tests passed）
 - ✅ 包含 Bridge 技巧結構（已實作）
 - ✅ 使用紅黃綠交通號誌系統（已修正）
-- ⏳ 分析結果存入 GBQ（tenant_id = "island_parents"）
+- ✅ 分析結果存入 GBQ（tenant_id = "island_parents"）（5/5 GBQ tests passed）
 - ⏳ 卡片顏色根據燈號變化（綠/黃/紅）
 - ⏳ 避免重複顯示相同建議
 

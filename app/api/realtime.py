@@ -3,11 +3,12 @@ Realtime STT Counseling API
 """
 import logging
 import os
+import uuid
 from datetime import datetime, timezone
 from typing import List
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -22,6 +23,7 @@ from app.schemas.realtime import (
     RiskLevel,
 )
 from app.services.cache_manager import CacheManager
+from app.services.gbq_service import gbq_service
 from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
 from app.services.rag_chat_service import RAGChatService
@@ -538,6 +540,24 @@ YOU MUST return safety_level field in JSON response!"""
     return prompt
 
 
+async def write_to_gbq_async(data: dict) -> None:
+    """Write realtime analysis result to BigQuery asynchronously
+
+    This is a wrapper function that catches all exceptions to prevent
+    GBQ write failures from affecting API response.
+
+    Args:
+        data: Analysis data to write to BigQuery
+    """
+    try:
+        await gbq_service.write_analysis_log(data)
+    except Exception as e:
+        # Log error but don't raise - GBQ failures should not block API
+        logger.error(
+            f"Failed to write to BigQuery (non-blocking): {str(e)}", exc_info=True
+        )
+
+
 async def _analyze_with_codeer(
     transcript: str,
     speakers: List[dict],
@@ -737,7 +757,9 @@ async def _analyze_with_codeer(
 
 @router.post("/analyze", response_model=RealtimeAnalyzeResponse)
 async def analyze_transcript(
-    request: RealtimeAnalyzeRequest, db: Session = Depends(get_db)
+    request: RealtimeAnalyzeRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
 ):
     """Analyze realtime counseling transcript with AI supervision.
 
@@ -941,6 +963,26 @@ async def analyze_transcript(
                 f"Invalid safety_level '{safety_level}' from LLM, defaulting to 'green'"
             )
             safety_level = "green"
+
+        # Calculate response time in milliseconds
+        response_time_ms = int((time.time() - start_time) * 1000)
+
+        # Prepare data for BigQuery (asynchronous write)
+        gbq_data = {
+            "id": str(uuid.uuid4()),
+            "tenant_id": "island_parents",  # Fixed for web version
+            "session_id": None,  # Web version has no session concept
+            "analyzed_at": datetime.now(timezone.utc),
+            "analysis_type": request.mode.value,  # "emergency" or "practice"
+            "safety_level": safety_level,  # "green", "yellow", or "red"
+            "matched_suggestions": analysis.get("suggestions", []),
+            "transcript_segment": request.transcript[:1000],  # Limit to 1000 chars
+            "response_time_ms": response_time_ms,
+            "created_at": datetime.now(timezone.utc),
+        }
+
+        # Schedule GBQ write as background task (non-blocking)
+        background_tasks.add_task(write_to_gbq_async, gbq_data)
 
         # Build response
         return RealtimeAnalyzeResponse(
