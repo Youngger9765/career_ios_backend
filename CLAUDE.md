@@ -105,6 +105,8 @@ poetry run pre-commit install --hook-type pre-push
 
 | Skill | Purpose | Trigger Keywords |
 |-------|---------|-----------------|
+| **requirements-clarification** | Clarify requirements BEFORE coding | "需求", "requirement", "客戶要", "案主說" |
+| **prd-workflow** | PRD-driven development | "PRD", "產品需求", "功能文檔", "規格書" |
 | **tdd-workflow** | TDD development process | "new feature", "add API", "implement", "新功能" |
 | **git-workflow** | Git commit/push workflow | "git", "commit", "push", "提交" |
 | **api-development** | API development patterns | "API", "endpoint", "FastAPI", "測試 API" |
