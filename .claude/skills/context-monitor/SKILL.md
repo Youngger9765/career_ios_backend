@@ -1,3 +1,14 @@
+---
+name: context-monitor
+description: |
+  Monitors context token usage and warns when approaching limits.
+  Automatically activates when context usage exceeds thresholds (30k, 50k, 70k tokens).
+  Provides recommendations for context management and /clear usage.
+
+  Auto-activates based on token usage, no specific keywords needed.
+allowed-tools: [Read]
+---
+
 # Context Usage Monitor
 
 ## Purpose
@@ -50,3 +61,9 @@ git diff --staged >> /tmp/context_save.txt
 # After /clear, restore context:
 cat /tmp/context_save.txt
 ```
+
+---
+
+**Skill Version**: v1.0
+**Last Updated**: 2025-12-25
+**Project**: career_ios_backend
