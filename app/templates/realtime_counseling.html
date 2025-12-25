@@ -444,38 +444,98 @@
 
         <!-- MIDDLE BLOCK: Content Area (flex-1, fills remaining space) -->
         <div class="flex-1 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-            <!-- REQUIREMENT 3: Instruction Card (visible when NOT recording) -->
-            <div id="instructionCard" class="h-full bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 rounded-2xl p-6 ios-card-shadow border border-indigo-100 flex flex-col justify-center">
-                <div class="flex items-start gap-4 mb-4">
-                    <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
-                        <span class="text-2xl">💡</span>
+            <!-- Initial UI (手機版首頁) -->
+            <div id="initialUI" class="h-full bg-gradient-to-br from-gray-50 to-white flex flex-col items-center justify-center px-8 py-12 space-y-12">
+                <!-- 頂部標題 -->
+                <h1 class="text-2xl font-bold text-gray-900 text-center">
+                    準備好跟孩子談談了嗎？
+                </h1>
+
+                <!-- 按鈕區域 -->
+                <div class="w-full max-w-sm space-y-6">
+                    <!-- 預先練習按鈕 -->
+                    <button id="practiceBtn" class="haptic-feedback btn-touch w-full bg-black active:bg-gray-800 text-white py-6 px-8 rounded-3xl font-bold text-lg transition-smooth shadow-xl">
+                        預先練習
+                    </button>
+
+                    <!-- 和孩子談談按鈕 -->
+                    <button id="realTalkBtn" class="haptic-feedback btn-touch w-full bg-black active:bg-gray-800 text-white py-6 px-8 rounded-3xl font-bold text-lg transition-smooth shadow-xl">
+                        和孩子談談
+                    </button>
+                </div>
+            </div>
+
+            <!-- Practice Intro UI (練習介紹頁面) -->
+            <div id="practiceIntroUI" class="hidden h-full bg-gradient-to-br from-gray-50 to-white flex flex-col items-center justify-between px-8 py-12">
+                <!-- 中央同心圓漸層區域 -->
+                <div class="flex-1 flex items-center justify-center w-full">
+                    <div class="relative w-80 h-80 flex items-center justify-center">
+                        <!-- 同心圓漸層背景 (4 層 teal/cyan) -->
+                        <div class="absolute inset-0 rounded-full" style="background: radial-gradient(circle, #2dd4bf 0%, #5eead4 25%, #99f6e4 50%, #ccfbf1 75%, transparent 100%);"></div>
+
+                        <!-- 中央文字 -->
+                        <div class="relative z-10 text-center space-y-6">
+                            <h2 class="text-2xl font-bold text-teal-900">
+                                準備好跟孩子談談了嗎？
+                            </h2>
+                        </div>
                     </div>
-                    <div class="flex-1">
-                        <h3 class="text-lg font-bold text-gray-800 mb-2">如何使用</h3>
-                        <div class="space-y-2 text-sm text-gray-700 leading-relaxed">
-                            <p class="flex items-start gap-2">
-                                <span class="text-green-600 font-bold mt-0.5">1.</span>
-                                <span>點擊上方「開始」按鈕開始錄音</span>
-                            </p>
-                            <p class="flex items-start gap-2">
-                                <span class="text-green-600 font-bold mt-0.5">2.</span>
-                                <span>對話過程中，AI 每 60 秒自動分析</span>
-                            </p>
-                            <p class="flex items-start gap-2">
-                                <span class="text-green-600 font-bold mt-0.5">3.</span>
-                                <span>或點擊下方「即時分析」立即取得建議</span>
-                            </p>
-                            <p id="demoModeHintMobile" class="flex items-start gap-2" style="display: none;">
-                                <span class="text-purple-600 font-bold mt-0.5">💡</span>
-                                <span class="font-semibold">測試模式：按 <kbd class="bg-white px-2 py-0.5 rounded border shadow-sm font-mono text-xs">T</kbd> 鍵可模擬對話</span>
+                </div>
+
+                <!-- 底部文字和按鈕 -->
+                <div class="w-full max-w-sm space-y-8">
+                    <!-- 描述文字 -->
+                    <div class="text-center space-y-2">
+                        <p class="text-lg font-semibold text-gray-800">為美好對話做準備</p>
+                        <p class="text-base text-gray-600">準備好了，溝通更輕鬆</p>
+                    </div>
+
+                    <!-- 創建練習按鈕 -->
+                    <button id="createPracticeBtn" class="haptic-feedback btn-touch w-full bg-black active:bg-gray-800 text-white py-6 px-8 rounded-3xl font-bold text-lg transition-smooth shadow-xl">
+                        創建練習
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recording UI (手機版錄音中的極簡界面) -->
+            <div id="recordingUI" class="hidden h-full flex flex-col items-center justify-between py-8 px-4">
+                <!-- 頂部狀態和計時器 -->
+                <div class="text-center space-y-2">
+                    <h2 class="text-lg font-semibold text-gray-800" id="recordingStatusText">練習與孩子對話中</h2>
+                    <p class="text-sm text-gray-600">
+                        已談話 <span id="recordingTimer">00:00:00</span>
+                    </p>
+                </div>
+
+                <!-- 中央同心圓漸層和建議文字 -->
+                <div class="flex-1 flex items-center justify-center w-full max-w-md">
+                    <div id="suggestionCircle" class="relative w-80 h-80 rounded-full flex items-center justify-center shadow-2xl" style="background: radial-gradient(circle, #67e8f9 0%, #99f6e4 40%, #ccfbf1 70%, #f0fdfa 100%);">
+                        <!-- 建議文字 -->
+                        <div class="text-center px-8">
+                            <p id="liveSuggestion" class="text-2xl font-bold text-teal-900 leading-tight">
+                                讓孩子知道<br>你站在他這邊
                             </p>
                         </div>
                     </div>
                 </div>
+
+                <!-- 底部預留空間（按鈕在 fixed bottom bar） -->
+                <div class="h-4"></div>
             </div>
 
-            <!-- REQUIREMENT 6: Carousel Container (hidden initially, shown when analysis cards appear) -->
+            <!-- REQUIREMENT 6: Carousel Container with Persistent Circle (hidden initially, shown when analysis cards appear) -->
             <div id="mobileCarousel" class="hidden h-full flex flex-col">
+                <!-- Top Section: Compact Suggestion Circle (shown when carousel is active) -->
+                <div id="carouselSuggestionCircle" class="flex-shrink-0 mb-3 flex items-center justify-center">
+                    <div id="carouselCircle" class="relative w-32 h-32 rounded-full flex items-center justify-center shadow-lg transition-all duration-300" style="background: radial-gradient(circle, #67e8f9 0%, #99f6e4 40%, #ccfbf1 70%, #f0fdfa 100%);">
+                        <!-- Compact suggestion text -->
+                        <div class="text-center px-4">
+                            <p id="carouselLiveSuggestion" class="text-sm font-bold text-teal-900 leading-tight">
+                                讓孩子知道<br>你站在他這邊
+                            </p>
+                        </div>
+                    </div>
+                </div>
                 <!-- Carousel Header with Navigation -->
                 <div class="flex items-center justify-between mb-3 flex-shrink-0">
                     <h3 class="text-base font-bold text-gray-800 flex items-center gap-2">
@@ -509,27 +569,20 @@
             </div>
         </div>
 
-        <!-- MOBILE-ONLY: Fixed Bottom Navigation Bar -->
-        <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 ios-frosted border-t border-gray-200/50 ios-card-shadow safe-area-inset-bottom z-50">
-            <div class="px-4 py-3">
-                <div class="flex gap-2">
-                    <button id="settingsBtnMobile" class="haptic-feedback btn-touch bg-gray-100 active:bg-gray-200 text-gray-700 py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2 flex-1">
-                        <span class="text-xl">⚙️</span>
-                        <span class="text-base">設定</span>
-                    </button>
-                    <button id="startBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-green-500 to-emerald-600 active:from-green-600 active:to-emerald-700 text-white py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2 flex-1">
-                        <span class="text-xl">▶️</span>
-                        <span class="text-base">開始</span>
-                    </button>
-                    <button id="stopBtnMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-red-500 to-rose-600 active:from-red-600 active:to-rose-700 text-white py-3 px-4 rounded-2xl font-bold opacity-50 cursor-not-allowed ios-card-shadow flex items-center justify-center gap-2 flex-1" disabled>
-                        <span class="text-xl">⏹️</span>
-                        <span class="text-base">結束</span>
-                    </button>
-                    <button id="fabAnalyzeMobile" class="haptic-feedback btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 active:from-purple-600 active:to-indigo-700 text-white py-3 px-4 rounded-2xl font-bold transition-smooth ios-card-shadow flex items-center justify-center gap-2 flex-1 opacity-50 cursor-not-allowed" disabled>
-                        <span class="text-xl">⚡</span>
-                        <span class="text-base">分析</span>
-                    </button>
-                </div>
+        <!-- MOBILE-ONLY: Fixed Bottom Navigation Bar (只在錄音時顯示) -->
+        <div id="recordingBottomBar" class="hidden md:hidden fixed bottom-0 left-0 right-0 bg-white/95 ios-frosted border-t border-gray-200/50 ios-card-shadow safe-area-inset-bottom z-50">
+            <div class="px-4 py-4 flex gap-3">
+                <!-- 暫停按鈕 -->
+                <button id="pauseBtnMobile" class="haptic-feedback btn-touch flex-1 bg-black active:bg-gray-800 text-white py-4 px-6 rounded-full font-bold text-base transition-smooth shadow-xl flex items-center justify-center gap-2">
+                    <span class="text-2xl">⏸</span>
+                    <span>暫停</span>
+                </button>
+
+                <!-- 結束對話按鈕 -->
+                <button id="stopBtnMobile" class="haptic-feedback btn-touch flex-1 bg-white border-2 border-gray-800 text-gray-900 py-4 px-6 rounded-full font-semibold transition-smooth shadow-lg flex items-center justify-center gap-2">
+                    <span class="text-xl">⏹</span>
+                    <span>結束對話</span>
+                </button>
             </div>
         </div>
     </div>
@@ -628,7 +681,7 @@
                                 <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
                                 <span class="text-sm font-medium text-gray-700">錄音中</span>
                             </div>
-                            <div class="recording-timer text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600" id="recordingTimer">00:00</div>
+                            <div class="recording-timer text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600" id="recordingTimerDesktop">00:00</div>
                         </div>
                     </div>
 
@@ -814,11 +867,10 @@
                         </div>
                         <h2 class="text-lg md:text-xl font-bold text-gray-800">AI 即時分析</h2>
                     </div>
-                    <div class="flex gap-2 flex-wrap">
+                    <div class="hidden md:flex gap-2 flex-wrap">
                         <button id="triggerAnalysisBtn" class="btn-touch bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-smooth shadow-md opacity-50 cursor-not-allowed flex items-center gap-1" disabled>
                             <span>⚡</span>
-                            <span class="hidden sm:inline">立即分析</span>
-                            <span class="sm:hidden">分析</span>
+                            <span>立即分析</span>
                         </button>
                     </div>
                 </div>
@@ -956,10 +1008,16 @@
         let inactivityCheckInterval = null;
         let countdownInterval = null;
 
+        // === Analysis State ===
+        let isAnalyzing = false; // Global flag to prevent concurrent analysis
+        let sessionMode = 'practice'; // 'practice' or 'realTalk'
+
         // === DOM Elements ===
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
-        const startBtnMobile = document.getElementById('startBtnMobile');
+        const practiceBtn = document.getElementById('practiceBtn');
+        const realTalkBtn = document.getElementById('realTalkBtn');
+        const pauseBtnMobile = document.getElementById('pauseBtnMobile');
         const stopBtnMobile = document.getElementById('stopBtnMobile');
         const timer = document.getElementById('timer');
         const status = document.getElementById('status');
@@ -978,8 +1036,9 @@
         const waveformContainerMobile = document.getElementById('waveformContainerMobile');
         const recordingTimerDisplay = document.getElementById('recordingTimerDisplay');
         const recordingTimerDisplayMobile = document.getElementById('recordingTimerDisplayMobile');
-        const recordingTimer = document.getElementById('recordingTimer');
-        const recordingTimerMobile = document.getElementById('recordingTimerMobile');
+        const recordingTimer = document.getElementById('recordingTimer'); // Mobile recording UI timer
+        const recordingTimerDesktop = document.getElementById('recordingTimerDesktop'); // Desktop recording timer display
+        const recordingTimerMobile = document.getElementById('recordingTimerMobile'); // Mobile compact waveform timer
         const modeToggle = document.getElementById('modeToggle');
         const modeToggleDesktop = document.getElementById('modeToggleDesktop');
         const modeToggleLabel = document.getElementById('modeToggleLabel');
@@ -989,7 +1048,11 @@
 
         // NEW: Mobile-specific elements for requirements 3, 4, 6
         const mainHeader = document.getElementById('mainHeader');
-        const instructionCard = document.getElementById('instructionCard');
+        const initialUI = document.getElementById('initialUI');
+        const practiceIntroUI = document.getElementById('practiceIntroUI');
+        const createPracticeBtn = document.getElementById('createPracticeBtn');
+        const recordingUI = document.getElementById('recordingUI');
+        const recordingBottomBar = document.getElementById('recordingBottomBar');
         const mobileCarousel = document.getElementById('mobileCarousel');
         const mobileCarouselTrack = document.getElementById('mobileCarouselTrack');
         const carouselPrev = document.getElementById('carouselPrev');
@@ -1021,7 +1084,41 @@
         // === Event Listeners ===
         startBtn.addEventListener('click', startSession);
         stopBtn.addEventListener('click', stopSession);
-        if (startBtnMobile) startBtnMobile.addEventListener('click', startSession);
+
+        // Mobile flow: Practice button shows intro screen
+        if (practiceBtn) {
+            practiceBtn.addEventListener('click', () => {
+                sessionMode = 'practice';
+                if (initialUI) initialUI.classList.add('hidden');
+                if (practiceIntroUI) practiceIntroUI.classList.remove('hidden');
+                // Update button text for practice mode
+                if (createPracticeBtn) {
+                    createPracticeBtn.textContent = '創建練習';
+                }
+            });
+        }
+
+        // Mobile flow: Real talk button shows intro screen
+        if (realTalkBtn) {
+            realTalkBtn.addEventListener('click', () => {
+                sessionMode = 'realTalk';
+                if (initialUI) initialUI.classList.add('hidden');
+                if (practiceIntroUI) practiceIntroUI.classList.remove('hidden');
+                // Update button text for real talk mode
+                if (createPracticeBtn) {
+                    createPracticeBtn.textContent = '開始對話';
+                }
+            });
+        }
+
+        // Mobile flow: Create practice/real talk button starts recording
+        if (createPracticeBtn) {
+            createPracticeBtn.addEventListener('click', () => {
+                if (practiceIntroUI) practiceIntroUI.classList.add('hidden');
+                startSession();
+            });
+        }
+        if (pauseBtnMobile) pauseBtnMobile.addEventListener('click', stopSession);
         if (stopBtnMobile) stopBtnMobile.addEventListener('click', stopSession);
         // Speaker buttons removed (AI auto-detects speakers)
         triggerAnalysisBtn.addEventListener('click', manuallyTriggerAnalysis);
@@ -1112,23 +1209,23 @@
             yellow: [
                 { speaker: 'counselor', text: '咦，這是什麼？數學考卷嗎？', time: 0 },
                 { speaker: 'client', text: '啊那個', time: 3 },
-                { speaker: 'counselor', text: '65分？你上次不是考85分嗎？', time: 5 },
+                { speaker: 'counselor', text: '65分？你氣死我了！上次不是考85分嗎？', time: 5 },
                 { speaker: 'client', text: '這次比較難啦', time: 9 },
-                { speaker: 'counselor', text: '難？你是不是又一直玩手機沒認真讀書？', time: 12 },
+                { speaker: 'counselor', text: '你煩死我了！又一直玩手機不聽話', time: 12 },
                 { speaker: 'client', text: '我有認真讀啊', time: 16 },
-                { speaker: 'counselor', text: '認真？認真會這樣嗎？你每次都這樣，講都講不聽', time: 19 },
-                { speaker: 'client', text: '我就是努力了啊！為什麼你都不相信我！', time: 24 }
+                { speaker: 'counselor', text: '你說謊！我受夠了！每次都這樣', time: 19 },
+                { speaker: 'client', text: '我快崩潰了！為什麼你都不相信我！', time: 24 }
             ],
             red: [
-                { speaker: 'counselor', text: '你給我過來！這是什麼成績？', time: 0 },
+                { speaker: 'counselor', text: '你給我滾出去！這是什麼成績？', time: 0 },
                 { speaker: 'client', text: '我...', time: 3 },
-                { speaker: 'counselor', text: '50分！你知不知道這樣會被當掉？你還想不想讀書？', time: 5 },
-                { speaker: 'client', text: '我有努力啊...', time: 10 },
-                { speaker: 'counselor', text: '努力？努力會這樣？你是不是一直玩手機？', time: 13 },
-                { speaker: 'client', text: '我沒有一直玩手機', time: 18 },
-                { speaker: 'counselor', text: '沒有？那你成績怎麼會這麼差？你是不是覺得自己很笨？', time: 21 },
-                { speaker: 'client', text: '我就是笨！我什麼都做不好！', time: 27 },
-                { speaker: 'counselor', text: '你給我閉嘴！再哭我就把你手機沒收！', time: 32 }
+                { speaker: 'counselor', text: '50分！打死你算了！你還想不想讀書？', time: 5 },
+                { speaker: 'client', text: '我受不了了...', time: 10 },
+                { speaker: 'counselor', text: '受不了？我才受不了你這樣！', time: 13 },
+                { speaker: 'client', text: '我不想活了', time: 18 },
+                { speaker: 'counselor', text: '你說什麼？不想活？你知道你在說什麼嗎？', time: 21 },
+                { speaker: 'client', text: '我真的不想活了...', time: 27 },
+                { speaker: 'counselor', text: '你這樣說我恨死你了！', time: 32 }
             ]
         };
 
@@ -1174,6 +1271,7 @@
         const loadYellowBtn = document.getElementById('loadYellowBtn');
         const loadRedBtn = document.getElementById('loadRedBtn');
         const quickTestAnalyzeBtn = document.getElementById('quickTestAnalyzeBtn');
+        const quickTestAnalyzeBtnDesktop = document.getElementById('quickTestAnalyzeBtnDesktop');
         const clearTranscriptBtn = document.getElementById('clearTranscriptBtn');
 
         if (loadGreenBtn) loadGreenBtn.addEventListener('click', () => loadPresetTranscript('green'));
@@ -1186,7 +1284,6 @@
         const loadGreenBtnDesktop = document.getElementById('loadGreenBtnDesktop');
         const loadYellowBtnDesktop = document.getElementById('loadYellowBtnDesktop');
         const loadRedBtnDesktop = document.getElementById('loadRedBtnDesktop');
-        const quickTestAnalyzeBtnDesktop = document.getElementById('quickTestAnalyzeBtnDesktop');
         const clearTranscriptBtnDesktop = document.getElementById('clearTranscriptBtnDesktop');
 
         if (loadGreenBtnDesktop) loadGreenBtnDesktop.addEventListener('click', () => loadPresetTranscript('green'));
@@ -1727,6 +1824,7 @@
 
         // === Core Functions ===
         async function startSession() {
+            console.log(`🎯 Session mode: ${sessionMode}`);
             isRecording = true;
             startTime = Date.now();
             transcriptSegments = [];
@@ -1761,11 +1859,15 @@
             stopBtn.disabled = false;
             stopBtn.classList.remove('opacity-50', 'cursor-not-allowed');
 
-            // UI Updates - Mobile
-            startBtnMobile.disabled = true;
-            startBtnMobile.classList.add('opacity-50', 'cursor-not-allowed');
-            stopBtnMobile.disabled = false;
-            stopBtnMobile.classList.remove('opacity-50', 'cursor-not-allowed');
+            // UI Updates - Mobile (pauseBtnMobile and stopBtnMobile are already visible in recordingBottomBar)
+            if (pauseBtnMobile) {
+                pauseBtnMobile.disabled = false;
+                pauseBtnMobile.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+            if (stopBtnMobile) {
+                stopBtnMobile.disabled = false;
+                stopBtnMobile.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
 
             // Analysis buttons
             triggerAnalysisBtn.disabled = false;
@@ -1781,9 +1883,21 @@
                 fabAnalyzeMobile.classList.remove('opacity-50', 'cursor-not-allowed');
             }
 
-            // REQUIREMENT 3: Hide instruction card when recording starts
-            if (instructionCard) {
-                instructionCard.style.display = 'none';
+            // REQUIREMENT 3: Hide all UI cards when recording starts
+            // 顯示手機版錄音中的極簡 UI，隱藏其他 UI
+            const recordingUI = document.getElementById('recordingUI');
+            if (recordingUI && window.innerWidth < 768) {
+                recordingUI.classList.remove('hidden');
+            }
+            if (initialUI) {
+                initialUI.classList.add('hidden');
+            }
+            if (practiceIntroUI) {
+                practiceIntroUI.classList.add('hidden');
+            }
+            // 顯示手機版底部按鈕列 (pauseBtnMobile and stopBtnMobile are inside recordingBottomBar)
+            if (recordingBottomBar && window.innerWidth < 768) {
+                recordingBottomBar.classList.remove('hidden');
             }
 
             // Header is now hidden on mobile via CSS (hidden md:block)
@@ -1855,11 +1969,15 @@
             stopBtn.disabled = true;
             stopBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
-            // UI Updates - Mobile
-            startBtnMobile.disabled = false;
-            startBtnMobile.classList.remove('opacity-50', 'cursor-not-allowed');
-            stopBtnMobile.disabled = true;
-            stopBtnMobile.classList.add('opacity-50', 'cursor-not-allowed');
+            // UI Updates - Mobile (disable buttons since session stopped)
+            if (pauseBtnMobile) {
+                pauseBtnMobile.disabled = true;
+                pauseBtnMobile.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            if (stopBtnMobile) {
+                stopBtnMobile.disabled = true;
+                stopBtnMobile.classList.add('opacity-50', 'cursor-not-allowed');
+            }
 
             // Hide indicators
             liveIndicator.classList.add('hidden');
@@ -1870,9 +1988,22 @@
                 fabAnalyzeMobile.classList.add('opacity-50', 'cursor-not-allowed');
             }
 
-            // REQUIREMENT 3: Show instruction card when recording stops
-            if (instructionCard && mobileAnalysisCards.length === 0) {
-                instructionCard.style.display = 'block';
+            // REQUIREMENT 3: Show initial UI when recording stops (return to homepage)
+            // 隱藏手機版錄音中的極簡 UI，顯示首頁
+            const recordingUI = document.getElementById('recordingUI');
+            if (recordingUI) {
+                recordingUI.classList.add('hidden');
+            }
+            if (practiceIntroUI) {
+                practiceIntroUI.classList.add('hidden');
+            }
+            // Only show initialUI if no analysis cards exist
+            if (initialUI && mobileAnalysisCards.length === 0) {
+                initialUI.classList.remove('hidden');
+            }
+            // 隱藏手機版底部按鈕列
+            if (recordingBottomBar) {
+                recordingBottomBar.classList.add('hidden');
             }
 
             // Header is now hidden on mobile via CSS (hidden md:block)
@@ -2186,14 +2317,22 @@
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
             const minutes = Math.floor(elapsed / 60);
             const seconds = elapsed % 60;
+            const hours = Math.floor(elapsed / 3600);
+            const displayMinutes = Math.floor((elapsed % 3600) / 60);
+
+            // Format: MM:SS for compact displays
             const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-            // Update main timer
+            // Format: HH:MM:SS for mobile recording UI
+            const timeStringLong = `${String(hours).padStart(2, '0')}:${String(displayMinutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+            // Update main timer (desktop)
             timer.textContent = timeString;
 
             // Update recording timer displays
-            if (recordingTimer) recordingTimer.textContent = timeString;
-            if (recordingTimerMobile) recordingTimerMobile.textContent = timeString;
+            if (recordingTimer) recordingTimer.textContent = timeStringLong; // Mobile recording UI (已談話 HH:MM:SS)
+            if (recordingTimerDesktop) recordingTimerDesktop.textContent = timeString; // Desktop recording timer display
+            if (recordingTimerMobile) recordingTimerMobile.textContent = timeString; // Mobile compact waveform timer
 
             // Auto-analysis at dynamic intervals (based on safety_level)
             if (elapsed > 0 && elapsed % nextAnalysisInterval === 0 && elapsed !== lastAutoAnalysisTime) {
@@ -2261,6 +2400,71 @@
             // You could add a toast notification here if needed
         }
 
+        // Update mobile suggestion circle with AI analysis results
+        function updateMobileSuggestionCircle(safetyLevel, suggestion) {
+            console.log(`🔍 updateMobileSuggestionCircle called with safetyLevel="${safetyLevel}", suggestion="${suggestion.substring(0, 100)}..."`);
+            console.log(`🔍 Current viewport width: ${window.innerWidth}px`);
+
+            // Get both circle elements (recording UI and carousel UI)
+            const liveSuggestion = document.getElementById('liveSuggestion');
+            const suggestionCircle = document.getElementById('suggestionCircle');
+            const carouselLiveSuggestion = document.getElementById('carouselLiveSuggestion');
+            const carouselCircle = document.getElementById('carouselCircle');
+
+            console.log(`🔍 liveSuggestion element:`, liveSuggestion ? 'FOUND' : 'NOT FOUND');
+            console.log(`🔍 suggestionCircle element:`, suggestionCircle ? 'FOUND' : 'NOT FOUND');
+            console.log(`🔍 carouselLiveSuggestion element:`, carouselLiveSuggestion ? 'FOUND' : 'NOT FOUND');
+            console.log(`🔍 carouselCircle element:`, carouselCircle ? 'FOUND' : 'NOT FOUND');
+
+            // Only update on mobile viewport
+            if (window.innerWidth >= 768) {
+                console.log('⚠️ Skipping mobile circle update - viewport width >= 768px (desktop mode)');
+                return;
+            }
+
+            // Update text (replace \n or \\n with <br> for HTML display)
+            const formattedSuggestion = suggestion.replace(/\\n|\n/g, '<br>');
+            console.log(`🔍 Formatted suggestion: "${formattedSuggestion}"`);
+
+            // Update color based on safety level
+            const gradients = {
+                red: 'radial-gradient(circle, #ef4444 0%, #f87171 40%, #fca5a5 70%, #fecaca 100%)',
+                yellow: 'radial-gradient(circle, #f59e0b 0%, #fbbf24 40%, #fcd34d 70%, #fef3c7 100%)',
+                green: 'radial-gradient(circle, #67e8f9 0%, #99f6e4 40%, #ccfbf1 70%, #f0fdfa 100%)'
+            };
+
+            // Update text color for better contrast
+            const textColors = {
+                red: 'text-red-900',
+                yellow: 'text-orange-900',
+                green: 'text-teal-900'
+            };
+
+            const selectedGradient = gradients[safetyLevel] || gradients.green;
+            const selectedTextColor = textColors[safetyLevel] || textColors.green;
+
+            console.log(`🔍 Applying gradient: ${selectedGradient}`);
+            console.log(`🔍 Applying text color: ${selectedTextColor}`);
+
+            // Update recording UI circle (large version)
+            if (liveSuggestion && suggestionCircle) {
+                liveSuggestion.innerHTML = formattedSuggestion;
+                suggestionCircle.style.background = selectedGradient;
+                liveSuggestion.className = `text-2xl font-bold leading-tight ${selectedTextColor}`;
+                console.log(`✅ Recording UI circle updated`);
+            }
+
+            // Update carousel UI circle (compact version)
+            if (carouselLiveSuggestion && carouselCircle) {
+                carouselLiveSuggestion.innerHTML = formattedSuggestion;
+                carouselCircle.style.background = selectedGradient;
+                carouselLiveSuggestion.className = `text-sm font-bold leading-tight ${selectedTextColor}`;
+                console.log(`✅ Carousel UI circle updated`);
+            }
+
+            console.log(`✅ Mobile circles updated successfully: ${safetyLevel} - ${suggestion.substring(0, 50)}...`);
+        }
+
         // === Transcript Management ===
         function addTranscriptLine(speaker, text) {
             // Hide empty state on first transcript line
@@ -2303,11 +2507,19 @@
 
         // === AI Analysis ===
         async function analyzeTranscript() {
-            // Set loading state for both analyze buttons (do this first for user feedback)
+            // Prevent concurrent API calls
+            if (isAnalyzing) {
+                console.log('⏳ Analysis already in progress, ignoring duplicate request');
+                return;
+            }
+
+            // Set analyzing flag and loading state for all analyze buttons (do this first for user feedback)
+            isAnalyzing = true;
             setAnalyzeButtonsLoading(true);
 
             if (transcriptSegments.length === 0) {
                 // Restore button state and show error
+                isAnalyzing = false;
                 setAnalyzeButtonsLoading(false);
                 alert('目前沒有逐字稿內容，請先開始錄音');
                 return;
@@ -2322,6 +2534,7 @@
                 // Skip analysis if transcript is too short (less than 10 characters)
                 if (!transcriptText || transcriptText.trim().length < 10) {
                     console.log('⏭️ Skipping analysis: transcript too short');
+                    isAnalyzing = false;
                     setAnalyzeButtonsLoading(false);
                     return;
                 }
@@ -2404,7 +2617,8 @@
                     error: error.message
                 });
             } finally {
-                // Always restore button states, even if error occurs
+                // Always restore analyzing flag and button states, even if error occurs
+                isAnalyzing = false;
                 setAnalyzeButtonsLoading(false);
             }
         }
@@ -2413,7 +2627,9 @@
         function setAnalyzeButtonsLoading(isLoading) {
             const buttons = [
                 { btn: fabAnalyzeMobile, icon: '⚡', text: '即時分析' },
-                { btn: triggerAnalysisBtn, icon: '⚡', text: '立即分析' }
+                { btn: triggerAnalysisBtn, icon: '⚡', text: '立即分析' },
+                { btn: quickTestAnalyzeBtn, icon: '⚡', text: '立即分析' },
+                { btn: quickTestAnalyzeBtnDesktop, icon: '⚡', text: '立即分析' }
             ];
 
             buttons.forEach(({ btn, icon, text }) => {
@@ -2548,33 +2764,36 @@
         }
 
         function displayAnalysisCard(analysis) {
-            // Build Risk Level configuration (for card background and header)
+            // Build Safety Level configuration with radial gradient backgrounds
             let riskConfig = {
                 'red': {
                     emoji: '🔴',
                     label: '危險',
-                    cardBg: 'bg-red-50',
+                    cardBg: 'bg-red-50',  // Fallback for web
+                    gradientBg: 'radial-gradient(circle, #f9a8d4 0%, #fbcfe8 40%, #fce7f3 70%, #fdf2f8 100%)',  // Pink radial
                     borderColor: 'border-red-300',
-                    headerBg: 'bg-red-100',
-                    textColor: 'text-red-700',
+                    headerBg: 'bg-white/10 backdrop-blur-sm',  // Transparent header
+                    textColor: 'text-red-900',  // Darker for better contrast
                     title: '危險：立即修正'
                 },
                 'yellow': {
                     emoji: '💛',
                     label: '警示',
-                    cardBg: 'bg-yellow-50',
+                    cardBg: 'bg-yellow-50',  // Fallback for web
+                    gradientBg: 'radial-gradient(circle, #fde047 0%, #fef08a 40%, #fef9c3 70%, #fefce8 100%)',  // Yellow radial
                     borderColor: 'border-yellow-300',
-                    headerBg: 'bg-yellow-100',
-                    textColor: 'text-yellow-700',
+                    headerBg: 'bg-white/10 backdrop-blur-sm',  // Transparent header
+                    textColor: 'text-yellow-900',  // Darker for better contrast
                     title: '警示：需要調整'
                 },
                 'green': {
                     emoji: '💚',
                     label: '安全',
-                    cardBg: 'bg-green-50',
+                    cardBg: 'bg-green-50',  // Fallback for web
+                    gradientBg: 'radial-gradient(circle, #67e8f9 0%, #99f6e4 40%, #ccfbf1 70%, #f0fdfa 100%)',  // Teal/Cyan radial
                     borderColor: 'border-green-300',
-                    headerBg: 'bg-green-100',
-                    textColor: 'text-green-700',
+                    headerBg: 'bg-white/10 backdrop-blur-sm',  // Transparent header
+                    textColor: 'text-teal-900',  // Darker for better contrast
                     title: '安全：溝通良好'
                 }
             };
@@ -2586,10 +2805,23 @@
 
             // Use error styling if this is an error response
             const isError = analysis.is_error || (analysis.summary && analysis.summary.includes('失敗'));
+
+            // Get current risk config
+            const currentRiskConfig = analysis.safety_level ? (riskConfig[analysis.safety_level] || riskConfig['green']) : riskConfig['green'];
+
             // Set card background and border based on safety level
-            const cardBgColor = analysis.safety_level ? (riskConfig[analysis.safety_level]?.cardBg || 'bg-white') : 'bg-white';
-            const cardBorderColor = analysis.safety_level ? (riskConfig[analysis.safety_level]?.borderColor || 'border-gray-300') : 'border-gray-300';
-            card.className = `${cardBgColor} rounded-xl shadow-md hover:shadow-lg transition-shadow p-4 md:p-5 border-2 ${cardBorderColor} fade-in card-hover`;
+            // Mobile: full-screen with radial gradient background
+            // Desktop: right panel card with solid background
+            const cardBgColor = currentRiskConfig.cardBg;
+            const cardBorderColor = currentRiskConfig.borderColor;
+
+            // Apply responsive classes
+            // Mobile: fixed positioning for full-screen with radial gradient
+            // Desktop: normal card in right panel with radial gradient
+            card.className = `rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 md:p-5 border-2 ${cardBorderColor} fade-in card-hover fixed md:relative inset-0 md:inset-auto z-50 md:z-auto overflow-y-auto md:overflow-visible`;
+
+            // Apply radial gradient background for both mobile and desktop
+            card.style.background = currentRiskConfig.gradientBg;
 
             // Determine severity for alerts
             const hasCritical = analysis.alerts.some(a => a.includes('🔴') || a.includes('高風險'));
@@ -2656,36 +2888,40 @@
                    </span>`;
             }
 
-            const currentRisk = riskConfig[analysis.safety_level] || riskConfig['green'];
-
             card.innerHTML = `
-                <!-- Risk Level Header - Prominent Display -->
-                <div class="flex items-center justify-between ${currentRisk.headerBg} -mx-4 -mt-4 md:-mx-5 md:-mt-5 px-4 py-3 md:px-5 md:py-3 rounded-t-xl mb-4 border-b-2 ${currentRisk.borderColor}">
+                <!-- Safety Level Header - Prominent Display -->
+                <div class="flex items-center justify-between ${currentRiskConfig.headerBg} -mx-6 -mt-6 md:-mx-5 md:-mt-5 px-6 py-4 md:px-5 md:py-3 rounded-t-xl mb-4 border-b-2 ${currentRiskConfig.borderColor}">
                     <div class="flex items-center gap-3">
-                        <span class="text-4xl">${currentRisk.emoji}</span>
+                        <span class="text-5xl md:text-4xl">${currentRiskConfig.emoji}</span>
                         <div>
-                            <div class="font-bold text-lg ${currentRisk.textColor}">${currentRisk.label}</div>
-                            <div class="text-xs ${currentRisk.textColor} opacity-75">${currentRisk.title}</div>
+                            <div class="font-bold text-xl md:text-lg ${currentRiskConfig.textColor}">${currentRiskConfig.label}</div>
+                            <div class="text-sm md:text-xs ${currentRiskConfig.textColor} opacity-75">${currentRiskConfig.title}</div>
                         </div>
                     </div>
                     <span class="text-xs text-gray-500">${new Date(analysis.timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
-                <!-- Meta Information -->
-                <div class="flex items-center gap-2 flex-wrap mb-3">
-                    <span class="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
-                        ${analysis.time_range}
-                    </span>
-                    ${analysis.recording_timestamp ? `
-                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium">
-                            <span>⏱</span>
-                            <span>${analysis.recording_timestamp}</span>
+                <!-- Meta Information - Collapsible -->
+                <details class="mb-3">
+                    <summary class="cursor-pointer text-xs text-gray-500 hover:text-gray-700 transition-colors inline-flex items-center gap-1">
+                        <span>詳細資訊</span>
+                        <span class="text-[10px]">▼</span>
+                    </summary>
+                    <div class="flex items-center gap-2 flex-wrap mt-2 pt-2 border-t border-gray-200/50">
+                        <span class="inline-block px-3 py-1 bg-purple-100/50 text-purple-700 text-xs font-semibold rounded-full">
+                            ${analysis.time_range}
                         </span>
-                    ` : ''}
-                    ${modelBadge}
-                    ${tokenUsageBadge}
-                    ${ragBadge}
-                </div>
+                        ${analysis.recording_timestamp ? `
+                            <span class="inline-flex items-center gap-1 px-2 py-1 bg-teal-100/50 text-teal-700 rounded-full text-xs font-medium">
+                                <span>⏱</span>
+                                <span>${analysis.recording_timestamp}</span>
+                            </span>
+                        ` : ''}
+                        ${modelBadge}
+                        ${tokenUsageBadge}
+                        ${ragBadge}
+                    </div>
+                </details>
 
                 <!-- Summary Section (Practice mode only) -->
                 ${analysis.alerts && analysis.alerts.length > 0 ? `
@@ -2732,29 +2968,23 @@
                 <!-- Suggestions Section -->
                 ${analysis.suggestions.length > 0 ? `
                     <div class="mb-4">
-                        <div class="flex items-center gap-2 mb-2">
-                            <div class="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
-                                💡
-                            </div>
-                            <h3 class="font-bold text-sm md:text-base text-gray-800">建議</h3>
-                        </div>
-                        <div class="space-y-2 pl-8">
+                        <div class="space-y-2">
                             ${analysis.suggestions.map(sug => {
                                 // Check if suggestion has two-line format (Emergency mode: 心法\n具體做法)
                                 // Check for both real newline and escaped newline
                                 if (sug.includes('\n') || sug.includes('\\n')) {
                                     const [title, action] = sug.split(/\\n|\n/);
                                     return `
-                                        <div class="py-6 md:py-8 px-0 mx-0 bg-green-50 border-2 border-green-300 rounded-xl hover:bg-green-100 transition-smooth shadow-sm text-center">
-                                            <div style="font-size: xxx-large;" class="font-bold text-green-800 mb-4 leading-relaxed mx-0 px-0">${title}</div>
-                                            <div style="font-size: xxx-large;" class="text-green-700 font-semibold leading-relaxed mx-0 px-0">${action}</div>
+                                        <div class="py-6 md:py-8 px-4 md:px-6 bg-white/10 backdrop-blur-sm rounded-xl hover:bg-white/20 transition-smooth shadow-sm text-center">
+                                            <div style="font-size: xxx-large;" class="font-bold text-green-900 mb-4 leading-relaxed">${title}</div>
+                                            <div style="font-size: xxx-large;" class="text-green-800 font-semibold leading-relaxed">${action}</div>
                                         </div>
                                     `;
                                 } else {
                                     // Practice mode: single paragraph - ENLARGED for better readability
                                     return `
-                                        <div class="p-4 md:p-6 bg-green-50 border-2 border-green-200 rounded-lg hover:bg-green-100 transition-smooth cursor-pointer">
-                                            <p class="text-xl md:text-2xl text-green-700 leading-relaxed font-semibold">${sug}</p>
+                                        <div class="p-4 md:p-6 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transition-smooth cursor-pointer">
+                                            <p class="text-xl md:text-2xl text-green-900 leading-relaxed font-semibold">${sug}</p>
                                         </div>
                                     `;
                                 }
@@ -2841,9 +3071,13 @@
             // Always create mobile card (regardless of current screen size)
             // This ensures cards persist when switching between desktop/mobile views
             if (mobileCarouselTrack) {
-                // Hide instruction card when first analysis appears
-                if (instructionCard && mobileAnalysisCards.length === 0) {
-                    instructionCard.style.display = 'none';
+                // Hide initial UI when first analysis appears
+                if (initialUI && mobileAnalysisCards.length === 0) {
+                    initialUI.classList.add('hidden');
+                }
+                // Also hide practice intro UI
+                if (practiceIntroUI && mobileAnalysisCards.length === 0) {
+                    practiceIntroUI.classList.add('hidden');
                 }
 
                 // Show carousel container
@@ -2868,6 +3102,19 @@
 
             // Save to history
             analysisHistory.push(analysis);
+
+            // Update mobile suggestion circle with first suggestion
+            if (analysis.suggestions && analysis.suggestions.length > 0) {
+                const safetyLevel = analysis.safety_level || 'green';
+                console.log(`🔍 displayAnalysisCard: About to call updateMobileSuggestionCircle`);
+                console.log(`🔍 - safety_level: "${safetyLevel}"`);
+                console.log(`🔍 - suggestions[0]: "${analysis.suggestions[0]}"`);
+                console.log(`🔍 - suggestions array length: ${analysis.suggestions.length}`);
+                updateMobileSuggestionCircle(safetyLevel, analysis.suggestions[0]);
+            } else {
+                console.log(`⚠️ displayAnalysisCard: No suggestions found in analysis`);
+                console.log(`🔍 - analysis.suggestions:`, analysis.suggestions);
+            }
         }
 
         function showError(message) {
