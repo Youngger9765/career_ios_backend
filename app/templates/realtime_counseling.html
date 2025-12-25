@@ -405,6 +405,36 @@
                             練習：完整分析
                         </p>
                     </div>
+
+                    <!-- Transcript Testing Shortcuts (Mobile) -->
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200 mt-4">
+                        <label class="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
+                            <span class="text-xl">🧪</span>
+                            <span>快速測試</span>
+                        </label>
+                        <div class="grid grid-cols-3 gap-2 mb-2">
+                            <button id="loadGreenBtn" class="px-2 py-2 rounded-lg bg-green-500 text-white font-semibold text-xs transition-all hover:bg-green-600 shadow-sm">
+                                🟢 綠燈
+                            </button>
+                            <button id="loadYellowBtn" class="px-2 py-2 rounded-lg bg-yellow-500 text-white font-semibold text-xs transition-all hover:bg-yellow-600 shadow-sm">
+                                🟡 黃燈
+                            </button>
+                            <button id="loadRedBtn" class="px-2 py-2 rounded-lg bg-red-500 text-white font-semibold text-xs transition-all hover:bg-red-600 shadow-sm">
+                                🔴 紅燈
+                            </button>
+                        </div>
+                        <button id="quickTestAnalyzeBtn" class="w-full px-3 py-2.5 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold text-xs transition-all mb-2 shadow-md hover:shadow-lg">
+                            ⚡ 立即分析
+                        </button>
+                        <div class="flex gap-2">
+                            <button id="clearTranscriptBtn" class="flex-1 px-2 py-1.5 rounded-lg bg-gray-200 text-gray-700 font-semibold text-xs transition-all hover:bg-gray-300">
+                                清除
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            快速載入測試對話，無需語音辨識
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Safe Area Bottom Padding -->
@@ -723,6 +753,36 @@
                         </div>
                     </div>
 
+                    <!-- Transcript Testing Shortcuts (Desktop) -->
+                    <div class="mb-4">
+                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                            <label class="text-sm font-bold text-gray-800 flex items-center gap-2 mb-3">
+                                <span class="text-lg">🧪</span>
+                                <span>快速測試</span>
+                            </label>
+                            <div class="grid grid-cols-3 gap-2 mb-3">
+                                <button id="loadGreenBtnDesktop" class="px-3 py-2 rounded-lg bg-green-500 text-white font-bold text-sm transition-all hover:bg-green-600 shadow-md hover:shadow-lg">
+                                    🟢 綠燈
+                                </button>
+                                <button id="loadYellowBtnDesktop" class="px-3 py-2 rounded-lg bg-yellow-500 text-white font-bold text-sm transition-all hover:bg-yellow-600 shadow-md hover:shadow-lg">
+                                    🟡 黃燈
+                                </button>
+                                <button id="loadRedBtnDesktop" class="px-3 py-2 rounded-lg bg-red-500 text-white font-bold text-sm transition-all hover:bg-red-600 shadow-md hover:shadow-lg">
+                                    🔴 紅燈
+                                </button>
+                            </div>
+                            <button id="quickTestAnalyzeBtnDesktop" class="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold transition-all mb-3 shadow-md hover:shadow-lg">
+                                ⚡ 立即分析
+                            </button>
+                            <button id="clearTranscriptBtnDesktop" class="w-full px-3 py-2 rounded-lg bg-gray-200 text-gray-700 font-bold text-sm transition-all hover:bg-gray-300">
+                                清除對話記錄
+                            </button>
+                            <p class="text-xs text-gray-600 mt-3">
+                                快速載入測試對話，無需語音辨識
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Status Indicator - Enhanced -->
                     <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
                         <div class="flex items-center justify-between text-sm mb-2">
@@ -855,6 +915,10 @@
         let lastAutoAnalysisTime = 0; // Track last auto-analysis to prevent duplicates
         let analysisHistory = [];
         let isDemoMode = false; // Default to real recording, toggle switches to demo mode
+
+        // Dynamic analysis interval based on safety_level
+        let nextAnalysisInterval = 60; // Default 60 seconds
+        let lastSafetyLevel = 'green';
         let isVoiceSimEnabled = false; // Voice simulation toggle state (demo mode only)
         let currentProvider = 'gemini'; // 'gemini' or 'codeer' - Force to 'gemini' if Codeer is hidden
         let currentCodeerModel = 'gemini-flash'; // Codeer model selection (default: Gemini 2.5 Flash - fastest + best quality balance)
@@ -1031,6 +1095,105 @@
         // Desktop buttons
         if (emergencyModeBtnDesktop) emergencyModeBtnDesktop.addEventListener('click', () => setCounselingMode('emergency'));
         if (practiceModeBtnDesktop) practiceModeBtnDesktop.addEventListener('click', () => setCounselingMode('practice'));
+
+        // === Preset Transcript Testing Shortcuts ===
+        // Preset transcripts based on test_10min_realtime_simulation.py
+        const PRESET_TRANSCRIPTS = {
+            green: [
+                { speaker: 'counselor', text: '寶貝，今天在學校怎麼樣？', time: 0 },
+                { speaker: 'client', text: '還好啦。', time: 3 },
+                { speaker: 'counselor', text: '老師有說什麼嗎？', time: 5 },
+                { speaker: 'client', text: '沒有特別說什麼。', time: 8 },
+                { speaker: 'counselor', text: '那數學考試怎麼樣？', time: 11 },
+                { speaker: 'client', text: '還沒發下來。', time: 14 },
+                { speaker: 'counselor', text: '喔，那等發下來跟媽媽說一聲。', time: 17 },
+                { speaker: 'client', text: '好。', time: 20 }
+            ],
+            yellow: [
+                { speaker: 'counselor', text: '咦，這是什麼？數學考卷嗎？', time: 0 },
+                { speaker: 'client', text: '啊那個', time: 3 },
+                { speaker: 'counselor', text: '65分？你上次不是考85分嗎？', time: 5 },
+                { speaker: 'client', text: '這次比較難啦', time: 9 },
+                { speaker: 'counselor', text: '難？你是不是又一直玩手機沒認真讀書？', time: 12 },
+                { speaker: 'client', text: '我有認真讀啊', time: 16 },
+                { speaker: 'counselor', text: '認真？認真會這樣嗎？你每次都這樣，講都講不聽', time: 19 },
+                { speaker: 'client', text: '我就是努力了啊！為什麼你都不相信我！', time: 24 }
+            ],
+            red: [
+                { speaker: 'counselor', text: '你給我過來！這是什麼成績？', time: 0 },
+                { speaker: 'client', text: '我...', time: 3 },
+                { speaker: 'counselor', text: '50分！你知不知道這樣會被當掉？你還想不想讀書？', time: 5 },
+                { speaker: 'client', text: '我有努力啊...', time: 10 },
+                { speaker: 'counselor', text: '努力？努力會這樣？你是不是一直玩手機？', time: 13 },
+                { speaker: 'client', text: '我沒有一直玩手機', time: 18 },
+                { speaker: 'counselor', text: '沒有？那你成績怎麼會這麼差？你是不是覺得自己很笨？', time: 21 },
+                { speaker: 'client', text: '我就是笨！我什麼都做不好！', time: 27 },
+                { speaker: 'counselor', text: '你給我閉嘴！再哭我就把你手機沒收！', time: 32 }
+            ]
+        };
+
+        // Function to load preset transcript
+        function loadPresetTranscript(safetyLevel) {
+            const preset = PRESET_TRANSCRIPTS[safetyLevel];
+            if (!preset) {
+                console.error(`Unknown safety level: ${safetyLevel}`);
+                return;
+            }
+
+            console.log(`🧪 Loading ${safetyLevel.toUpperCase()} preset transcript (${preset.length} segments)`);
+
+            // Clear existing transcript
+            clearTranscript();
+
+            // Load preset segments
+            preset.forEach(segment => {
+                addTranscriptLine(segment.speaker, segment.text);
+            });
+
+            console.log(`✅ Loaded ${preset.length} transcript segments`);
+        }
+
+        // Function to clear transcript
+        function clearTranscript() {
+            transcriptSegments = [];
+            const transcript = document.getElementById('transcript');
+            if (transcript) {
+                // Keep only the header
+                const header = transcript.querySelector('.text-xs.text-gray-500.mb-3');
+                transcript.innerHTML = '';
+                if (header) {
+                    transcript.appendChild(header);
+                }
+            }
+
+            console.log('🗑️ Transcript cleared');
+        }
+
+        // Event listeners for mobile shortcut buttons
+        const loadGreenBtn = document.getElementById('loadGreenBtn');
+        const loadYellowBtn = document.getElementById('loadYellowBtn');
+        const loadRedBtn = document.getElementById('loadRedBtn');
+        const quickTestAnalyzeBtn = document.getElementById('quickTestAnalyzeBtn');
+        const clearTranscriptBtn = document.getElementById('clearTranscriptBtn');
+
+        if (loadGreenBtn) loadGreenBtn.addEventListener('click', () => loadPresetTranscript('green'));
+        if (loadYellowBtn) loadYellowBtn.addEventListener('click', () => loadPresetTranscript('yellow'));
+        if (loadRedBtn) loadRedBtn.addEventListener('click', () => loadPresetTranscript('red'));
+        if (quickTestAnalyzeBtn) quickTestAnalyzeBtn.addEventListener('click', analyzeTranscript);
+        if (clearTranscriptBtn) clearTranscriptBtn.addEventListener('click', clearTranscript);
+
+        // Event listeners for desktop shortcut buttons
+        const loadGreenBtnDesktop = document.getElementById('loadGreenBtnDesktop');
+        const loadYellowBtnDesktop = document.getElementById('loadYellowBtnDesktop');
+        const loadRedBtnDesktop = document.getElementById('loadRedBtnDesktop');
+        const quickTestAnalyzeBtnDesktop = document.getElementById('quickTestAnalyzeBtnDesktop');
+        const clearTranscriptBtnDesktop = document.getElementById('clearTranscriptBtnDesktop');
+
+        if (loadGreenBtnDesktop) loadGreenBtnDesktop.addEventListener('click', () => loadPresetTranscript('green'));
+        if (loadYellowBtnDesktop) loadYellowBtnDesktop.addEventListener('click', () => loadPresetTranscript('yellow'));
+        if (loadRedBtnDesktop) loadRedBtnDesktop.addEventListener('click', () => loadPresetTranscript('red'));
+        if (quickTestAnalyzeBtnDesktop) quickTestAnalyzeBtnDesktop.addEventListener('click', analyzeTranscript);
+        if (clearTranscriptBtnDesktop) clearTranscriptBtnDesktop.addEventListener('click', clearTranscript);
 
         // Audio Player Controls
         if (audioPlayBtn) audioPlayBtn.addEventListener('click', toggleAudioPlayback);
@@ -2032,8 +2195,8 @@
             if (recordingTimer) recordingTimer.textContent = timeString;
             if (recordingTimerMobile) recordingTimerMobile.textContent = timeString;
 
-            // Auto-analysis every 60 seconds
-            if (elapsed > 0 && elapsed % 60 === 0 && elapsed !== lastAutoAnalysisTime) {
+            // Auto-analysis at dynamic intervals (based on safety_level)
+            if (elapsed > 0 && elapsed % nextAnalysisInterval === 0 && elapsed !== lastAutoAnalysisTime) {
                 lastAutoAnalysisTime = elapsed;
 
                 // Only trigger if we have transcript content
@@ -2051,10 +2214,51 @@
             if (!isRecording) return;
 
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const remaining = 60 - (elapsed % 60);
+            const remaining = nextAnalysisInterval - (elapsed % nextAnalysisInterval);
             nextAnalysis.textContent = `${remaining} 秒`;
 
             setTimeout(() => updateNextAnalysisCountdown(), 1000);
+        }
+
+        // Update analysis interval based on safety_level
+        function updateAnalysisInterval(safetyLevel) {
+            const intervalMap = {
+                green: 60,   // Safe: check every 60 seconds
+                yellow: 30,  // Warning: check every 30 seconds
+                red: 15      // Critical: check every 15 seconds
+            };
+
+            const newInterval = intervalMap[safetyLevel] || 60;
+
+            // Only log and notify if interval actually changed
+            if (newInterval !== nextAnalysisInterval) {
+                nextAnalysisInterval = newInterval;
+                lastSafetyLevel = safetyLevel;
+
+                const emoji = {green: '🟢', yellow: '🟡', red: '🔴'}[safetyLevel] || '⚪';
+                const levelText = {green: '安全', yellow: '警示', red: '高風險'}[safetyLevel] || '未知';
+                console.log(`⏱️ Analysis interval updated: ${nextAnalysisInterval}s (${safetyLevel.toUpperCase()} - ${levelText})`);
+
+                // Show visual notification
+                showIntervalChangeNotification(safetyLevel, newInterval);
+            }
+        }
+
+        // Show notification when interval changes
+        function showIntervalChangeNotification(safetyLevel, interval) {
+            const emoji = {green: '🟢', yellow: '🟡', red: '🔴'}[safetyLevel] || '⚪';
+            const levelText = {
+                green: '安全對話',
+                yellow: '警示對話',
+                red: '高風險對話'
+            }[safetyLevel] || '對話';
+
+            const message = `${emoji} 偵測到${levelText}，下次分析時間調整為 ${interval} 秒`;
+
+            console.log(`📢 ${message}`);
+
+            // If toast notification system exists, use it; otherwise just log
+            // You could add a toast notification here if needed
         }
 
         // === Transcript Management ===
@@ -2179,6 +2383,12 @@
                 if (!analysis.recording_timestamp) {
                     analysis.recording_timestamp = recordingTimestamp;
                 }
+
+                // Update analysis interval based on safety_level
+                if (analysis.safety_level) {
+                    updateAnalysisInterval(analysis.safety_level);
+                }
+
                 displayAnalysisCard(analysis);
 
             } catch (error) {
@@ -2342,21 +2552,21 @@
             let riskConfig = {
                 'red': {
                     emoji: '🔴',
-                    label: '高風險',
+                    label: '危險',
                     cardBg: 'bg-red-50',
                     borderColor: 'border-red-300',
                     headerBg: 'bg-red-100',
                     textColor: 'text-red-700',
-                    title: '高風險：需立即關注'
+                    title: '危險：立即修正'
                 },
                 'yellow': {
                     emoji: '💛',
-                    label: '注意',
+                    label: '警示',
                     cardBg: 'bg-yellow-50',
                     borderColor: 'border-yellow-300',
                     headerBg: 'bg-yellow-100',
                     textColor: 'text-yellow-700',
-                    title: '中風險：需要注意'
+                    title: '警示：需要調整'
                 },
                 'green': {
                     emoji: '💚',
@@ -2376,9 +2586,9 @@
 
             // Use error styling if this is an error response
             const isError = analysis.is_error || (analysis.summary && analysis.summary.includes('失敗'));
-            // Set card background and border based on risk level
-            const cardBgColor = analysis.risk_level ? (riskConfig[analysis.risk_level]?.cardBg || 'bg-white') : 'bg-white';
-            const cardBorderColor = analysis.risk_level ? (riskConfig[analysis.risk_level]?.borderColor || 'border-gray-300') : 'border-gray-300';
+            // Set card background and border based on safety level
+            const cardBgColor = analysis.safety_level ? (riskConfig[analysis.safety_level]?.cardBg || 'bg-white') : 'bg-white';
+            const cardBorderColor = analysis.safety_level ? (riskConfig[analysis.safety_level]?.borderColor || 'border-gray-300') : 'border-gray-300';
             card.className = `${cardBgColor} rounded-xl shadow-md hover:shadow-lg transition-shadow p-4 md:p-5 border-2 ${cardBorderColor} fade-in card-hover`;
 
             // Determine severity for alerts
@@ -2446,7 +2656,7 @@
                    </span>`;
             }
 
-            const currentRisk = riskConfig[analysis.risk_level] || riskConfig['green'];
+            const currentRisk = riskConfig[analysis.safety_level] || riskConfig['green'];
 
             card.innerHTML = `
                 <!-- Risk Level Header - Prominent Display -->
