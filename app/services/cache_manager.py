@@ -56,25 +56,24 @@ class CacheManager:
         self,
         session_id: str,
         system_instruction: str,
-        accumulated_transcript: str,
         ttl_seconds: int = 7200,
     ) -> Tuple[caching.CachedContent | None, bool]:
         """
-        Get or create cache for a session (Strategy A: Always update)
+        Get or create cache for a session (Strategy B: Cache once per session)
 
-        Strategy A: Delete old cache and create new one with updated transcript.
-        This ensures cache always contains the latest accumulated conversation.
+        Strategy B: Create cache once per session with only system instruction.
+        This ensures cache hit for subsequent requests with same session_id.
+        Variable content (transcript) should be sent as user_prompt instead.
 
         Args:
             session_id: Unique session identifier
-            system_instruction: System instruction for Gemini
-            accumulated_transcript: Accumulated conversation transcript
+            system_instruction: System instruction for Gemini (200 suggestions + rules)
             ttl_seconds: Time-to-live in seconds (default: 2 hours)
 
         Returns:
             Tuple of (CachedContent | None, is_new)
             - CachedContent: The cache object (None if content too short)
-            - is_new: Always True for Strategy A (always recreating)
+            - is_new: True if cache was created, False if reusing existing
 
         Raises:
             Exception: If cache creation/retrieval fails
@@ -84,50 +83,54 @@ class CacheManager:
         cache_display_name = f"counseling_session_{session_id}"
 
         try:
-            # Step 1: Find and delete existing cache (if any)
-            # Gracefully handle permission errors (e.g., missing cachedContents.list permission)
+            # Step 1: Check if cache already exists (Strategy B: reuse existing)
+            existing_cache = None
             try:
                 existing_caches = caching.CachedContent.list()
                 for cache in existing_caches:
                     if cache.display_name == cache_display_name:
                         logger.info(
-                            f"Found existing cache, deleting to update with new content: {cache.name}"
+                            f"Found existing cache for session {session_id}: {cache.name}, "
+                            f"expires at {cache.expire_time}"
                         )
-                        cache.delete()
+                        existing_cache = cache
                         break
             except Exception as list_error:
-                # If list() fails (e.g., permission denied), skip deletion and proceed to create
-                # This is acceptable because:
-                # 1. For new sessions, there won't be existing caches anyway
-                # 2. Gemini will auto-expire old caches based on TTL
+                # If list() fails (e.g., permission denied), proceed to create
                 logger.warning(
                     f"Cannot list existing caches (permission denied or API error): {list_error}. "
-                    f"Proceeding to create new cache without checking for existing ones."
+                    f"Proceeding to create new cache."
                 )
 
-            # Step 2: Check if content is long enough for caching
-            combined_content = system_instruction + "\n\n" + accumulated_transcript
-            estimated_tokens = self.estimate_token_count(combined_content)
+            # Step 2: Return existing cache if found (cache hit!)
+            if existing_cache:
+                logger.info(
+                    f"Reusing existing cache for session {session_id} (cache hit!)"
+                )
+                return existing_cache, False  # is_new=False for cache hit
+
+            # Step 3: Check if content is long enough for caching
+            estimated_tokens = self.estimate_token_count(system_instruction)
 
             if estimated_tokens < self.MIN_CACHE_TOKENS:
                 logger.info(
                     f"Content too short for caching: {estimated_tokens} tokens "
                     f"(minimum: {self.MIN_CACHE_TOKENS}). "
-                    f"Transcript length: {len(accumulated_transcript)} chars"
+                    f"System instruction length: {len(system_instruction)} chars"
                 )
                 return None, False
 
-            # Step 3: Create new cache with updated accumulated transcript
+            # Step 4: Create new cache with only system instruction (immutable content)
             logger.info(
                 f"Creating new cache for session: {session_id}, "
                 f"estimated tokens: {estimated_tokens}, "
-                f"transcript length: {len(accumulated_transcript)} chars"
+                f"system instruction length: {len(system_instruction)} chars"
             )
 
             cached_content = caching.CachedContent.create(
                 model_name=self.model_name,
                 system_instruction=system_instruction,
-                contents=[accumulated_transcript],
+                # No contents parameter - only cache system instruction
                 ttl=f"{ttl_seconds}s",
                 display_name=cache_display_name,
             )
@@ -137,7 +140,7 @@ class CacheManager:
                 f"expires at {cached_content.expire_time}"
             )
 
-            # Strategy A always returns is_new=True (always recreating)
+            # Strategy B returns is_new=True only when creating new cache
             return cached_content, True
 
         except Exception as e:

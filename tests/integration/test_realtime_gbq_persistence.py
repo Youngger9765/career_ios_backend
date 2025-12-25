@@ -84,25 +84,110 @@ class TestRealtimeGBQPersistence:
             call_args = mock_gbq_write.call_args
             gbq_data = call_args[0][0] if call_args[0] else call_args[1].get("data")
 
-            # Validate GBQ data structure
+            # Validate GBQ data structure - Basic info
             assert "id" in gbq_data, "GBQ data should have UUID id"
             assert "tenant_id" in gbq_data
             assert gbq_data["tenant_id"] == "island_parents"
             assert "session_id" in gbq_data
-            assert (
-                gbq_data["session_id"] is None
-            ), "Web version should have None session_id"
             assert "analyzed_at" in gbq_data
+            assert "created_at" in gbq_data
+
+            # Analysis results
             assert "analysis_type" in gbq_data
             assert gbq_data["analysis_type"] == "emergency"
             assert "safety_level" in gbq_data
             assert gbq_data["safety_level"] in ["green", "yellow", "red"]
             assert "matched_suggestions" in gbq_data
             assert isinstance(gbq_data["matched_suggestions"], list)
-            assert "transcript_segment" in gbq_data
-            assert "response_time_ms" in gbq_data
-            assert isinstance(gbq_data["response_time_ms"], (int, float))
-            assert "created_at" in gbq_data
+
+            # Complete transcript (NO truncation!)
+            assert "transcript" in gbq_data, "Should have full transcript"
+            assert (
+                gbq_data["transcript"] == request["transcript"]
+            ), "Transcript should NOT be truncated"
+            assert "time_range" in gbq_data
+            assert gbq_data["time_range"] == "0:00-1:00"
+
+            # Complete analysis result
+            assert "analysis_result" in gbq_data
+            assert isinstance(gbq_data["analysis_result"], dict)
+
+            # NEW: Prompt information
+            assert "system_prompt" in gbq_data, "Should capture system prompt"
+            assert "user_prompt" in gbq_data, "Should capture user prompt"
+            assert "prompt_template" in gbq_data, "Should capture prompt template name"
+
+            # RAG information
+            assert "rag_used" in gbq_data
+            assert isinstance(gbq_data["rag_used"], bool)
+            assert "rag_documents" in gbq_data
+            assert "rag_sources" in gbq_data
+            assert isinstance(gbq_data["rag_sources"], list)
+            # NEW: RAG metadata
+            assert "rag_query" in gbq_data, "Should capture RAG query"
+            assert "rag_top_k" in gbq_data, "Should capture RAG top_k parameter"
+            assert (
+                "rag_similarity_threshold" in gbq_data
+            ), "Should capture similarity threshold"
+
+            # Model & Provider info
+            assert "provider" in gbq_data
+            assert gbq_data["provider"] == "gemini"
+            assert "model_name" in gbq_data
+            assert gbq_data["model_name"] != ""
+            # NEW: Model version
+            assert "model_version" in gbq_data, "Should capture model version"
+
+            # Token usage
+            assert "prompt_tokens" in gbq_data
+            assert isinstance(gbq_data["prompt_tokens"], int)
+            assert "completion_tokens" in gbq_data
+            assert isinstance(gbq_data["completion_tokens"], int)
+            assert "total_tokens" in gbq_data
+            assert isinstance(gbq_data["total_tokens"], int)
+            assert "estimated_cost_usd" in gbq_data
+            assert isinstance(gbq_data["estimated_cost_usd"], float)
+            # NEW: Cached tokens
+            assert "cached_tokens" in gbq_data, "Should track cached tokens"
+            assert isinstance(gbq_data["cached_tokens"], int)
+
+            # Performance metrics
+            assert "start_time" in gbq_data
+            assert "end_time" in gbq_data
+            assert "duration_ms" in gbq_data
+            assert isinstance(gbq_data["duration_ms"], int)
+            assert gbq_data["duration_ms"] > 0
+            assert "api_response_time_ms" in gbq_data
+            assert isinstance(gbq_data["api_response_time_ms"], (int, float))
+            # NEW: Detailed timing breakdown
+            assert "rag_search_time_ms" in gbq_data, "Should track RAG search time"
+            assert isinstance(gbq_data["rag_search_time_ms"], int)
+            assert "llm_call_time_ms" in gbq_data, "Should track LLM call time"
+            assert isinstance(gbq_data["llm_call_time_ms"], int)
+
+            # NEW: LLM response metadata
+            assert "llm_raw_response" in gbq_data, "Should capture raw LLM response"
+            assert (
+                "analysis_reasoning" in gbq_data
+            ), "Should capture reasoning from analysis"
+
+            # Cache information
+            assert "use_cache" in gbq_data
+            assert isinstance(gbq_data["use_cache"], bool)
+            # NEW: Extended cache metadata
+            assert "cache_hit" in gbq_data, "Should track cache hit"
+            assert isinstance(gbq_data["cache_hit"], bool)
+            assert "cache_key" in gbq_data, "Should track cache key"
+            assert "gemini_cache_ttl" in gbq_data, "Should track cache TTL"
+
+            # Request context
+            assert "speakers" in gbq_data
+            assert isinstance(gbq_data["speakers"], list)
+            assert len(gbq_data["speakers"]) == 2
+            assert "mode" in gbq_data
+            assert gbq_data["mode"] == "emergency"
+            # NEW: Request ID
+            assert "request_id" in gbq_data, "Should have request ID"
 
     @skip_without_gcp
     def test_gbq_write_failure_does_not_block_api_response(self, client, db_session):
@@ -176,12 +261,13 @@ class TestRealtimeGBQPersistence:
             ), "Practice mode should have 3-4 suggestions"
 
     @skip_without_gcp
-    def test_gbq_data_includes_response_time_metric(self, client, db_session):
-        """GBQ data should include API response time for performance monitoring
+    def test_gbq_data_includes_performance_metrics(self, client, db_session):
+        """GBQ data should include complete performance metrics for monitoring
 
         Expected behavior (RED - will fail until implemented):
-        - response_time_ms is calculated and included
-        - Value is positive integer/float in milliseconds
+        - start_time, end_time, duration_ms are calculated and included
+        - api_response_time_ms is calculated
+        - All values are valid and positive
         """
         with patch("app.api.realtime.write_to_gbq_async") as mock_gbq_write:
             mock_gbq_write.return_value = None
@@ -197,13 +283,145 @@ class TestRealtimeGBQPersistence:
             response = client.post("/api/v1/realtime/analyze", json=request)
             assert response.status_code == 200
 
-            # Verify response time is recorded
+            # Verify performance metrics
             call_args = mock_gbq_write.call_args
             gbq_data = call_args[0][0] if call_args[0] else call_args[1].get("data")
 
-            assert "response_time_ms" in gbq_data
-            assert isinstance(gbq_data["response_time_ms"], (int, float))
-            assert gbq_data["response_time_ms"] > 0, "Response time should be positive"
+            assert "start_time" in gbq_data
+            assert "end_time" in gbq_data
+            assert "duration_ms" in gbq_data
+            assert isinstance(gbq_data["duration_ms"], int)
+            assert gbq_data["duration_ms"] > 0, "Duration should be positive"
+
+            assert "api_response_time_ms" in gbq_data
+            assert isinstance(gbq_data["api_response_time_ms"], (int, float))
+            assert (
+                gbq_data["api_response_time_ms"] > 0
+            ), "API response time should be positive"
+
+    @skip_without_gcp
+    def test_complete_transcript_stored_without_truncation(self, client, db_session):
+        """Complete transcript should be stored WITHOUT any truncation
+
+        Expected behavior (RED - will fail until implemented):
+        - Full transcript is stored, not limited to 1000 chars
+        - Long transcripts (> 1000 chars) are stored completely
+        - time_range is included
+        """
+        with patch("app.api.realtime.write_to_gbq_async") as mock_gbq_write:
+            mock_gbq_write.return_value = None
+
+            # Create a long transcript (> 1000 chars)
+            long_transcript = "家長：" + "這是很長的對話內容。" * 100  # ~1500 chars
+
+            request = {
+                "transcript": long_transcript,
+                "speakers": [{"speaker": "client", "text": long_transcript}],
+                "time_range": "0:00-2:30",
+                "mode": "emergency",
+                "provider": "gemini",
+            }
+
+            response = client.post("/api/v1/realtime/analyze", json=request)
+            assert response.status_code == 200
+
+            # Verify complete transcript is stored
+            call_args = mock_gbq_write.call_args
+            gbq_data = call_args[0][0] if call_args[0] else call_args[1].get("data")
+
+            assert "transcript" in gbq_data
+            assert (
+                gbq_data["transcript"] == long_transcript
+            ), "Transcript should NOT be truncated"
+            assert (
+                len(gbq_data["transcript"]) > 1000
+            ), "Long transcript should exceed 1000 chars"
+            assert "time_range" in gbq_data
+            assert gbq_data["time_range"] == "0:00-2:30"
+
+    @skip_without_gcp
+    def test_rag_metadata_stored_when_rag_used(self, client, db_session):
+        """RAG metadata should be stored when RAG is triggered
+
+        Expected behavior (RED - will fail until implemented):
+        - rag_used is True when parenting keywords detected
+        - rag_documents contains full RAG search results
+        - rag_sources contains document titles
+        """
+        with patch("app.api.realtime.write_to_gbq_async") as mock_gbq_write:
+            mock_gbq_write.return_value = None
+
+            # Use parenting keywords to trigger RAG
+            request = {
+                "transcript": "家長：孩子最近很叛逆，情緒管理很差，我該怎麼教養他？",
+                "speakers": [
+                    {
+                        "speaker": "client",
+                        "text": "孩子最近很叛逆，情緒管理很差，我該怎麼教養他？",
+                    }
+                ],
+                "time_range": "0:00-1:00",
+                "mode": "practice",
+                "provider": "gemini",
+            }
+
+            response = client.post("/api/v1/realtime/analyze", json=request)
+            assert response.status_code == 200
+
+            # Verify RAG metadata
+            call_args = mock_gbq_write.call_args
+            gbq_data = call_args[0][0] if call_args[0] else call_args[1].get("data")
+
+            assert "rag_used" in gbq_data
+            assert isinstance(gbq_data["rag_used"], bool)
+            # RAG may or may not be used depending on database content
+            # Just verify fields are present
+            assert "rag_documents" in gbq_data
+            assert "rag_sources" in gbq_data
+            assert isinstance(gbq_data["rag_sources"], list)
+
+    @skip_without_gcp
+    def test_token_usage_and_cost_tracked(self, client, db_session):
+        """Token usage and estimated cost should be tracked for all providers
+
+        Expected behavior (RED - will fail until implemented):
+        - prompt_tokens, completion_tokens, total_tokens are recorded
+        - estimated_cost_usd is calculated
+        - Values are non-negative
+        """
+        with patch("app.api.realtime.write_to_gbq_async") as mock_gbq_write:
+            mock_gbq_write.return_value = None
+
+            request = {
+                "transcript": "家長：你今天在學校過得如何？",
+                "speakers": [{"speaker": "client", "text": "你今天在學校過得如何？"}],
+                "time_range": "0:00-1:00",
+                "mode": "emergency",
+                "provider": "gemini",
+            }
+
+            response = client.post("/api/v1/realtime/analyze", json=request)
+            assert response.status_code == 200
+
+            # Verify token usage and cost
+            call_args = mock_gbq_write.call_args
+            gbq_data = call_args[0][0] if call_args[0] else call_args[1].get("data")
+
+            assert "prompt_tokens" in gbq_data
+            assert isinstance(gbq_data["prompt_tokens"], int)
+            assert gbq_data["prompt_tokens"] >= 0
+
+            assert "completion_tokens" in gbq_data
+            assert isinstance(gbq_data["completion_tokens"], int)
+            assert gbq_data["completion_tokens"] >= 0
+
+            assert "total_tokens" in gbq_data
+            assert isinstance(gbq_data["total_tokens"], int)
+            assert gbq_data["total_tokens"] >= 0
+
+            assert "estimated_cost_usd" in gbq_data
+            assert isinstance(gbq_data["estimated_cost_usd"], float)
+            assert gbq_data["estimated_cost_usd"] >= 0.0
 
     @skip_without_gcp
     def test_gbq_write_logs_errors_without_failing_silently(
@@ -244,3 +462,65 @@ class TestRealtimeGBQPersistence:
                 "BigQuery" in record.message or "GBQ" in record.message
                 for record in caplog.records
             ), "GBQ errors should be logged"
+
+    @skip_without_gcp
+    def test_rag_timing_and_prompts_tracked(self, client, db_session):
+        """RAG search timing and prompts should be tracked for observability
+
+        Expected behavior (RED - will fail until implemented):
+        - rag_search_time_ms is tracked when RAG is used
+        - system_prompt and user_prompt are captured
+        - llm_raw_response is stored
+        - All timing values are non-negative
+        """
+        with patch("app.api.realtime.write_to_gbq_async") as mock_gbq_write:
+            mock_gbq_write.return_value = None
+
+            # Use parenting keywords to potentially trigger RAG
+            request = {
+                "transcript": "家長：孩子最近很叛逆，情緒管理很差，我該怎麼教養他？",
+                "speakers": [
+                    {
+                        "speaker": "client",
+                        "text": "孩子最近很叛逆，情緒管理很差，我該怎麼教養他？",
+                    }
+                ],
+                "time_range": "0:00-1:00",
+                "mode": "practice",
+                "provider": "gemini",
+            }
+
+            response = client.post("/api/v1/realtime/analyze", json=request)
+            assert response.status_code == 200
+
+            # Verify timing and prompt tracking
+            call_args = mock_gbq_write.call_args
+            gbq_data = call_args[0][0] if call_args[0] else call_args[1].get("data")
+
+            # Timing breakdown
+            assert "rag_search_time_ms" in gbq_data
+            assert isinstance(gbq_data["rag_search_time_ms"], int)
+            assert gbq_data["rag_search_time_ms"] >= 0
+
+            assert "llm_call_time_ms" in gbq_data
+            assert isinstance(gbq_data["llm_call_time_ms"], int)
+            assert gbq_data["llm_call_time_ms"] > 0
+
+            # Prompts
+            assert "system_prompt" in gbq_data
+            assert gbq_data["system_prompt"] is not None
+            assert (
+                len(gbq_data["system_prompt"]) > 100
+            )  # Should have substantial content
+
+            assert "user_prompt" in gbq_data
+            assert gbq_data["user_prompt"] is not None
+            assert request["transcript"] in gbq_data["user_prompt"]
+
+            # LLM raw response
+            assert "llm_raw_response" in gbq_data
+            assert gbq_data["llm_raw_response"] is not None
+
+            # Request ID
+            assert "request_id" in gbq_data
+            assert gbq_data["request_id"] is not None

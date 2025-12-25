@@ -51,8 +51,15 @@ class RealtimeAnalyzeRequest(BaseModel):
         default=CounselingMode.practice,
         description="Counseling mode: 'emergency' (simplified) or 'practice' (detailed, default)",
     )
-    transcript: str = Field(..., min_length=1, description="完整逐字稿（過去 1 分鐘）")
-    speakers: List[SpeakerSegment] = Field(..., description="Speaker 片段列表")
+    transcript: str = Field(
+        ...,
+        min_length=1,
+        description="累積的完整逐字稿（從開始到現在所有內容，前端持續累加發送）",
+    )
+    speakers: List[SpeakerSegment] | None = Field(
+        default=None,
+        description="Speaker 片段列表（前端目前不提供，STT 無法識別說話者）",
+    )
     time_range: str = Field(..., description="時間範圍（例如：0:00-1:00）")
     use_cache: bool = Field(default=True, description="是否使用 Gemini context caching")
     session_id: str = Field(default="", description="會談 session ID（用於 cache key）")
@@ -129,6 +136,7 @@ class CacheMetadata(BaseModel):
 
     cache_name: str = Field(..., description="Cache 名稱")
     cache_created: bool = Field(..., description="是否為新建的 cache")
+    cache_hit: bool = Field(default=False, description="是否 hit cache（Strategy B）")
     cached_tokens: int = Field(default=0, description="從 cache 讀取的 token 數")
     prompt_tokens: int = Field(default=0, description="新增的 prompt token 數")
     error: str = Field(default="", description="錯誤訊息（如有）")

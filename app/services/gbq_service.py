@@ -58,6 +58,11 @@ class GBQService:
             No exceptions raised - all errors are caught and logged
         """
         try:
+            # Ensure table exists before writing
+            if not self.ensure_table_exists():
+                logger.error("Failed to ensure table exists, cannot write to BigQuery")
+                return False
+
             # Helper function to serialize datetime objects
             def serialize_datetime(obj):
                 if isinstance(obj, datetime):
@@ -94,11 +99,6 @@ class GBQService:
                 "created_at": serialize_datetime(created_at),
                 # Complete transcript (NO truncation!)
                 "transcript": data.get("transcript"),
-                # Backwards compatibility: support both transcript_segment (old) and transcript (new)
-                "transcript_segment": data.get("transcript_segment")
-                or (
-                    data.get("transcript", "")[:200] if data.get("transcript") else None
-                ),
                 "time_range": data.get("time_range"),
                 "speakers": ensure_json_serializable(
                     data.get("speakers")
@@ -124,11 +124,7 @@ class GBQService:
                 "start_time": serialize_datetime(start_time),
                 "end_time": serialize_datetime(end_time),
                 "duration_ms": data.get("duration_ms", 0),
-                # Backwards compatibility: support both response_time_ms (old) and api_response_time_ms (new)
-                "api_response_time_ms": data.get("api_response_time_ms")
-                or data.get("response_time_ms", 0),
-                "response_time_ms": data.get("response_time_ms")
-                or data.get("api_response_time_ms", 0),
+                "api_response_time_ms": data.get("api_response_time_ms", 0),
                 "rag_search_time_ms": data.get("rag_search_time_ms", 0),
                 "llm_call_time_ms": data.get("llm_call_time_ms", 0),
                 # Analysis results

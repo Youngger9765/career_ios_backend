@@ -37,8 +37,22 @@ gemini_service = GeminiService()
 openai_service = OpenAIService()
 cache_manager = CacheManager()
 
-# System instruction for cache (固定不變的部分)
-CACHE_SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
+
+# Build CACHE_SYSTEM_INSTRUCTION with 200 expert suggestions (immutable content for caching)
+def _build_cache_system_instruction() -> str:
+    """Build system instruction for caching (includes 200 expert suggestions)."""
+    from app.config.parenting_suggestions import (
+        GREEN_SUGGESTIONS,
+        RED_SUGGESTIONS,
+        YELLOW_SUGGESTIONS,
+    )
+
+    # Format suggestion lists for cache
+    green_list = "\n".join([f"  - {s}" for s in GREEN_SUGGESTIONS])
+    yellow_list = "\n".join([f"  - {s}" for s in YELLOW_SUGGESTIONS])
+    red_list = "\n".join([f"  - {s}" for s in RED_SUGGESTIONS])
+
+    return f"""你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
 
 【角色定義】CRITICAL - 必須嚴格遵守：
 - "counselor" = 諮詢師/輔導師（專業助人者，提供協助的一方）
@@ -71,9 +85,20 @@ CACHE_SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對�
    - 避免抽象概念，用具體做法
    - 不要冗長的步驟說明或對話範例
 
+【專家建議句庫】請從以下 200 句專家建議中選擇最符合當前對話的：
+
+🟢 綠色｜對話安全：
+{green_list}
+
+🟡 黃色｜需要調整：
+{yellow_list}
+
+🔴 紅色｜立刻修正：
+{red_list}
+
 【輸出格式】請提供以下 JSON 格式回應：
 
-{
+{{
   "summary": "案主處境簡述（1-2 句）",
   "alerts": [
     "💡 同理案主感受（1 句）",
@@ -83,7 +108,7 @@ CACHE_SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對�
     "💡 核心建議（簡短，< 50 字）",
     "💡 具體做法（簡短，< 50 字）"
   ]
-}
+}}
 
 【語氣要求】溫和、同理、簡潔，避免批判或過度說教
 
@@ -93,6 +118,10 @@ CACHE_SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對�
 - 不要僅憑一般常識或想像回答專業問題
 - 如果知識庫內容相關，請在建議中融入（不需明確標注來源）
 """
+
+
+# Initialize CACHE_SYSTEM_INSTRUCTION (immutable, includes 200 expert suggestions)
+CACHE_SYSTEM_INSTRUCTION = _build_cache_system_instruction()
 
 # Parenting-related keywords that trigger RAG search
 # Keywords organized by category for better maintainability
@@ -773,13 +802,30 @@ async def analyze_transcript(
     """
     import time
 
+    # Track start time for performance metrics
+    analysis_start_time = datetime.now(timezone.utc)
     start_time = time.time()
+    request_id = str(uuid.uuid4())
+
+    # Initialize tracking variables for complete observability
+    rag_search_time_ms = 0
+    llm_call_time_ms = 0
+    system_prompt_used = None
+    user_prompt_used = None
+    rag_query = None
+    rag_top_k = None
+    rag_similarity_threshold = None
+    cached_tokens = 0
+    cache_hit = False
+    cache_key = None
 
     try:
-        # Convert speakers to dict format for service
-        speakers_dict = [
-            {"speaker": s.speaker, "text": s.text} for s in request.speakers
-        ]
+        # Convert speakers to dict format for service (handle None from frontend)
+        speakers_dict = (
+            [{"speaker": s.speaker, "text": s.text} for s in request.speakers]
+            if request.speakers
+            else []
+        )
 
         # Assess risk level based on transcript content
         risk_level = _assess_risk_level(request.transcript, speakers_dict)
@@ -791,8 +837,22 @@ async def analyze_transcript(
 
         if _detect_parenting_keywords(request.transcript):
             logger.info("Parenting keywords detected, triggering RAG search")
+            # Track RAG search timing
+            rag_search_start = time.time()
+            rag_query = request.transcript  # Store the query for observability
+            rag_top_k = 3
+            rag_similarity_threshold = 0.5
+
             rag_sources = await _search_rag_knowledge(
-                transcript=request.transcript, db=db, top_k=3, similarity_threshold=0.5
+                transcript=request.transcript,
+                db=db,
+                top_k=rag_top_k,
+                similarity_threshold=rag_similarity_threshold,
+            )
+
+            rag_search_time_ms = int((time.time() - rag_search_start) * 1000)
+            logger.info(
+                f"RAG search completed in {rag_search_time_ms}ms, found {len(rag_sources)} sources"
             )
 
             # Build RAG context for Gemini prompt
@@ -804,13 +864,20 @@ async def analyze_transcript(
                     )
                 rag_context = "\n".join(rag_context_parts)
 
-        # Select prompt based on counseling mode
+        # Select prompt based on counseling mode and capture for observability
         if request.mode == CounselingMode.emergency:
             logger.info("Using EMERGENCY mode (simplified prompt)")
             custom_prompt = _build_emergency_prompt(request.transcript, rag_context)
+            prompt_template = "emergency_mode_prompt"
         else:
             logger.info("Using PRACTICE mode (detailed prompt)")
             custom_prompt = _build_practice_prompt(request.transcript, rag_context)
+            prompt_template = "practice_mode_prompt"
+
+        # Capture system prompt for observability
+        system_prompt_used = CACHE_SYSTEM_INSTRUCTION
+        # Capture user prompt for observability
+        user_prompt_used = custom_prompt
 
         # Initialize variables
         analysis = {}
@@ -867,11 +934,12 @@ async def analyze_transcript(
                         f"attempting to get or create cache"
                     )
 
-                    # Get or create cache with accumulated transcript
+                    # Get or create cache (only system instruction is cached)
+                    # Transcript is sent as user_prompt in analyze_with_cache()
                     cached_content, is_new = await cache_manager.get_or_create_cache(
                         session_id=request.session_id,
                         system_instruction=CACHE_SYSTEM_INSTRUCTION,
-                        accumulated_transcript=request.transcript,
+                        # accumulated_transcript removed - not part of cache
                         ttl_seconds=7200,  # 2 hours
                     )
 
@@ -880,21 +948,33 @@ async def analyze_transcript(
                         logger.info(
                             "Content too short for caching, using standard analysis"
                         )
+                        # Track LLM call timing
+                        llm_call_start = time.time()
                         analysis = await gemini_service.analyze_realtime_transcript(
                             transcript=request.transcript,
                             speakers=speakers_dict,
                             rag_context=rag_context,
                             custom_prompt=custom_prompt,
                         )
+                        llm_call_time_ms = int((time.time() - llm_call_start) * 1000)
+
                         cache_metadata = CacheMetadata(
                             cache_name="",
                             cache_created=False,
+                            cache_hit=False,
                             cached_tokens=0,
                             prompt_tokens=0,
                             message="對話內容較短，尚未啟用 cache（需 >= 1024 tokens）",
                         )
                     else:
                         # Analyze with cache
+                        # Track LLM call timing
+                        llm_call_start = time.time()
+                        cache_key = cached_content.name
+                        cache_hit = (
+                            not is_new  # If cache was not newly created, it was a hit
+                        )
+
                         analysis = await gemini_service.analyze_with_cache(
                             cached_content=cached_content,
                             transcript=request.transcript,
@@ -902,15 +982,19 @@ async def analyze_transcript(
                             rag_context=rag_context,
                             custom_prompt=custom_prompt,
                         )
+                        llm_call_time_ms = int((time.time() - llm_call_start) * 1000)
 
                         # Extract cache metadata from usage_metadata
                         usage_metadata = analysis.get("usage_metadata", {})
+                        cached_tokens = usage_metadata.get(
+                            "cached_content_token_count", 0
+                        )
+
                         cache_metadata = CacheMetadata(
                             cache_name=cached_content.name,
                             cache_created=is_new,
-                            cached_tokens=usage_metadata.get(
-                                "cached_content_token_count", 0
-                            ),
+                            cache_hit=not is_new,  # cache_hit = True when reusing existing cache
+                            cached_tokens=cached_tokens,
                             prompt_tokens=usage_metadata.get("prompt_token_count", 0),
                         )
 
@@ -925,15 +1009,20 @@ async def analyze_transcript(
                     logger.warning(
                         f"Cache analysis failed, falling back to non-cached: {cache_error}"
                     )
+                    # Track LLM call timing
+                    llm_call_start = time.time()
                     analysis = await gemini_service.analyze_realtime_transcript(
                         transcript=request.transcript,
                         speakers=speakers_dict,
                         rag_context=rag_context,
                         custom_prompt=custom_prompt,
                     )
+                    llm_call_time_ms = int((time.time() - llm_call_start) * 1000)
+
                     cache_metadata = CacheMetadata(
                         cache_name="",
                         cache_created=False,
+                        cache_hit=False,
                         cached_tokens=0,
                         prompt_tokens=0,
                         error=str(cache_error),
@@ -941,12 +1030,15 @@ async def analyze_transcript(
             else:
                 # Cache disabled or no session_id, use standard analysis
                 logger.info("Cache disabled or no session_id, using standard analysis")
+                # Track LLM call timing
+                llm_call_start = time.time()
                 analysis = await gemini_service.analyze_realtime_transcript(
                     transcript=request.transcript,
                     speakers=speakers_dict,
                     rag_context=rag_context,
                     custom_prompt=custom_prompt,
                 )
+                llm_call_time_ms = int((time.time() - llm_call_start) * 1000)
 
             # Calculate latency
             latency_ms = int((time.time() - start_time) * 1000)
@@ -964,21 +1056,119 @@ async def analyze_transcript(
             )
             safety_level = "green"
 
-        # Calculate response time in milliseconds
-        response_time_ms = int((time.time() - start_time) * 1000)
+        # Calculate performance metrics
+        analysis_end_time = datetime.now(timezone.utc)
+        duration_ms = int(
+            (analysis_end_time - analysis_start_time).total_seconds() * 1000
+        )
+        api_response_time_ms = int((time.time() - start_time) * 1000)
 
-        # Prepare data for BigQuery (asynchronous write)
+        # Extract token usage and model info based on provider
+        prompt_tokens = 0
+        completion_tokens = 0
+        total_tokens = 0
+        estimated_cost_usd = 0.0
+        model_name = ""
+
+        if request.provider == "codeer":
+            model_name = f"codeer-{request.codeer_model}"
+            if provider_metadata and provider_metadata.codeer_token_usage:
+                prompt_tokens = provider_metadata.codeer_token_usage.total_prompt_tokens
+                completion_tokens = (
+                    provider_metadata.codeer_token_usage.total_completion_tokens
+                )
+                total_tokens = provider_metadata.codeer_token_usage.total_tokens
+                # TODO: Calculate cost based on Codeer pricing
+        else:  # Gemini
+            model_name = "gemini-2.5-flash"
+            usage_metadata = analysis.get("usage_metadata", {})
+            prompt_tokens = usage_metadata.get("prompt_token_count", 0)
+            completion_tokens = usage_metadata.get("candidates_token_count", 0)
+            total_tokens = usage_metadata.get("total_token_count", 0)
+            # Gemini Flash pricing: $0.075 per 1M input tokens, $0.30 per 1M output tokens
+            estimated_cost_usd = (prompt_tokens * 0.075 / 1_000_000) + (
+                completion_tokens * 0.30 / 1_000_000
+            )
+
+        # Prepare RAG data
+        rag_used = len(rag_sources) > 0
+        rag_documents_json = None
+        rag_source_titles = []
+        if rag_used:
+            rag_documents_json = [
+                {
+                    "title": source.title,
+                    "content": source.content,
+                    "score": source.score,
+                    "theory": source.theory,
+                }
+                for source in rag_sources
+            ]
+            rag_source_titles = [source.title for source in rag_sources]
+
+        # Prepare speakers data as JSON (handle None from frontend)
+        speakers_json = (
+            [{"speaker": s.speaker, "text": s.text} for s in request.speakers]
+            if request.speakers
+            else None
+        )
+
+        # Prepare COMPLETE data for BigQuery with full observability (asynchronous write)
         gbq_data = {
-            "id": str(uuid.uuid4()),
+            # Basic identification
+            "id": request_id,
             "tenant_id": "island_parents",  # Fixed for web version
-            "session_id": None,  # Web version has no session concept
-            "analyzed_at": datetime.now(timezone.utc),
+            "session_id": request.session_id,  # May be None for web version
+            "analyzed_at": analysis_end_time,
+            "created_at": datetime.now(timezone.utc),
+            # Complete transcript (NO truncation!)
+            "transcript": request.transcript,  # FULL text
+            "time_range": request.time_range,
+            "speakers": speakers_json,
+            # Prompt information (complete observability)
+            "system_prompt": system_prompt_used,
+            "user_prompt": user_prompt_used,
+            "prompt_template": prompt_template,
+            # RAG information (expanded)
+            "rag_used": rag_used,
+            "rag_query": rag_query,  # Query used for RAG search
+            "rag_documents": rag_documents_json,  # Full RAG documents
+            "rag_sources": rag_source_titles,  # Array of source titles
+            "rag_top_k": rag_top_k,  # Top-k parameter
+            "rag_similarity_threshold": rag_similarity_threshold,  # Similarity threshold
+            # Model information
+            "provider": request.provider,
+            "model_name": model_name,
+            "model_version": None,  # Can add if available
+            # Timing & performance (detailed breakdown)
+            "start_time": analysis_start_time,
+            "end_time": analysis_end_time,
+            "duration_ms": duration_ms,
+            "api_response_time_ms": api_response_time_ms,
+            "rag_search_time_ms": rag_search_time_ms,  # RAG search timing
+            "llm_call_time_ms": llm_call_time_ms,  # LLM call timing
+            # Analysis results
             "analysis_type": request.mode.value,  # "emergency" or "practice"
             "safety_level": safety_level,  # "green", "yellow", or "red"
             "matched_suggestions": analysis.get("suggestions", []),
-            "transcript_segment": request.transcript[:1000],  # Limit to 1000 chars
-            "response_time_ms": response_time_ms,
-            "created_at": datetime.now(timezone.utc),
+            # LLM response (complete observability)
+            "llm_raw_response": str(analysis),  # Capture full analysis as raw response
+            "analysis_result": analysis,  # Full JSON response
+            "analysis_reasoning": analysis.get("reasoning"),  # Reasoning if available
+            # Token usage (expanded)
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            "cached_tokens": cached_tokens,  # Cached tokens from Gemini cache
+            "estimated_cost_usd": estimated_cost_usd,
+            # Cache information (expanded)
+            "use_cache": request.use_cache,
+            "cache_hit": cache_hit,
+            "cache_key": cache_key,
+            "gemini_cache_ttl": 7200 if request.use_cache else None,  # 2 hours TTL
+            # Request context
+            "mode": request.mode.value,
+            "request_id": request_id,
         }
 
         # Schedule GBQ write as background task (non-blocking)
