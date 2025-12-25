@@ -56,18 +56,34 @@ class GBQService:
             No exceptions raised - all errors are caught and logged
         """
         try:
+            # Get timestamps with defaults
+            analyzed_at = data.get("analyzed_at", datetime.now(timezone.utc))
+            created_at = data.get("created_at", datetime.now(timezone.utc))
+
+            # Convert datetime to ISO format string for JSON serialization
+            analyzed_at_str = (
+                analyzed_at.isoformat()
+                if isinstance(analyzed_at, datetime)
+                else analyzed_at
+            )
+            created_at_str = (
+                created_at.isoformat()
+                if isinstance(created_at, datetime)
+                else created_at
+            )
+
             # Prepare row for insertion
             row = {
                 "id": data.get("id", str(uuid.uuid4())),
                 "tenant_id": data.get("tenant_id", "island_parents"),
                 "session_id": data.get("session_id"),  # None for web version
-                "analyzed_at": data.get("analyzed_at", datetime.now(timezone.utc)),
+                "analyzed_at": analyzed_at_str,
                 "analysis_type": data.get("analysis_type"),
                 "safety_level": data.get("safety_level"),
                 "matched_suggestions": data.get("matched_suggestions", []),
                 "transcript_segment": data.get("transcript_segment", ""),
                 "response_time_ms": data.get("response_time_ms", 0),
-                "created_at": data.get("created_at", datetime.now(timezone.utc)),
+                "created_at": created_at_str,
             }
 
             # Insert row into BigQuery
@@ -92,6 +108,37 @@ class GBQService:
             )
             return False
 
+    def ensure_dataset_exists(self) -> bool:
+        """Ensure the BigQuery dataset exists
+
+        Returns:
+            bool: True if dataset exists or was created, False on error
+        """
+        try:
+            dataset_ref = f"{self.project_id}.{self.dataset_id}"
+
+            # Check if dataset exists
+            try:
+                self.client.get_dataset(dataset_ref)
+                logger.info(f"BigQuery dataset {dataset_ref} already exists")
+                return True
+            except Exception:
+                # Dataset doesn't exist, create it
+                pass
+
+            # Create dataset
+            dataset = bigquery.Dataset(dataset_ref)
+            dataset.location = "US"  # Set location
+            dataset.description = "Realtime analysis logs for career counseling"
+
+            dataset = self.client.create_dataset(dataset, timeout=30)
+            logger.info(f"Created BigQuery dataset {dataset_ref}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to create BigQuery dataset: {str(e)}", exc_info=True)
+            return False
+
     def ensure_table_exists(self) -> bool:
         """Ensure the BigQuery table exists with correct schema
 
@@ -99,6 +146,11 @@ class GBQService:
             bool: True if table exists or was created, False on error
         """
         try:
+            # First ensure dataset exists
+            if not self.ensure_dataset_exists():
+                logger.error("Failed to ensure dataset exists")
+                return False
+
             table_ref = self._get_table_ref()
 
             # Check if table exists
