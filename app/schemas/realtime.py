@@ -15,8 +15,8 @@ class CounselingMode(str, Enum):
     practice = "practice"
 
 
-class RiskLevel(str, Enum):
-    """Risk level indicator for parent-child interaction"""
+class SafetyLevel(str, Enum):
+    """Safety level indicator for parent-child interaction"""
 
     red = "red"  # High risk: violent language, extreme emotions, crisis
     yellow = "yellow"  # Medium risk: escalating conflict, frustration
@@ -160,8 +160,8 @@ class ProviderMetadata(BaseModel):
 class RealtimeAnalyzeResponse(BaseModel):
     """即時分析回應（AI 督導建議）"""
 
-    risk_level: RiskLevel = Field(
-        ..., description="Risk level: red (high), yellow (medium), green (safe)"
+    safety_level: SafetyLevel = Field(
+        ..., description="Safety level: red (high risk), yellow (warning), green (safe)"
     )
     summary: str = Field(..., description="對話歸納（1-2 句）")
     alerts: List[str] = Field(..., description="提醒事項（3-5 點）")
@@ -182,7 +182,7 @@ class RealtimeAnalyzeResponse(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
-                    "risk_level": "yellow",
+                    "safety_level": "yellow",
                     "summary": "案主表達對工作的焦慮，提到「活著沒意義」，諮詢師開始評估風險",
                     "alerts": [
                         "⚠️ 案主提到「活著沒意義」，需立即評估自殺風險",

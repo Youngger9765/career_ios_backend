@@ -19,7 +19,7 @@ from app.schemas.realtime import (
     RAGSource,
     RealtimeAnalyzeRequest,
     RealtimeAnalyzeResponse,
-    RiskLevel,
+    SafetyLevel,
 )
 from app.services.cache_manager import CacheManager
 from app.services.gemini_service import GeminiService
@@ -34,6 +34,10 @@ router = APIRouter(prefix="/api/v1/realtime", tags=["Realtime Counseling"])
 gemini_service = GeminiService()
 openai_service = OpenAIService()
 cache_manager = CacheManager()
+
+# Safety assessment sliding window configuration
+SAFETY_WINDOW_SPEAKER_TURNS = 10  # Number of recent speaker turns to evaluate
+SAFETY_WINDOW_CHARACTERS = 300  # Fallback: character count for sliding window
 
 # System instruction for cache (固定不變的部分)
 CACHE_SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
@@ -291,22 +295,53 @@ async def _search_rag_knowledge(
         return []
 
 
-def _assess_risk_level(transcript: str, speakers: List[dict]) -> RiskLevel:
-    """Assess risk level based on transcript content.
+def _assess_safety_level(transcript: str, speakers: List[dict]) -> SafetyLevel:
+    """Assess safety level based on RECENT conversation (sliding window).
 
-    Risk levels:
-    - RED: Violent language, extreme emotions, crisis indicators
-    - YELLOW: Escalating conflict, frustration, raised emotions
-    - GREEN: Calm, positive interaction
+    Only evaluates the last ~1 minute of dialogue to allow rapid safety relaxation.
+    This prevents dangerous keywords from earlier in the conversation from keeping
+    the safety level elevated indefinitely.
+
+    Safety levels:
+    - RED: Violent language, extreme emotions, crisis indicators (high risk)
+    - YELLOW: Escalating conflict, frustration, raised emotions (warning)
+    - GREEN: Calm, positive interaction (safe)
 
     Args:
-        transcript: The conversation transcript
-        speakers: List of speaker segments (not currently used, reserved for future)
+        transcript: The full conversation transcript (cumulative)
+        speakers: List of speaker segments (used for sliding window)
 
     Returns:
-        RiskLevel enum: red, yellow, or green
+        SafetyLevel enum: red, yellow, or green
     """
-    text_lower = transcript.lower()
+    # Strategy: Use last N speaker segments (approximate 1 minute)
+    # Extract recent transcript from speakers array
+    if speakers and len(speakers) > 0:
+        # Take last N segments to approximate 1 minute of conversation
+        recent_speakers = speakers[-SAFETY_WINDOW_SPEAKER_TURNS:]
+        recent_transcript = "\n".join(
+            [
+                f"{seg.get('speaker', 'unknown')}: {seg.get('text', '')}"
+                for seg in recent_speakers
+            ]
+        )
+        logger.info(
+            f"Using sliding window: last {len(recent_speakers)} speaker turns "
+            f"({len(recent_transcript)} chars)"
+        )
+    else:
+        # Fallback: use last N characters (approximate 1 minute)
+        if len(transcript) > SAFETY_WINDOW_CHARACTERS:
+            recent_transcript = transcript[-SAFETY_WINDOW_CHARACTERS:]
+            logger.info(
+                f"Using fallback window: last {SAFETY_WINDOW_CHARACTERS} characters"
+            )
+        else:
+            recent_transcript = transcript
+            logger.info("Using full transcript (shorter than window)")
+
+    # Convert to lowercase for keyword matching
+    text_lower = recent_transcript.lower()
 
     # RED indicators (high risk) - violence, extreme emotions, crisis
     red_keywords = [
@@ -321,9 +356,12 @@ def _assess_risk_level(transcript: str, speakers: List[dict]) -> RiskLevel:
         "不想活",
         "去死",
     ]
-    if any(keyword in text_lower for keyword in red_keywords):
-        logger.info("Risk level: RED detected (violent/extreme language)")
-        return RiskLevel.red
+    for keyword in red_keywords:
+        if keyword in text_lower:
+            logger.info(
+                f"Safety level: RED detected (keyword: '{keyword}' in recent window)"
+            )
+            return SafetyLevel.red
 
     # YELLOW indicators (medium risk) - frustration, escalating conflict
     yellow_keywords = [
@@ -336,13 +374,16 @@ def _assess_risk_level(transcript: str, speakers: List[dict]) -> RiskLevel:
         "崩潰",
         "發火",
     ]
-    if any(keyword in text_lower for keyword in yellow_keywords):
-        logger.info("Risk level: YELLOW detected (frustration/conflict)")
-        return RiskLevel.yellow
+    for keyword in yellow_keywords:
+        if keyword in text_lower:
+            logger.info(
+                f"Safety level: YELLOW detected (keyword: '{keyword}' in recent window)"
+            )
+            return SafetyLevel.yellow
 
-    # GREEN (safe/positive) - default if no risk indicators found
-    logger.info("Risk level: GREEN (calm/positive interaction)")
-    return RiskLevel.green
+    # GREEN (safe/positive) - default if no risk indicators found in recent window
+    logger.info("Safety level: GREEN (calm/positive interaction in recent window)")
+    return SafetyLevel.green
 
 
 def _build_emergency_prompt(transcript: str, rag_context: str) -> str:
@@ -675,9 +716,9 @@ async def analyze_transcript(
             {"speaker": s.speaker, "text": s.text} for s in request.speakers
         ]
 
-        # Assess risk level based on transcript content
-        risk_level = _assess_risk_level(request.transcript, speakers_dict)
-        logger.info(f"Risk level assessed: {risk_level.value}")
+        # Assess safety level based on transcript content
+        safety_level = _assess_safety_level(request.transcript, speakers_dict)
+        logger.info(f"Safety level assessed: {safety_level.value}")
 
         # Detect parenting keywords and trigger RAG if needed
         rag_sources = []
@@ -850,7 +891,7 @@ async def analyze_transcript(
 
         # Build response
         return RealtimeAnalyzeResponse(
-            risk_level=risk_level,
+            safety_level=safety_level,
             summary=analysis.get("summary", ""),
             alerts=analysis.get("alerts", []),
             suggestions=analysis.get("suggestions", []),
