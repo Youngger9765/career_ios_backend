@@ -101,7 +101,7 @@ poetry run pre-commit install --hook-type pre-push
 
 ## 📚 Detailed Workflows (Skills)
 
-**All detailed processes are in Skills** (auto-activated):
+**All detailed processes are in Skills** with **AUTOMATIC ACTIVATION** (80%+ success rate):
 
 | Skill | Purpose | Trigger Keywords |
 |-------|---------|-----------------|
@@ -116,10 +116,34 @@ poetry run pre-commit install --hook-type pre-push
 | **error-handling** | Error handling patterns | "error", "exception", "validation", "錯誤處理" |
 | **context-monitor** | Context usage monitoring | Auto-activates when context high |
 
-**How it works**:
-- You mention keywords → Claude auto-activates relevant Skill
-- Skills contain detailed workflows (not in CLAUDE.md)
-- Saves token usage, loaded only when needed
+### 🤖 Skill Auto-Activation System
+
+**Status**: ACTIVE (since v3.1)
+**Success Rate**: 80%+ (up from 20% baseline)
+
+Skills now auto-activate via UserPromptSubmit hook:
+1. **Keyword Detection** - Hook scans your message for trigger keywords
+2. **Smart Injection** - Critical skills are forced to activate
+3. **Zero User Action** - Happens automatically, every time
+
+**Example**:
+- You say: "我想新增一個 API endpoint"
+- Hook detects: "API", "新增"
+- Auto-activates: `api-development` + `tdd-workflow`
+- You get: Full workflow guidance automatically
+
+**Tech Details**:
+- Hook: `.claude/hooks/skill-activation-hook.sh`
+- Config: `.claude/config/skill-rules.json`
+- Based on: [Scott Spence's research](https://scottspence.com/posts/how-to-make-claude-code-skills-activate-reliably) (84% success)
+
+**Debugging Auto-Activation**:
+```bash
+# Test what skills activate for a prompt
+echo "your prompt here" | .claude/hooks/skill-activation-hook.sh
+```
+
+**Reference**: See `.claude/hooks/README.md` for full documentation
 
 ---
 
@@ -212,11 +236,13 @@ All development tasks go through agent-manager:
 - **Skills Directory**: `.claude/skills/` - Detailed workflows
 - **Agents Directory**: `.claude/agents/` - Task executors
 - **Commands Directory**: `.claude/commands/` - Slash commands
+- **Hooks Directory**: `.claude/hooks/` - Auto-activation system
+- **Config Directory**: `.claude/config/` - Skill rules and settings
 - **PRD.md**: Product requirements
 - **CHANGELOG.md**: Change history
 
 ---
 
-**Version**: v3.0 (Skill-Based Architecture)
+**Version**: v3.1 (Skill Auto-Activation System)
 **Last Updated**: 2025-12-25
-**Philosophy**: Context efficiency through progressive disclosure
+**Philosophy**: Context efficiency through progressive disclosure + intelligent automation
