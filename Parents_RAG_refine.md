@@ -70,7 +70,7 @@
 - 你在陪，而不是推 (7字)
 ```
 
-##### 🟠 橘色｜需要調整（65 句）
+##### 🟡 黃色｜需要調整（65 句）
 **目的**：指出可改善點，提供替代說法
 
 **警訊指標**：
@@ -362,33 +362,42 @@ Realtime API 分析完成
 
 - [x] **建立檔案**：`app/config/parenting_suggestions.py`
   - [x] GREEN_SUGGESTIONS = [...]  # 70 句
-  - [x] ORANGE_SUGGESTIONS = [...]  # 65 句
+  - [x] YELLOW_SUGGESTIONS = [...]  # 65 句
   - [x] RED_SUGGESTIONS = [...]  # 65 句
   - [x] 格式：簡單的 Python list（不要 TypedDict）
   - [x] 驗證通過（200 句，無重複）
 
 ##### 1.2 修改後端 API（`app/api/realtime.py`）
 
-- [ ] **修改 Emergency Mode Prompt**
-  - [ ] 從 200 句專家建議中選 1-2 句
-  - [ ] 移除兩行格式（心法\n做法）
-  - [ ] 加入 Bridge 技巧結構（穩住 → 同理 → 修正）
+- [x] **修改 Emergency Mode Prompt**
+  - [x] 從 200 句專家建議中選 1-2 句
+  - [x] 移除兩行格式（心法\n做法）
+  - [x] 加入 Bridge 技巧結構（穩住 → 同理 → 修正）
 
-- [ ] **修改 Practice Mode Prompt**
-  - [ ] 從 200 句專家建議中選 3-4 句
-  - [ ] 加入 Bridge 技巧結構（讚美 → 橋樑 → 延伸）
-  - [ ] 加入 200 句建議到 CACHE_SYSTEM_INSTRUCTION
+- [x] **修改 Practice Mode Prompt**
+  - [x] 從 200 句專家建議中選 3-4 句
+  - [x] 加入 Bridge 技巧結構（讚美 → 橋樑 → 延伸）
+  - [x] 加入 200 句建議到 Prompt（已內嵌）
 
-- [ ] **改進燈號判斷邏輯**
-  - [ ] 改進 `_assess_risk_level()`
-  - [ ] 加入上下文理解（不只關鍵字匹配）
-  - [ ] 明確回傳 safety_level（green/orange/red）
+- [x] **改進燈號判斷邏輯**
+  - [x] LLM 判斷上下文（不只關鍵字匹配）
+  - [x] 明確回傳 safety_level（green/yellow/red）
+  - [x] **CRITICAL FIX**: 修正為紅黃綠交通號誌系統
 
-- [ ] **擴充 API 回傳格式**
-  - [ ] 新增 `"safety_level": "green|orange|red"`
-  - [ ] 確保 suggestions 從 200 句中選擇
-  - [ ] 測試 Emergency 模式：1-2 句
-  - [ ] 測試 Practice 模式：3-4 句
+- [x] **擴充 API 回傳格式**
+  - [x] 新增 `"safety_level": "green|yellow|red"`
+  - [x] 確保 suggestions 從 200 句中選擇
+  - [x] 測試 Emergency 模式：1-2 句（✅ 9/9 tests passed）
+  - [x] 測試 Practice 模式：3-4 句（✅ 9/9 tests passed）
+
+**Phase 1.2 完成**（2025-12-25）：
+- ✅ 修改 Emergency/Practice Mode Prompt（內嵌 200 句建議）
+- ✅ 加入 Bridge 技巧結構（穩住→同理→修正 / 讚美→橋樑→延伸）
+- ✅ API 新增 `safety_level` 欄位（green/yellow/red）
+- ✅ LLM 從 200 句專家建議中選擇（不自己生成）
+- ✅ **CRITICAL FIX**: 修正為紅黃綠交通號誌系統（orange → yellow）
+- ✅ 建立整合測試（9 個測試全部通過）
+- ✅ **所有測試通過（9/9 integration tests + 28/28 unit tests）**
 
 ##### 1.3 資料持久化（GBQ Only - Web 版暫不寫 DB）
 
@@ -407,7 +416,7 @@ Realtime API 分析完成
       session_id STRING,                  -- Web 版為 null，iOS 版有值
       analyzed_at TIMESTAMP,              -- 分析時間
       analysis_type STRING,               -- "emergency" | "practice"
-      safety_level STRING,                -- "green" | "orange" | "red"
+      safety_level STRING,                -- "green" | "yellow" | "red"
       matched_suggestions ARRAY<STRING>,  -- 選中的專家建議
       transcript_segment STRING,          -- 被分析的逐字稿片段
       response_time_ms INT64,             -- API 回應時間（毫秒）
@@ -428,7 +437,7 @@ Realtime API 分析完成
       "session_id": None,                 # Web 版為 None
       "analyzed_at": datetime.utcnow(),
       "analysis_type": "emergency|practice",
-      "safety_level": "green|orange|red",
+      "safety_level": "green|yellow|red",
       "matched_suggestions": [...],
       "transcript_segment": "...",
       "response_time_ms": 1500,
@@ -461,7 +470,7 @@ Realtime API 分析完成
     // 根據 API 回傳的 safety_level 動態設定卡片樣式
     const cardStyles = {
       green: 'bg-green-50 border-2 border-green-200 text-green-700',
-      orange: 'bg-yellow-50 border-2 border-yellow-200 text-yellow-700',
+      yellow: 'bg-yellow-50 border-2 border-yellow-200 text-yellow-700',
       red: 'bg-red-50 border-2 border-red-200 text-red-700'
     };
     ```
@@ -516,7 +525,7 @@ Realtime API 分析完成
 - [ ] **動態調整分析頻率（根據燈號）**
   - [ ] 🟢 **綠燈**（對話安全）：60 秒觸發一次
     - 當前狀態良好，維持正常監控頻率
-  - [ ] 🟠 **橘燈**（需要調整）：30 秒觸發一次
+  - [ ] 🟡 **黃燈**（需要調整）：30 秒觸發一次
     - 對話出現警訊，提高監控密度
   - [ ] 🔴 **紅燈**（立刻修正）：15 秒觸發一次
     - 危險狀況，最高監控頻率
@@ -525,7 +534,7 @@ Realtime API 分析完成
     // 根據上次分析的 safety_level 動態調整
     let analysisInterval = 60; // 預設
     if (lastSafetyLevel === 'red') analysisInterval = 15;
-    else if (lastSafetyLevel === 'orange') analysisInterval = 30;
+    else if (lastSafetyLevel === 'yellow') analysisInterval = 30;
     else analysisInterval = 60;
 
     // Line 2036: 改成動態判斷
@@ -647,19 +656,20 @@ Realtime API 分析完成
 ### 下一步行動
 
 **本週目標**：
-1. ✅ 建立 200 句建議檔案（已完成）
-2. 修改 Emergency/Practice Mode Prompt
-3. 建立 GBQ Table 並實作非同步寫入
-4. 前端調整（卡片顏色、去重邏輯）
-5. 寫 Integration Tests
+1. ✅ 建立 200 句建議檔案（已完成 - Phase 1.1）
+2. ✅ 修改 Emergency/Practice Mode Prompt（已完成 - Phase 1.2）
+3. ✅ 修正交通號誌系統（orange → yellow）（已完成 - Phase 1.2）
+4. ⏳ 建立 GBQ Table 並實作非同步寫入（進行中 - Phase 1.3）
+5. ⏳ 前端調整（卡片顏色、去重邏輯）（待開始 - Phase 1.4）
 
 **成功標準**：
-- ✅ 200 句建議檔案建立並驗證通過
-- Emergency/Practice 建議從 200 句中選擇
-- 包含 Bridge 技巧結構
-- 分析結果存入 GBQ（tenant_id = "island_parents"）
-- 卡片顏色根據燈號變化（綠/黃/紅）
-- 避免重複顯示相同建議
+- ✅ 200 句建議檔案建立並驗證通過（28/28 unit tests passed）
+- ✅ Emergency/Practice 建議從 200 句中選擇（9/9 integration tests passed）
+- ✅ 包含 Bridge 技巧結構（已實作）
+- ✅ 使用紅黃綠交通號誌系統（已修正）
+- ⏳ 分析結果存入 GBQ（tenant_id = "island_parents"）
+- ⏳ 卡片顏色根據燈號變化（綠/黃/紅）
+- ⏳ 避免重複顯示相同建議
 
 ---
 
