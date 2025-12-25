@@ -1189,7 +1189,9 @@ async def generate_elevenlabs_token():
 
 @router.post("/parents-report", response_model=ParentsReportResponse)
 async def generate_parents_report(
-    request: ParentsReportRequest, db: Session = Depends(get_db)
+    request: ParentsReportRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
 ):
     """Generate a comprehensive parenting communication report.
 
@@ -1201,8 +1203,14 @@ async def generate_parents_report(
 
     This endpoint queries the parenting RAG knowledge base and uses
     Gemini to generate structured feedback.
+
+    Results are persisted to BigQuery for analytics.
     """
     import json
+    import uuid
+
+    # Track timing for GBQ
+    start_time = datetime.now(timezone.utc)
 
     try:
         # Step 1: Search RAG knowledge base for relevant parenting content
@@ -1320,18 +1328,59 @@ async def generate_parents_report(
             )
 
         # Step 6: Build response
-        return ParentsReportResponse(
+        improvements_list = [
+            ImprovementSuggestion(
+                issue=item.get("issue", ""), suggestion=item.get("suggestion", "")
+            )
+            for item in analysis.get("improvements", [])
+        ]
+
+        response = ParentsReportResponse(
             summary=analysis.get("summary", ""),
             highlights=analysis.get("highlights", []),
-            improvements=[
-                ImprovementSuggestion(
-                    issue=item.get("issue", ""), suggestion=item.get("suggestion", "")
-                )
-                for item in analysis.get("improvements", [])
-            ],
+            improvements=improvements_list,
             rag_references=rag_sources,
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
+
+        # Step 7: Prepare GBQ data for analytics
+        end_time = datetime.now(timezone.utc)
+        duration_ms = int((end_time - start_time).total_seconds() * 1000)
+
+        # Determine safety level based on number of improvements
+        # More improvements = more issues = higher concern level
+        safety_level = "green"  # Default
+        if len(improvements_list) >= 4:
+            safety_level = "yellow"  # Multiple areas to improve
+        elif len(improvements_list) >= 2:
+            safety_level = "green"  # Normal feedback
+        # Note: parents_report doesn't have explicit "red" level like realtime
+
+        gbq_data = {
+            "id": str(uuid.uuid4()),
+            "tenant_id": "island_parents",  # Fixed for web version
+            "session_id": None,  # Web version has no session concept
+            "analyzed_at": start_time,
+            "analysis_type": "parents_report",  # Distinguish from emergency/practice
+            "safety_level": safety_level,
+            "matched_suggestions": [
+                f"{imp.issue} → {imp.suggestion}" for imp in improvements_list
+            ],
+            "transcript_segment": request.transcript[
+                :500
+            ],  # Truncate for storage efficiency
+            "response_time_ms": duration_ms,
+            "created_at": end_time,
+        }
+
+        # Schedule GBQ write as background task (non-blocking)
+        background_tasks.add_task(write_to_gbq_async, gbq_data)
+
+        logger.info(
+            f"Parents report generated successfully in {duration_ms}ms with {len(improvements_list)} improvements"
+        )
+
+        return response
 
     except HTTPException:
         # Re-raise HTTP exceptions
