@@ -453,12 +453,12 @@
 
                 <!-- 按鈕區域 -->
                 <div class="w-full max-w-sm space-y-6">
-                    <!-- 預先練習按鈕 -->
+                    <!-- 練習按鈕 -->
                     <button id="practiceBtn" class="haptic-feedback btn-touch w-full bg-black active:bg-gray-800 text-white py-6 px-8 rounded-3xl font-bold text-lg transition-smooth shadow-xl">
                         預先練習
                     </button>
 
-                    <!-- 和孩子談談按鈕 -->
+                    <!-- 實戰按鈕 -->
                     <button id="realTalkBtn" class="haptic-feedback btn-touch w-full bg-black active:bg-gray-800 text-white py-6 px-8 rounded-3xl font-bold text-lg transition-smooth shadow-xl">
                         和孩子談談
                     </button>
@@ -466,7 +466,22 @@
             </div>
 
             <!-- Practice Intro UI (練習介紹頁面) -->
-            <div id="practiceIntroUI" class="hidden h-full bg-gradient-to-br from-gray-50 to-white flex flex-col items-center justify-between px-8 py-12">
+            <div id="practiceIntroUI" class="hidden h-full bg-gradient-to-br from-gray-50 to-white flex flex-col items-center justify-between px-8 py-12 relative">
+                <!-- Navigation buttons -->
+                <div class="absolute top-4 left-4 right-4 flex justify-between z-10">
+                    <!-- Home button (left) -->
+                    <button id="homeBtn" class="haptic-feedback px-4 py-2 bg-white/90 hover:bg-white active:bg-gray-50 rounded-full text-gray-700 font-medium text-sm shadow-md transition-smooth flex items-center gap-2">
+                        <span>🏠</span>
+                        <span>首頁</span>
+                    </button>
+
+                    <!-- Back button (right) -->
+                    <button id="backToInitialBtn" class="haptic-feedback px-4 py-2 bg-white/90 hover:bg-white active:bg-gray-50 rounded-full text-gray-700 font-medium text-sm shadow-md transition-smooth flex items-center gap-2">
+                        <span>←</span>
+                        <span>上一頁</span>
+                    </button>
+                </div>
+
                 <!-- 中央同心圓漸層區域 -->
                 <div class="flex-1 flex items-center justify-center w-full">
                     <div class="relative w-80 h-80 flex items-center justify-center">
@@ -1051,6 +1066,8 @@
         const initialUI = document.getElementById('initialUI');
         const practiceIntroUI = document.getElementById('practiceIntroUI');
         const createPracticeBtn = document.getElementById('createPracticeBtn');
+        const homeBtn = document.getElementById('homeBtn');
+        const backToInitialBtn = document.getElementById('backToInitialBtn');
         const recordingUI = document.getElementById('recordingUI');
         const recordingBottomBar = document.getElementById('recordingBottomBar');
         const mobileCarousel = document.getElementById('mobileCarousel');
@@ -1081,69 +1098,7 @@
         let mobileAnalysisCards = [];
         let currentCarouselIndex = 0;
 
-        // === Event Listeners ===
-        startBtn.addEventListener('click', startSession);
-        stopBtn.addEventListener('click', stopSession);
-
-        // Mobile flow: Practice button shows intro screen
-        if (practiceBtn) {
-            practiceBtn.addEventListener('click', () => {
-                sessionMode = 'practice';
-                if (initialUI) initialUI.classList.add('hidden');
-                if (practiceIntroUI) practiceIntroUI.classList.remove('hidden');
-                // Update button text for practice mode
-                if (createPracticeBtn) {
-                    createPracticeBtn.textContent = '創建練習';
-                }
-            });
-        }
-
-        // Mobile flow: Real talk button shows intro screen
-        if (realTalkBtn) {
-            realTalkBtn.addEventListener('click', () => {
-                sessionMode = 'realTalk';
-                if (initialUI) initialUI.classList.add('hidden');
-                if (practiceIntroUI) practiceIntroUI.classList.remove('hidden');
-                // Update button text for real talk mode
-                if (createPracticeBtn) {
-                    createPracticeBtn.textContent = '開始對話';
-                }
-            });
-        }
-
-        // Mobile flow: Create practice/real talk button starts recording
-        if (createPracticeBtn) {
-            createPracticeBtn.addEventListener('click', () => {
-                if (practiceIntroUI) practiceIntroUI.classList.add('hidden');
-                startSession();
-            });
-        }
-        if (pauseBtnMobile) pauseBtnMobile.addEventListener('click', stopSession);
-        if (stopBtnMobile) stopBtnMobile.addEventListener('click', stopSession);
-        // Speaker buttons removed (AI auto-detects speakers)
-        triggerAnalysisBtn.addEventListener('click', manuallyTriggerAnalysis);
-        if (fabAnalyzeMobile) fabAnalyzeMobile.addEventListener('click', manuallyTriggerAnalysis);
-
-        // NEW: Carousel navigation
-        if (carouselPrev) carouselPrev.addEventListener('click', () => navigateCarousel(-1));
-        if (carouselNext) carouselNext.addEventListener('click', () => navigateCarousel(1));
-
-        // Settings Modal Control
-        if (settingsBtnMobile) {
-            settingsBtnMobile.addEventListener('click', openSettingsModal);
-        }
-        if (settingsModalBackdrop) {
-            settingsModalBackdrop.addEventListener('click', closeSettingsModal);
-        }
-        if (settingsModalClose) {
-            settingsModalClose.addEventListener('click', closeSettingsModal);
-        }
-
-        // Mode Toggle (Demo/Real)
-        modeToggle.addEventListener('click', toggleRecordingMode);
-        if (modeToggleDesktop) modeToggleDesktop.addEventListener('click', toggleRecordingMode);
-
-        // Counseling Mode Toggle (Emergency/Practice)
+        // === Counseling Mode Setup (must be before event listeners) ===
         const emergencyModeBtn = document.getElementById('emergencyModeBtn');
         const practiceModeBtn = document.getElementById('practiceModeBtn');
         const emergencyModeBtnDesktop = document.getElementById('emergencyModeBtnDesktop');
@@ -1185,11 +1140,91 @@
             console.log(`✅ 切換諮詢模式: ${mode}`);
         }
 
-        // Mobile buttons
+        // === Event Listeners ===
+        startBtn.addEventListener('click', startSession);
+        stopBtn.addEventListener('click', stopSession);
+
+        // Mobile flow: Practice button shows intro screen
+        if (practiceBtn) {
+            practiceBtn.addEventListener('click', () => {
+                sessionMode = 'practice';
+                // Sync consultation mode to 'practice'
+                setCounselingMode('practice');
+                if (initialUI) initialUI.classList.add('hidden');
+                if (practiceIntroUI) practiceIntroUI.classList.remove('hidden');
+                // Update button text for practice mode
+                if (createPracticeBtn) {
+                    createPracticeBtn.textContent = '創建練習';
+                }
+            });
+        }
+
+        // Mobile flow: Real talk button shows intro screen
+        if (realTalkBtn) {
+            realTalkBtn.addEventListener('click', () => {
+                sessionMode = 'realTalk';
+                // Sync consultation mode to 'emergency' (實戰)
+                setCounselingMode('emergency');
+                if (initialUI) initialUI.classList.add('hidden');
+                if (practiceIntroUI) practiceIntroUI.classList.remove('hidden');
+                // Update button text for real talk mode
+                if (createPracticeBtn) {
+                    createPracticeBtn.textContent = '開始對話';
+                }
+            });
+        }
+
+        // Mobile flow: Create practice/real talk button starts recording
+        if (createPracticeBtn) {
+            createPracticeBtn.addEventListener('click', () => {
+                if (practiceIntroUI) practiceIntroUI.classList.add('hidden');
+                startSession();
+            });
+        }
+
+        // Navigation buttons for Practice Intro UI
+        if (homeBtn) {
+            homeBtn.addEventListener('click', () => {
+                location.reload();
+            });
+        }
+
+        if (backToInitialBtn) {
+            backToInitialBtn.addEventListener('click', () => {
+                if (practiceIntroUI) practiceIntroUI.classList.add('hidden');
+                if (initialUI) initialUI.classList.remove('hidden');
+            });
+        }
+
+        if (pauseBtnMobile) pauseBtnMobile.addEventListener('click', stopSession);
+        if (stopBtnMobile) stopBtnMobile.addEventListener('click', stopSession);
+        // Speaker buttons removed (AI auto-detects speakers)
+        triggerAnalysisBtn.addEventListener('click', manuallyTriggerAnalysis);
+        if (fabAnalyzeMobile) fabAnalyzeMobile.addEventListener('click', manuallyTriggerAnalysis);
+
+        // NEW: Carousel navigation
+        if (carouselPrev) carouselPrev.addEventListener('click', () => navigateCarousel(-1));
+        if (carouselNext) carouselNext.addEventListener('click', () => navigateCarousel(1));
+
+        // Settings Modal Control
+        if (settingsBtnMobile) {
+            settingsBtnMobile.addEventListener('click', openSettingsModal);
+        }
+        if (settingsModalBackdrop) {
+            settingsModalBackdrop.addEventListener('click', closeSettingsModal);
+        }
+        if (settingsModalClose) {
+            settingsModalClose.addEventListener('click', closeSettingsModal);
+        }
+
+        // Mode Toggle (Demo/Real)
+        modeToggle.addEventListener('click', toggleRecordingMode);
+        if (modeToggleDesktop) modeToggleDesktop.addEventListener('click', toggleRecordingMode);
+
+        // Counseling Mode Toggle event listeners (Emergency/Practice)
+        // (Function definition and DOM elements are above, before all event listeners)
         if (emergencyModeBtn) emergencyModeBtn.addEventListener('click', () => setCounselingMode('emergency'));
         if (practiceModeBtn) practiceModeBtn.addEventListener('click', () => setCounselingMode('practice'));
-
-        // Desktop buttons
         if (emergencyModeBtnDesktop) emergencyModeBtnDesktop.addEventListener('click', () => setCounselingMode('emergency'));
         if (practiceModeBtnDesktop) practiceModeBtnDesktop.addEventListener('click', () => setCounselingMode('practice'));
 
