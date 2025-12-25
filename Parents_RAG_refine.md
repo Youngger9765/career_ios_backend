@@ -556,41 +556,7 @@ Realtime API 分析完成
   - [ ] 前端顯示倒數計時（下次分析還有 X 秒）
   - [ ] 燈號變化時即時調整間隔
 
-- [ ] **卡片去重邏輯（避免重複建議）**
-  - [ ] 問題：60 秒內對話沒變化 → 收到相同建議卡片
-  - [ ] 解決方案：比較新舊卡片內容相似度
-    ```javascript
-    // 計算兩句建議的相似度（簡單方式：Levenshtein distance or 字串比對）
-    function isSimilarSuggestion(newSug, oldSug) {
-      // 方法 1：完全相同
-      if (newSug === oldSug) return true;
-
-      // 方法 2：相似度 > 80%（使用簡單字串比對）
-      const similarity = calculateSimilarity(newSug, oldSug);
-      return similarity > 0.8;
-    }
-
-    // 過濾重複建議
-    const newSuggestions = apiResponse.suggestions.filter(newSug => {
-      return !lastSuggestions.some(oldSug => isSimilarSuggestion(newSug, oldSug));
-    });
-
-    // 如果沒有新建議，保留舊卡片（不更新）
-    if (newSuggestions.length === 0) {
-      console.log('建議內容與上次相同，保留原卡片');
-      return;
-    }
-    ```
-  - [ ] 實作細節：
-    - [ ] 儲存上次的建議內容（`lastSuggestions = []`）
-    - [ ] 每次 API 回傳後比對新舊建議
-    - [ ] 相似度 > 80% 視為重複
-    - [ ] 只顯示新的、不重複的建議
-    - [ ] 如果完全沒有新建議，保留原卡片不變
-  - [ ] 測試場景：
-    - [ ] 對話持續進行 → 新建議正常顯示
-    - [ ] 對話停頓/無變化 → 不顯示重複建議
-    - [ ] 60 秒後對話改變 → 顯示新建議
+- [x] ~~**卡片去重邏輯（避免重複建議）**~~ → **已移除，不需要實作**
 
 ##### 2.3 測試
 
@@ -599,7 +565,6 @@ Realtime API 分析完成
   - 測試燈號判斷正確性
   - 測試 GBQ 寫入
   - 測試動態分析頻率切換
-  - 測試卡片去重邏輯
 
 ---
 

@@ -41,7 +41,9 @@ openai_service = OpenAIService()
 cache_manager = CacheManager()
 
 # Safety assessment sliding window configuration
-SAFETY_WINDOW_SPEAKER_TURNS = 10  # Number of recent speaker turns to evaluate
+SAFETY_WINDOW_SPEAKER_TURNS = (
+    10  # Number of recent speaker turns to evaluate (~1 minute)
+)
 SAFETY_WINDOW_CHARACTERS = 300  # Fallback: character count for sliding window
 
 # Annotated window configuration for AI safety assessment
@@ -904,16 +906,21 @@ async def analyze_transcript(
 
         if _detect_parenting_keywords(request.transcript):
             logger.info("Parenting keywords detected, triggering RAG search")
+            # Phase 2.1 Enhancement: Increased top_k and lowered threshold for richer context
             rag_sources = await _search_rag_knowledge(
-                transcript=request.transcript, db=db, top_k=3, similarity_threshold=0.5
+                transcript=request.transcript,
+                db=db,
+                top_k=7,  # Increased from 3 to 7 for more diverse suggestions
+                similarity_threshold=0.35,  # Lowered from 0.5 to 0.35 (production scores ~0.54-0.59)
             )
 
             # Build RAG context for Gemini prompt
             if rag_sources:
                 rag_context_parts = ["\n\n📚 相關親子教養知識庫內容（供參考）：\n"]
                 for idx, source in enumerate(rag_sources, 1):
+                    # Phase 2.1 Enhancement: Full content without truncation for complete context
                     rag_context_parts.append(
-                        f"[{idx}] {source.title}: {source.content[:200]}..."
+                        f"[{idx}] {source.title}: {source.content}"
                     )
                 rag_context = "\n".join(rag_context_parts)
 

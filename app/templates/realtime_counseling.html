@@ -401,8 +401,8 @@
                             </button>
                         </div>
                         <p class="text-xs text-gray-500 mt-2">
-                            實戰：極簡建議（≤2句）<br>
-                            練習：完整分析
+                            緊急：1-2 句專家建議（從 200 句中選擇）<br>
+                            練習：3-4 句專家建議（從 200 句中選擇）
                         </p>
                     </div>
 
@@ -888,8 +888,8 @@
                                 </button>
                             </div>
                             <p class="text-xs text-gray-600 mt-3">
-                                實戰：極簡建議（心法+做法）<br>
-                                練習：完整分析（摘要+警示+建議）
+                                緊急：1-2 句專家建議（從 200 句中選擇）<br>
+                                練習：3-4 句專家建議（從 200 句中選擇）
                             </p>
                         </div>
                     </div>
@@ -3308,24 +3308,12 @@
                     <div class="mb-4">
                         <div class="space-y-2">
                             ${analysis.suggestions.map(sug => {
-                                // Check if suggestion has two-line format (Emergency mode: 心法\n具體做法)
-                                // Check for both real newline and escaped newline
-                                if (sug.includes('\n') || sug.includes('\\n')) {
-                                    const [title, action] = sug.split(/\\n|\n/);
-                                    return `
-                                        <div class="py-6 md:py-8 px-4 md:px-6 bg-white/10 backdrop-blur-sm rounded-xl hover:bg-white/20 transition-smooth shadow-sm text-center">
-                                            <div style="font-size: xxx-large;" class="font-bold text-green-900 mb-4 leading-relaxed">${title}</div>
-                                            <div style="font-size: xxx-large;" class="text-green-800 font-semibold leading-relaxed">${action}</div>
-                                        </div>
-                                    `;
-                                } else {
-                                    // Practice mode: single paragraph - ENLARGED for better readability
-                                    return `
-                                        <div class="p-4 md:p-6 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transition-smooth cursor-pointer">
-                                            <p class="text-xl md:text-2xl text-green-900 leading-relaxed font-semibold">${sug}</p>
-                                        </div>
-                                    `;
-                                }
+                                // Unified single-line format for all suggestions (200 expert suggestions)
+                                return `
+                                    <div class="p-4 md:p-6 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transition-smooth cursor-pointer">
+                                        <p class="text-xl md:text-2xl text-green-900 leading-relaxed font-semibold">${sug}</p>
+                                    </div>
+                                `;
                             }).join('')}
                         </div>
                     </div>
