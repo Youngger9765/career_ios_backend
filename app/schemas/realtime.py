@@ -206,3 +206,87 @@ class RealtimeAnalyzeResponse(BaseModel):
             ]
         }
     }
+
+
+class ParentsReportRequest(BaseModel):
+    """家長對話報告請求"""
+
+    transcript: str = Field(..., min_length=1, description="完整對話逐字稿")
+    session_id: str = Field(default="", description="會談 session ID（可選）")
+
+    @field_validator("transcript")
+    @classmethod
+    def validate_transcript(cls, v: str) -> str:
+        """驗證 transcript 不能為空白"""
+        if not v or not v.strip():
+            raise ValueError("transcript cannot be empty")
+        return v
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "transcript": "家長：我今天真的氣死了，孩子又不寫功課...\n孩子：我就是不想寫！",
+                    "session_id": "session-123",
+                }
+            ]
+        }
+    }
+
+
+class ImprovementSuggestion(BaseModel):
+    """改進建議"""
+
+    issue: str = Field(..., description="需要改進的地方")
+    suggestion: str = Field(..., description="具體建議或換句話說")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "issue": "使用威脅語氣「你再不寫我就打你」",
+                    "suggestion": "可以換成：「我看到你現在不想寫功課，可以跟我說說為什麼嗎？」",
+                }
+            ]
+        }
+    }
+
+
+class ParentsReportResponse(BaseModel):
+    """家長對話報告回應"""
+
+    summary: str = Field(..., description="對話主題與回饋摘要（中性立場）")
+    highlights: List[str] = Field(..., description="溝通亮點列表")
+    improvements: List[ImprovementSuggestion] = Field(..., description="改進建議列表")
+    rag_references: List[RAGSource] = Field(..., description="相關親子教養知識庫參考")
+    timestamp: str = Field(..., description="生成時間戳（ISO 8601 格式）")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "summary": "這次對話主要討論孩子不寫功課的問題，家長表達了挫折與擔心。",
+                    "highlights": [
+                        "嘗試理解孩子的感受",
+                        "願意花時間陪伴孩子討論問題",
+                        "認知到情緒管理的重要性",
+                    ],
+                    "improvements": [
+                        {
+                            "issue": "使用威脅語氣「你再不寫我就打你」",
+                            "suggestion": "可以換成：「我看到你現在不想寫功課，可以跟我說說為什麼嗎？」",
+                        }
+                    ],
+                    "rag_references": [
+                        {
+                            "title": "正向教養：如何不打不罵教孩子",
+                            "content": "正向教養強調尊重孩子，透過連結建立合作關係...",
+                            "score": 0.85,
+                            "theory": "正向教養",
+                        }
+                    ],
+                    "timestamp": "2025-12-26T10:00:00Z",
+                }
+            ]
+        }
+    }

@@ -600,6 +600,79 @@
                 </button>
             </div>
         </div>
+
+        <!-- MOBILE-ONLY: Completion Screen (顯示在結束對話後) -->
+        <div id="completionScreen" class="hidden fixed inset-0 bg-gray-50 flex flex-col items-center justify-center px-8 z-50">
+            <!-- Title -->
+            <h1 class="text-4xl font-bold mb-4 text-gray-900">太棒了！</h1>
+
+            <!-- Subtitle with session duration -->
+            <p class="text-gray-600 text-lg mb-12">
+                已完成 <span id="sessionDuration" class="font-semibold text-gray-900">00:00:00</span> 的練習
+            </p>
+
+            <!-- Buttons -->
+            <div class="space-y-4 w-full max-w-xs">
+                <!-- View Report Button (Black) -->
+                <button id="viewReportBtn" class="haptic-feedback btn-touch w-full bg-black active:bg-gray-800 text-white rounded-full py-4 px-8 text-lg font-medium transition-smooth shadow-xl">
+                    查看報告
+                </button>
+
+                <!-- Return to Home Button (White with border) -->
+                <button id="returnHomeBtn" class="haptic-feedback btn-touch w-full bg-white text-black border-2 border-black rounded-full py-4 px-8 text-lg font-medium transition-smooth shadow-lg">
+                    回到首頁
+                </button>
+            </div>
+        </div>
+
+        <!-- MOBILE-ONLY: Report Screen (顯示在點擊查看報告後) -->
+        <div id="reportScreen" class="hidden fixed inset-0 bg-gray-50 overflow-y-auto z-50 px-6 py-8">
+            <div class="max-w-2xl mx-auto">
+                <!-- Back button (top left) -->
+                <button id="reportBackBtn" class="haptic-feedback btn-touch mb-6 text-gray-600 flex items-center gap-2 hover:text-gray-900 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    <span class="font-medium">返回</span>
+                </button>
+
+                <!-- Title Section -->
+                <div class="text-center mb-8">
+                    <h1 class="text-2xl font-bold mb-4 text-gray-900">
+                        這次你已經做了一件重要的事：
+                    </h1>
+                    <p class="text-xl font-semibold text-gray-800">
+                        願意好好跟孩子談。
+                    </p>
+                </div>
+
+                <!-- Tips Section (instructional text) -->
+                <div class="bg-white rounded-2xl p-6 mb-8 shadow-sm">
+                    <p class="text-gray-700 leading-relaxed mb-4">
+                        剛才的表達已經不錯了！
+                    </p>
+                    <p class="text-gray-700 leading-relaxed mb-4">
+                        不過如果換個方式說，孩子可能更容易接受。
+                    </p>
+                    <p class="text-gray-700 leading-relaxed mb-4">
+                        試試看用「我注意到...」開頭，
+                    </p>
+                    <p class="text-gray-700 leading-relaxed">
+                        少用「你總是...」這類詞，會讓對話更順暢。
+                    </p>
+                </div>
+
+                <!-- Highlights Section -->
+                <h2 class="text-xl font-bold mb-6 text-center text-gray-900">
+                    這次對話的亮點
+                </h2>
+
+                <!-- Highlight Cards Container -->
+                <div id="highlightCards" class="space-y-4 mb-8">
+                    <!-- Cards will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- DESKTOP LAYOUT (unchanged) -->
@@ -974,6 +1047,9 @@
 
         // === State Management ===
         let isRecording = false;
+        let isPaused = false; // NEW: Track pause state
+        let pausedTime = 0; // NEW: Track paused duration
+        let pauseStartTime = null; // NEW: Track when pause started
         let currentSpeaker = 'counselor';
         let startTime = null;
         let timerInterval = null;
@@ -1026,6 +1102,7 @@
         // === Analysis State ===
         let isAnalyzing = false; // Global flag to prevent concurrent analysis
         let sessionMode = 'practice'; // 'practice' or 'realTalk'
+        let currentSessionId = null; // Global session ID for unified tracking
 
         // === DOM Elements ===
         const startBtn = document.getElementById('startBtn');
@@ -1075,6 +1152,17 @@
         const carouselPrev = document.getElementById('carouselPrev');
         const carouselNext = document.getElementById('carouselNext');
         const carouselCounter = document.getElementById('carouselCounter');
+
+        // Completion Screen Elements
+        const completionScreen = document.getElementById('completionScreen');
+        const sessionDuration = document.getElementById('sessionDuration');
+        const viewReportBtn = document.getElementById('viewReportBtn');
+        const returnHomeBtn = document.getElementById('returnHomeBtn');
+
+        // Report Screen Elements
+        const reportScreen = document.getElementById('reportScreen');
+        const reportBackBtn = document.getElementById('reportBackBtn');
+        const highlightCards = document.getElementById('highlightCards');
 
         // Settings Modal Elements
         const settingsBtnMobile = document.getElementById('settingsBtnMobile');
@@ -1196,7 +1284,7 @@
             });
         }
 
-        if (pauseBtnMobile) pauseBtnMobile.addEventListener('click', stopSession);
+        if (pauseBtnMobile) pauseBtnMobile.addEventListener('click', togglePause);
         if (stopBtnMobile) stopBtnMobile.addEventListener('click', stopSession);
         // Speaker buttons removed (AI auto-detects speakers)
         triggerAnalysisBtn.addEventListener('click', manuallyTriggerAnalysis);
@@ -1205,6 +1293,72 @@
         // NEW: Carousel navigation
         if (carouselPrev) carouselPrev.addEventListener('click', () => navigateCarousel(-1));
         if (carouselNext) carouselNext.addEventListener('click', () => navigateCarousel(1));
+
+        // Completion Screen Buttons
+        if (viewReportBtn) {
+            viewReportBtn.addEventListener('click', async () => {
+                // Show loading state
+                viewReportBtn.disabled = true;
+                viewReportBtn.textContent = '生成報告中...';
+
+                try {
+                    // Call new parents-report API
+                    const fullTranscript = transcriptSegments.map(seg =>
+                        `${seg.speaker === 'counselor' ? '家長' : '孩子'}：${seg.text}`
+                    ).join('\n');
+
+                    const response = await fetch('/api/v1/realtime/parents-report', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            transcript: fullTranscript,
+                            session_id: currentSessionId  // Use unified session ID
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
+                    }
+
+                    const reportData = await response.json();
+                    console.log('📊 Parents report generated:', reportData);
+
+                    // Hide completion screen
+                    if (completionScreen) completionScreen.classList.add('hidden');
+
+                    // Populate report with real API data
+                    populateReportFromAPI(reportData);
+
+                    // Show report screen
+                    if (reportScreen) reportScreen.classList.remove('hidden');
+
+                } catch (error) {
+                    console.error('Failed to generate report:', error);
+                    alert('報告生成失敗，請稍後再試');
+                } finally {
+                    // Reset button state
+                    viewReportBtn.disabled = false;
+                    viewReportBtn.textContent = '查看報告';
+                }
+            });
+        }
+
+        // Report Screen Back Button
+        if (reportBackBtn) {
+            reportBackBtn.addEventListener('click', () => {
+                // Hide report screen
+                if (reportScreen) reportScreen.classList.add('hidden');
+
+                // Show completion screen
+                if (completionScreen) completionScreen.classList.remove('hidden');
+            });
+        }
+
+        if (returnHomeBtn) {
+            returnHomeBtn.addEventListener('click', () => {
+                location.reload();
+            });
+        }
 
         // Settings Modal Control
         if (settingsBtnMobile) {
@@ -1482,6 +1636,9 @@
             const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
 
             processor.onaudioprocess = (e) => {
+                // Don't send audio if paused
+                if (isPaused) return;
+
                 if (elevenLabsWs && elevenLabsWs.readyState === WebSocket.OPEN) {
                     // Get PCM float32 audio data
                     const inputData = e.inputBuffer.getChannelData(0);
@@ -1859,8 +2016,17 @@
 
         // === Core Functions ===
         async function startSession() {
+            // Generate unique session ID
+            const sessionId = `session-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+            currentSessionId = sessionId;
+            localStorage.setItem('currentSessionId', sessionId);
+            console.log(`🎯 Session ID: ${sessionId}`);
+
             console.log(`🎯 Session mode: ${sessionMode}`);
             isRecording = true;
+            isPaused = false; // Reset pause state
+            pausedTime = 0; // Reset paused duration
+            pauseStartTime = null; // Reset pause start time
             startTime = Date.now();
             transcriptSegments = [];
             analysisHistory = [];
@@ -1970,6 +2136,9 @@
 
         function stopSession() {
             isRecording = false;
+            isPaused = false; // Reset pause state
+            pausedTime = 0; // Reset paused duration
+            pauseStartTime = null; // Reset pause start time
 
             // Stop inactivity monitoring
             stopInactivityMonitoring();
@@ -2008,6 +2177,11 @@
             if (pauseBtnMobile) {
                 pauseBtnMobile.disabled = true;
                 pauseBtnMobile.classList.add('opacity-50', 'cursor-not-allowed');
+                // Reset pause button text
+                pauseBtnMobile.innerHTML = `
+                    <span class="text-2xl">⏸</span>
+                    <span>暫停</span>
+                `;
             }
             if (stopBtnMobile) {
                 stopBtnMobile.disabled = true;
@@ -2032,10 +2206,36 @@
             if (practiceIntroUI) {
                 practiceIntroUI.classList.add('hidden');
             }
-            // Only show initialUI if no analysis cards exist
-            if (initialUI && mobileAnalysisCards.length === 0) {
-                initialUI.classList.remove('hidden');
+
+            // Show completion screen on mobile, otherwise show initial UI
+            if (window.innerWidth < 768) {
+                // Mobile: Check if there's a transcript
+                const hasTranscript = transcriptSegments && transcriptSegments.length > 0;
+
+                if (hasTranscript && completionScreen && sessionDuration) {
+                    // Has transcript: Show completion screen
+                    // Calculate and display session duration
+                    const duration = calculateSessionDuration();
+                    sessionDuration.textContent = duration;
+
+                    // CRITICAL: Hide carousel before showing completion screen
+                    if (mobileCarousel) mobileCarousel.classList.add('hidden');
+
+                    // Show completion screen
+                    completionScreen.classList.remove('hidden');
+                } else {
+                    // No transcript: Return to initial UI (home page)
+                    if (mobileCarousel) mobileCarousel.classList.add('hidden');
+                    if (completionScreen) completionScreen.classList.add('hidden');
+                    if (initialUI) initialUI.classList.remove('hidden');
+                }
+            } else {
+                // Only show initialUI if no analysis cards exist (desktop behavior)
+                if (initialUI && mobileAnalysisCards.length === 0) {
+                    initialUI.classList.remove('hidden');
+                }
             }
+
             // 隱藏手機版底部按鈕列
             if (recordingBottomBar) {
                 recordingBottomBar.classList.add('hidden');
@@ -2058,6 +2258,95 @@
 
             // Save to localStorage
             saveToHistory();
+        }
+
+        // NEW: Toggle pause/resume
+        function togglePause() {
+            if (isPaused) {
+                resumeSession();
+            } else {
+                pauseSession();
+            }
+        }
+
+        // NEW: Pause the session
+        function pauseSession() {
+            if (!isRecording || isPaused) return;
+
+            isPaused = true;
+            pauseStartTime = Date.now();
+
+            // Pause timer
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            // Pause audio simulation if playing (demo mode)
+            if (isDemoMode && audioSimulation.isPlaying) {
+                pauseAudioSimulation();
+            }
+
+            // In real mode, we can't truly "pause" ElevenLabs WebSocket
+            // But we can stop sending audio and ignore incoming messages
+            // The WebSocket stays connected but inactive
+
+            // Update UI - Mobile pause button
+            if (pauseBtnMobile) {
+                pauseBtnMobile.innerHTML = `
+                    <span class="text-2xl">▶️</span>
+                    <span>繼續</span>
+                `;
+            }
+
+            // Update status
+            status.textContent = '⏸️ 已暫停';
+            status.classList.remove('pulse-recording');
+
+            // Stop waveform animations
+            updateWaveformAnimations();
+
+            console.log('⏸️ Session paused');
+        }
+
+        // NEW: Resume the session
+        function resumeSession() {
+            if (!isRecording || !isPaused) return;
+
+            // Calculate paused duration and add to total
+            if (pauseStartTime) {
+                pausedTime += (Date.now() - pauseStartTime);
+                pauseStartTime = null;
+            }
+
+            isPaused = false;
+
+            // Resume timer
+            timerInterval = setInterval(updateTimer, 1000);
+
+            // Resume audio simulation if was playing (demo mode)
+            if (isDemoMode && isVoiceSimEnabled && audioPlayerSection) {
+                playAudioSimulation();
+            }
+
+            // In real mode, WebSocket is still connected, just resume normal operation
+
+            // Update UI - Mobile pause button
+            if (pauseBtnMobile) {
+                pauseBtnMobile.innerHTML = `
+                    <span class="text-2xl">⏸</span>
+                    <span>暫停</span>
+                `;
+            }
+
+            // Update status
+            status.textContent = '🔴 錄音中';
+            status.classList.add('pulse-recording');
+
+            // Resume waveform animations
+            updateWaveformAnimations();
+
+            console.log('▶️ Session resumed');
         }
 
         function switchSpeaker(speaker) {
@@ -2348,8 +2637,20 @@
             });
         }
 
+        function calculateSessionDuration() {
+            // Subtract paused time from total elapsed time
+            const totalPausedMs = pausedTime + (isPaused && pauseStartTime ? (Date.now() - pauseStartTime) : 0);
+            const elapsed = Math.floor((Date.now() - startTime - totalPausedMs) / 1000);
+            const hours = Math.floor(elapsed / 3600);
+            const displayMinutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+            return `${String(hours).padStart(2, '0')}:${String(displayMinutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
         function updateTimer() {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            // Subtract paused time from total elapsed time
+            const totalPausedMs = pausedTime + (isPaused && pauseStartTime ? (Date.now() - pauseStartTime) : 0);
+            const elapsed = Math.floor((Date.now() - startTime - totalPausedMs) / 1000);
             const minutes = Math.floor(elapsed / 60);
             const seconds = elapsed % 60;
             const hours = Math.floor(elapsed / 3600);
@@ -2598,7 +2899,9 @@
                     speakers: transcriptSegments,
                     time_range: timeRange,
                     recording_timestamp: recordingTimestamp,
-                    provider: currentProvider
+                    provider: currentProvider,
+                    session_id: currentSessionId,  // Unified session ID
+                    use_cache: true  // Enable Gemini caching
                 };
 
                 // Add codeer_model parameter when using Codeer provider
@@ -3316,6 +3619,122 @@
                     carouselNext.disabled = false;
                 }
             }
+        }
+
+        // === Report Screen: Populate Report Function (NEW - Using API Data) ===
+        function populateReportFromAPI(reportData) {
+            if (!highlightCards) return;
+
+            console.log('📊 Populating report with API data:', reportData);
+
+            // Clear existing cards
+            highlightCards.innerHTML = '';
+
+            // Update report title with summary
+            const reportTitle = document.querySelector('#reportScreen h1');
+            if (reportTitle && reportData.summary) {
+                // Keep original title, but could optionally add summary as subtitle
+                console.log('Summary:', reportData.summary);
+            }
+
+            // Create highlight cards from API response
+            const highlights = reportData.highlights || [];
+
+            highlights.forEach((highlight, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-amber-50 rounded-2xl p-6 shadow-sm border border-amber-100 relative';
+                card.innerHTML = `
+                    <p class="text-gray-800 leading-relaxed pr-12">${highlight}</p>
+                    <div class="absolute top-4 right-4 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                        <span class="text-white text-xl">✓</span>
+                    </div>
+                `;
+                highlightCards.appendChild(card);
+            });
+
+            // Add improvement suggestions section (if we want to show them)
+            if (reportData.improvements && reportData.improvements.length > 0) {
+                const improvementsSection = document.createElement('div');
+                improvementsSection.className = 'mt-8';
+                improvementsSection.innerHTML = `
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">💡 可以更好的地方</h2>
+                    <div class="space-y-4">
+                        ${reportData.improvements.map(item => `
+                            <div class="bg-blue-50 rounded-2xl p-6 border border-blue-100">
+                                <p class="text-gray-700 font-medium mb-2">📌 ${item.issue}</p>
+                                <p class="text-gray-600 pl-6">💬 ${item.suggestion}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                highlightCards.parentElement.appendChild(improvementsSection);
+            }
+
+            // Log RAG references (could be displayed later if needed)
+            if (reportData.rag_references && reportData.rag_references.length > 0) {
+                console.log('📚 RAG References:', reportData.rag_references);
+            }
+        }
+
+        // === LEGACY: Old populate function (kept for fallback) ===
+        function populateReport() {
+            if (!highlightCards) return;
+
+            // Clear existing cards
+            highlightCards.innerHTML = '';
+
+            // Extract highlights from analysis cards
+            const highlights = [];
+
+            // Get data from mobileAnalysisCards array
+            mobileAnalysisCards.forEach(card => {
+                // Extract suggestions from each analysis card
+                const suggestions = card.querySelectorAll('.suggestion-card');
+                suggestions.forEach(suggestion => {
+                    const text = suggestion.textContent.trim();
+                    if (text && text.length > 0) {
+                        highlights.push(text);
+                    }
+                });
+
+                // Also extract from analysis text if available
+                const analysisText = card.querySelector('.analysis-content');
+                if (analysisText) {
+                    const text = analysisText.textContent.trim();
+                    // Split by common delimiters and extract key points
+                    const points = text.split(/[。！]/g).filter(p => p.trim().length > 10);
+                    points.forEach(point => {
+                        if (point.trim() && !highlights.includes(point.trim())) {
+                            highlights.push(point.trim());
+                        }
+                    });
+                }
+            });
+
+            // Fallback: Create default highlights if none found
+            if (highlights.length === 0) {
+                highlights.push(
+                    '你有試著說明自己在意的是『未來』而不是只說成績。',
+                    '你在對話中表現出願意理解孩子的態度。',
+                    '你嘗試用較溫和的方式開啟對話。'
+                );
+            }
+
+            // Limit to maximum 5 highlights
+            const displayHighlights = highlights.slice(0, 5);
+
+            // Create cards for each highlight
+            displayHighlights.forEach((highlight, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-amber-50 rounded-2xl p-6 shadow-sm border border-amber-100 relative';
+                card.innerHTML = `
+                    <p class="text-gray-800 leading-relaxed pr-12">${highlight}</p>
+                    <div class="absolute top-4 right-4 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                        <span class="text-white text-xl">✓</span>
+                    </div>
+                `;
+                highlightCards.appendChild(card);
+            });
         }
 
         // Add swipe gesture support for carousel

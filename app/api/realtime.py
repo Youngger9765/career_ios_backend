@@ -15,6 +15,9 @@ from app.schemas.realtime import (
     CacheMetadata,
     CodeerTokenMetadata,
     CounselingMode,
+    ImprovementSuggestion,
+    ParentsReportRequest,
+    ParentsReportResponse,
     ProviderMetadata,
     RAGSource,
     RealtimeAnalyzeRequest,
@@ -39,6 +42,11 @@ cache_manager = CacheManager()
 SAFETY_WINDOW_SPEAKER_TURNS = 10  # Number of recent speaker turns to evaluate
 SAFETY_WINDOW_CHARACTERS = 300  # Fallback: character count for sliding window
 
+# Annotated window configuration for AI safety assessment
+ANNOTATED_SAFETY_WINDOW_TURNS = (
+    5  # Last 5-10 turns highlighted for AI safety evaluation
+)
+
 # System instruction for cache (固定不變的部分)
 CACHE_SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
 
@@ -54,6 +62,17 @@ CACHE_SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對�
    - 你會收到完整的對話記錄（可能長達數十分鐘）
    - 但你的分析必須聚焦在「最後出現的對話」（最新一分鐘）
    - 前面的對話僅作為背景脈絡參考，幫助你理解前因後果
+
+【安全等級評估規則】CRITICAL - 必須嚴格遵守：
+⚠️ **僅根據「【最近對話 - 用於安全評估】」區塊判斷安全等級**
+   - 標註區塊顯示最近 5-10 個對話輪次
+   - 不要因為完整逐字稿中出現過的危險詞就評估為高風險
+   - 如果最近對話已經緩和、正向，即使之前有危險內容，也應評估為較低風險
+   - 安全等級反映當前狀態，不是歷史狀態
+
+🎯 **建議內容**：
+   - 可以參考完整對話歷史，提供更有深度的建議
+   - 但要聚焦在最近對話的當前狀態
 
 【核心原則】同理優先、溫和引導、具體行動：
 
@@ -386,6 +405,52 @@ def _assess_safety_level(transcript: str, speakers: List[dict]) -> SafetyLevel:
     return SafetyLevel.green
 
 
+def _build_annotated_transcript(transcript: str, speakers: List[dict]) -> str:
+    """Build annotated transcript with recent window highlighted for safety assessment.
+
+    Args:
+        transcript: Full conversation transcript
+        speakers: List of speaker segments
+
+    Returns:
+        Annotated transcript with recent window marked for safety evaluation
+    """
+    # Build full transcript
+    full_transcript = "\n".join(
+        [f"{seg.get('speaker', 'unknown')}: {seg.get('text', '')}" for seg in speakers]
+    )
+
+    # Extract recent window for annotation
+    recent_speakers = (
+        speakers[-ANNOTATED_SAFETY_WINDOW_TURNS:]
+        if len(speakers) > ANNOTATED_SAFETY_WINDOW_TURNS
+        else speakers
+    )
+    recent_transcript = "\n".join(
+        [
+            f"{seg.get('speaker', 'unknown')}: {seg.get('text', '')}"
+            for seg in recent_speakers
+        ]
+    )
+
+    # Construct annotated prompt
+    annotated = f"""完整對話逐字稿（供參考，理解背景脈絡）：
+{full_transcript}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【最近對話 - 用於安全評估】
+（請根據此區塊判斷當前安全等級）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{recent_transcript}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ CRITICAL: 安全等級評估請只根據「【最近對話 - 用於安全評估】」區塊判斷，
+完整對話僅作為理解脈絡參考。如果最近對話已緩和，即使之前有危險內容，
+也應評估為較低風險。"""
+
+    return annotated
+
+
 def _build_emergency_prompt(transcript: str, rag_context: str) -> str:
     """Build simplified prompt for emergency mode (~500 tokens).
 
@@ -435,7 +500,9 @@ YOU MUST output ONLY 1 suggestion with 2 lines!"""
     return prompt
 
 
-def _build_practice_prompt(transcript: str, rag_context: str) -> str:
+def _build_practice_prompt(
+    transcript: str, rag_context: str, annotated_transcript: str = ""
+) -> str:
     """Build detailed prompt for practice mode (~1500 tokens).
 
     Practice mode is for learning situations with detailed analysis and guidance.
@@ -444,15 +511,19 @@ def _build_practice_prompt(transcript: str, rag_context: str) -> str:
     Args:
         transcript: The conversation transcript
         rag_context: RAG knowledge context (if available)
+        annotated_transcript: Optional annotated transcript with safety window highlighted
 
     Returns:
         Detailed prompt for practice/learning situations
     """
+    # Use annotated transcript if provided, otherwise fall back to plain transcript
+    dialogue_content = annotated_transcript if annotated_transcript else transcript
+
     # Use existing detailed prompt (same as CACHE_SYSTEM_INSTRUCTION style)
     prompt = f"""你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
 
 【對話內容】
-{transcript}
+{dialogue_content}
 
 【相關親子教養知識庫】
 {rag_context if rag_context else "（無相關知識庫內容）"}
@@ -739,13 +810,24 @@ async def analyze_transcript(
                     )
                 rag_context = "\n".join(rag_context_parts)
 
+        # Build annotated transcript for safety assessment
+        annotated_transcript = _build_annotated_transcript(
+            request.transcript, speakers_dict
+        )
+        logger.info(
+            f"Built annotated transcript with {len(speakers_dict)} total speakers, "
+            f"last {min(ANNOTATED_SAFETY_WINDOW_TURNS, len(speakers_dict))} highlighted"
+        )
+
         # Select prompt based on counseling mode
         if request.mode == CounselingMode.emergency:
             logger.info("Using EMERGENCY mode (simplified prompt)")
-            custom_prompt = _build_emergency_prompt(request.transcript, rag_context)
+            custom_prompt = _build_emergency_prompt(annotated_transcript, rag_context)
         else:
             logger.info("Using PRACTICE mode (detailed prompt)")
-            custom_prompt = _build_practice_prompt(request.transcript, rag_context)
+            custom_prompt = _build_practice_prompt(
+                request.transcript, rag_context, annotated_transcript
+            )
 
         # Initialize variables
         analysis = {}
@@ -959,3 +1041,157 @@ async def generate_elevenlabs_token():
     except Exception as e:
         logger.error(f"Token generation failed: {e}")
         raise HTTPException(status_code=500, detail=f"Token generation failed: {e}")
+
+
+@router.post("/parents-report", response_model=ParentsReportResponse)
+async def generate_parents_report(
+    request: ParentsReportRequest, db: Session = Depends(get_db)
+):
+    """Generate a comprehensive parenting communication report.
+
+    Analyzes parent-child conversation transcript and provides:
+    1. Summary/theme of the conversation (neutral stance)
+    2. Communication highlights (what went well)
+    3. Areas for improvement with specific suggestions
+    4. Relevant RAG references from parenting knowledge base
+
+    This endpoint queries the parenting RAG knowledge base and uses
+    Gemini to generate structured feedback.
+    """
+    import json
+
+    try:
+        # Step 1: Search RAG knowledge base for relevant parenting content
+        logger.info("Searching RAG for parenting-related content")
+        rag_sources = await _search_rag_knowledge(
+            transcript=request.transcript,
+            db=db,
+            top_k=5,  # Get more sources for comprehensive report
+            similarity_threshold=0.5,
+        )
+
+        # Step 2: Build RAG context for prompt
+        rag_context = ""
+        if rag_sources:
+            rag_context_parts = ["\n\n📚 相關親子教養知識庫內容（供參考）：\n"]
+            for idx, source in enumerate(rag_sources, 1):
+                rag_context_parts.append(
+                    f"[{idx}] {source.title} ({source.theory}): {source.content}"
+                )
+            rag_context = "\n".join(rag_context_parts)
+            logger.info(f"Found {len(rag_sources)} relevant RAG sources")
+        else:
+            logger.info("No RAG sources found, proceeding without context")
+
+        # Step 3: Build analysis prompt
+        analysis_prompt = f"""你是專業的親子溝通分析師，負責分析家長與孩子的對話，提供建設性的回饋。
+
+【對話逐字稿】
+{request.transcript}
+
+{rag_context}
+
+【分析要求】
+請以中性、客觀、溫和的立場分析這次對話，提供以下 4 個部分：
+
+1. **對話主題與摘要**（summary）
+   - 簡短說明這次對話的主題是什麼
+   - 中性立場，不批判，讓家長知道「這次到底說了什麼」
+   - 1-2 句話即可
+
+2. **溝通亮點**（highlights）
+   - 列出家長在溝通中做得好的地方
+   - 例如：展現同理心、願意傾聽、嘗試理解孩子感受等
+   - 用正向、鼓勵的語氣
+   - 3-5 個亮點，每個 ≤ 30 字
+
+3. **改進建議**（improvements）
+   - 指出值得更好的地方
+   - 提供具體、可操作的建議或換句話說
+   - 溫和、非批判的語氣
+   - 每個建議包含：
+     * issue: 需要改進的地方（具體描述，≤ 40 字）
+     * suggestion: 具體建議或換句話說（≤ 60 字）
+   - 2-4 個建議
+
+4. **知識庫參考**（rag_references）
+   - 已自動提供上方的 RAG 知識庫內容
+   - 你不需要額外處理，只需在分析時參考即可
+
+【語氣要求】
+- 溫和、同理、建設性
+- 避免批判或讓家長感到被指責
+- 用「可以試試」「或許」「換個方式」等柔和引導詞
+- 焦點放在「如何做得更好」而非「哪裡做錯」
+
+【輸出格式】
+請以 JSON 格式回應（不要用 markdown code block，直接輸出 JSON）：
+
+{{
+  "summary": "對話主題摘要（1-2 句）",
+  "highlights": [
+    "亮點1（≤ 30 字）",
+    "亮點2（≤ 30 字）",
+    "亮點3（≤ 30 字）"
+  ],
+  "improvements": [
+    {{
+      "issue": "需要改進的地方（≤ 40 字）",
+      "suggestion": "具體建議或換句話說（≤ 60 字）"
+    }}
+  ]
+}}
+
+請開始分析。"""
+
+        # Step 4: Call Gemini for analysis
+        logger.info("Calling Gemini for report generation")
+        response = await gemini_service.chat_completion(
+            prompt=analysis_prompt,
+            temperature=0.7,  # Higher temperature for more natural language
+        )
+
+        # Step 5: Parse Gemini response
+        try:
+            # Try to extract JSON from response
+            if "```json" in response:
+                json_start = response.find("```json") + 7
+                json_end = response.find("```", json_start)
+                json_text = response[json_start:json_end].strip()
+            elif "{" in response:
+                json_start = response.find("{")
+                json_end = response.rfind("}") + 1
+                json_text = response[json_start:json_end]
+            else:
+                raise ValueError("No JSON found in response")
+
+            analysis = json.loads(json_text)
+            logger.info("Successfully parsed Gemini response")
+
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Failed to parse Gemini response: {e}")
+            logger.error(f"Response text: {response[:500]}")
+            raise HTTPException(
+                status_code=500, detail="Failed to parse AI analysis response"
+            )
+
+        # Step 6: Build response
+        return ParentsReportResponse(
+            summary=analysis.get("summary", ""),
+            highlights=analysis.get("highlights", []),
+            improvements=[
+                ImprovementSuggestion(
+                    issue=item.get("issue", ""), suggestion=item.get("suggestion", "")
+                )
+                for item in analysis.get("improvements", [])
+            ],
+            rag_references=rag_sources,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        )
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Parents report generation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

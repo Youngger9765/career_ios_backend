@@ -10,6 +10,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Parents Report API & Unified Session Management** (2025-12-26)
+  - ✅ New endpoint: `POST /api/v1/realtime/parents-report`
+    - Generates comprehensive parenting communication reports
+    - Analyzes parent-child conversation transcripts
+    - Provides structured feedback in 4 sections:
+      1. Summary/theme (neutral stance)
+      2. Communication highlights (what went well)
+      3. Areas for improvement with specific suggestions
+      4. RAG references from parenting knowledge base
+    - Integrates with existing RAG infrastructure (similarity_threshold=0.5)
+    - Uses Gemini 2.5 Flash for analysis (temperature=0.7)
+  - ✅ Unified Session ID Management
+    - Generated once at session start: `session-{timestamp}-{random}`
+    - Persisted in localStorage for cross-request tracking
+    - Used consistently across all realtime APIs:
+      - `/api/v1/realtime/analyze` (now includes session_id + use_cache)
+      - `/api/v1/realtime/parents-report`
+      - Future GBQ data persistence
+    - Enables Gemini context caching for cost optimization
+  - ✅ Frontend Integration
+    - Report screen UI with highlight cards and improvement suggestions
+    - Click "查看報告" triggers API call and displays structured feedback
+    - Mobile-responsive design with completion screen
+    - Session ID tracking across recording lifecycle
+  - ✅ New Schemas: `ParentsReportRequest`, `ParentsReportResponse`, `ImprovementSuggestion`
+  - ✅ Testing: Backend API tested via curl (successful response with RAG integration)
 - **Universal Credit/Payment System - Admin Backend (Phase 1)** (2025-12-20)
   - ✅ Database schema extensions:
     - Extended `counselors` table with credit fields (phone, total_credits, credits_used, subscription_expires_at)

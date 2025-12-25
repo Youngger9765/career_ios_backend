@@ -10,6 +10,32 @@
 ## [未發布]
 
 ### 新增
+- **家長報告 API 與統一 Session 管理** (2025-12-26)
+  - ✅ 新增端點：`POST /api/v1/realtime/parents-report`
+    - 生成完整的親子溝通報告
+    - 分析家長與孩子的對話逐字稿
+    - 提供 4 個結構化回饋區塊：
+      1. 對話主題摘要（中性立場）
+      2. 溝通亮點（表現良好的部分）
+      3. 改進建議（具體建議或換句話說）
+      4. RAG 知識庫參考（相關親子教養文獻）
+    - 整合現有 RAG 基礎設施（similarity_threshold=0.5）
+    - 使用 Gemini 2.5 Flash 進行分析（temperature=0.7）
+  - ✅ 統一 Session ID 管理
+    - 在 session 開始時生成一次：`session-{timestamp}-{random}`
+    - 持久化於 localStorage 以跨請求追蹤
+    - 所有即時分析 API 統一使用：
+      - `/api/v1/realtime/analyze`（現包含 session_id + use_cache）
+      - `/api/v1/realtime/parents-report`
+      - 未來的 GBQ 資料持久化
+    - 啟用 Gemini context caching 優化成本
+  - ✅ 前端整合
+    - 報告畫面 UI，包含亮點卡片與改進建議
+    - 點擊「查看報告」觸發 API 並顯示結構化回饋
+    - 手機版響應式設計，包含完成畫面
+    - Session ID 貫穿整個錄音生命週期
+  - ✅ 新增 Schemas：`ParentsReportRequest`、`ParentsReportResponse`、`ImprovementSuggestion`
+  - ✅ 測試：後端 API 透過 curl 測試（成功回應，含 RAG 整合）
 - **用戶註冊 API** (2025-12-15)
   - ✅ 新增端點：`POST /api/auth/register` 用於諮詢師帳號註冊
   - ✅ 註冊後自動登入（立即返回 JWT token）
