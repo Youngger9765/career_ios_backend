@@ -795,18 +795,594 @@ CREATE INDEX idx_sessions_mode ON sessions(mode);
 
 ---
 
+## 任務五：浮島 App iOS 完整功能交付
+
+**優先級**: 🔴 P0（緊急）
+**預估時間**: 16-20 小時
+**負責**: Backend
+**影響範圍**: iOS App + Web Admin Console
+**參考文件**:
+- 浮島 App｜登入註冊、Onboarding
+- 浮島 App｜AI 功能模組 (事前練習)
+- 浮島 App｜AI 功能模組 (事中提醒)
+- 浮島 App｜History 頁 (諮詢紀錄)
+- 浮島 App｜Settings 設置頁
+
+---
+
+### 5.1 手機號碼登入與 SMS 認證（全新功能）
+
+**需求說明**:
+- 使用者輸入手機號碼
+- 後端發送 SMS 驗證碼
+- 二階段認證完成後建立帳號並保持登入
+- 需要防止驗證碼濫發（時間限制、次數限制）
+
+**API 設計**:
+
+- [ ] **POST /api/v1/auth/sms/request** - 請求 SMS 驗證碼
+  ```json
+  Request:
+  {
+    "phone": "+886912345678",
+    "tenant_id": "island_parents"
+  }
+
+  Response 200:
+  {
+    "message": "驗證碼已發送",
+    "retry_after_seconds": 60,  // 60 秒後可重新發送
+    "expires_in_seconds": 300   // 5 分鐘內有效
+  }
+
+  Response 429 (太頻繁):
+  {
+    "error": "請求過於頻繁",
+    "retry_after_seconds": 45
+  }
+  ```
+
+- [ ] **POST /api/v1/auth/sms/verify** - 驗證 SMS 碼並登入
+  ```json
+  Request:
+  {
+    "phone": "+886912345678",
+    "code": "123456"
+  }
+
+  Response 200 (首次登入 - 建立帳號):
+  {
+    "access_token": "jwt_token",
+    "refresh_token": "refresh_token",
+    "is_new_user": true,
+    "counselor_id": "uuid",
+    "onboarding_required": true
+  }
+
+  Response 200 (已有帳號 - 直接登入):
+  {
+    "access_token": "jwt_token",
+    "refresh_token": "refresh_token",
+    "is_new_user": false,
+    "counselor_id": "uuid",
+    "onboarding_required": false
+  }
+
+  Response 400:
+  {
+    "error": "驗證碼錯誤或已過期"
+  }
+  ```
+
+- [ ] **POST /api/v1/auth/sms/resend** - 重新發送驗證碼
+  ```json
+  Request:
+  {
+    "phone": "+886912345678"
+  }
+
+  Response 200:
+  {
+    "message": "驗證碼已重新發送",
+    "retry_after_seconds": 60
+  }
+  ```
+
+**資料模型**:
+
+- [ ] **SMSVerification Model**
+  ```python
+  class SMSVerification(Base):
+      id = Column(GUID(), primary_key=True)
+      phone = Column(String(20), nullable=False, index=True)
+      code = Column(String(6), nullable=False)  # 6 位數字
+      created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+      expires_at = Column(DateTime(timezone=True))  # 5 分鐘後過期
+      verified = Column(Boolean, default=False)
+      attempts = Column(Integer, default=0)  # 驗證嘗試次數
+      tenant_id = Column(String, default="island_parents")
+  ```
+
+**安全機制**:
+- [ ] 驗證碼 6 位數字（隨機生成）
+- [ ] 5 分鐘有效期
+- [ ] 同一手機號 60 秒內只能發送一次
+- [ ] 最多嘗試 5 次，超過則鎖定 1 小時
+- [ ] 驗證成功後立即失效
+
+**SMS 服務整合**:
+- [ ] 選擇 SMS 服務商（Twilio / AWS SNS / 三竹簡訊）
+- [ ] 環境變數配置
+- [ ] 發送日誌記錄
+
+**Deliverable**:
+- 3 個 API endpoints
+- SMSVerification model + migration
+- SMS 服務整合
+- 10+ integration tests
+
+---
+
+### 5.2 Onboarding 流程與孩子資料管理
+
+**需求說明**:
+- 首次登入後，要求輸入孩子基本資料
+- 支援多個孩子
+- 每個孩子的資料包含：暱稱、性別、年級、家長關係
+
+**API 設計**:
+
+✅ **已存在 API（可直接使用）**:
+- `POST /api/v1/island/clients` - 建立孩子資料（任務三 § 3.2 已實作）
+  - Required: `name`, `grade` (1-12)
+  - Optional: `gender`, `birth_date`, `notes`
+
+- [ ] **PATCH /api/v1/island/clients/:client_id** - 更新孩子資料
+  ```json
+  Request:
+  {
+    "name": "小寶",
+    "grade": 5,
+    "gender": "male",
+    "notes": "容易生氣、拒絕寫作業"
+  }
+
+  Response 200:
+  {
+    "client_id": "uuid",
+    "name": "小寶",
+    "grade": 5,
+    "gender": "male",
+    "updated_at": "2025-12-20T10:00:00Z"
+  }
+  ```
+
+- [ ] **GET /api/v1/island/clients** - 取得所有孩子列表
+  ```json
+  Response 200:
+  [
+    {
+      "client_id": "uuid",
+      "name": "小寶",
+      "grade": 5,
+      "gender": "male",
+      "avatar": null,  // 未來支援頭像
+      "created_at": "2025-12-20T10:00:00Z"
+    }
+  ]
+  ```
+
+- [ ] **新增欄位到 Client model**
+  ```python
+  class Client(Base):
+      # 新增欄位
+      parent_relationship = Column(String(20))  # "爸爸", "媽媽", "不願透漏"
+      avatar_text = Column(String(2))  # 頭像文字（中文兩字或英文首字母）
+  ```
+
+**Deliverable**:
+- 2 個新 API endpoints（UPDATE + LIST）
+- Client model 擴充（parent_relationship, avatar_text）
+- 5+ integration tests
+
+---
+
+### 5.3 練習情境管理（事前練習專用）
+
+**需求說明**:
+- 提供 4 個預設情境供選擇
+- 支援自訂情境
+- 情境包含：標題、副標題、詳細說明
+
+**API 設計**:
+
+- [ ] **GET /api/v1/island/practice-scenarios** - 取得預設情境列表
+  ```json
+  Response 200:
+  [
+    {
+      "scenario_id": "scenario_1",
+      "title": "成績出來了，我不知道怎麼開口",
+      "subtitle": "我其實很擔心，但又怕一開口就變成責怪。",
+      "description": "詳細說明...",
+      "icon": "grade_icon"
+    },
+    {
+      "scenario_id": "scenario_2",
+      "title": "手機不放，怎麼講都沒用",
+      "subtitle": "已經說過很多次，但只要一提到手機，氣氛就變得很差。",
+      "description": "詳細說明...",
+      "icon": "phone_icon"
+    }
+    // ... 共 4 個預設情境
+  ]
+  ```
+
+- [ ] **資料結構（後端硬編碼 4 個預設情境）**
+  - 不需要資料庫儲存，直接在代碼中定義
+  - 未來可擴充為動態管理
+
+✅ **scenario_topic 欄位已存在**（任務三 § 3.3）:
+- Session model 已有 `scenario_topic` 欄位
+- 可直接使用，無需修改
+
+**Deliverable**:
+- 1 個 API endpoint（GET scenarios）
+- 4 個預設情境定義（代碼）
+- 3+ integration tests
+
+---
+
+### 5.4 即時對話與紅黃綠燈回饋
+
+**需求說明**:
+- 事前練習模式（練習對話）
+- 事中提醒模式（實際親子對話）
+- 紅黃綠燈即時回饋（15s/30s/60s 動態頻率）
+- 使用時數追蹤與扣款
+
+**API 對應**:
+
+✅ **已存在 API（可直接使用）**:
+- `POST /api/v1/island/sessions` - 建立空 Session（任務三 § 3.4 Phase 1）
+  - 支援 `mode`: "practice" | "emergency"
+  - 支援 `scenario_topic` 欄位
+
+- `POST /api/v1/island/sessions/:session_id/analyze-partial` - Partial 分析（任務三 § 3.4 Phase 2）
+  - 回傳 `risk_level`, `severity`, `display_text`, `action_suggestion`
+  - 回傳 `suggested_interval_seconds`: 15 | 30 | 60
+
+- `PATCH /api/v1/island/sessions/:session_id/complete` - 完成 Session（任務三 § 3.4 Phase 3）
+
+**需要新增的功能**:
+
+- [ ] **使用時數計算與扣款邏輯**
+  - Session 結束時計算 `duration_seconds`
+  - 轉換為分鐘數（無條件捨去秒數）
+  - 從使用者的兌換碼額度中扣除
+  - 參考任務三 Section 5（兌換碼系統）
+
+- [ ] **即時檢查額度是否足夠**
+  - 在 `analyze-partial` API 中檢查剩餘額度
+  - 若額度不足，回傳特殊狀態碼
+  ```json
+  Response 402 (額度不足):
+  {
+    "error": "使用時數已用完",
+    "remaining_minutes": 0,
+    "message": "請前往設定輸入兌換碼"
+  }
+  ```
+
+**Deliverable**:
+- 使用時數扣款邏輯整合
+- 額度不足檢查機制
+- 5+ integration tests
+
+---
+
+### 5.5 報告生成（事前 vs 事中差異）
+
+**需求說明**:
+- **事前練習報告**：完整分析（摘要、警示、建議、反思提示、理論引用、學習重點）
+- **事中實戰報告**：簡化分析（關鍵事件、快速建議、行動檢核清單）
+- 報告內容欄位：待解決的議題、溝通內容分析、建議下次可以這樣做
+- 每個欄位字數上限 50 字
+
+**API 對應**:
+
+✅ **已規劃 API**（任務三 Section 6 - 育兒談話分析）:
+- `POST /api/v1/reports/parenting-analysis`
+  ```json
+  Request:
+  {
+    "session_id": "uuid",
+    "mode": "practice" | "emergency"
+  }
+
+  Response 200:
+  {
+    "report_id": "uuid",
+    "report_title": "親子溝通訓練報告 2025-12-20-14:30",  // practice mode
+    // OR "親子溝通報告 2025-12-20-14:30",  // emergency mode
+    "issue": "待解決的議題（50 字內）",
+    "analysis": "溝通內容分析（50 字內）",
+    "suggestions": "建議下次可以這樣做（50 字內）",
+    "created_at": "2025-12-20T14:30:00Z"
+  }
+  ```
+
+**需要完成的開發**:
+- [ ] 實作 `POST /api/v1/reports/parenting-analysis` API
+- [ ] Practice mode 生成邏輯（完整分析）
+- [ ] Emergency mode 生成邏輯（簡化分析）
+- [ ] 字數限制（每欄位 50 字）
+- [ ] 整合 RAG（理論引用）
+
+**Deliverable**:
+- 1 個 API endpoint
+- 兩種模式的報告模板
+- 8+ integration tests
+
+---
+
+### 5.6 歷史記錄查詢
+
+**需求說明**:
+- 查看所有對話紀錄
+- 分 Tab 顯示：對話練習 vs 孩子溝通
+- 支援多個孩子切換
+- 顯示使用量統計
+
+**API 設計**:
+
+- [ ] **GET /api/v1/island/sessions** - 取得 Session 列表
+  ```json
+  Query Parameters:
+  - client_id (optional): 篩選特定孩子
+  - mode (optional): "practice" | "emergency"
+  - limit (default: 20)
+  - offset (default: 0)
+
+  Response 200:
+  {
+    "total": 45,
+    "sessions": [
+      {
+        "session_id": "uuid",
+        "client_id": "uuid",
+        "client_name": "小寶",
+        "mode": "practice",
+        "scenario_topic": "成績出來了，我不知道怎麼開口",
+        "started_at": "2025-12-20T10:00:00Z",
+        "duration_seconds": 1800,
+        "report_generated": true,
+        "report_id": "uuid"
+      }
+    ]
+  }
+  ```
+
+- [ ] **GET /api/v1/island/usage-stats** - 取得使用量統計
+  ```json
+  Response 200:
+  {
+    "total_minutes_used": 120,
+    "remaining_minutes": 480,
+    "total_quota_minutes": 600,
+    "total_sessions": 15,
+    "children_count": 2,
+    "last_used_at": "2025-12-20T14:30:00Z"
+  }
+  ```
+
+**Deliverable**:
+- 2 個 API endpoints
+- 分頁邏輯
+- 5+ integration tests
+
+---
+
+### 5.7 設定頁面 APIs
+
+**需求說明**:
+- 顯示使用狀態（孩子數量、剩餘時數、已使用時數、最近使用時間）
+- 兌換碼輸入與驗證
+- 幫助資源連結
+- 帳號管理
+
+**API 對應**:
+
+✅ **使用狀態 API**（已在 5.6 規劃）:
+- `GET /api/v1/island/usage-stats`
+
+✅ **兌換碼 API**（任務三 Section 5 已規劃）:
+- `POST /api/v1/redeem-codes/verify` - 驗證兌換碼
+- `POST /api/v1/redeem-codes/redeem` - 兌換並啟用額度
+
+- [ ] **需要新增的 API**:
+  ```json
+  POST /api/v1/island/redeem-codes/apply
+  Request:
+  {
+    "code": "XXXX-XXXX-XXXX"
+  }
+
+  Response 200:
+  {
+    "message": "兌換成功",
+    "added_minutes": 3600,  // 新增 60 小時 = 3600 分鐘
+    "total_remaining_minutes": 4080,
+    "expires_at": "2026-12-20T00:00:00Z",
+    "source": "逗點教室"  // 來源（補習班名稱）
+  }
+
+  Response 400:
+  {
+    "error": "兌換碼無效或已使用"
+  }
+  ```
+
+**Deliverable**:
+- 1 個新 API endpoint（apply redeem code）
+- 整合既有兌換碼系統
+- 3+ integration tests
+
+---
+
+### 5.8 Web Admin Console（管理後台）
+
+**需求說明**:
+- 管理員可以：
+  - 查看所有註冊用戶（手機號碼）
+  - 查看使用量統計
+  - 生成兌換碼
+  - 查看兌換碼使用狀況
+  - 管理白名單（開通/停權）
+
+**API 對應**:
+
+✅ **已存在 Admin APIs**（任務二已實作）:
+- `GET /api/v1/admin/whitelist/members` - 查詢會員清單
+- `POST /api/v1/admin/whitelist/members` - 新增會員
+- `PATCH /api/v1/admin/whitelist/members/:member_id` - 更新狀態
+- `DELETE /api/v1/admin/whitelist/members/:member_id` - 移除會員
+
+✅ **兌換碼管理 APIs**（任務三 Section 5 已規劃）:
+- `POST /api/v1/redeem-codes/generate` - 產生兌換碼
+- `GET /api/v1/redeem-codes` - 查詢兌換碼列表
+- `PATCH /api/v1/redeem-codes/:code/revoke` - 停權
+
+**需要新增的功能**:
+
+- [ ] **整合手機號碼登入用戶到 Admin Console**
+  - 在 Admin 後台顯示手機號碼用戶
+  - 查看用戶的使用量
+  - 手動開通/停權
+
+- [ ] **GET /api/v1/admin/island/users** - 查詢所有 Island Parents 用戶
+  ```json
+  Response 200:
+  {
+    "total": 150,
+    "users": [
+      {
+        "counselor_id": "uuid",
+        "phone": "+886912345678",
+        "children_count": 2,
+        "total_minutes_used": 120,
+        "remaining_minutes": 480,
+        "last_login_at": "2025-12-20T14:30:00Z",
+        "status": "active",
+        "redeem_code_source": "逗點教室"
+      }
+    ]
+  }
+  ```
+
+**Deliverable**:
+- 1 個新 API endpoint
+- Admin Console UI 擴充
+- 5+ integration tests
+
+---
+
+### 5.9 完整 API 清單（供 iOS 對接）
+
+**新建 APIs（需要開發）**:
+1. ✅ `POST /api/v1/auth/sms/request` - 請求 SMS 驗證碼
+2. ✅ `POST /api/v1/auth/sms/verify` - 驗證 SMS 並登入
+3. ✅ `POST /api/v1/auth/sms/resend` - 重發驗證碼
+4. ✅ `PATCH /api/v1/island/clients/:client_id` - 更新孩子資料
+5. ✅ `GET /api/v1/island/clients` - 取得孩子列表
+6. ✅ `GET /api/v1/island/practice-scenarios` - 取得預設情境
+7. ✅ `POST /api/v1/reports/parenting-analysis` - 生成報告
+8. ✅ `GET /api/v1/island/sessions` - 取得歷史記錄
+9. ✅ `GET /api/v1/island/usage-stats` - 使用量統計
+10. ✅ `POST /api/v1/island/redeem-codes/apply` - 兌換碼兌換
+11. ✅ `GET /api/v1/admin/island/users` - Admin 查詢用戶
+
+**已存在 APIs（可直接使用）**:
+1. ✅ `POST /api/v1/island/sessions` - 建立 Session（任務三 § 3.4）
+2. ✅ `POST /api/v1/island/sessions/:id/analyze-partial` - Partial 分析（任務三 § 3.4）
+3. ✅ `PATCH /api/v1/island/sessions/:id/complete` - 完成 Session（任務三 § 3.4）
+4. ✅ `POST /api/v1/island/clients` - 建立孩子資料（任務三 § 3.2）
+
+**Total**:
+- **11 個新 APIs** 需要開發
+- **4 個既有 APIs** 可直接使用
+
+---
+
+### 5.10 環境變數與配置
+
+```env
+# SMS 服務配置
+SMS_PROVIDER=twilio  # twilio / aws_sns / mitake
+SMS_API_KEY=your_api_key
+SMS_API_SECRET=your_secret
+SMS_FROM_NUMBER=+886XXXXXXXX
+
+# SMS 驗證碼設定
+SMS_CODE_LENGTH=6
+SMS_CODE_EXPIRY_MINUTES=5
+SMS_RATE_LIMIT_SECONDS=60
+SMS_MAX_ATTEMPTS=5
+SMS_LOCKOUT_MINUTES=60
+
+# 兌換碼設定
+REDEEM_CODE_DEFAULT_HOURS=60
+REDEEM_CODE_FORMAT=XXXX-XXXX-XXXX
+
+# Island Parents 租戶設定
+ISLAND_PARENTS_TENANT_ID=island_parents
+ISLAND_PARENTS_DEFAULT_QUOTA_MINUTES=3600  # 60 小時
+```
+
+---
+
+### 5.11 測試與文檔
+
+- [ ] **完整流程測試（50+ tests）**
+  - SMS 登入流程（成功、失敗、重發、限制）
+  - Onboarding 流程（建立孩子、多孩子）
+  - 事前練習完整流程
+  - 事中實戰完整流程
+  - 額度扣款邏輯
+  - 歷史記錄查詢
+  - 兌換碼兌換
+
+- [ ] **API 文檔更新**
+  - Swagger UI 完整更新
+  - 為 iOS 團隊準備 API 文檔
+  - Postman Collection
+
+- [ ] **Admin Console 文檔**
+  - 管理員操作手冊
+  - 兌換碼生成與發放流程
+  - 用戶管理指南
+
+**Deliverable**:
+- 50+ integration tests
+- 完整 API 文檔（中英文）
+- Admin Console 使用手冊
+- iOS 對接文檔
+
+---
+
 ## 📊 本週 KPI（更新版）
 
 ### 開發進度
-- 🎯 完成 4 大任務（Web 改版 + 付費版 + iOS API + 密碼管理）
-- 🎯 60+ integration tests 新增
-- 🎯 6+ DB migrations
+- 🎯 完成 5 大任務（Web 改版 + 付費版 + iOS API + 密碼管理 + 浮島 App）
+- 🎯 110+ integration tests 新增
+- 🎯 8+ DB migrations
 
 ### API 交付
 - 🎯 Web 改版：2 APIs（即時分析改版 + 卡片合併）
 - 🎯 付費版：5 APIs（白名單管理）
-- 🎯 iOS API：3 APIs（Create / Partial / Complete）
+- 🎯 iOS 基礎 API：3 APIs（Create / Partial / Complete）
 - 🎯 密碼管理：3 APIs（密碼重設請求/驗證/確認）
+- 🎯 浮島 App iOS：11 APIs（SMS登入 + 孩子管理 + 情境 + 報告 + 歷史 + 兌換碼）
 
 ### 性能目標
 - 🎯 即時分析 API：< 10 秒（含紅黃綠判斷）
@@ -851,6 +1427,18 @@ CREATE INDEX idx_sessions_mode ON sessions(mode);
 - [ ] PasswordResetToken model + EmailLog model
 - [ ] 20+ integration tests
 - [ ] 1+ DB migration
+
+#### 任務五：浮島 App iOS 完整功能交付（緊急）
+- [ ] SMS 登入認證系統（3 APIs + SMSVerification model）
+- [ ] 孩子資料管理（2 APIs + Client model 擴充）
+- [ ] 練習情境管理（1 API + 4 預設情境）
+- [ ] 報告生成 API（practice vs emergency 模式）
+- [ ] 歷史記錄查詢（2 APIs）
+- [ ] 兌換碼兌換（1 API）
+- [ ] Admin Console 擴充（1 API + UI）
+- [ ] 50+ integration tests
+- [ ] 2+ DB migrations
+- [ ] iOS 對接文檔
 
 ### 建議完成（P1）
 - [ ] 行政後台 UI（簡易版）
