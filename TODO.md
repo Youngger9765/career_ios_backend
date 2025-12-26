@@ -376,6 +376,169 @@ CREATE INDEX idx_sessions_mode ON sessions(mode);
 
 ---
 
+### 3.3.2 錄音同意流程（實戰模式）
+
+**需求說明**:
+- 實戰模式（emergency mode）須在開始錄音前獲得用戶同意
+- 符合 GDPR 和個資法要求
+- 記錄同意時間、版本、IP 地址
+
+**開發**:
+
+- [ ] **設計錄音同意文案與流程**
+  - 與法務審核同意文案
+  - 明確告知錄音用途、儲存方式、保留期限
+  - 提供拒絕選項（無法使用實戰模式，僅能使用練習模式）
+
+- [ ] **Backend API: 儲存同意記錄**
+  - `POST /api/v1/island/sessions/{id}/consent`
+  - 記錄欄位：
+    - consent_timestamp (DateTime) - 同意時間
+    - consent_version (String) - 同意條款版本
+    - ip_address (String) - 用戶 IP
+    - user_agent (String) - 設備資訊
+
+- [ ] **RecordingConsent Model**
+  ```python
+  class RecordingConsent(Base):
+      id = Column(GUID(), primary_key=True)
+      session_id = Column(GUID(), ForeignKey("sessions.id"), nullable=False)
+      counselor_id = Column(GUID(), ForeignKey("counselors.id"), nullable=False)
+      consent_timestamp = Column(DateTime(timezone=True), default=datetime.utcnow)
+      consent_version = Column(String(20), nullable=False)  # "v1.0"
+      ip_address = Column(String(50), nullable=True)
+      user_agent = Column(Text, nullable=True)
+      tenant_id = Column(String, nullable=False)
+  ```
+
+- [ ] **iOS: 實戰模式開始前顯示同意彈窗**
+  - 練習模式不需同意（無錄音儲存）
+  - 實戰模式必須同意後才能開始
+
+- [ ] **隱私政策與合規審查**
+  - 更新隱私政策文件
+  - GDPR compliance check
+  - 個資法 compliance check
+
+**Deliverable**:
+- RecordingConsent model + migration
+- POST /api/v1/island/sessions/{id}/consent API
+- 同意文案（經法務審核）
+- 5+ integration tests
+- 隱私政策更新
+
+**預估時間**: 4-6 小時
+
+---
+
+### 3.3.3 使用記錄邊界情境處理
+
+**需求說明**:
+- 定義邊界情境（中途取消、離線、靜音）的計費規則
+- 實作容錯機制確保使用記錄準確
+- 提供爭議處理 SOP
+
+**邊界情境規則**:
+
+- [ ] **中途取消**
+  - < 1分鐘：不扣點
+  - >= 1分鐘：按實際分鐘數扣點（無條件捨去）
+  - 範例：錄音 1 分 30 秒取消 → 扣 1 點
+
+- [ ] **離線/崩潰**
+  - 按最後成功寫入的 duration_seconds 計算
+  - 使用 SessionUsage.duration_seconds (每 30 秒更新一次)
+  - 若完全沒有 duration 記錄 → 0 點
+
+- [ ] **長時間靜音**
+  - 仍計費（ElevenLabs STT 特性：連線即計費）
+  - 不因靜音而停止計時
+
+**容錯機制**:
+
+- [ ] **增量更新 SessionUsage**
+  - 每 30 秒寫入一次 SessionUsage (incremental update)
+  - 不等到 session 結束才寫入
+  - 確保離線時有最新資料
+
+- [ ] **Session 異常結束自動補完**
+  ```python
+  def auto_complete_abandoned_sessions():
+      """每小時跑一次，自動完成超過 2 小時未更新的 session"""
+      abandoned = Session.query.filter(
+          Session.status == "in_progress",
+          Session.partial_last_updated_at < datetime.utcnow() - timedelta(hours=2)
+      ).all()
+
+      for session in abandoned:
+          # 使用最後 partial_last_updated_at 計算 duration
+          duration = calculate_duration(session)
+          complete_session(session, duration)
+  ```
+
+- [ ] **爭議處理 SOP**
+  - Admin 可查看詳細使用記錄（SessionUsage + SessionAnalysisLog）
+  - 手動調整扣點（需註記原因）
+  - 記錄所有手動調整歷史
+
+**Deliverable**:
+- 邊界情境邏輯實作
+- 增量更新機制（每 30 秒）
+- 自動補完 abandoned sessions (cron job)
+- Admin 爭議處理 API
+- 8+ integration tests（各種邊界情境）
+
+**預估時間**: 4-6 小時
+
+---
+
+### 3.3.4 前端使用時長與點數顯示
+
+**需求說明**:
+- iOS 錄音中即時顯示本次使用時長、預計扣點、剩餘點數
+- 剩餘點數 < 100 時提醒用戶
+- Web 同步實作
+
+**iOS 顯示需求**:
+
+- [ ] **錄音中即時顯示**
+  - 本次時長：「15:32」(分:秒) - 每秒更新
+  - 預計扣點：「16 點」- 無條件捨去 (15.5 分鐘 = 15 點)
+  - 剩餘點數：「84 點」- 即時更新
+
+- [ ] **低點數警告**
+  - < 100 點：黃色提示「剩餘點數不多，建議加值」
+  - < 20 點：紅色警告「點數即將用盡，請盡快加值」
+  - < 5 點：阻擋新 session「點數不足，無法開始錄音」
+
+- [ ] **API 支援**
+  - GET /api/v1/island/credits/balance - 查詢剩餘點數
+  - 回傳：
+    ```json
+    {
+      "available_credits": 84,
+      "total_credits": 100,
+      "credits_used": 16,
+      "low_balance_warning": false,  // < 100
+      "critical_balance_warning": false  // < 20
+    }
+    ```
+
+- [ ] **Web 同步實作**
+  - console.html 即時顯示使用時長與點數
+  - 與 iOS 相同的 UI 邏輯
+
+**Deliverable**:
+- iOS 即時顯示 UI（前端任務）
+- GET /api/v1/island/credits/balance API
+- 低點數警告邏輯
+- Web 即時顯示（前端任務）
+- 5+ integration tests (API)
+
+**預估時間**: 3-4 小時（Backend API only，前端另計）
+
+---
+
 ### 3.4 自動存檔功能（三段式 API）
 
 **問題**:
@@ -509,6 +672,66 @@ CREATE INDEX idx_sessions_mode ON sessions(mode);
 
 ---
 
+### 3.4.2 報告展示層級與RAG術語可見性
+
+**需求說明**:
+- 定義親子溝通報告的展示層級（心法＋做法的呈現範圍）
+- 決定是否顯示 RAG 理論標籤和專業術語
+- 設計可視化方式（摺疊/展開、說明文字）
+
+**產品決策（待確認）**:
+
+- [ ] **RAG 理論標籤顯示規則**
+  - Option 1: 完全隱藏 RAG 來源（用戶只看建議）
+  - Option 2: 顯示但可 toggle（預設摺疊）
+  - Option 3: 顯示且預設展開（專業模式）
+
+- [ ] **專業術語處理**
+  - Option 1: 白話翻譯（如「5比1」→「5次正向回應配1次負向」）
+  - Option 2: 保留術語但加註解釋（tooltip 或註腳）
+  - Option 3: 同時顯示術語和白話（「5比1 原則（5次正向回應配1次負向）」）
+
+- [ ] **展示層級設計**
+  - 心法：Icon + 簡短標題（如「正向對話比例」）
+  - 做法：具體步驟列表（如「1. 先肯定孩子努力 2. 再提出建議」）
+  - RAG 來源：可選顯示（「參考：正向教養理論」）
+  - 預設摺疊 vs 全展開？
+
+**實作需求**:
+
+- [ ] **報告 Schema 調整**
+  ```python
+  class ParentingReportSection(BaseModel):
+      """報告區段"""
+      principle: str  # 心法（簡短標題）
+      principle_description: str  # 心法說明（可選顯示）
+      actionable_steps: List[str]  # 做法（具體步驟）
+      rag_source: Optional[str] = None  # RAG 來源（可選顯示）
+      rag_source_visible: bool = False  # 是否顯示 RAG 來源
+      example_dialogue: Optional[str] = None  # 範例對話
+  ```
+
+- [ ] **可視化設計**
+  - 心法：使用 Icon（如 💡 ✨ 🎯）
+  - 做法：編號列表，每項可點擊展開詳細說明
+  - RAG 來源：灰色小字，可 toggle 顯示/隱藏
+
+- [ ] **A/B Testing（可選）**
+  - 測試不同展示層級的用戶偏好
+  - 指標：報告閱讀時間、行動採納率
+
+**Deliverable**:
+- 產品決策文件（展示層級規則）
+- 報告 Schema 更新（支援可選顯示）
+- iOS/Web UI 調整（摺疊/展開、tooltip）
+- A/B Testing 實驗設計（可選）
+- 3+ integration tests
+
+**預估時間**: 3-4 小時（待產品定案後實作）
+**優先級**: 🟡 P1（依賴產品決策）
+
+---
+
 ### 3.5 即時分析 API 改版
 
 **參考**: 任務一的 Web 改版（紅黃綠燈機制）
@@ -539,6 +762,101 @@ CREATE INDEX idx_sessions_mode ON sessions(mode);
 **Deliverable**:
 - 預設 Case 自動建立邏輯
 - 3+ integration tests
+
+---
+
+### 3.6.3 點數有效期與結算細則
+
+**需求說明**:
+- 定義點數有效期規則（每學期 vs 半年 vs 一年）
+- 實作到期自動處理機制
+- 提供到期前通知
+- 設計點數滾存或歸零規則
+
+**產品決策（待確認）**:
+
+- [ ] **點數有效期長度**
+  - Option 1: 每學期（4 個月）- 配合學期制
+  - Option 2: 半年（6 個月）- 彈性較大
+  - Option 3: 一年（12 個月）- 最長期限
+  - 建議：根據目標用戶使用頻率決定
+
+- [ ] **到期處理規則**
+  - Option 1: 到期歸零（鼓勵持續使用）
+  - Option 2: 自動滾存到下期（保留價值）
+  - Option 3: 可延期一次（給予緩衝）
+
+- [ ] **剩餘點數處理**
+  - 未用完的點數如何處理？
+  - 是否允許退款或轉讓？
+  - 到期前多久通知用戶？
+
+**實作需求**:
+
+- [ ] **CreditPackage Model 更新**
+  ```python
+  class CreditPackage(Base):
+      # 現有欄位...
+
+      # 新增欄位
+      expires_at = Column(DateTime(timezone=True), nullable=True)  # 到期時間
+      expiry_notified = Column(Boolean, default=False)  # 是否已通知到期
+      expiry_notification_sent_at = Column(DateTime(timezone=True), nullable=True)
+      status = Column(String(20), default="active")  # active, expired, extended
+  ```
+
+- [ ] **到期自動處理 (Cron Job)**
+  ```python
+  @scheduler.scheduled_job('cron', hour=0, minute=0)  # 每日 00:00 執行
+  def check_credit_expiry():
+      """檢查並處理過期點數"""
+      # 1. 到期前 7 天通知
+      notify_expiring_credits(days_before=7)
+
+      # 2. 到期當日處理
+      expire_credits()
+
+      # 3. 記錄到期日誌
+      log_expiry_events()
+  ```
+
+- [ ] **Backend APIs**
+  - GET /api/v1/island/credits/expiry - 查詢點數到期資訊
+    ```json
+    {
+      "total_credits": 100,
+      "available_credits": 84,
+      "expiring_soon": 30,  // 7 天內到期
+      "expires_at": "2025-07-01T00:00:00Z",
+      "days_until_expiry": 5
+    }
+    ```
+
+  - POST /api/v1/admin/credits/extend-expiry - Admin 手動延期
+    ```json
+    Request:
+    {
+      "counselor_id": "uuid",
+      "extend_days": 30,
+      "reason": "特殊情況延期"
+    }
+    ```
+
+- [ ] **通知機制**
+  - 到期前 7 天：Email + App 推播
+  - 到期前 1 天：再次提醒
+  - 到期當日：通知已歸零（若採用歸零規則）
+
+**Deliverable**:
+- 產品決策文件（有效期規則）
+- CreditPackage model 更新 + migration
+- Cron job（每日檢查到期）
+- 2 個 API endpoints（查詢到期 + Admin 延期）
+- Email 通知整合
+- 8+ integration tests（正常到期 + 延期 + 通知）
+
+**預估時間**: 4-5 小時（待產品定案後實作）
+**優先級**: 🟡 P1（依賴產品決策）
 
 ---
 
@@ -728,6 +1046,322 @@ CREATE INDEX idx_sessions_mode ON sessions(mode);
 
 ---
 
+### 4.5 登入失敗提示語統一（資安）
+
+**需求說明**:
+- 登入失敗時採用泛化訊息，不區分密碼錯誤或帳號不存在
+- 防止帳號探測攻擊（Account Enumeration）
+- 統一 Backend 錯誤訊息和前端 UI 提示
+
+**資安考量**:
+- ❌ 錯誤：「密碼錯誤」→ 洩漏帳號存在
+- ❌ 錯誤：「此帳號不存在」→ 可用於探測有效帳號
+- ✅ 正確：「登入資料有誤，請檢查後重試」→ 泛化訊息
+
+**Backend 實作**:
+
+- [ ] **統一 API 錯誤訊息**
+  - 密碼錯誤 → `401 Unauthorized: "登入資料有誤，請檢查後重試"`
+  - 帳號不存在 → `401 Unauthorized: "登入資料有誤，請檢查後重試"`
+  - 帳號停權 → `403 Forbidden: "無權限訪問，請聯繫客服"`
+  - 帳號鎖定 → `429 Too Many Requests: "登入失敗次數過多，請稍後再試"`
+
+- [ ] **登入 API 更新**
+  ```python
+  @router.post("/api/v1/auth/login")
+  def login(credentials: LoginRequest):
+      counselor = get_counselor_by_email(credentials.email)
+
+      # 統一錯誤訊息 - 不洩漏帳號是否存在
+      if not counselor or not verify_password(credentials.password, counselor.hashed_password):
+          # 記錄失敗次數
+          log_failed_login_attempt(credentials.email)
+          raise HTTPException(
+              status_code=401,
+              detail="登入資料有誤，請檢查後重試"
+          )
+
+      # 檢查帳號狀態
+      if counselor.status == "suspended":
+          raise HTTPException(
+              status_code=403,
+              detail="無權限訪問，請聯繫客服"
+          )
+
+      # 檢查是否鎖定
+      if is_account_locked(counselor):
+          raise HTTPException(
+              status_code=429,
+              detail="登入失敗次數過多，請 15 分鐘後再試"
+          )
+
+      # 登入成功，重置失敗次數
+      reset_failed_login_attempts(counselor)
+      return generate_jwt_token(counselor)
+  ```
+
+- [ ] **iOS/Web 前端統一錯誤提示 UI**
+  - 401: 顯示「登入資料有誤，請檢查後重試」
+  - 403: 顯示「無權限訪問，請聯繫客服」
+  - 429: 顯示「登入失敗次數過多，請稍後再試」
+
+**Deliverable**:
+- Backend: 統一錯誤訊息邏輯
+- iOS: 統一前端錯誤提示 UI（前端任務）
+- Web: 統一前端錯誤提示 UI（前端任務）
+- 文檔: 登入失敗訊息規範
+- 5+ integration tests（各種失敗情境）
+
+**預估時間**: 2-3 小時
+**優先級**: 🔴 P0（資安必須）
+
+---
+
+### 4.6 Email 發信系統與錯誤處理
+
+**需求說明**:
+- 確認並建立官方發信 Email（可用 Gmail SMTP）
+- 實作 Email 狀態追蹤（sent, delivered, bounced, failed）
+- Admin 可查看 Email 發送記錄與狀態
+- 提供重發機制
+
+**Email 服務商選擇**:
+
+- [ ] **Option 1: Gmail SMTP（簡單、快速）** ✅ 推薦 Prototype 階段
+  - 優點：快速設定、免費（每日 500 封限額）
+  - 缺點：功能較陽春、無詳細追蹤
+  - 設定：環境變數 `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`
+
+- [ ] **Option 2: SendGrid（專業、易用）**
+  - 優點：免費額度（每日 100 封）、API 簡單、追蹤詳細
+  - 缺點：需註冊、需驗證 domain
+  - 適合：Production 環境
+
+- [ ] **Option 3: AWS SES（可靠、便宜）**
+  - 優點：便宜（$0.10/1000 封）、穩定、整合 AWS
+  - 缺點：設定複雜、需 AWS 帳號
+  - 適合：Production 大量發送
+
+**實作需求**:
+
+- [ ] **EmailLog Model**
+  ```python
+  class EmailLog(Base):
+      id = Column(GUID(), primary_key=True)
+      recipient_email = Column(String, nullable=False, index=True)
+      email_type = Column(String, nullable=False)  # "welcome", "password_reset", "credit_expiry"
+      subject = Column(String, nullable=False)
+      body = Column(Text, nullable=False)
+
+      # 狀態追蹤
+      status = Column(String(20), default="pending")  # pending, sent, delivered, bounced, failed
+      sent_at = Column(DateTime(timezone=True), nullable=True)
+      delivered_at = Column(DateTime(timezone=True), nullable=True)
+      bounced_at = Column(DateTime(timezone=True), nullable=True)
+
+      # 錯誤處理
+      error_message = Column(Text, nullable=True)
+      retry_count = Column(Integer, default=0)
+      last_retry_at = Column(DateTime(timezone=True), nullable=True)
+
+      # 關聯
+      counselor_id = Column(GUID(), ForeignKey("counselors.id"), nullable=True)
+      tenant_id = Column(String, nullable=False)
+
+      created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+  ```
+
+- [ ] **Email Service 實作**
+  ```python
+  class EmailService:
+      def send_email(self, to: str, subject: str, body: str, email_type: str):
+          """發送 Email 並記錄狀態"""
+          log = EmailLog(
+              recipient_email=to,
+              email_type=email_type,
+              subject=subject,
+              body=body,
+              status="pending"
+          )
+          db.add(log)
+
+          try:
+              # 使用 SMTP 或 SendGrid 發送
+              send_via_smtp(to, subject, body)
+              log.status = "sent"
+              log.sent_at = datetime.utcnow()
+          except Exception as e:
+              log.status = "failed"
+              log.error_message = str(e)
+
+          db.commit()
+          return log
+
+      def handle_bounce(self, email_log_id: str):
+          """處理退信"""
+          log = db.query(EmailLog).get(email_log_id)
+          log.status = "bounced"
+          log.bounced_at = datetime.utcnow()
+
+          # 標記 Counselor 的 Email 無效
+          counselor = log.counselor
+          counselor.email_status = "bounced"
+
+          # 通知 Admin
+          notify_admin_email_bounce(counselor)
+  ```
+
+- [ ] **Admin Backend APIs**
+  - GET /api/v1/admin/emails/logs - 查看 Email 發送記錄
+    ```json
+    {
+      "logs": [
+        {
+          "id": "uuid",
+          "recipient_email": "user@example.com",
+          "email_type": "welcome",
+          "status": "sent",
+          "sent_at": "2025-12-20T10:00:00Z"
+        }
+      ],
+      "total": 150,
+      "page": 1
+    }
+    ```
+
+  - POST /api/v1/admin/emails/resend - 重發 Email
+    ```json
+    Request:
+    {
+      "email_log_id": "uuid"
+    }
+    ```
+
+- [ ] **重發機制（用戶端）**
+  - 用戶可在登入頁面點擊「重新發送密碼重設信」
+  - 5 分鐘內只能請求一次（防止濫用）
+
+**Deliverable**:
+- Email 服務商選擇與設定（Gmail SMTP 優先）
+- EmailLog model + migration
+- EmailService 實作（發送 + 錯誤處理）
+- 2 個 Admin API endpoints
+- 用戶端重發機制
+- 8+ integration tests（發送 + 失敗 + 重發）
+
+**預估時間**: 4-5 小時
+**優先級**: 🔴 P0（密碼管理依賴）
+
+---
+
+### 4.7 密碼強度政策與安全策略
+
+**需求說明**:
+- 定義密碼規則（最低長度、複雜度要求）
+- 實作弱密碼黑名單
+- 實作登入失敗鎖定機制
+- 前端即時密碼強度檢查
+
+**密碼規則定義**:
+
+- [ ] **最低要求**
+  - 長度：至少 8 字元（建議 10+）
+  - 組成：必須包含英文 + 數字
+  - 可選：特殊字元（!@#$%^&*）
+
+- [ ] **弱密碼黑名單**
+  - 常見弱密碼：`123456`, `password`, `qwerty`, `abc123`, `12345678`
+  - 連續字元：`111111`, `aaaaaa`
+  - 鍵盤順序：`asdfgh`, `zxcvbn`
+
+- [ ] **登入失敗鎖定機制**
+  - 5 次失敗 → 鎖定 15 分鐘
+  - 記錄欄位：`failed_login_attempts`, `locked_until`
+
+**Backend 實作**:
+
+- [ ] **Counselor Model 更新**
+  ```python
+  class Counselor(Base):
+      # 現有欄位...
+
+      # 新增欄位
+      failed_login_attempts = Column(Integer, default=0)
+      locked_until = Column(DateTime(timezone=True), nullable=True)
+      last_failed_login_at = Column(DateTime(timezone=True), nullable=True)
+  ```
+
+- [ ] **密碼驗證邏輯**
+  ```python
+  def validate_password_strength(password: str) -> tuple[bool, str]:
+      """驗證密碼強度"""
+      # 長度檢查
+      if len(password) < 8:
+          return False, "密碼長度至少需要 8 個字元"
+
+      # 複雜度檢查
+      has_letter = any(c.isalpha() for c in password)
+      has_number = any(c.isdigit() for c in password)
+      if not (has_letter and has_number):
+          return False, "密碼必須包含英文和數字"
+
+      # 弱密碼黑名單
+      weak_passwords = ["123456", "password", "qwerty", "abc123", "12345678"]
+      if password.lower() in weak_passwords:
+          return False, "此密碼過於簡單，請使用更複雜的密碼"
+
+      return True, "密碼強度符合要求"
+
+  def check_account_locked(counselor: Counselor) -> bool:
+      """檢查帳號是否鎖定"""
+      if counselor.locked_until and counselor.locked_until > datetime.utcnow():
+          return True
+      return False
+
+  def record_failed_login(counselor: Counselor):
+      """記錄登入失敗"""
+      counselor.failed_login_attempts += 1
+      counselor.last_failed_login_at = datetime.utcnow()
+
+      # 5 次失敗 → 鎖定 15 分鐘
+      if counselor.failed_login_attempts >= 5:
+          counselor.locked_until = datetime.utcnow() + timedelta(minutes=15)
+
+      db.commit()
+
+  def reset_failed_login(counselor: Counselor):
+      """登入成功後重置"""
+      counselor.failed_login_attempts = 0
+      counselor.locked_until = None
+      db.commit()
+  ```
+
+- [ ] **密碼重設 API 整合**
+  - 在 `POST /api/v1/auth/password-reset/confirm` 加入密碼強度驗證
+  - 拒絕弱密碼
+
+**Frontend 實作（iOS + Web）**:
+
+- [ ] **即時密碼強度檢查**
+  - 使用者輸入時即時檢查（debounce 500ms）
+  - 視覺化顯示：
+    - 弱（紅色）：< 8 字元或純數字
+    - 中（黃色）：8+ 字元 + 英文數字
+    - 強（綠色）：10+ 字元 + 英文數字 + 特殊字元
+  - 提示訊息：即時顯示不符合的規則
+
+**Deliverable**:
+- 密碼規則文檔
+- Counselor model 更新 + migration
+- Backend 驗證邏輯（密碼強度 + 鎖定機制）
+- Frontend 即時檢查 UI（iOS + Web，前端任務）
+- 10+ integration tests（密碼驗證 + 鎖定機制）
+
+**預估時間**: 3-4 小時
+**優先級**: 🔴 P0（資安必須）
+
+---
+
 ### 4.4 整合測試與文檔
 
 - [ ] **完整流程測試**
@@ -760,18 +1394,35 @@ CREATE INDEX idx_sessions_mode ON sessions(mode);
 
 ---
 
-## 任務五：浮島 App iOS 完整功能交付
+## ~~任務五：浮島 App iOS 完整功能交付~~ ✅ 已合併至任務三
 
-**優先級**: 🔴 P0（緊急）
-**預估時間**: 16-20 小時
-**負責**: Backend
-**影響範圍**: iOS App + Web Admin Console
-**參考文件**:
-- 浮島 App｜登入註冊、Onboarding
-- 浮島 App｜AI 功能模組 (事前練習)
-- 浮島 App｜AI 功能模組 (事中提醒)
-- 浮島 App｜History 頁 (諮詢紀錄)
-- 浮島 App｜Settings 設置頁
+**📌 重要通知**: 此任務已於 2025-12-27 合併至 **任務三：iOS API 改版 - island_parents 租戶**
+
+**合併原因**:
+- 任務三和任務五內容高度重疊（皆為 island_parents 租戶相關 API）
+- 合併後可更好地追蹤完整的 iOS API 開發進度
+- 避免重複任務造成混淆
+
+**📋 詳細任務內容請參考**:
+1. **任務三**（本文件上方）- 包含完整的 iOS API 開發任務
+2. **docs/ISLAND_APP_TASKS_REORGANIZED.md** - 重新組織後的任務分解（WEB vs iOS API）
+
+**原任務五內容已整合至任務三**:
+- 5.1 手機號碼登入與 SMS 認證 → 任務三 3.1.1 SMS Authentication
+- 5.2 孩子管理 API → 任務三 3.1.2 Children Management
+- 5.3 四格情境選擇 → 任務三 3.2.1 Practice Scenarios
+- 5.4 錄音與即時提醒 → 任務三 3.3.1 Three-phase Session API
+- 5.5 報告生成 → 任務三 3.4.1 Reports
+- 5.6 歷史記錄查詢 → 任務三 3.5.1 History
+- 5.7 設置頁 API → 任務三 3.6.1 Settings
+- 5.8 兌換碼與點數系統 → 任務三 3.6.2 Redeem Codes
+- 5.9 Web Admin Console → 任務三 3.7 Web Admin APIs
+
+**🚀 請直接查看任務三進行開發**
+
+---
+
+## 任務五原內容（保留供參考，請以任務三為準）
 
 ---
 
