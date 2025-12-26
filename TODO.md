@@ -20,85 +20,168 @@
 
 ## 任務三：iOS API 改版 - island_parents 租戶
 
-### 3.1 Multi-Tenant 架構擴充
+**參考 Notion SPEC**:
+- SPEC 1: 登入註冊、Onboarding
+- SPEC 2: AI 功能模組 (事前練習)
+- SPEC 3: AI 功能模組 (事中提醒)
+- SPEC 4: History 頁 (諮詢紀錄)
+- SPEC 5: Settings 設置頁
+
+---
+
+### 3.0 基礎架構（Infrastructure）
+
+#### 3.0.1 Multi-Tenant 架構擴充
 - [ ] 所有 table 都有 tenant_id 欄位
 - [ ] API 自動注入 tenant_id（基於 JWT）
 - [ ] Query 自動過濾 tenant（避免跨租戶資料洩漏）
 
-### 3.2 Client 物件簡化（island_parents 專用）
-- [ ] island_parents 的 Client 只需兩個 required 欄位：name + grade (1-12)
+#### 3.0.2 Session 資料結構擴充
+- [ ] SessionAnalysisLog table（獨立存儲分析記錄）
+- [ ] SessionUsage table（使用量追蹤 + 點數扣除）
+- [ ] Session 新增欄位：scenario_topic, mode, partial_segments
+
+#### 3.0.3 Client 物件簡化（island_parents）
+- [ ] island_parents 的 Client 只需：name + grade (1-12)
 - [ ] Optional 欄位：birth_date, gender, notes
-- [ ] DB Schema 調整：新增 grade 欄位，既有欄位改 nullable
-- [ ] Schema Validation：ClientCreateIslandParents
-- [ ] API 路由分離：POST /api/v1/island/clients
+- [ ] DB Schema 調整：新增 grade 欄位
 
-### 3.3 Session 資料結構調整
+---
 
-**3.3.1 新增欄位**:
-- [ ] scenario_topic (String, optional) - 練習情境
-- [ ] mode (String, required) - practice / emergency
-- [ ] partial_segments (JSONB) - 儲存 partial 分析片段
-- [ ] partial_last_updated_at (DateTime)
+### 3.1 SPEC 1：登入註冊、Onboarding
 
-**3.3.2 錄音同意流程（實戰模式）**:
-- [ ] 設計錄音同意文案與流程（法務審核）
-- [ ] POST /api/v1/island/sessions/{id}/consent API
+#### 3.1.1 SMS 登入認證
+- [ ] POST /api/v1/auth/sms/send-code - 發送驗證碼
+- [ ] POST /api/v1/auth/sms/verify-code - 驗證並登入
+- [ ] SMSVerification Model + migration
+- [ ] SMS provider 整合（Twilio / AWS SNS）
+- [ ] 防濫用機制（rate limiting）
+
+#### 3.1.2 孩子資料管理
+- [ ] POST /api/v1/island/children - 新增孩子
+- [ ] GET /api/v1/island/children - 列出孩子
+- [ ] PATCH /api/v1/island/children/{id} - 編輯孩子資料
+- [ ] DELETE /api/v1/island/children/{id} - 刪除孩子
+
+---
+
+### 3.2 SPEC 2：AI 功能模組（事前練習）
+
+#### 3.2.1 練習情境選擇
+- [ ] GET /api/v1/island/scenarios - 取得預設情境列表
+  - 孩子不寫作業
+  - 兄弟姊妹吵架
+  - 睡前拖延
+  - 自訂情境（用戶輸入）
+
+#### 3.2.2 Practice Mode 錄音流程
+- [ ] POST /api/v1/island/sessions - 開始練習（mode=practice）
+- [ ] POST /api/v1/island/sessions/{id}/analyze-partial - 即時分析
+- [ ] PATCH /api/v1/island/sessions/{id}/complete - 結束 + 扣點
+- [ ] 增量更新 SessionUsage（每 30 秒）
+- [ ] Session 異常結束自動補完（cron job）
+
+#### 3.2.3 Practice 報告生成
+- [ ] GET /api/v1/island/sessions/{id}/report - 取得練習報告
+- [ ] 報告包含：summary, highlights, improvements, practice_tips, RAG references
+- [ ] 定義報告展示層級（產品決策）
+
+---
+
+### 3.3 SPEC 3：AI 功能模組（事中提醒）
+
+#### 3.3.1 錄音同意流程
+- [ ] 設計錄音同意文案（法務審核）
+- [ ] POST /api/v1/island/sessions/{id}/consent - 儲存同意記錄
 - [ ] RecordingConsent Model + migration
 - [ ] iOS：實戰模式開始前顯示同意彈窗
 - [ ] 隱私政策與合規審查（GDPR, 個資法）
 
-**3.3.3 使用記錄邊界情境處理**:
-- [ ] 定義邊界情境規則（中途取消、離線、靜音）
-- [ ] 增量更新 SessionUsage（每 30 秒）
-- [ ] Session 異常結束自動補完（cron job）
-- [ ] Admin 爭議處理 API
+#### 3.3.2 Emergency Mode 錄音流程
+- [ ] POST /api/v1/island/sessions - 開始實戰（mode=emergency）
+- [ ] POST /api/v1/island/sessions/{id}/analyze-partial - 即時危機提醒
+- [ ] PATCH /api/v1/island/sessions/{id}/complete - 結束 + 扣點
+- [ ] 紅黃綠燈危機判斷（severity 1-3）
+- [ ] 動態分析間隔（Red 15s / Yellow 30s / Green 60s）
 
-**3.3.4 前端使用時長與點數顯示**:
-- [ ] GET /api/v1/island/credits/balance API
+#### 3.3.3 Emergency 報告生成
+- [ ] GET /api/v1/island/sessions/{id}/report - 取得實戰報告
+- [ ] 報告包含：summary, highlights, improvements (1-2條), RAG references
+- [ ] 報告差異：emergency 無 practice_tips
+
+---
+
+### 3.4 SPEC 4：History 頁（諮詢紀錄）
+
+#### 3.4.1 歷史記錄查詢
+- [ ] GET /api/v1/island/sessions - 列出所有 sessions
+  - 篩選：client_id, mode, date range
+  - 分頁支援（limit, offset）
+- [ ] GET /api/v1/island/sessions/{id} - 單一 session 詳情
+  - 完整逐字稿
+  - 分析記錄（最多 50 筆）
+  - 使用量統計
+
+---
+
+### 3.5 SPEC 5：Settings 設置頁
+
+#### 3.5.1 個人設定管理
+- [ ] GET /api/v1/island/settings - 取得設定
+- [ ] PATCH /api/v1/island/settings - 更新設定
+  - 姓名、email、通知偏好
+- [ ] 隱私設定（notification_enabled）
+
+#### 3.5.2 點數查詢與兌換
+- [ ] GET /api/v1/island/credits - 查詢點數餘額
+- [ ] POST /api/v1/island/redeem - 兌換碼兌換
+- [ ] RedeemCode Model + migration
 - [ ] 低點數警告邏輯（< 100 黃色，< 20 紅色）
-- [ ] iOS/Web 即時顯示 UI
 
-### 3.4 自動存檔功能（三段式 API）
-
-**Phase 1: 開始錄音**:
-- [ ] POST /api/v1/island/sessions - 建立空 Session
-- [ ] 回傳 session_id 給 App
-
-**Phase 2: 錄音中**:
-- [ ] POST /api/v1/island/sessions/{id}/analyze-partial
-- [ ] 儲存 partial segment 到 JSONB
-- [ ] 執行即時分析（紅黃綠燈判斷）
-- [ ] 計算與前一張卡片的相似度
-- [ ] 回傳分析結果（含 should_merge）
-
-**Phase 3: 結束錄音**:
-- [ ] PATCH /api/v1/island/sessions/{id}/complete
-- [ ] 更新完整逐字稿
-- [ ] Fallback 機制：若 full_transcript 為空，使用 partial_segments 拼接
-
-**3.4.2 報告展示層級與RAG術語可見性**:
-- [ ] 定義 RAG 理論標籤顯示規則（產品決策）
-- [ ] 定義專業術語處理方式（產品決策）
-- [ ] 報告 Schema 調整（支援可選顯示）
-- [ ] iOS/Web UI 調整（摺疊/展開、tooltip）
-
-### 3.5 即時分析 API 改版
-- [ ] 使用相同的 response schema（與 Web 版一致）
-- [ ] island_parents 租戶專用的 Prompt 調整
-- [ ] RAG 知識庫：使用親子教養相關知識
-
-### 3.6 Case 管理簡化
-- [ ] 預設 Case 自動建立（「親子溝通成長」）
-- [ ] API 簡化：Create Session 時自動使用預設 Case
-
-**3.6.3 點數有效期與結算細則**:
+#### 3.5.3 點數有效期管理
 - [ ] 定義點數有效期規則（產品決策：每學期/半年/一年）
 - [ ] 定義到期處理規則（歸零/滾存/延期）
-- [ ] CreditPackage Model 更新（新增 expires_at 等欄位）
 - [ ] 到期自動處理 Cron Job（每日 00:00）
-- [ ] GET /api/v1/island/credits/expiry API
-- [ ] POST /api/v1/admin/credits/extend-expiry API（Admin 手動延期）
+- [ ] GET /api/v1/island/credits/expiry - 查詢到期資訊
 - [ ] Email 通知整合（到期前 7 天 + 1 天）
+
+#### 3.5.4 帳號管理（待確認）
+- [ ] 登出功能
+- [ ] 刪除帳號（產品決策）
+- [ ] 變更手機號碼（產品決策）
+
+---
+
+### 3.6 WEB Admin 功能
+
+#### 3.6.1 浮島用戶管理
+- [ ] GET /api/v1/admin/island/users - 列出所有浮島用戶
+- [ ] GET /api/v1/admin/island/users/{id} - 用戶詳情
+- [ ] PATCH /api/v1/admin/island/users/{id} - 更新用戶狀態（active/inactive）
+
+#### 3.6.2 兌換碼管理
+- [ ] POST /api/v1/admin/redeem-codes/generate - 批次生成兌換碼
+- [ ] GET /api/v1/admin/redeem-codes - 列出所有兌換碼
+- [ ] PATCH /api/v1/admin/redeem-codes/{code}/revoke - 停權兌換碼
+- [ ] POST /api/v1/admin/credits/extend-expiry - 手動延期點數
+
+#### 3.6.3 使用記錄爭議處理
+- [ ] 定義邊界情境規則（中途取消、離線、靜音）
+- [ ] Admin 查看詳細使用記錄
+- [ ] Admin 手動調整扣點（需註記原因）
+
+---
+
+### 3.7 其他整合
+
+#### 3.7.1 RAG 知識庫整合
+- [ ] island_parents 租戶專用 Prompt 調整
+- [ ] RAG 知識庫：使用親子教養相關知識
+- [ ] 與 Web 版使用相同的 response schema
+
+#### 3.7.2 Case 管理簡化
+- [ ] 預設 Case 自動建立（「親子溝通成長」）
+- [ ] Create Session 時自動使用預設 Case
 
 ---
 
