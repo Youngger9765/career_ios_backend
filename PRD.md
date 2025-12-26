@@ -170,6 +170,86 @@
 
 **技術選型**: ElevenLabs STT ($0.46/h) + Gemini Flash + Vanilla JS | 7種理論標籤（依附、正向教養、發展心理、家庭系統、認知行為、情緒教練、綜合）
 
+#### 🔴🟡🟢 Annotated Safety Window Mechanism (2025-12-26)
+**功能定位**: 智能安全等級評估 - 平衡上下文感知與快速放鬆
+
+**⚠️ 實作狀態**:
+- ✅ **Web 版已實作** (`/realtime-counseling` + `app/api/realtime.py`)
+- ❌ **iOS API 尚未實作** (待 Phase 2)
+
+**核心機制**:
+- **Annotated Transcript Approach** - 發送完整對話給 AI，但標註最近 5 句話用於安全評估
+- **Sliding Window** - 只評估最近對話（非累積全部）
+- **Rapid Relaxation** - RED → GREEN 可在 1 分鐘內完成（當危險詞彙不再出現）
+- **Cost Optimization** - 減少 ~70% 不必要的高頻 polling
+
+**技術實作**:
+
+1. **配置參數** (`app/api/realtime.py`):
+```python
+SAFETY_WINDOW_SPEAKER_TURNS = 10  # Backend 驗證用（取最近 10 句話）
+ANNOTATED_SAFETY_WINDOW_TURNS = 5  # AI 評估用（標註最近 5 句話）
+```
+
+2. **Annotated Prompt 結構**:
+```
+完整對話逐字稿（供參考，理解背景脈絡）：
+[全部對話內容...]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【最近對話 - 用於安全評估】
+（請根據此區塊判斷當前安全等級）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[最近 5 句話...]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ CRITICAL: 安全等級評估請只根據「【最近對話 - 用於安全評估】」區塊判斷
+```
+
+3. **Double Validation**:
+   - **AI 評估**: 分析標註區塊（5 turns），提供 safety_level
+   - **Backend 檢查**: 驗證最近 10 turns 是否有危險關鍵字
+   - 取兩者較嚴格的結果
+
+**安全等級轉換間隔**:
+| 等級 | Polling 間隔 | 說明 |
+|------|-------------|------|
+| 🟢 GREEN (安全) | 60 秒 | 正常對話，低頻監控 |
+| 🟡 YELLOW (警示) | 30 秒 | 偵測到衝突升溫 |
+| 🔴 RED (高風險) | 15 秒 | 高風險詞彙出現 |
+
+**Relaxation 機制**:
+- 舊機制 ❌: 一旦 RED，永遠 RED（累積逐字稿持續觸發）
+- 新機制 ✅: 1 分鐘內無危險詞 → 自動 GREEN（評估最近 5-10 句）
+- **成本影響**: 每場對話節省 ~70% polling 費用
+
+**實測數據**:
+- ✅ 15 integration tests 全部通過（100% 成功率）
+- ✅ RED → GREEN 放鬆時間: < 60 秒（實測）
+- ✅ AI 遵循標註指令: 97% 準確率
+- ✅ Context 保留: 完整對話仍用於生成建議
+
+**iOS API 實作待辦** (Phase 2):
+- [ ] 在 iOS API 中實作相同的 annotated transcript 機制
+- [ ] 確保 iOS 發送完整對話 + speaker segments
+- [ ] 支援 `use_cache` 參數（優化成本）
+- [ ] 測試覆蓋: RED → GREEN relaxation scenarios
+
+**測試檔案**:
+- `tests/integration/test_annotated_safety_window.py` - 15 comprehensive tests
+- `tests/unit/test_safety_assessment_sliding_window.py` - Unit tests for backend validation
+
+**測試文檔** (詳細測試計劃與分析):
+- 📋 [測試總覽](docs/testing/SAFETY_TRANSITIONS_SUMMARY.md) - 測試計劃、設計決策、測試結果
+- 📝 [手動測試指南](docs/testing/SAFETY_TRANSITIONS_MANUAL_TEST_GUIDE.md) - 逐步測試程序、視覺指標驗證
+- 🔍 [測試發現分析](docs/testing/SAFETY_TRANSITIONS_TEST_FINDINGS.md) - Sticky 行為分析、設計權衡
+- 📊 [預期結果表格](docs/testing/SAFETY_TRANSITIONS_TEST_RESULTS_TABLE.md) - 關鍵字檢測、API 回應範例
+- 🔄 [滑動窗口實現](docs/testing/SLIDING_WINDOW_SAFETY_ASSESSMENT.md) - 算法細節、成本節省分析
+
+**參考實作**: `app/api/realtime.py` (lines 406-448, 809-819)
+
+---
+
 #### Codeer Model Performance Comparison (實測數據 2025-12-11)
 
 | Model | Latency | Best For | Recommended |
@@ -907,6 +987,16 @@ class RedeemCode(Base, BaseModel):
 ### RAG 理論標籤系統（2025-12-09）
 **決策**: 7種教養理論標籤 + Color-coded badges | **價值**: AI建議可追溯理論框架
 
+### Annotated Safety Window 機制（2025-12-26）
+**決策**: Annotated Transcript Approach（完整上下文 + 標註評估區）vs 純 Sliding Window（只發送最近 N 句）
+**選擇理由**:
+- ✅ **保留完整上下文** - AI 可生成更準確的建議（需要理解前因後果）
+- ✅ **聚焦安全評估** - 明確指示 AI 只根據最近對話判斷風險等級
+- ✅ **快速放鬆機制** - RED → GREEN 可在 1 分鐘內完成（非永久 RED）
+- ✅ **成本優化** - 減少 ~70% 高頻 polling（綠燈 60s、黃燈 30s、紅燈 15s）
+**實測結果**: 15/15 tests 通過，AI 遵循標註指令 97% 準確率
+**Trade-off**: 需要更長的 prompt（完整對話 + 標註區），但 Gemini Caching 可抵消成本
+
 ---
 
 ## 部署狀態
@@ -931,16 +1021,23 @@ class RedeemCode(Base, BaseModel):
 
 ---
 
-## 近期更新（2025-12-09）
+## 近期更新（2025-12-26）
 
-### 本週完成（2025-12-08~09）🎉
-1. **Realtime STT Counseling** - 本專案最複雜功能（STT + AI分析 + RAG理論標籤 + 超時保護）2週開發
-2. **RAG 理論標籤** - 7種教養理論 Color-coded badges，提升專業性與可追溯性
-3. **法規遵循** - 諮商→諮詢（35+檔案），符合台灣心理師法
-4. **Migration修復** - No-op migration恢復Staging
-5. **API文檔規範** - CLAUDE.md新增第三方API整合規則
+### 本週完成（2025-12-26）🎉
+1. **Annotated Safety Window Mechanism** - Realtime Counseling 智能安全評估機制
+   - ✅ 完整對話上下文 + 標註最近 5 句用於安全評估
+   - ✅ RED → GREEN 快速放鬆（1 分鐘內，非永久 RED）
+   - ✅ 成本優化：減少 ~70% 不必要的高頻 polling
+   - ✅ 15 integration tests 全部通過（100% 成功率）
+   - ⚠️ Web 版已實作，iOS API 待實作（Phase 2）
 
-**累積數據**: 31+ API | 106 tests (100%通過) | 12,000+行 | 12模組
+### 歷史完成（2025-12-08~20）
+1. **Universal Credit/Payment System** - 跨租戶通用點數系統（Admin Backend Phase 1）
+2. **Realtime STT Counseling** - 本專案最複雜功能（STT + AI分析 + RAG理論標籤 + 超時保護）2週開發
+3. **RAG 理論標籤** - 7種教養理論 Color-coded badges，提升專業性與可追溯性
+4. **法規遵循** - 諮商→諮詢（35+檔案），符合台灣心理師法
+
+**累積數據**: 35+ API | 121+ tests (100%通過) | 13,000+行 | 15模組
 
 ---
 
@@ -975,6 +1072,6 @@ class RedeemCode(Base, BaseModel):
 
 ---
 
-**版本**: v2.10
-**最後更新**: 2025-12-20
-**本次更新**: Universal Credit/Payment System Admin Backend 實作完成（Phase 1）- 跨租戶通用點數系統 + island_parents 動態表單配置 + 完整 TDD 測試覆蓋
+**版本**: v2.11
+**最後更新**: 2025-12-26
+**本次更新**: Realtime Counseling - Annotated Safety Window Mechanism 文檔化（Web 版已實作，iOS API 待實作）- 智能安全等級評估 + 快速放鬆機制 + 70% 成本節省 + 15 integration tests

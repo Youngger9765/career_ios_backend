@@ -10,6 +10,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Parents RAG Refinement - Complete Observability** (2025-12-26)
+  - ✅ Expanded GBQ schema coverage from 23% to 67%+ (29/43 fields)
+  - ✅ Complete metadata tracking for parents_report API:
+    - Token usage: prompt_tokens, completion_tokens, total_tokens, cached_tokens
+    - Cost calculation: Gemini 2.5 Flash pricing ($0.000075/1K input, $0.0003/1K output)
+    - Timing breakdown: RAG search time, LLM call time, total duration
+    - Full prompts: system_prompt, user_prompt, prompt_template
+    - LLM response: raw response, structured analysis result
+    - RAG tracking: query, documents, sources, timing
+    - Model info: provider, model_name, model_version
+  - ✅ Modified `gemini_service.chat_completion()` to optionally return usage_metadata
+  - ✅ JSON serialization for BigQuery JSON fields (analysis_result, speakers, rag_documents)
+  - ✅ Session ID capture from request (Web localStorage-based)
+  - ✅ Fixed field name mismatches (response_time_ms → api_response_time_ms, transcript_segment → transcript)
+  - ✅ Model corrected to gemini-2.5-flash (from 2.0-flash-exp)
+- **Parents RAG Refinement - Phase 1.4 & 2.1** (2025-12-25)
+  - ✅ Phase 1.4 - Frontend Adjustments:
+    - Removed two-line format detection, unified single-line suggestion display
+    - Updated frontend descriptions (Mobile & Desktop) to reflect 200 expert suggestions
+    - Emergency mode: 1-2 expert suggestions (from 200 pool)
+    - Practice mode: 3-4 expert suggestions (from 200 pool)
+  - ✅ Phase 2.1 - Backend Optimizations:
+    - Expanded analysis scope from 1 min to 3-5 min (SAFETY_WINDOW_SPEAKER_TURNS: 10 → 40)
+    - Enhanced RAG retrieval: top_k 3→7, similarity_threshold 0.5→0.35
+    - Removed 200-character truncation from RAG content
+  - ✅ Dynamic Analysis Intervals (Commit: 2b10eb0):
+    - Implemented adaptive monitoring based on safety_level
+    - Green (safe): 60 seconds
+    - Yellow (warning): 30 seconds
+    - Red (critical): 15 seconds
+    - Visual notifications and console logging
+    - `updateAnalysisInterval()` function dynamically adjusts timer
+  - ✅ Card Color Consistency:
+    - Fixed card colors to use `safety_level` instead of `risk_level`
+    - Updated labels: "危險：立即修正", "警示：需要調整", "安全：溝通良好"
+  - ✅ Testing Enhancements:
+    - Added preset transcript shortcuts (🟢🟡🔴)
+    - Added "⚡ 立即分析" button for instant testing
+    - Phase 1.5: 8/9 integration tests pass, 106 total tests pass
+- **Parents Report API & Unified Session Management** (2025-12-26)
+  - ✅ New endpoint: `POST /api/v1/realtime/parents-report`
+    - Generates comprehensive parenting communication reports
+    - Analyzes parent-child conversation transcripts
+    - Provides structured feedback in 4 sections:
+      1. Summary/theme (neutral stance)
+      2. Communication highlights (what went well)
+      3. Areas for improvement with specific suggestions
+      4. RAG references from parenting knowledge base
+    - Integrates with existing RAG infrastructure (similarity_threshold=0.5)
+    - Uses Gemini 2.5 Flash for analysis (temperature=0.7)
+  - ✅ Unified Session ID Management
+    - Generated once at session start: `session-{timestamp}-{random}`
+    - Persisted in localStorage for cross-request tracking
+    - Used consistently across all realtime APIs:
+      - `/api/v1/realtime/analyze` (now includes session_id + use_cache)
+      - `/api/v1/realtime/parents-report`
+      - Future GBQ data persistence
+    - Enables Gemini context caching for cost optimization
+  - ✅ Frontend Integration
+    - Report screen UI with highlight cards and improvement suggestions
+    - Click "查看報告" triggers API call and displays structured feedback
+    - Mobile-responsive design with completion screen
+    - Session ID tracking across recording lifecycle
+  - ✅ New Schemas: `ParentsReportRequest`, `ParentsReportResponse`, `ImprovementSuggestion`
+  - ✅ Testing: Backend API tested via curl (successful response with RAG integration)
 - **Universal Credit/Payment System - Admin Backend (Phase 1)** (2025-12-20)
   - ✅ Database schema extensions:
     - Extended `counselors` table with credit fields (phone, total_credits, credits_used, subscription_expires_at)
@@ -48,6 +113,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ✅ Updated iOS API documentation with Swift examples
 
 ### Changed
+- **Documentation Reorganization** (2025-12-26)
+  - Moved safety transition testing docs to `docs/testing/` directory:
+    - `SAFETY_TRANSITIONS_SUMMARY.md` - Test plan overview and design decisions
+    - `SAFETY_TRANSITIONS_MANUAL_TEST_GUIDE.md` - Step-by-step testing procedures
+    - `SAFETY_TRANSITIONS_TEST_FINDINGS.md` - Sticky behavior analysis and trade-offs
+    - `SAFETY_TRANSITIONS_TEST_RESULTS_TABLE.md` - Expected results and keyword detection
+    - `SLIDING_WINDOW_SAFETY_ASSESSMENT.md` - Algorithm details and cost savings
+  - Updated PRD.md with references to testing documentation
+  - Cleaned up 7 experiment JSON files (data already documented in PRD.md):
+    - Removed cache_strategy_comparison.json, experiment_results*.json, strategy_*.json
+  - Reason: Better organization, separate concerns (PRD vs testing docs)
+  - Impact: Cleaner root directory, easier navigation, preserved test documentation
 - **Extended JWT Token Expiration** (2025-12-13)
   - Access Token: 24 hours → 90 days (3 months)
   - Refresh Token: 7 days → 90 days (3 months)

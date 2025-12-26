@@ -1,0 +1,175 @@
+{
+  "skills": {
+    "requirements-clarification": {
+      "description": "Force requirements clarification BEFORE implementation using CARIO framework",
+      "keywords": [
+        "需求",
+        "requirement",
+        "requirements",
+        "客戶要",
+        "案主說",
+        "新功能",
+        "用戶想要",
+        "clarify",
+        "clarification",
+        "不確定"
+      ],
+      "force_activation": true,
+      "priority": "critical",
+      "activation_message": "MANDATORY: Use requirements-clarification skill to validate requirements using CARIO framework BEFORE any implementation."
+    },
+    "prd-workflow": {
+      "description": "PRD-driven development workflow (PRD → Plan → Implement → Update)",
+      "keywords": [
+        "PRD",
+        "產品需求",
+        "功能文檔",
+        "規格書",
+        "feature spec",
+        "product requirements",
+        "specification",
+        "需求文檔"
+      ],
+      "force_activation": true,
+      "priority": "critical",
+      "activation_message": "MANDATORY: Use prd-workflow skill to follow PRD-driven development process."
+    },
+    "tdd-workflow": {
+      "description": "TDD development process",
+      "keywords": [
+        "new feature",
+        "add API",
+        "implement",
+        "新功能",
+        "測試",
+        "test first",
+        "write test",
+        "TDD",
+        "test-driven"
+      ],
+      "force_activation": true,
+      "priority": "critical",
+      "activation_message": "CRITICAL: Use tdd-workflow skill to enforce Test-Driven Development. Tests MUST be written BEFORE implementation."
+    },
+    "debugging": {
+      "description": "Systematic debugging workflow (5-step checklist)",
+      "keywords": [
+        "bug",
+        "error",
+        "debug",
+        "不work",
+        "壞掉",
+        "修復",
+        "fix",
+        "broken",
+        "not working",
+        "issue",
+        "問題"
+      ],
+      "force_activation": true,
+      "priority": "high",
+      "activation_message": "MANDATORY: Use debugging skill to follow systematic 5-step debugging process."
+    },
+    "api-development": {
+      "description": "API development patterns",
+      "keywords": [
+        "API",
+        "endpoint",
+        "FastAPI",
+        "測試 API",
+        "route",
+        "REST",
+        "接口",
+        "controller"
+      ],
+      "force_activation": true,
+      "priority": "high",
+      "activation_message": "Use api-development skill for FastAPI development patterns and best practices."
+    },
+    "git-workflow": {
+      "description": "Git commit/push workflow",
+      "keywords": [
+        "git",
+        "commit",
+        "push",
+        "提交",
+        "pull request",
+        "PR",
+        "merge",
+        "branch",
+        "版本控制"
+      ],
+      "force_activation": true,
+      "priority": "high",
+      "activation_message": "MANDATORY: Use git-workflow skill to ensure proper Git workflow (no commits to main, update docs before push)."
+    },
+    "quality-standards": {
+      "description": "Quality requirements",
+      "keywords": [
+        "quality",
+        "refactor",
+        "optimize",
+        "品質",
+        "code review",
+        "clean code",
+        "best practices"
+      ],
+      "force_activation": false,
+      "priority": "medium",
+      "activation_message": "Consider using quality-standards skill for code quality guidelines."
+    },
+    "third-party-apis": {
+      "description": "External API integration",
+      "keywords": [
+        "ElevenLabs",
+        "OpenAI",
+        "Gemini",
+        "第三方 API",
+        "external API",
+        "integration",
+        "third party"
+      ],
+      "force_activation": false,
+      "priority": "medium",
+      "activation_message": "Consider using third-party-apis skill for external API integration patterns."
+    },
+    "error-handling": {
+      "description": "Error handling patterns",
+      "keywords": [
+        "error",
+        "exception",
+        "validation",
+        "錯誤處理",
+        "try catch",
+        "handle error"
+      ],
+      "force_activation": false,
+      "priority": "medium",
+      "activation_message": "Consider using error-handling skill for robust error handling patterns."
+    },
+    "context-monitor": {
+      "description": "Context usage monitoring",
+      "keywords": [
+        "context",
+        "token",
+        "usage",
+        "memory",
+        "上下文"
+      ],
+      "force_activation": false,
+      "priority": "low",
+      "activation_message": "Context monitoring skill available if needed."
+    }
+  },
+  "activation_strategy": {
+    "method": "forced_eval",
+    "fallback": "keyword_matching",
+    "min_confidence": 0.7,
+    "max_skills_per_prompt": 3
+  },
+  "hook_config": {
+    "timeout_seconds": 5,
+    "verbose_mode": false,
+    "fail_silently": true
+  }
+}

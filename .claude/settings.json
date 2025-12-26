@@ -6,6 +6,13 @@
         {
           "eventName": "UserPromptSubmit",
           "type": "command",
+          "command": "./.claude/hooks/skill-activation-hook.sh",
+          "timeout": 5,
+          "description": "Auto-activate skills based on keyword matching"
+        },
+        {
+          "eventName": "UserPromptSubmit",
+          "type": "command",
           "command": "./.claude/hooks/check-agent-rules.py",
           "timeout": 5,
           "description": "Check if task requires agent-manager for TDD compliance"

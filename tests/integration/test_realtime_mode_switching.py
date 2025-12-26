@@ -70,7 +70,7 @@ class TestRealtimeModeSwitching:
             assert "summary" in data
             assert "alerts" in data
             assert "suggestions" in data
-            assert "risk_level" in data  # NEW: Risk level field
+            assert "safety_level" in data  # NEW: Risk level field
 
             # Verify suggestions are simplified (≤2 sentences each)
             for suggestion in data["suggestions"]:
@@ -124,7 +124,7 @@ class TestRealtimeModeSwitching:
             assert "summary" in data
             assert "alerts" in data
             assert "suggestions" in data
-            assert "risk_level" in data
+            assert "safety_level" in data
 
             # Verify detailed format (more comprehensive)
             assert (
@@ -171,11 +171,11 @@ class TestRiskLevelIndicators:
     """Test risk level assessment (red/yellow/green) for realtime counseling"""
 
     @skip_without_gcp
-    def test_risk_level_red_for_violent_language(self):
+    def test_safety_level_red_for_violent_language(self):
         """Test 4: Violent language should trigger RED risk level
 
         Scenario: Transcript contains violent language: "我要打死你！滾出去！"
-        Expected: risk_level == "red"
+        Expected: safety_level == "red"
         """
         with TestClient(app) as client:
             response = client.post(
@@ -195,20 +195,20 @@ class TestRiskLevelIndicators:
             assert response.status_code == 200
             data = response.json()
 
-            # Verify risk_level field exists
-            assert "risk_level" in data
+            # Verify safety_level field exists
+            assert "safety_level" in data
 
             # Should be RED for violent language
             assert (
-                data["risk_level"] == "red"
-            ), f"Expected 'red' but got '{data['risk_level']}'"
+                data["safety_level"] == "red"
+            ), f"Expected 'red' but got '{data['safety_level']}'"
 
     @skip_without_gcp
-    def test_risk_level_yellow_for_escalating_conflict(self):
+    def test_safety_level_yellow_for_escalating_conflict(self):
         """Test 5: Escalating conflict should trigger YELLOW risk level
 
         Scenario: Transcript shows escalating emotions: "你怎麼又不聽話！我快氣死了！"
-        Expected: risk_level == "yellow"
+        Expected: safety_level == "yellow"
         """
         with TestClient(app) as client:
             response = client.post(
@@ -228,20 +228,20 @@ class TestRiskLevelIndicators:
             assert response.status_code == 200
             data = response.json()
 
-            # Verify risk_level field exists
-            assert "risk_level" in data
+            # Verify safety_level field exists
+            assert "safety_level" in data
 
             # Should be YELLOW for escalating conflict
             assert (
-                data["risk_level"] == "yellow"
-            ), f"Expected 'yellow' but got '{data['risk_level']}'"
+                data["safety_level"] == "yellow"
+            ), f"Expected 'yellow' but got '{data['safety_level']}'"
 
     @skip_without_gcp
-    def test_risk_level_green_for_positive_interaction(self):
+    def test_safety_level_green_for_positive_interaction(self):
         """Test 6: Positive interaction should trigger GREEN risk level
 
         Scenario: Transcript shows calm, positive interaction: "寶貝，我們一起收拾好嗎？"
-        Expected: risk_level == "green"
+        Expected: safety_level == "green"
         """
         with TestClient(app) as client:
             response = client.post(
@@ -261,20 +261,20 @@ class TestRiskLevelIndicators:
             assert response.status_code == 200
             data = response.json()
 
-            # Verify risk_level field exists
-            assert "risk_level" in data
+            # Verify safety_level field exists
+            assert "safety_level" in data
 
             # Should be GREEN for positive interaction
             assert (
-                data["risk_level"] == "green"
-            ), f"Expected 'green' but got '{data['risk_level']}'"
+                data["safety_level"] == "green"
+            ), f"Expected 'green' but got '{data['safety_level']}'"
 
     @skip_without_gcp
-    def test_risk_level_red_for_extreme_emotions(self):
+    def test_safety_level_red_for_extreme_emotions(self):
         """Test 7: Extreme emotions should trigger RED risk level
 
         Scenario: Multiple red flag keywords: "恨死", "受不了", "不想活"
-        Expected: risk_level == "red"
+        Expected: safety_level == "red"
         """
         with TestClient(app) as client:
             response = client.post(
@@ -294,17 +294,17 @@ class TestRiskLevelIndicators:
             assert response.status_code == 200
             data = response.json()
 
-            assert "risk_level" in data
+            assert "safety_level" in data
             assert (
-                data["risk_level"] == "red"
-            ), f"Expected 'red' but got '{data['risk_level']}'"
+                data["safety_level"] == "red"
+            ), f"Expected 'red' but got '{data['safety_level']}'"
 
     @skip_without_gcp
-    def test_risk_level_yellow_for_frustration(self):
+    def test_safety_level_yellow_for_frustration(self):
         """Test 8: Frustration without violence should trigger YELLOW
 
         Scenario: Frustrated but not violent: "你不聽話", "煩死了"
-        Expected: risk_level == "yellow"
+        Expected: safety_level == "yellow"
         """
         with TestClient(app) as client:
             response = client.post(
@@ -324,14 +324,14 @@ class TestRiskLevelIndicators:
             assert response.status_code == 200
             data = response.json()
 
-            assert "risk_level" in data
+            assert "safety_level" in data
             assert (
-                data["risk_level"] == "yellow"
-            ), f"Expected 'yellow' but got '{data['risk_level']}'"
+                data["safety_level"] == "yellow"
+            ), f"Expected 'yellow' but got '{data['safety_level']}'"
 
 
 class TestSchemaValidation:
-    """Test schema validation for mode and risk_level fields"""
+    """Test schema validation for mode and safety_level fields"""
 
     @skip_without_gcp
     def test_schema_validation_mode_field_emergency(self):
@@ -353,7 +353,7 @@ class TestSchemaValidation:
 
             assert response.status_code == 200
             data = response.json()
-            assert "risk_level" in data
+            assert "safety_level" in data
 
     @skip_without_gcp
     def test_schema_validation_mode_field_practice(self):
@@ -377,7 +377,7 @@ class TestSchemaValidation:
 
             assert response.status_code == 200
             data = response.json()
-            assert "risk_level" in data
+            assert "safety_level" in data
 
     def test_schema_validation_invalid_mode(self):
         """Test 11: Verify invalid mode is rejected
@@ -400,11 +400,11 @@ class TestSchemaValidation:
             assert response.status_code == 422
 
     @skip_without_gcp
-    def test_schema_validation_risk_level_in_response(self):
-        """Test 12: Verify response includes risk_level field
+    def test_schema_validation_safety_level_in_response(self):
+        """Test 12: Verify response includes safety_level field
 
         Scenario: Any valid POST request
-        Expected: Response must include risk_level field with value in ["red", "yellow", "green"]
+        Expected: Response must include safety_level field with value in ["red", "yellow", "green"]
         """
         with TestClient(app) as client:
             response = client.post(
@@ -419,22 +419,22 @@ class TestSchemaValidation:
             assert response.status_code == 200
             data = response.json()
 
-            # Verify risk_level field exists
-            assert "risk_level" in data, "Response missing 'risk_level' field"
+            # Verify safety_level field exists
+            assert "safety_level" in data, "Response missing 'safety_level' field"
 
-            # Verify risk_level has valid value
-            assert data["risk_level"] in [
+            # Verify safety_level has valid value
+            assert data["safety_level"] in [
                 "red",
                 "yellow",
                 "green",
-            ], f"Invalid risk_level: {data['risk_level']}"
+            ], f"Invalid safety_level: {data['safety_level']}"
 
     @skip_without_gcp
     def test_complete_response_schema(self):
         """Test 13: Verify complete response schema with all new fields
 
         Scenario: Verify response includes all required fields including new ones
-        Expected: Response should have summary, alerts, suggestions, risk_level, etc.
+        Expected: Response should have summary, alerts, suggestions, safety_level, etc.
         """
         with TestClient(app) as client:
             response = client.post(
@@ -457,7 +457,7 @@ class TestSchemaValidation:
                 "suggestions",
                 "time_range",
                 "timestamp",
-                "risk_level",  # NEW FIELD
+                "safety_level",  # NEW FIELD
             ]
 
             for field in required_fields:
@@ -467,15 +467,15 @@ class TestSchemaValidation:
             assert isinstance(data["summary"], str)
             assert isinstance(data["alerts"], list)
             assert isinstance(data["suggestions"], list)
-            assert isinstance(data["risk_level"], str)
-            assert data["risk_level"] in ["red", "yellow", "green"]
+            assert isinstance(data["safety_level"], str)
+            assert data["safety_level"] in ["red", "yellow", "green"]
 
 
 class TestModeSwitchingWithRiskLevel:
     """Test interaction between mode switching and risk level"""
 
     @skip_without_gcp
-    def test_emergency_mode_with_red_risk_level(self):
+    def test_emergency_mode_with_red_safety_level(self):
         """Test 14: Emergency mode + RED risk should provide urgent, simplified guidance
 
         Scenario: mode="emergency" + violent language (red risk)
@@ -498,7 +498,7 @@ class TestModeSwitchingWithRiskLevel:
             data = response.json()
 
             # Should be RED risk
-            assert data["risk_level"] == "red"
+            assert data["safety_level"] == "red"
 
             # Should have simplified emergency response
             for suggestion in data["suggestions"]:
@@ -510,7 +510,7 @@ class TestModeSwitchingWithRiskLevel:
                 assert sentence_count <= 2
 
     @skip_without_gcp
-    def test_practice_mode_with_green_risk_level(self):
+    def test_practice_mode_with_green_safety_level(self):
         """Test 15: Practice mode + GREEN risk should provide detailed learning guidance
 
         Scenario: mode="practice" + positive interaction (green risk)
@@ -536,7 +536,7 @@ class TestModeSwitchingWithRiskLevel:
             data = response.json()
 
             # Should be GREEN risk
-            assert data["risk_level"] == "green"
+            assert data["safety_level"] == "green"
 
             # Should have detailed practice response
             assert len(data["suggestions"]) >= 2
