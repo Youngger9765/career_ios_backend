@@ -57,11 +57,11 @@
 - [ ] SMS provider 整合（Twilio / AWS SNS）
 - [ ] 防濫用機制（rate limiting）
 
-#### 3.1.2 孩子資料管理
-- [ ] POST /api/v1/island/children - 新增孩子
-- [ ] GET /api/v1/island/children - 列出孩子
-- [ ] PATCH /api/v1/island/children/{id} - 編輯孩子資料
-- [ ] DELETE /api/v1/island/children/{id} - 刪除孩子
+#### 3.1.2 孩子資料管理（沿用 Client API）
+- [ ] POST /api/v1/clients - 新增孩子（tenant_id=island_parents）
+- [ ] GET /api/v1/clients - 列出孩子（自動過濾 tenant）
+- [ ] PATCH /api/v1/clients/{id} - 編輯孩子資料
+- [ ] DELETE /api/v1/clients/{id} - 刪除孩子
 
 ---
 
