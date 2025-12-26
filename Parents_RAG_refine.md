@@ -520,7 +520,105 @@ Realtime API 分析完成
 
 #### Phase 2（本週內）
 
-##### 2.1 後端優化
+**來源**：KM 曹凱閔產品需求（2025-12-26 Slack 對話）
+
+##### 2.1 動態調整分析頻率（根據燈號）✅ 已完成
+
+**需求背景**（KM 原話）：
+> "紅綠燈的方式，是想要將卡片反應的內容，依據內容判斷這段溝通是否屬於嚴重錯誤？
+> 如果已經知道這段對話出現嚴重錯誤 (例如紅燈)，則啟動一個緊急機制，從原來的 60 出一張卡片縮短成 15 秒一張、黃燈則是 30 秒一張，用來作為緊急事故的幫助。"
+
+**Young 的理解確認**：
+> "理解、就是根據上一次的檢查、縮短週期、直到舒緩、再回到 60秒"
+
+**實作狀態**（Commit: `2b10eb0` - 2025-12-25）：
+
+- [x] **前端：動態調整分析頻率**
+  - [x] `updateAnalysisInterval(safetyLevel)` 函數（lines 2698-2720）
+    - 🟢 **綠燈**（對話安全）：60 秒
+    - 🟡 **黃燈**（需要調整）：30 秒
+    - 🔴 **紅燈**（立刻修正）：15 秒
+  - [x] 動態調整計時器邏輯
+  - [x] 燈號變化時即時調整間隔
+  - [x] 視覺通知：`showIntervalChangeNotification()`
+  - [x] Console 日誌：顯示當前分析間隔和安全等級
+
+**實作細節**：
+```javascript
+// app/templates/realtime_counseling.html:2698-2720
+function updateAnalysisInterval(safetyLevel) {
+    const intervalMap = {
+        green: 60,   // Safe: check every 60 seconds
+        yellow: 30,  // Warning: check every 30 seconds
+        red: 15      // Critical: check every 15 seconds
+    };
+
+    const newInterval = intervalMap[safetyLevel] || 60;
+
+    // Only log and notify if interval actually changed
+    if (newInterval !== nextAnalysisInterval) {
+        nextAnalysisInterval = newInterval;
+        lastSafetyLevel = safetyLevel;
+
+        // Console notification
+        console.log(`⏱️ Analysis interval updated: ${nextAnalysisInterval}s (${safetyLevel.toUpperCase()})`);
+
+        // Visual notification to user
+        showIntervalChangeNotification(safetyLevel, newInterval);
+    }
+}
+```
+
+##### 2.2 卡片去重/合併機制 ❌ 不需要實作
+
+**需求背景**（KM 原話）：
+> "我實際測試之後，發現如果這段對話 (家長對話總是又臭又長 XDDD) 沒有太大問題，通常我會每 60 秒收到的卡片內容是很類似的，
+> 因此，是否可以有一個邏輯是：當建議卡片前後兩張沒有太多差異的情況下，可以保留原卡片或是合併卡片即可。
+> 我自己的經驗是，可能我這段對話結束後，會累積蠻多張卡片的，而其中的內容大致相同。"
+
+**Young 的理解確認**：
+> "好的，也就是如果出現跟上一次差不多的，就不要 show 了，直接延長同一張卡片的長度"
+
+**決策**（2025-12-26）：
+- ❌ **不需要實作去重邏輯**
+- **原因**：前端（Web 和 iOS）目前只會顯示一張卡片，不會累積多張
+- **現況**：每次分析會覆蓋上一張卡片，不會有重複累積的問題
+
+##### 2.3 覆盤統整 ✅ 已完成
+
+**需求背景**（KM 原話）：
+> "覆盤統整的話，我建議可以用既有的格式 (作最大程度的簡化) 即可，不需要額外多增加新的邏輯。"
+
+**實作狀態**（Commit: `634642d` - 2025-12-26）：
+
+- [x] **後端：Parents Report API**
+  - [x] Endpoint: `POST /api/v1/realtime/parents-report`
+  - [x] 輸入：完整對話逐字稿（`ParentsReportRequest`）
+  - [x] 輸出（`ParentsReportResponse`）：
+    - `summary`：對話摘要（3-5 句話）
+    - `highlights`：表現好的地方（2-3 點）
+    - `improvements`：可改進的地方（2-3 點）
+      - 每個包含 `issue` + `suggestion`（`ImprovementSuggestion`）
+    - `rag_sources`：RAG 參考來源
+  - [x] 整合 RAG 知識庫（similarity_threshold=0.5）
+  - [x] 使用 Gemini 2.5 Flash 分析
+
+- [x] **前端：覆盤報告 UI**
+  - [x] "查看報告"按鈕（會談結束後）
+  - [x] 呼叫 Parents Report API
+  - [x] 顯示結構化報告：
+    - Highlight cards（值得肯定）
+    - Improvement suggestions（可以調整）
+    - Mobile-responsive design
+  - [x] Session ID 追蹤（localStorage）
+
+**實作細節**：
+- **檔案**：`app/api/realtime.py:1190-1460` (generate_parents_report)
+- **Schema**：`app/schemas/realtime.py` (ParentsReportRequest, ParentsReportResponse, ImprovementSuggestion)
+- **前端**：`app/templates/realtime_counseling.html` (報告畫面 UI)
+- **整合**：完整的後端 API + 前端 UI + Session 管理
+
+##### 2.4 後端優化（原計劃）
 
 - [ ] **擴大分析範圍**
   - 從「最新 1 分鐘」→「最近 3-5 分鐘」
@@ -531,40 +629,15 @@ Realtime API 分析完成
   - similarity_threshold: 0.5 → 0.3-0.4
   - 移除 200 字內容截斷
 
-##### 2.2 前端智能化
-
-- [ ] **動態調整分析頻率（根據燈號）**
-  - [ ] 🟢 **綠燈**（對話安全）：60 秒觸發一次
-    - 當前狀態良好，維持正常監控頻率
-  - [ ] 🟡 **黃燈**（需要調整）：30 秒觸發一次
-    - 對話出現警訊，提高監控密度
-  - [ ] 🔴 **紅燈**（立刻修正）：15 秒觸發一次
-    - 危險狀況，最高監控頻率
-  - [ ] 實作邏輯：
-    ```javascript
-    // 根據上次分析的 safety_level 動態調整
-    let analysisInterval = 60; // 預設
-    if (lastSafetyLevel === 'red') analysisInterval = 15;
-    else if (lastSafetyLevel === 'yellow') analysisInterval = 30;
-    else analysisInterval = 60;
-
-    // Line 2036: 改成動態判斷
-    if (elapsed > 0 && elapsed % analysisInterval === 0) {
-        analyzeTranscript();
-    }
-    ```
-  - [ ] 前端顯示倒數計時（下次分析還有 X 秒）
-  - [ ] 燈號變化時即時調整間隔
-
-- [x] ~~**卡片去重邏輯（避免重複建議）**~~ → **已移除，不需要實作**
-
-##### 2.3 測試
+##### 2.5 測試
 
 - [ ] **Integration Tests**
   - 測試 Practice mode 建議從 200 句中選擇
   - 測試燈號判斷正確性
   - 測試 GBQ 寫入
-  - 測試動態分析頻率切換
+  - 測試動態分析頻率切換（紅 15s / 黃 30s / 綠 60s）
+  - 測試卡片去重邏輯（相似度 ≥ 80%）
+  - 測試覆盤報告生成（使用現有 Parents Report API）
 
 ---
 
@@ -631,21 +704,43 @@ Realtime API 分析完成
 
 ### 下一步行動
 
-**本週目標**：
+**Phase 1 已完成**（2025-12-25）：
 1. ✅ 建立 200 句建議檔案（已完成 - Phase 1.1）
 2. ✅ 修改 Emergency/Practice Mode Prompt（已完成 - Phase 1.2）
 3. ✅ 修正交通號誌系統（orange → yellow）（已完成 - Phase 1.2）
 4. ✅ 建立 GBQ Table 並實作非同步寫入（已完成 - Phase 1.3）
-5. ⏳ 前端調整（卡片顏色、去重邏輯）（待開始 - Phase 1.4）
+5. ⏳ 前端調整（卡片顏色）（待開始 - Phase 1.4）
+
+**Phase 2 本週目標**（2025-12-26 KM 新需求）：
+1. ✅ **緊急機制**：動態調整分析頻率（紅 15s / 黃 30s / 綠 60s）
+   - ✅ 前端：`updateAnalysisInterval()` 動態調整計時器
+   - ✅ 視覺通知：`showIntervalChangeNotification()`
+   - ✅ Console 日誌顯示當前分析間隔
+   - **Commit**: `2b10eb0` (2025-12-25)
+
+2. ❌ **卡片去重**：不需要實作
+   - **原因**：前端（Web 和 iOS）只顯示一張卡片，不會累積
+
+3. ✅ **覆盤統整**：會談結束後生成總結報告
+   - ✅ 後端：`POST /api/v1/realtime/parents-report` API
+   - ✅ 前端："查看報告"按鈕 + 報告畫面 UI
+   - ✅ 整合 RAG 知識庫 + Session 管理
+   - **Commit**: `634642d` (2025-12-26)
 
 **成功標準**：
+
+**Phase 1（已完成）**：
 - ✅ 200 句建議檔案建立並驗證通過（28/28 unit tests passed）
 - ✅ Emergency/Practice 建議從 200 句中選擇（9/9 integration tests passed）
 - ✅ 包含 Bridge 技巧結構（已實作）
 - ✅ 使用紅黃綠交通號誌系統（已修正）
 - ✅ 分析結果存入 GBQ（tenant_id = "island_parents"）（5/5 GBQ tests passed）
-- ⏳ 卡片顏色根據燈號變化（綠/黃/紅）
-- ⏳ 避免重複顯示相同建議
+- ⏳ 卡片顏色根據燈號變化（綠/黃/紅）- 待前端實作
+
+**Phase 2（KM 新需求 - 已完成）**：
+- ✅ 動態分析頻率（紅 15s / 黃 30s / 綠 60s）- Commit: `2b10eb0`
+- ❌ 卡片去重邏輯 - 不需要（前端只顯示一張卡片）
+- ✅ 覆盤報告生成（Parents Report API + 前端 UI）- Commit: `634642d`
 
 ---
 
