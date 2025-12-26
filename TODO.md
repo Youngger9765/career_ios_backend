@@ -18,10 +18,10 @@
 
 ## 任務一：Web 改版（Web Realtime Console）
 
-### 1.1 紅綠燈卡片機制（視覺化風險等級）
+### 1.1 紅綠燈卡片機制（視覺化風險等級）⚠️ Backend 完成 / Frontend 待整合
 **優先級**: 🔴 P0
 **預估時間**: 4-6 小時
-**負責**: Backend API + Frontend UI
+**負責**: Backend API ✅ + Frontend UI ⏳
 
 **需求說明**:
 - **紅燈（嚴重錯誤）**：家長說了很不該說的話
@@ -40,21 +40,21 @@
   - 範例：溫和、同理、有效策略
 
 **Backend 開發**:
-- [ ] 更新 `POST /api/v1/realtime/analyze` response schema
+- [x] 更新 `POST /api/v1/realtime/analyze` response schema ✅ (Dynamic Analysis Intervals, 2025-12-25)
   ```json
   {
-    "risk_level": "red" | "yellow" | "green",
-    "severity": 1 | 2 | 3,  // 1=綠, 2=黃, 3=紅
+    "risk_level": "red" | "yellow" | "green",  ✅ 已實作 (safety_level)
+    "severity": 1 | 2 | 3,  // 1=綠, 2=黃, 3=紅  ✅ 已實作
     "display_text": "要顯示的一段話（簡潔版）",
     "action_suggestion": "立即可做的行動句",
-    "suggested_interval_seconds": 15 | 30 | 60,  // 建議 Frontend 調整 Timer
+    "suggested_interval_seconds": 15 | 30 | 60,  ✅ 已實作 (Green 60s, Yellow 30s, Red 15s)
     "keywords": [...],
     "categories": [...]
   }
   ```
-- [ ] 移除 `confidence` 欄位（改用 severity）
-- [ ] 實作風險等級判斷邏輯（Prompt 調整）
-- [ ] 10+ integration tests
+- [x] 移除 `confidence` 欄位（改用 severity） ✅ (Card Color Consistency, 2025-12-25)
+- [x] 實作風險等級判斷邏輯（Prompt 調整） ✅ (safety_level labels implemented)
+- [x] 10+ integration tests ✅ (15 integration tests in test_annotated_safety_window.py)
 
 **Frontend 需配合**:
 - 根據 `suggested_interval_seconds` 動態調整 Timer
@@ -104,7 +104,7 @@
 
 ---
 
-### 1.3 覆盤統整簡化
+### 1.3 覆盤統整簡化 ✅ (已完成 2025-12-26)
 **優先級**: 🟢 P2
 **預估時間**: 2-3 小時
 **負責**: Backend
@@ -115,9 +115,9 @@
 - 參考現有 `POST /api/v1/reports/generate`
 
 **開發**:
-- [ ] 確認現有報告格式適用
-- [ ] 若需調整，僅做最小修改
-- [ ] 不新增額外欄位或邏輯
+- [x] 確認現有報告格式適用 ✅ (Parents Report API)
+- [x] 若需調整，僅做最小修改 ✅ (4 sections: 摘要、優點、改進建議、RAG 參考)
+- [x] 不新增額外欄位或邏輯 ✅ (POST /api/v1/realtime/parents-report)
 
 ---
 
@@ -1441,8 +1441,8 @@ ISLAND_PARENTS_DEFAULT_QUOTA_MINUTES=3600  # 60 小時
 - [ ] iOS 對接文檔
 
 ### 建議完成（P1）
-- [ ] 行政後台 UI（簡易版）
-- [ ] 覆盤統整簡化
+- [x] 行政後台 UI（簡易版）✅ (Universal Credit/Payment System - Admin Backend, 2025-12-20)
+- [x] 覆盤統整簡化 ✅ (Parents Report API, 2025-12-26)
 - [ ] API 文檔完整更新
 
 ### 可選完成（P2）
