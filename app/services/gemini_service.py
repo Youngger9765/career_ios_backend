@@ -114,7 +114,8 @@ class GeminiService:
         temperature: float = 0.7,
         max_tokens: int = 8192,
         response_format: Optional[Dict[str, str]] = None,
-    ) -> str:
+        return_metadata: bool = False,
+    ) -> str | Dict[str, Any]:
         """
         Chat completion using Gemini (alias for generate_text for compatibility)
 
@@ -123,10 +124,45 @@ class GeminiService:
             temperature: Sampling temperature (0-1)
             max_tokens: Maximum tokens to generate
             response_format: Optional response format (e.g., {"type": "json_object"})
+            return_metadata: If True, return dict with 'text' and 'usage_metadata'
 
         Returns:
-            Generated text
+            Generated text, or dict with text and metadata if return_metadata=True
         """
+        if return_metadata:
+            # Generate with metadata
+            generation_config = {
+                "temperature": temperature,
+                "max_output_tokens": max_tokens,
+            }
+            if response_format:
+                generation_config["response_mime_type"] = response_format.get(
+                    "type", "text/plain"
+                )
+
+            config = GenerationConfig(**generation_config)
+            response = self.chat_model.generate_content(
+                prompt, generation_config=config
+            )
+
+            # Extract usage metadata
+            usage_metadata = {}
+            if hasattr(response, "usage_metadata"):
+                usage = response.usage_metadata
+                for attr in [
+                    "cached_content_token_count",
+                    "prompt_token_count",
+                    "candidates_token_count",
+                    "total_token_count",
+                ]:
+                    if hasattr(usage, attr):
+                        usage_metadata[attr] = getattr(usage, attr)
+
+            return {
+                "text": response.text,
+                "usage_metadata": usage_metadata,
+            }
+
         return await self.generate_text(
             prompt, temperature, max_tokens, response_format
         )

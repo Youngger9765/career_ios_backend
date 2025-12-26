@@ -655,6 +655,29 @@ YOU MUST return safety_level field in JSON response!"""
     return prompt
 
 
+def _calculate_gemini_cost(usage_metadata: dict) -> float:
+    """Calculate estimated cost for Gemini API usage
+
+    Gemini 2.5 Flash pricing (as of 2025):
+    - Input: $0.000075 per 1K tokens
+    - Output: $0.0003 per 1K tokens
+    - Cached input: $0.00001875 per 1K tokens (75% discount)
+    """
+    prompt_tokens = usage_metadata.get("prompt_token_count", 0)
+    completion_tokens = usage_metadata.get("candidates_token_count", 0)
+    cached_tokens = usage_metadata.get("cached_content_token_count", 0)
+
+    # Subtract cached tokens from prompt tokens
+    non_cached_prompt = max(0, prompt_tokens - cached_tokens)
+
+    # Calculate costs
+    prompt_cost = (non_cached_prompt / 1000) * 0.000075
+    cached_cost = (cached_tokens / 1000) * 0.00001875
+    completion_cost = (completion_tokens / 1000) * 0.0003
+
+    return prompt_cost + cached_cost + completion_cost
+
+
 async def write_to_gbq_async(data: dict) -> None:
     """Write realtime analysis result to BigQuery asynchronously
 
@@ -1207,20 +1230,28 @@ async def generate_parents_report(
     Results are persisted to BigQuery for analytics.
     """
     import json
+    import time
     import uuid
 
     # Track timing for GBQ
     start_time = datetime.now(timezone.utc)
+    rag_start_time = None
+    rag_end_time = None
+    llm_start_time = None
+    llm_end_time = None
 
     try:
         # Step 1: Search RAG knowledge base for relevant parenting content
         logger.info("Searching RAG for parenting-related content")
+        rag_start_time = time.time()
         rag_sources = await _search_rag_knowledge(
             transcript=request.transcript,
             db=db,
             top_k=5,  # Get more sources for comprehensive report
             similarity_threshold=0.5,
         )
+        rag_end_time = time.time()
+        rag_search_time_ms = int((rag_end_time - rag_start_time) * 1000)
 
         # Step 2: Build RAG context for prompt
         rag_context = ""
@@ -1294,35 +1325,50 @@ async def generate_parents_report(
   ]
 }}
 
+⚠️ 重要：請確保 JSON 格式正確，不要在最後一個元素後面加逗號（trailing comma）！
+
 請開始分析。"""
 
         # Step 4: Call Gemini for analysis
         logger.info("Calling Gemini for report generation")
-        response = await gemini_service.chat_completion(
+        llm_start_time = time.time()
+        gemini_response = await gemini_service.chat_completion(
             prompt=analysis_prompt,
             temperature=0.7,  # Higher temperature for more natural language
+            return_metadata=True,  # Get usage metadata for observability
         )
+        llm_end_time = time.time()
+        llm_call_time_ms = int((llm_end_time - llm_start_time) * 1000)
+
+        # Extract response text and metadata
+        llm_raw_response = gemini_response["text"]
+        usage_metadata = gemini_response.get("usage_metadata", {})
 
         # Step 5: Parse Gemini response
         try:
             # Try to extract JSON from response
-            if "```json" in response:
-                json_start = response.find("```json") + 7
-                json_end = response.find("```", json_start)
-                json_text = response[json_start:json_end].strip()
-            elif "{" in response:
-                json_start = response.find("{")
-                json_end = response.rfind("}") + 1
-                json_text = response[json_start:json_end]
+            if "```json" in llm_raw_response:
+                json_start = llm_raw_response.find("```json") + 7
+                json_end = llm_raw_response.find("```", json_start)
+                json_text = llm_raw_response[json_start:json_end].strip()
+            elif "{" in llm_raw_response:
+                json_start = llm_raw_response.find("{")
+                json_end = llm_raw_response.rfind("}") + 1
+                json_text = llm_raw_response[json_start:json_end]
             else:
                 raise ValueError("No JSON found in response")
+
+            # Remove trailing commas from JSON (common LLM mistake)
+            import re
+
+            json_text = re.sub(r",(\s*[}\]])", r"\1", json_text)
 
             analysis = json.loads(json_text)
             logger.info("Successfully parsed Gemini response")
 
         except (json.JSONDecodeError, ValueError) as e:
             logger.error(f"Failed to parse Gemini response: {e}")
-            logger.error(f"Response text: {response[:500]}")
+            logger.error(f"Response text: {llm_raw_response[:500]}")
             raise HTTPException(
                 status_code=500, detail="Failed to parse AI analysis response"
             )
@@ -1356,21 +1402,78 @@ async def generate_parents_report(
             safety_level = "green"  # Normal feedback
         # Note: parents_report doesn't have explicit "red" level like realtime
 
+        # Prepare comprehensive GBQ data for observability
         gbq_data = {
+            # IDs and metadata
             "id": str(uuid.uuid4()),
-            "tenant_id": "island_parents",  # Fixed for web version
-            "session_id": None,  # Web version has no session concept
+            "tenant_id": "island_parents",
+            "session_id": request.session_id if request.session_id else None,
+            "request_id": str(uuid.uuid4()),
+            # Timestamps
             "analyzed_at": start_time,
-            "analysis_type": "parents_report",  # Distinguish from emergency/practice
+            "start_time": start_time,
+            "end_time": end_time,
+            "created_at": end_time,
+            # Analysis type and result
+            "analysis_type": "parents_report",
             "safety_level": safety_level,
             "matched_suggestions": [
                 f"{imp.issue} → {imp.suggestion}" for imp in improvements_list
             ],
-            "transcript_segment": request.transcript[
-                :500
-            ],  # Truncate for storage efficiency
-            "response_time_ms": duration_ms,
-            "created_at": end_time,
+            "analysis_result": analysis,  # Full parsed JSON
+            # Input data
+            "transcript": request.transcript,  # Store full transcript
+            "speakers": None,  # Parents report doesn't have speaker info
+            # Prompts
+            "system_prompt": None,  # Gemini doesn't separate system/user in this call
+            "user_prompt": analysis_prompt,  # The full prompt
+            "prompt_template": "parents_report_v1",
+            # RAG information
+            "rag_used": len(rag_sources) > 0,
+            "rag_query": request.transcript[
+                :200
+            ],  # First 200 chars used for RAG search
+            "rag_documents": [
+                {
+                    "content": source.get("content", "")[:500],
+                    "source": source.get("source", ""),
+                    "similarity": source.get("similarity", 0.0),
+                }
+                for source in rag_sources
+            ]
+            if rag_sources
+            else None,
+            "rag_sources": [source.get("source", "") for source in rag_sources]
+            if rag_sources
+            else [],
+            "rag_top_k": 5,
+            "rag_similarity_threshold": 0.5,
+            "rag_search_time_ms": rag_search_time_ms if rag_start_time else None,
+            # Model information
+            "provider": "gemini",
+            "model_name": "gemini-2.5-flash",
+            "model_version": "2.5",
+            # Timing breakdown
+            "duration_ms": duration_ms,
+            "api_response_time_ms": duration_ms,
+            "llm_call_time_ms": llm_call_time_ms if llm_start_time else None,
+            # LLM response
+            "llm_raw_response": llm_raw_response,
+            # Token usage (from Gemini usage_metadata)
+            "prompt_tokens": usage_metadata.get("prompt_token_count"),
+            "completion_tokens": usage_metadata.get("candidates_token_count"),
+            "total_tokens": usage_metadata.get("total_token_count"),
+            "cached_tokens": usage_metadata.get("cached_content_token_count"),
+            "estimated_cost_usd": _calculate_gemini_cost(usage_metadata)
+            if usage_metadata
+            else None,
+            # Cache info (not used in parents_report)
+            "use_cache": False,
+            "cache_hit": None,
+            "cache_key": None,
+            "gemini_cache_ttl": None,
+            # Mode
+            "mode": "parents_report",
         }
 
         # Schedule GBQ write as background task (non-blocking)
