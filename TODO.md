@@ -577,17 +577,236 @@ CREATE INDEX idx_sessions_mode ON sessions(mode);
 
 ---
 
+## 任務四：密碼管理與通知系統
+
+**優先級**: 🔴 P0
+**預估時間**: 6-8 小時
+**負責**: Backend
+**影響範圍**: Web Admin + iOS App
+
+### 4.1 帳號建立後自動發送密碼信件
+
+**需求說明**:
+- 當管理員在後台建立新會員帳號時，系統應自動發送包含密碼的歡迎信件給用戶
+- 信件應包含：登入網址、帳號（Email）、初始密碼、首次登入提示
+
+**開發**:
+
+- [ ] **整合 Email 服務**
+  - 選擇 Email 服務商（SendGrid / AWS SES / SMTP）
+  - 設定 Email 模板
+  - 環境變數配置（API Key、發件人地址）
+
+- [ ] **信件模板設計**
+  ```html
+  主旨：歡迎加入浮島諮詢系統
+
+  內容：
+  - 歡迎訊息
+  - 登入網址：https://your-domain.com/admin
+  - 您的帳號：{email}
+  - 初始密碼：{password}
+  - 建議首次登入後立即修改密碼
+  ```
+
+- [ ] **修改會員建立 API**
+  - 在 `POST /api/v1/admin/counselors` 成功建立後
+  - 觸發異步任務發送 Email
+  - 記錄發送狀態（成功/失敗）
+
+- [ ] **Email 發送日誌**
+  ```python
+  class EmailLog(Base):
+      id = Column(GUID(), primary_key=True)
+      recipient_email = Column(String, nullable=False)
+      email_type = Column(String)  # "welcome", "password_reset"
+      status = Column(String)  # "sent", "failed", "pending"
+      sent_at = Column(DateTime(timezone=True))
+      error_message = Column(Text, nullable=True)
+  ```
+
+**Deliverable**:
+- Email 服務整合
+- 歡迎信件模板
+- Email 日誌模型
+- 5+ integration tests
+
+---
+
+### 4.2 密碼重設頁面（Web）
+
+**需求說明**:
+- 提供 Web 頁面讓用戶可以自行重設密碼
+- 流程：輸入 Email → 收到重設連結 → 設定新密碼
+
+**開發**:
+
+- [ ] **密碼重設請求頁面**
+  - URL: `/reset-password`
+  - 輸入欄位：Email
+  - 提交後顯示「已發送重設連結」訊息
+
+- [ ] **密碼重設 Token 生成**
+  ```python
+  class PasswordResetToken(Base):
+      id = Column(GUID(), primary_key=True)
+      counselor_id = Column(GUID(), ForeignKey("counselors.id"))
+      token = Column(String(64), unique=True, index=True)
+      expires_at = Column(DateTime(timezone=True))  # 有效期 1 小時
+      used = Column(Boolean, default=False)
+      created_at = Column(DateTime(timezone=True))
+  ```
+
+- [ ] **密碼重設確認頁面**
+  - URL: `/reset-password/confirm?token={token}`
+  - 驗證 Token 有效性
+  - 輸入欄位：新密碼、確認密碼
+  - 提交後更新密碼並標記 Token 為已使用
+
+- [ ] **發送密碼重設信件**
+  ```html
+  主旨：密碼重設請求
+
+  內容：
+  - 收到密碼重設請求
+  - 重設連結：https://your-domain.com/reset-password/confirm?token={token}
+  - 連結有效期：1 小時
+  - 若非本人操作，請忽略此信件
+  ```
+
+**Deliverable**:
+- 2 個 Web 頁面（請求 + 確認）
+- PasswordResetToken 模型
+- Email 通知整合
+- 8+ integration tests
+
+---
+
+### 4.3 密碼重設 API（給 iOS 使用）
+
+**需求說明**:
+- iOS App 需要 API 來實現密碼重設功能
+- 流程與 Web 相同，但使用 API 而非頁面
+
+**API 設計**:
+
+- [ ] **POST /api/v1/auth/password-reset/request** - 請求密碼重設
+  ```json
+  Request:
+  {
+    "email": "user@example.com"
+  }
+
+  Response 200:
+  {
+    "message": "密碼重設信件已發送，請檢查您的信箱",
+    "expires_in_minutes": 60
+  }
+
+  Response 404:
+  {
+    "detail": "找不到此 Email 的帳號"
+  }
+  ```
+
+- [ ] **POST /api/v1/auth/password-reset/verify** - 驗證 Token
+  ```json
+  Request:
+  {
+    "token": "abc123..."
+  }
+
+  Response 200:
+  {
+    "valid": true,
+    "email": "user@example.com"
+  }
+
+  Response 400:
+  {
+    "valid": false,
+    "reason": "Token 已過期或無效"
+  }
+  ```
+
+- [ ] **POST /api/v1/auth/password-reset/confirm** - 確認重設密碼
+  ```json
+  Request:
+  {
+    "token": "abc123...",
+    "new_password": "NewSecurePass123"
+  }
+
+  Response 200:
+  {
+    "message": "密碼已成功重設"
+  }
+
+  Response 400:
+  {
+    "detail": "Token 無效或已使用"
+  }
+  ```
+
+**安全考量**:
+- [ ] Token 應使用加密隨機字串（至少 32 字元）
+- [ ] Token 有效期 1 小時
+- [ ] Token 只能使用一次
+- [ ] 密碼強度驗證（至少 6 字元）
+- [ ] 限制請求頻率（同一 Email 5 分鐘內只能請求一次）
+
+**Deliverable**:
+- 3 個 API endpoints
+- 請求頻率限制邏輯
+- 10+ integration tests（正常流程 + 錯誤處理）
+- API 文檔更新
+
+---
+
+### 4.4 整合測試與文檔
+
+- [ ] **完整流程測試**
+  - 建立帳號 → 收到歡迎信
+  - 請求密碼重設 → 收到重設信 → 成功重設密碼
+  - Token 過期處理
+  - Token 重複使用防護
+
+- [ ] **API 文檔更新**
+  - Swagger UI 更新
+  - 在 `點數管理後台.md` 添加密碼重設說明
+
+- [ ] **環境變數文檔**
+  ```env
+  # Email 服務配置
+  EMAIL_PROVIDER=sendgrid  # sendgrid / ses / smtp
+  EMAIL_API_KEY=your_api_key
+  EMAIL_FROM_ADDRESS=noreply@your-domain.com
+  EMAIL_FROM_NAME=浮島諮詢系統
+
+  # 密碼重設配置
+  PASSWORD_RESET_TOKEN_EXPIRY_HOURS=1
+  PASSWORD_RESET_RATE_LIMIT_MINUTES=5
+  ```
+
+**Deliverable**:
+- 完整流程測試（20+ tests）
+- 用戶文檔更新
+- 開發者文檔（環境變數、部署指南）
+
+---
+
 ## 📊 本週 KPI（更新版）
 
 ### 開發進度
-- 🎯 完成 3 大任務（Web 改版 + 付費版 + iOS API）
-- 🎯 40+ integration tests 新增
-- 🎯 4+ DB migrations
+- 🎯 完成 4 大任務（Web 改版 + 付費版 + iOS API + 密碼管理）
+- 🎯 60+ integration tests 新增
+- 🎯 6+ DB migrations
 
 ### API 交付
 - 🎯 Web 改版：2 APIs（即時分析改版 + 卡片合併）
 - 🎯 付費版：5 APIs（白名單管理）
 - 🎯 iOS API：3 APIs（Create / Partial / Complete）
+- 🎯 密碼管理：3 APIs（密碼重設請求/驗證/確認）
 
 ### 性能目標
 - 🎯 即時分析 API：< 10 秒（含紅黃綠判斷）
@@ -623,6 +842,15 @@ CREATE INDEX idx_sessions_mode ON sessions(mode);
 - [ ] 即時分析 API 改版（紅黃綠燈 + 動態頻率）
 - [ ] 卡片合併邏輯（相似度計算）
 - [ ] 10+ integration tests
+
+#### 任務四：密碼管理與通知系統
+- [ ] Email 服務整合（SendGrid / AWS SES）
+- [ ] 帳號建立後自動發送密碼信件
+- [ ] 密碼重設頁面（Web）
+- [ ] 密碼重設 API（3 endpoints for iOS）
+- [ ] PasswordResetToken model + EmailLog model
+- [ ] 20+ integration tests
+- [ ] 1+ DB migration
 
 ### 建議完成（P1）
 - [ ] 行政後台 UI（簡易版）
