@@ -296,6 +296,60 @@
             animation-delay: 0.4s;
         }
 
+        /* Pure color concentric circles - fade between red, yellow, green */
+        @keyframes color-cycle {
+            0%, 25% {
+                background: radial-gradient(circle,
+                    rgba(239, 68, 68, 0.6) 0%,      /* Solid red center */
+                    rgba(239, 68, 68, 0.3) 50%,     /* Light red */
+                    rgba(239, 68, 68, 0.1) 80%,     /* Very light red */
+                    transparent 100%
+                );
+            }
+            33%, 58% {
+                background: radial-gradient(circle,
+                    rgba(251, 191, 36, 0.6) 0%,     /* Solid yellow center */
+                    rgba(251, 191, 36, 0.3) 50%,    /* Light yellow */
+                    rgba(251, 191, 36, 0.1) 80%,    /* Very light yellow */
+                    transparent 100%
+                );
+            }
+            66%, 91% {
+                background: radial-gradient(circle,
+                    rgba(34, 197, 94, 0.6) 0%,      /* Solid green center */
+                    rgba(34, 197, 94, 0.3) 50%,     /* Light green */
+                    rgba(34, 197, 94, 0.1) 80%,     /* Very light green */
+                    transparent 100%
+                );
+            }
+            100% {
+                background: radial-gradient(circle,
+                    rgba(239, 68, 68, 0.6) 0%,
+                    rgba(239, 68, 68, 0.3) 50%,
+                    rgba(239, 68, 68, 0.1) 80%,
+                    transparent 100%
+                );
+            }
+        }
+
+        @keyframes pulse-scale {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+        }
+
+        .concentric-circles {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            animation: color-cycle 6s ease-in-out infinite, pulse-scale 3s ease-in-out infinite;
+        }
+
         /* Header is now controlled via Tailwind classes (hidden md:block) */
     </style>
 </head>
@@ -655,6 +709,19 @@
             </div>
         </div>
 
+        <!-- MOBILE Loading Overlay for Report Generation -->
+        <div id="reportLoadingOverlay" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50" style="z-index: 9999 !important; pointer-events: auto; display: none;">
+            <div class="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center space-y-6 max-w-md mx-4">
+                <!-- Concentric circles gradient animation -->
+                <div class="concentric-circles"></div>
+                <!-- Loading text (removed "AI") -->
+                <p class="text-2xl font-semibold text-gray-800">
+                    生成報告中<span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span>
+                </p>
+                <p class="text-sm text-gray-500 text-center">請稍候片刻</p>
+            </div>
+        </div>
+
         <!-- MOBILE-ONLY: Report Screen (顯示在點擊查看報告後) -->
         <div id="reportScreen" class="hidden fixed inset-0 bg-gray-50 overflow-y-auto z-50 px-6 py-8">
             <div class="max-w-2xl mx-auto">
@@ -666,30 +733,23 @@
                     <span class="font-medium">返回</span>
                 </button>
 
-                <!-- Title Section -->
-                <div class="text-center mb-8">
-                    <h1 class="text-2xl font-bold mb-4 text-gray-900">
-                        這次你已經做了一件重要的事：
-                    </h1>
-                    <p class="text-xl font-semibold text-gray-800">
-                        願意好好跟孩子談。
-                    </p>
-                </div>
-
-                <!-- Tips Section (instructional text) -->
-                <div class="bg-white rounded-2xl p-6 mb-8 shadow-sm">
-                    <p class="text-gray-700 leading-relaxed mb-4">
-                        剛才的表達已經不錯了！
-                    </p>
-                    <p class="text-gray-700 leading-relaxed mb-4">
-                        不過如果換個方式說，孩子可能更容易接受。
-                    </p>
-                    <p class="text-gray-700 leading-relaxed mb-4">
-                        試試看用「我注意到...」開頭，
-                    </p>
-                    <p class="text-gray-700 leading-relaxed">
-                        少用「你總是...」這類詞，會讓對話更順暢。
-                    </p>
+                <!-- Summary Section (populated from API) -->
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 mb-8 shadow-sm border border-blue-100">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0 mt-1">
+                            <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <h2 class="text-lg font-semibold text-gray-900 mb-2">對話摘要</h2>
+                            <p id="reportSummary" class="text-gray-700 leading-relaxed">
+                                <!-- Summary will be populated by JavaScript -->
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Highlights Section -->
@@ -3696,15 +3756,14 @@
 
             console.log('📊 Populating report with API data:', reportData);
 
+            // Populate summary
+            const summaryElement = document.getElementById('reportSummary');
+            if (summaryElement && reportData.summary) {
+                summaryElement.textContent = reportData.summary;
+            }
+
             // Clear existing cards
             highlightCards.innerHTML = '';
-
-            // Update report title with summary
-            const reportTitle = document.querySelector('#reportScreen h1');
-            if (reportTitle && reportData.summary) {
-                // Keep original title, but could optionally add summary as subtitle
-                console.log('Summary:', reportData.summary);
-            }
 
             // Create highlight cards from API response
             const highlights = reportData.highlights || [];
@@ -4438,18 +4497,5 @@
         console.log('💡 Demo 模式：模擬即時對話，說話者自動切換');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     </script>
-
-    <!-- Loading Overlay for Report Generation -->
-    <div id="reportLoadingOverlay" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50" style="z-index: 9999 !important; pointer-events: auto;">
-        <div class="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center space-y-4 max-w-md mx-4" style="pointer-events: auto;">
-            <!-- Spinning animation -->
-            <div class="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-            <!-- Loading text -->
-            <p class="text-xl font-semibold text-gray-800">
-                AI 分析報告中<span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span>
-            </p>
-            <p class="text-sm text-gray-500 text-center">請稍候，正在為您生成專業分析</p>
-        </div>
-    </div>
 </body>
 </html>
