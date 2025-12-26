@@ -1643,6 +1643,12 @@
                     // Get PCM float32 audio data
                     const inputData = e.inputBuffer.getChannelData(0);
 
+                    // Calculate RMS (Root Mean Square) to detect if there's actual audio
+                    const rms = Math.sqrt(inputData.reduce((sum, val) => sum + val * val, 0) / inputData.length);
+                    if (rms > 0.01) {  // Only log if there's actual audio signal
+                        console.log('🎵 Audio chunk captured - RMS:', rms.toFixed(4), 'samples:', inputData.length);
+                    }
+
                     // Convert Float32 to Int16 (PCM S16LE)
                     const pcmData = new Int16Array(inputData.length);
                     for (let i = 0; i < inputData.length; i++) {
@@ -1662,6 +1668,11 @@
                         sample_rate: 16000
                     };
                     elevenLabsWs.send(JSON.stringify(message));
+
+                    // Log that chunk was sent
+                    if (rms > 0.01) {
+                        console.log('📤 Audio chunk sent to ElevenLabs - size:', base64Audio.length, 'chars');
+                    }
                 }
             };
 

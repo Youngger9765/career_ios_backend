@@ -1435,15 +1435,15 @@ async def generate_parents_report(
             ],  # First 200 chars used for RAG search
             "rag_documents": [
                 {
-                    "content": source.get("content", "")[:500],
-                    "source": source.get("source", ""),
-                    "similarity": source.get("similarity", 0.0),
+                    "content": source.content[:500],
+                    "source": source.title,
+                    "similarity": source.score,
                 }
                 for source in rag_sources
             ]
             if rag_sources
             else None,
-            "rag_sources": [source.get("source", "") for source in rag_sources]
+            "rag_sources": [source.title for source in rag_sources]
             if rag_sources
             else [],
             "rag_top_k": 5,
