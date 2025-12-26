@@ -10,6 +10,45 @@
 ## [未發布]
 
 ### 新增
+- **Parents RAG 優化 - 完整可觀測性** (2025-12-26)
+  - ✅ GBQ schema 覆蓋率從 23% 提升至 67%+（29/43 欄位）
+  - ✅ parents_report API 完整 metadata 追蹤：
+    - Token 用量：prompt_tokens、completion_tokens、total_tokens、cached_tokens
+    - 成本計算：Gemini 2.5 Flash 定價（$0.000075/1K 輸入、$0.0003/1K 輸出）
+    - 時間分解：RAG 搜尋時間、LLM 呼叫時間、總時長
+    - 完整 prompts：system_prompt、user_prompt、prompt_template
+    - LLM 回應：原始回應、結構化分析結果
+    - RAG 追蹤：查詢、文件、來源、時間
+    - 模型資訊：provider、model_name、model_version
+  - ✅ 修改 `gemini_service.chat_completion()` 可選返回 usage_metadata
+  - ✅ BigQuery JSON 欄位序列化（analysis_result、speakers、rag_documents）
+  - ✅ 從請求擷取 Session ID（Web localStorage-based）
+  - ✅ 修正欄位名稱不匹配（response_time_ms → api_response_time_ms、transcript_segment → transcript）
+  - ✅ 模型修正為 gemini-2.5-flash（從 2.0-flash-exp）
+- **Parents RAG 優化 - Phase 1.4 & 2.1** (2025-12-25)
+  - ✅ Phase 1.4 - 前端調整：
+    - 移除兩行格式判斷，統一單行建議顯示
+    - 更新前端說明（行動版 & 桌面版）反映 200 句專家建議
+    - Emergency 模式：1-2 句專家建議（從 200 句中選）
+    - Practice 模式：3-4 句專家建議（從 200 句中選）
+  - ✅ Phase 2.1 - 後端優化：
+    - 擴大分析範圍從 1 分鐘至 3-5 分鐘（SAFETY_WINDOW_SPEAKER_TURNS：10 → 40）
+    - 增強 RAG 檢索：top_k 3→7、similarity_threshold 0.5→0.35
+    - 移除 RAG 內容的 200 字截斷
+  - ✅ 動態分析間隔（Commit: 2b10eb0）：
+    - 實作基於 safety_level 的自適應監控
+    - 綠燈（安全）：60 秒
+    - 黃燈（警示）：30 秒
+    - 紅燈（高風險）：15 秒
+    - 視覺通知與 console 日誌
+    - `updateAnalysisInterval()` 函數動態調整計時器
+  - ✅ 卡片顏色一致性：
+    - 修正卡片顏色使用 `safety_level` 而非 `risk_level`
+    - 更新標籤：「危險：立即修正」、「警示：需要調整」、「安全：溝通良好」
+  - ✅ 測試增強：
+    - 新增預設逐字稿快捷鍵（🟢🟡🔴）
+    - 新增「⚡ 立即分析」按鈕用於即時測試
+    - Phase 1.5：8/9 integration tests 通過，106 個總測試通過
 - **家長報告 API 與統一 Session 管理** (2025-12-26)
   - ✅ 新增端點：`POST /api/v1/realtime/parents-report`
     - 生成完整的親子溝通報告
