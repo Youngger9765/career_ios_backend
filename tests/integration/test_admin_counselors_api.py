@@ -2,9 +2,20 @@
 Integration tests for Admin Counselor Management API
 Following TDD approach - these tests define the expected behavior
 """
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def mock_email_sender():
+    """Mock email sender to prevent actual emails during tests"""
+    with patch(
+        "app.services.email_sender.email_sender.send_password_reset_email"
+    ) as mock:
+        mock.return_value = AsyncMock(return_value=True)
+        yield mock
 
 
 class TestAdminListCounselors:
