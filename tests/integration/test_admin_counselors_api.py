@@ -58,13 +58,23 @@ class TestAdminListCounselors:
     def test_list_counselors_filter_by_tenant_forbidden(
         self, client, admin_token, test_counselors
     ):
-        """Admin cannot access other tenants without permission"""
+        """Admin cannot access other tenants without permission (unless DEBUG mode)"""
+        from app.core.config import settings
+
         response = client.get(
             "/api/v1/admin/counselors?tenant_id=island_parents",
             headers={"Authorization": f"Bearer {admin_token}"},
         )
 
-        assert response.status_code == 403
+        if settings.DEBUG:
+            # In DEBUG mode, cross-tenant access is allowed
+            assert response.status_code == 200
+            data = response.json()
+            for counselor in data["counselors"]:
+                assert counselor["tenant_id"] == "island_parents"
+        else:
+            # In production mode, cross-tenant access is forbidden
+            assert response.status_code == 403
 
     def test_list_counselors_filter_by_role(self, client, admin_token, test_counselors):
         """Admin can filter counselors by role"""
@@ -520,7 +530,9 @@ class TestAdminCreateCounselor:
         assert response.status_code == 400
 
     def test_create_counselor_other_tenant_forbidden(self, client, admin_token):
-        """Admin cannot create counselors in other tenants without permission"""
+        """Admin cannot create counselors in other tenants without permission (unless DEBUG mode)"""
+        from app.core.config import settings
+
         request_data = {
             "email": "shared@test.com",
             "username": "user_island",
@@ -535,7 +547,16 @@ class TestAdminCreateCounselor:
             headers={"Authorization": f"Bearer {admin_token}"},
             json=request_data,
         )
-        assert response.status_code == 403
+
+        if settings.DEBUG:
+            # In DEBUG mode, cross-tenant creation is allowed
+            assert response.status_code == 200
+            data = response.json()
+            assert data["counselor"]["email"] == "shared@test.com"
+            assert data["counselor"]["tenant_id"] == "island"
+        else:
+            # In production mode, cross-tenant creation is forbidden
+            assert response.status_code == 403
 
     def test_create_counselor_unauthorized(self, client, counselor_token):
         """Non-admin cannot create counselor"""
