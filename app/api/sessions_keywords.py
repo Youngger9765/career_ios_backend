@@ -300,6 +300,28 @@ async def analyze_session_keywords(
         tenant_id,
     )
 
+    # Save to SessionAnalysisLog (for backward compatibility)
+    from datetime import datetime, timezone
+
+    from app.models.session_analysis_log import SessionAnalysisLog
+
+    log = SessionAnalysisLog(
+        session_id=session_id,
+        counselor_id=current_user.id,
+        tenant_id=tenant_id,
+        analysis_type="keyword_analysis",
+        transcript=request.transcript_segment,
+        analysis_result=result_data,
+        safety_level="safe",  # Default for career tenant
+        risk_indicators=[],
+        rag_documents=result_data.get("rag_documents", []),
+        rag_sources=result_data.get("rag_sources", []),
+        token_usage=result_data.get("token_usage", {}),
+        analyzed_at=datetime.now(timezone.utc),
+    )
+    db.add(log)
+    db.commit()
+
     # Return legacy format (backward compatible)
     return KeywordAnalysisResponse(
         keywords=result_data.get("keywords", ["分析中"])[:10],

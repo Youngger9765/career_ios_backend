@@ -356,6 +356,7 @@ class TestAnalyzePartialAPI:
                     "birth_date": "1990-01-01",
                     "phone": f"091{uuid4().hex[:7]}",
                     "identity_option": "在職者",
+                    "current_status": "探索中",
                 },
             )
             if client_response.status_code != 201:
@@ -436,6 +437,7 @@ class TestAnalyzePartialAPI:
                     "birth_date": "1990-01-01",
                     "phone": f"091{uuid4().hex[:7]}",
                     "identity_option": "在職者",
+                    "current_status": "探索中",
                 },
             )
             if client_response.status_code != 201:

@@ -102,8 +102,31 @@ def list_analysis_logs(
     """List analysis logs for a session"""
     tenant_id = current_user.tenant_id
 
-    # Verify session exists and belongs to tenant
-    _get_session_or_404(db, session_id, tenant_id)
+    # Verify session exists and belongs to counselor (with ownership check)
+    from sqlalchemy import select
+
+    from app.models.case import Case
+    from app.models.client import Client
+
+    result = db.execute(
+        select(SessionModel, Client, Case)
+        .join(Case, SessionModel.case_id == Case.id)
+        .join(Client, Case.client_id == Client.id)
+        .where(
+            SessionModel.id == session_id,
+            Client.counselor_id == current_user.id,
+            Client.tenant_id == tenant_id,
+            SessionModel.deleted_at.is_(None),
+            Case.deleted_at.is_(None),
+            Client.deleted_at.is_(None),
+        )
+    )
+    row = result.first()
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found or access denied",
+        )
 
     # Build query
     query = db.query(SessionAnalysisLog).filter(
@@ -128,6 +151,69 @@ def list_analysis_logs(
         total=total,
         items=[SessionAnalysisLogResponse.model_validate(log) for log in items],
     )
+
+
+@router.delete(
+    "/api/v1/sessions/{session_id}/analysis-logs/{log_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_analysis_log(
+    session_id: UUID,
+    log_id: UUID,
+    current_user: Counselor = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> None:
+    """Delete a specific analysis log"""
+    tenant_id = current_user.tenant_id
+
+    # Verify session exists and belongs to counselor (with ownership check)
+    from sqlalchemy import select
+
+    from app.models.case import Case
+    from app.models.client import Client
+
+    result = db.execute(
+        select(SessionModel, Client, Case)
+        .join(Case, SessionModel.case_id == Case.id)
+        .join(Client, Case.client_id == Client.id)
+        .where(
+            SessionModel.id == session_id,
+            Client.counselor_id == current_user.id,
+            Client.tenant_id == tenant_id,
+            SessionModel.deleted_at.is_(None),
+            Case.deleted_at.is_(None),
+            Client.deleted_at.is_(None),
+        )
+    )
+    row = result.first()
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found or access denied",
+        )
+
+    # Find the log
+    log = (
+        db.query(SessionAnalysisLog)
+        .filter(
+            SessionAnalysisLog.id == log_id,
+            SessionAnalysisLog.session_id == session_id,
+            SessionAnalysisLog.tenant_id == tenant_id,
+        )
+        .first()
+    )
+
+    if not log:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Analysis log {log_id} not found",
+        )
+
+    # Delete the log
+    db.delete(log)
+    db.commit()
+
+    return None
 
 
 @router.get(

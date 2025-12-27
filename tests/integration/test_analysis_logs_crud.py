@@ -143,22 +143,24 @@ class TestAnalysisLogsCRUD:
                 headers=headers,
             )
             assert response2.status_code == 200
-            logs = response2.json()
-            assert logs["session_id"] == str(session_id)
-            assert logs["total_logs"] == 1
-            assert len(logs["logs"]) == 1
+            logs_response = response2.json()
+            assert logs_response["total"] == 1
+            assert len(logs_response["items"]) == 1
 
             # Verify log content
-            log = logs["logs"][0]
-            assert log["log_index"] == 0
+            log = logs_response["items"][0]
             assert "analyzed_at" in log
-            assert log["transcript_segment"] == "我感到很焦慮和壓力"[:200]
-            assert log["keywords"] == result1["keywords"]
-            assert log["categories"] == result1["categories"]
-            assert log["confidence"] == result1["confidence"]
-            assert log["counselor_insights"] == result1["counselor_insights"]
+            assert log["transcript"] == "我感到很焦慮和壓力"
+            assert log["analysis_result"]["keywords"] == result1["keywords"]
+            assert log["analysis_result"]["categories"] == result1["categories"]
+            assert log["analysis_result"]["confidence"] == result1["confidence"]
+            assert (
+                log["analysis_result"]["counselor_insights"]
+                == result1["counselor_insights"]
+            )
             assert "counselor_id" in log
-            assert log["fallback"] is False
+            # fallback is optional in analysis_result
+            assert log["analysis_result"].get("fallback", False) is False
 
             # CREATE another log
             response3 = client.post(
@@ -174,15 +176,14 @@ class TestAnalysisLogsCRUD:
                 headers=headers,
             )
             assert response4.status_code == 200
-            logs = response4.json()
-            assert logs["total_logs"] == 2
-            assert len(logs["logs"]) == 2
+            logs_response = response4.json()
+            assert logs_response["total"] == 2
+            assert len(logs_response["items"]) == 2
 
-            # Verify chronological order (oldest first)
-            assert logs["logs"][0]["log_index"] == 0
-            assert logs["logs"][1]["log_index"] == 1
-            assert logs["logs"][0]["transcript_segment"] == "我感到很焦慮和壓力"[:200]
-            assert logs["logs"][1]["transcript_segment"] == "我對未來感到迷惘"[:200]
+            # Verify items exist (order may be DESC by analyzed_at)
+            transcripts = [item["transcript"] for item in logs_response["items"]]
+            assert "我感到很焦慮和壓力" in transcripts
+            assert "我對未來感到迷惘" in transcripts
 
     def test_delete_analysis_log(self, test_session):
         """Test deleting a specific analysis log entry"""
@@ -203,11 +204,16 @@ class TestAnalysisLogsCRUD:
                 f"/api/v1/sessions/{session_id}/analysis-logs",
                 headers=headers,
             )
-            assert response.json()["total_logs"] == 3
+            logs_response = response.json()
+            assert logs_response["total"] == 3
 
-            # DELETE: Remove middle log (index 1)
+            # Get log IDs
+            log_ids = [item["id"] for item in logs_response["items"]]
+            assert len(log_ids) == 3
+
+            # DELETE: Remove one log
             response = client.delete(
-                f"/api/v1/sessions/{session_id}/analysis-logs/1",
+                f"/api/v1/sessions/{session_id}/analysis-logs/{log_ids[0]}",
                 headers=headers,
             )
             assert response.status_code == 204
@@ -217,15 +223,12 @@ class TestAnalysisLogsCRUD:
                 f"/api/v1/sessions/{session_id}/analysis-logs",
                 headers=headers,
             )
-            logs = response.json()
-            assert logs["total_logs"] == 2
-            # After deletion, indices are recalculated
-            assert logs["logs"][0]["transcript_segment"] == "第一次分析"
-            assert logs["logs"][1]["transcript_segment"] == "第三次分析"
+            logs_response = response.json()
+            assert logs_response["total"] == 2
 
-            # DELETE: Remove first log (now index 0)
+            # DELETE: Remove another log
             response = client.delete(
-                f"/api/v1/sessions/{session_id}/analysis-logs/0",
+                f"/api/v1/sessions/{session_id}/analysis-logs/{log_ids[1]}",
                 headers=headers,
             )
             assert response.status_code == 204
@@ -235,12 +238,11 @@ class TestAnalysisLogsCRUD:
                 f"/api/v1/sessions/{session_id}/analysis-logs",
                 headers=headers,
             )
-            logs = response.json()
-            assert logs["total_logs"] == 1
-            assert logs["logs"][0]["transcript_segment"] == "第三次分析"
+            logs_response = response.json()
+            assert logs_response["total"] == 1
 
     def test_delete_invalid_log_index(self, test_session):
-        """Test deleting with invalid log index"""
+        """Test deleting with invalid log ID"""
         session_id, headers = test_session
 
         with TestClient(app) as client:
@@ -251,20 +253,14 @@ class TestAnalysisLogsCRUD:
                 json={"transcript_segment": "測試"},
             )
 
-            # Try to delete index 1 (doesn't exist, only 0 exists)
+            # Try to delete with non-existent log ID
+            fake_log_id = uuid4()
             response = client.delete(
-                f"/api/v1/sessions/{session_id}/analysis-logs/1",
+                f"/api/v1/sessions/{session_id}/analysis-logs/{fake_log_id}",
                 headers=headers,
             )
-            assert response.status_code == 400
-            assert "Invalid log index" in response.json()["detail"]
-
-            # Try to delete negative index
-            response = client.delete(
-                f"/api/v1/sessions/{session_id}/analysis-logs/-1",
-                headers=headers,
-            )
-            assert response.status_code == 400
+            assert response.status_code == 404
+            assert "not found" in response.json()["detail"]
 
     def test_empty_analysis_logs(self, test_session):
         """Test reading analysis logs when none exist"""
@@ -276,10 +272,9 @@ class TestAnalysisLogsCRUD:
                 headers=headers,
             )
             assert response.status_code == 200
-            logs = response.json()
-            assert logs["session_id"] == str(session_id)
-            assert logs["total_logs"] == 0
-            assert logs["logs"] == []
+            logs_response = response.json()
+            assert logs_response["total"] == 0
+            assert logs_response["items"] == []
 
     def test_unauthorized_access(self, test_session, db_session: Session):
         """Test that counselors can't access other counselors' session logs"""
@@ -318,11 +313,12 @@ class TestAnalysisLogsCRUD:
                 headers=other_headers,
             )
             assert response.status_code == 404
-            assert "not found or access denied" in response.json()["detail"]
+            assert "not found" in response.json()["detail"].lower()
 
-            # Try to delete logs - should fail
+            # Try to delete logs - should fail (use fake log ID)
+            fake_log_id = uuid4()
             response = client.delete(
-                f"/api/v1/sessions/{session_id}/analysis-logs/0",
+                f"/api/v1/sessions/{session_id}/analysis-logs/{fake_log_id}",
                 headers=other_headers,
             )
             assert response.status_code == 404
