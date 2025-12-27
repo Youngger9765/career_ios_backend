@@ -60,3 +60,45 @@ class CounselorUpdate(BaseModel):
 
     full_name: Optional[str] = None
     username: Optional[str] = None
+
+
+class PasswordResetRequest(BaseModel):
+    """Password reset request"""
+
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    tenant_id: str
+
+    class Config:
+        # At least one of email or phone must be provided
+        json_schema_extra = {
+            "example": {"email": "user@example.com", "tenant_id": "test_tenant"}
+        }
+
+
+class PasswordResetResponse(BaseModel):
+    """Password reset request response"""
+
+    message: str
+    token: Optional[str] = None  # Only for testing/development
+
+
+class PasswordResetVerifyResponse(BaseModel):
+    """Password reset token verification response"""
+
+    valid: bool
+    email: Optional[str] = None
+    message: Optional[str] = None
+
+
+class PasswordResetConfirm(BaseModel):
+    """Password reset confirmation"""
+
+    token: str
+    new_password: str = Field(..., min_length=8)
+
+
+class PasswordResetConfirmResponse(BaseModel):
+    """Password reset confirmation response"""
+
+    message: str

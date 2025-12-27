@@ -23,6 +23,39 @@ class EmailSenderService:
         self.from_email = os.getenv("FROM_EMAIL", self.smtp_user)
         self.default_to_email = os.getenv("BILLING_REPORT_EMAIL", "dev02@example.com")
 
+    async def send_password_reset_email(
+        self,
+        to_email: str,
+        reset_token: str,
+        counselor_name: str = None,
+    ) -> bool:
+        """
+        Send password reset email
+
+        Args:
+            to_email: Recipient email
+            reset_token: Password reset token
+            counselor_name: Optional counselor name for personalization
+
+        Returns:
+            True if sent successfully
+        """
+        subject = "Password Reset Request - Career Counseling Platform"
+
+        # Generate password reset URL
+        # TODO: Update with actual frontend URL
+        reset_url = f"https://your-domain.com/reset-password?token={reset_token}"
+
+        html_body = self._generate_password_reset_html(
+            counselor_name or "User", reset_url, reset_token
+        )
+
+        try:
+            return await self._send_email(to_email, subject, html_body)
+        except Exception as e:
+            logger.error(f"Failed to send password reset email: {e}")
+            raise
+
     async def send_billing_report(
         self,
         report_data: Dict[str, Any],
@@ -49,6 +82,132 @@ class EmailSenderService:
         except Exception as e:
             logger.error(f"Failed to send billing report email: {e}")
             raise
+
+    def _generate_password_reset_html(
+        self, counselor_name: str, reset_url: str, reset_token: str
+    ) -> str:
+        """Generate password reset email HTML"""
+        html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset Request</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }}
+        .container {{
+            background-color: white;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        h1 {{
+            color: #1a73e8;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }}
+        .content {{
+            margin: 20px 0;
+            font-size: 16px;
+        }}
+        .button-container {{
+            text-align: center;
+            margin: 30px 0;
+        }}
+        .reset-button {{
+            display: inline-block;
+            background-color: #1a73e8;
+            color: white;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+        }}
+        .reset-button:hover {{
+            background-color: #1557b0;
+        }}
+        .alternative {{
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-size: 14px;
+        }}
+        .token {{
+            font-family: 'Courier New', monospace;
+            background-color: #e8f0fe;
+            padding: 12px;
+            border-radius: 4px;
+            word-break: break-all;
+            margin-top: 10px;
+        }}
+        .warning {{
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #fef7e0;
+            border-left: 4px solid #f9ab00;
+            border-radius: 4px;
+            font-size: 14px;
+        }}
+        .footer {{
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Password Reset Request</h1>
+
+        <div class="content">
+            <p>Hi {counselor_name},</p>
+
+            <p>We received a request to reset your password for your Career Counseling Platform account.</p>
+
+            <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
+        </div>
+
+        <div class="button-container">
+            <a href="{reset_url}" class="reset-button">Reset Password</a>
+        </div>
+
+        <div class="alternative">
+            <p><strong>Alternatively, you can copy and paste this reset token:</strong></p>
+            <div class="token">{reset_token}</div>
+        </div>
+
+        <div class="warning">
+            <p><strong>Security Notice:</strong></p>
+            <ul style="margin: 10px 0 0 20px;">
+                <li>If you didn't request this password reset, please ignore this email.</li>
+                <li>Never share this link or token with anyone.</li>
+                <li>This link will expire in 1 hour for your security.</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>Career Counseling Platform</p>
+            <p>This is an automated email. Please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+        return html
 
     def _generate_subject(self, report_data: Dict[str, Any]) -> str:
         """Generate email subject"""

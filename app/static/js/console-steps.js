@@ -4833,6 +4833,222 @@
                         <p style="font-size: 12px; color: #065f46; margin-top: 8px;">剩餘記錄的索引已自動重新計算</p>
                     </div>
                 `
+            },
+            'password-reset-request': {
+                title: '🔐 請求密碼重置',
+                subtitle: 'POST /api/v1/auth/password-reset/request',
+                renderForm: () => `
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" id="password_reset_email" placeholder="user@example.com" />
+                    </div>
+                    <div class="form-group">
+                        <label>Tenant ID</label>
+                        <select id="password_reset_tenant_id">
+                            <option value="test_tenant">test_tenant</option>
+                            <option value="career">career</option>
+                            <option value="island">island</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="executePasswordResetRequest()">發送重置郵件</button>
+                `,
+                execute: async () => {
+                    const email = document.getElementById('password_reset_email').value;
+                    const tenant_id = document.getElementById('password_reset_tenant_id').value;
+
+                    if (!email) {
+                        return {
+                            response: { ok: false, status: 400 },
+                            data: { detail: '請輸入 Email' }
+                        };
+                    }
+
+                    const response = await fetch(`${BASE_URL}/api/v1/auth/password-reset/request`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, tenant_id })
+                    });
+
+                    const data = await response.json();
+
+                    // Save token for testing
+                    if (response.ok && data.token) {
+                        state.passwordResetToken = data.token;
+                    }
+
+                    return { response, data };
+                },
+                renderPreview: (data) => {
+                    if (!data || data.detail) {
+                        return `
+                            <div class="info-card" style="background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444;">
+                                <h3>❌ 請求失敗</h3>
+                                <p style="color: #ef4444;">${data?.detail || '未知錯誤'}</p>
+                            </div>
+                        `;
+                    }
+                    return `
+                        <div class="info-card">
+                            <h3>✅ 重置郵件已發送</h3>
+                            <div class="info-row">
+                                <span class="info-label">Message</span>
+                                <span class="info-value">${data.message}</span>
+                            </div>
+                            ${data.token ? `
+                                <div class="info-row">
+                                    <span class="info-label">Token (測試用)</span>
+                                    <span class="info-value" style="font-size: 11px; word-break: break-all;">${data.token}</span>
+                                </div>
+                                <div class="info-row" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1);">
+                                    <span class="info-label">提示</span>
+                                    <span class="info-value" style="color: #0ea5e9;">Token 已自動儲存，可直接測試驗證步驟</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+            },
+            'password-reset-verify': {
+                title: '🔍 驗證重置 Token',
+                subtitle: 'GET /api/v1/auth/password-reset/verify',
+                renderForm: () => `
+                    <div class="form-group">
+                        <label>Reset Token *</label>
+                        <input type="text" id="verify_reset_token" placeholder="Token from email" value="${state.passwordResetToken || ''}" />
+                        <small style="color: #86868b; font-size: 12px; display: block; margin-top: 4px;">從上一步自動填入，或手動輸入</small>
+                    </div>
+                    <button class="btn btn-info" onclick="executePasswordResetVerify()">驗證 Token</button>
+                `,
+                execute: async () => {
+                    const token = document.getElementById('verify_reset_token').value;
+
+                    if (!token) {
+                        return {
+                            response: { ok: false, status: 400 },
+                            data: { detail: '請輸入 Token' }
+                        };
+                    }
+
+                    const response = await fetch(`${BASE_URL}/api/v1/auth/password-reset/verify?token=${encodeURIComponent(token)}`);
+                    const data = await response.json();
+
+                    // Save verified token
+                    if (response.ok) {
+                        state.verifiedResetToken = token;
+                    }
+
+                    return { response, data };
+                },
+                renderPreview: (data) => {
+                    if (!data || data.detail || !data.valid) {
+                        return `
+                            <div class="info-card" style="background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444;">
+                                <h3>❌ Token 無效</h3>
+                                <p style="color: #ef4444;">${data?.detail || 'Token 已過期或無效'}</p>
+                            </div>
+                        `;
+                    }
+                    return `
+                        <div class="info-card">
+                            <h3>✅ Token 有效</h3>
+                            <div class="info-row">
+                                <span class="info-label">Email</span>
+                                <span class="info-value">${data.email}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Valid</span>
+                                <span class="info-value" style="color: #10b981;">✓ ${data.valid}</span>
+                            </div>
+                            <div class="info-row" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1);">
+                                <span class="info-label">提示</span>
+                                <span class="info-value" style="color: #0ea5e9;">可以繼續下一步設定新密碼</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            'password-reset-confirm': {
+                title: '🔑 確認密碼重置',
+                subtitle: 'POST /api/v1/auth/password-reset/confirm',
+                renderForm: () => `
+                    <div class="form-group">
+                        <label>Reset Token *</label>
+                        <input type="text" id="confirm_reset_token" placeholder="Token from verification" value="${state.verifiedResetToken || state.passwordResetToken || ''}" />
+                        <small style="color: #86868b; font-size: 12px; display: block; margin-top: 4px;">從驗證步驟自動填入</small>
+                    </div>
+                    <div class="form-group">
+                        <label>New Password *</label>
+                        <input type="password" id="confirm_new_password" placeholder="New password" />
+                        <small style="color: #86868b; font-size: 12px; display: block; margin-top: 4px;">
+                            密碼要求：<br>
+                            • 至少 8 個字元<br>
+                            • 必須包含字母和數字<br>
+                            • 不可全為數字<br>
+                            • 不可使用常見弱密碼（如 12345678, password 等）
+                        </small>
+                    </div>
+                    <button class="btn btn-success" onclick="executePasswordResetConfirm()">重置密碼</button>
+                `,
+                execute: async () => {
+                    const token = document.getElementById('confirm_reset_token').value;
+                    const new_password = document.getElementById('confirm_new_password').value;
+
+                    if (!token || !new_password) {
+                        return {
+                            response: { ok: false, status: 400 },
+                            data: { detail: '請輸入 Token 和新密碼' }
+                        };
+                    }
+
+                    if (new_password.length < 8) {
+                        return {
+                            response: { ok: false, status: 400 },
+                            data: { detail: '密碼長度至少需要 8 個字元' }
+                        };
+                    }
+
+                    const response = await fetch(`${BASE_URL}/api/v1/auth/password-reset/confirm`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token, new_password })
+                    });
+
+                    const data = await response.json();
+
+                    // Clear saved tokens
+                    if (response.ok) {
+                        state.passwordResetToken = null;
+                        state.verifiedResetToken = null;
+                        // Clear form
+                        document.getElementById('confirm_reset_token').value = '';
+                        document.getElementById('confirm_new_password').value = '';
+                    }
+
+                    return { response, data };
+                },
+                renderPreview: (data) => {
+                    if (!data || data.detail) {
+                        return `
+                            <div class="info-card" style="background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444;">
+                                <h3>❌ 重置失敗</h3>
+                                <p style="color: #ef4444;">${data?.detail || '未知錯誤'}</p>
+                            </div>
+                        `;
+                    }
+                    return `
+                        <div class="info-card">
+                            <h3>✅ 密碼重置成功</h3>
+                            <div class="info-row">
+                                <span class="info-label">Message</span>
+                                <span class="info-value">${data.message}</span>
+                            </div>
+                            <div class="info-row" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1);">
+                                <span class="info-label">提示</span>
+                                <span class="info-value" style="color: #10b981;">現在可以使用新密碼登入</span>
+                            </div>
+                        </div>
+                    `;
+                }
             }
         };
 
@@ -5657,6 +5873,9 @@ Cl: 我開始用你上次建議的方法，先確認主管的需求再開始做�
         window.executeRegister = () => executeStep('register');
         window.executeLogin = () => executeStep('login');
         window.executeMe = () => executeStep('me');
+        window.executePasswordResetRequest = () => executeStep('password-reset-request');
+        window.executePasswordResetVerify = () => executeStep('password-reset-verify');
+        window.executePasswordResetConfirm = () => executeStep('password-reset-confirm');
         window.executeGetClientFieldSchema = () => executeStep('get-client-field-schema');
         window.executeGetCaseFieldSchema = () => executeStep('get-case-field-schema');
         window.executeListClients = () => executeStep('list-clients');

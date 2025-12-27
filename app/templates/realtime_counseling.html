@@ -354,16 +354,109 @@
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
-    <!-- Header - Commercial Grade with Gradient - Hidden on mobile, visible on desktop -->
-    <nav id="mainHeader" class="hidden md:block sticky top-0 z-50 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 shadow-lg gradient-animate">
-        <div class="container mx-auto max-w-7xl px-4 py-3">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-md">
-                    <span class="text-2xl">🎤</span>
-                </div>
+    <!-- Login Form (shown when not logged in) - Mobile-Friendly Design -->
+    <div id="loginContainer" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white">
+        <div class="w-full max-w-md px-6 py-8 fade-in">
+            <!-- Alert Messages -->
+            <div id="loginAlertContainer" class="mb-4"></div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="space-y-6">
+                <!-- Email Section -->
                 <div>
-                    <h1 class="text-white font-bold text-lg md:text-xl">AI 即時親子諮詢分析</h1>
-                    <p class="text-indigo-200 text-xs hidden md:block">親子教養專業版 - 本系統使用親子教養理論知識庫，提供即時 AI 分析與建議，幫助諮商師在親子諮詢過程中獲得專業支援。</p>
+                    <label for="loginEmail" class="block text-gray-800 font-medium text-base mb-3">輸入電子郵件</label>
+                    <input
+                        type="email"
+                        id="loginEmail"
+                        class="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all text-base"
+                        placeholder="your.email@example.com"
+                        required
+                    >
+                </div>
+
+                <!-- Password Section -->
+                <div>
+                    <label for="loginPassword" class="block text-gray-800 font-medium text-base mb-3">輸入密碼</label>
+                    <input
+                        type="password"
+                        id="loginPassword"
+                        class="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all text-base"
+                        placeholder="請輸入密碼"
+                        required
+                    >
+                </div>
+
+                <!-- Tenant Selector (Hidden by default) -->
+                <input type="hidden" id="loginTenantId" value="career">
+
+                <!-- Submit Button - Large Black Button at Bottom -->
+                <div class="mt-auto pt-8">
+                    <button
+                        type="submit"
+                        id="loginSubmitBtn"
+                        class="w-full py-4 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all duration-300 text-lg relative"
+                    >
+                        <span id="loginBtnText">開始諮詢</span>
+                        <span id="loginBtnSpinner" class="hidden">登入中...</span>
+                    </button>
+                </div>
+
+                <!-- Debug Indicator (Hidden by default) -->
+                <div id="debugIndicator" class="hidden text-center mt-4">
+                    <span class="text-xs text-red-500 font-mono">🐛 DEBUG MODE</span>
+                </div>
+            </form>
+
+            <!-- Advanced Options Toggle (Optional) -->
+            <div class="text-center mt-6">
+                <button
+                    type="button"
+                    id="showAdvancedBtn"
+                    class="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                    onclick="toggleAdvancedOptions()"
+                >
+                    進階選項 ▼
+                </button>
+            </div>
+
+            <!-- Advanced Options Panel (Hidden by default) -->
+            <div id="advancedOptions" class="hidden mt-4 p-4 bg-gray-50 rounded-lg space-y-3">
+                <div>
+                    <label for="tenantSelector" class="block text-gray-600 text-sm mb-1">租戶選擇</label>
+                    <select
+                        id="tenantSelector"
+                        class="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                        onchange="document.getElementById('loginTenantId').value = this.value"
+                    >
+                        <option value="career">Career</option>
+                        <option value="island">Island</option>
+                        <option value="island-parents">Island Parents</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content (hidden until logged in) -->
+    <div id="mainContent" style="display: none;">
+    <!-- Header - Commercial Grade with Gradient - Hidden on mobile, visible on desktop -->
+    <nav id="mainHeader" class="hidden md:block sticky top-0 z-50 shadow-lg gradient-animate" style="background: linear-gradient(135deg, #8bd1a8 0%, #7dbf9b 45%, #6fb1a1 100%);">
+        <div class="container mx-auto max-w-7xl px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-md">
+                        <span class="text-2xl">🎤</span>
+                    </div>
+                    <div>
+                        <h1 class="text-white font-bold text-lg md:text-xl">AI 即時親子諮詢分析</h1>
+                        <p class="text-green-900 text-xs hidden md:block">親子教養專業版 - 本系統使用親子教養理論知識庫，提供即時 AI 分析與建議，幫助諮商師在親子諮詢過程中獲得專業支援。</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="userEmailDisplay" class="text-white text-sm"></span>
+                    <button onclick="logout()" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg font-semibold">
+                        登出
+                    </button>
                 </div>
             </div>
         </div>
@@ -400,7 +493,7 @@
         <!-- iOS-style Settings Modal (Bottom Sheet) -->
         <div id="settingsModal" class="fixed inset-0 z-50 hidden">
             <!-- Backdrop -->
-            <div id="settingsModalBackdrop" class="absolute inset-0 bg-black/50 transition-opacity duration-300"></div>
+            <div id="settingsModalBackdrop" class="absolute inset-0 bg-black/50 opacity-0 transition-opacity duration-300"></div>
 
             <!-- Modal Content (slides up from bottom) -->
             <div id="settingsModalContent" class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-h-[70vh] overflow-y-auto transform translate-y-full transition-transform duration-300 mb-20">
@@ -4496,6 +4589,203 @@
         console.log('✨ 當前劇本：工作壓力與焦慮（劇本 1）');
         console.log('💡 Demo 模式：模擬即時對話，說話者自動切換');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        // ==================== Login/Logout Functionality ====================
+        // Check if user is logged in on page load
+        function checkAuth() {
+            const token = localStorage.getItem('authToken');
+            const email = localStorage.getItem('userEmail');
+
+            if (token && email) {
+                // User is logged in, show main content
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+
+                // Display user email in header
+                const emailDisplay = document.getElementById('userEmailDisplay');
+                if (emailDisplay) {
+                    emailDisplay.textContent = email;
+                }
+            } else {
+                // User is not logged in, show login form
+                document.getElementById('loginContainer').style.display = 'flex';
+                document.getElementById('mainContent').style.display = 'none';
+            }
+        }
+
+        // Debug Mode: Long-press handler
+        let longPressTimer = null;
+        let isDebugMode = localStorage.getItem('debugMode') === 'true';
+
+        // Show debug indicator if already in debug mode
+        if (isDebugMode) {
+            document.getElementById('debugIndicator').classList.remove('hidden');
+        }
+
+        const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+
+        // Long-press start (works for both touch and mouse)
+        function startLongPress(e) {
+            longPressTimer = setTimeout(() => {
+                // Enable debug mode after 3 seconds
+                isDebugMode = true;
+                localStorage.setItem('debugMode', 'true');
+                document.getElementById('debugIndicator').classList.remove('hidden');
+                showLoginAlert('Debug mode activated! Click to skip login.', 'success');
+
+                // Vibrate if supported (mobile)
+                if (navigator.vibrate) {
+                    navigator.vibrate(200);
+                }
+            }, 3000);
+        }
+
+        // Long-press end
+        function endLongPress() {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }
+
+        // Add event listeners for long-press
+        loginSubmitBtn.addEventListener('mousedown', startLongPress);
+        loginSubmitBtn.addEventListener('mouseup', endLongPress);
+        loginSubmitBtn.addEventListener('mouseleave', endLongPress);
+        loginSubmitBtn.addEventListener('touchstart', startLongPress);
+        loginSubmitBtn.addEventListener('touchend', endLongPress);
+        loginSubmitBtn.addEventListener('touchcancel', endLongPress);
+
+        // Toggle advanced options
+        function toggleAdvancedOptions() {
+            const advancedPanel = document.getElementById('advancedOptions');
+            const toggleBtn = document.getElementById('showAdvancedBtn');
+            if (advancedPanel.classList.contains('hidden')) {
+                advancedPanel.classList.remove('hidden');
+                toggleBtn.textContent = '進階選項 ▲';
+            } else {
+                advancedPanel.classList.add('hidden');
+                toggleBtn.textContent = '進階選項 ▼';
+            }
+        }
+
+        // Handle login form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('loginEmail').value;
+            const tenantId = document.getElementById('loginTenantId').value;
+
+            const submitBtn = document.getElementById('loginSubmitBtn');
+            const btnText = document.getElementById('loginBtnText');
+            const btnSpinner = document.getElementById('loginBtnSpinner');
+
+            // Debug mode: Skip login
+            if (isDebugMode) {
+                console.log('[DEBUG MODE] Skipping login, using fake token');
+                localStorage.setItem('authToken', 'DEBUG_FAKE_TOKEN_' + Date.now());
+                localStorage.setItem('userEmail', email || 'debug@example.com');
+                localStorage.setItem('tenantId', tenantId);
+
+                // Hide login form, show main content
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+
+                showLoginAlert('Debug login successful!', 'success');
+                return;
+            }
+
+            // Normal login flow
+            const password = document.getElementById('loginPassword').value;
+
+            if (!password) {
+                showLoginAlert('請輸入密碼', 'error');
+                return;
+            }
+
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.classList.add('hidden');
+            btnSpinner.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        tenant_id: tenantId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Login successful
+                    localStorage.setItem('authToken', data.access_token);
+                    localStorage.setItem('userEmail', email);
+                    localStorage.setItem('tenantId', tenantId);
+
+                    // Hide login form, show main content
+                    document.getElementById('loginContainer').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+
+                    showLoginAlert('登入成功！', 'success');
+                } else {
+                    // Login failed
+                    showLoginAlert(data.detail || '登入失敗，請檢查您的帳號密碼', 'error');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showLoginAlert('網路錯誤，請稍後再試', 'error');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                btnText.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
+            }
+        });
+
+        // Show alert message in login form
+        function showLoginAlert(message, type) {
+            const alertContainer = document.getElementById('loginAlertContainer');
+            const alertClass = type === 'error' ? 'bg-red-100 border-red-400 text-red-700' : 'bg-green-100 border-green-400 text-green-700';
+
+            alertContainer.innerHTML = `
+                <div class="${alertClass} border px-4 py-3 rounded mb-4" role="alert">
+                    <span class="block sm:inline">${message}</span>
+                </div>
+            `;
+
+            // Auto-dismiss success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    alertContainer.innerHTML = '';
+                }, 3000);
+            }
+        }
+
+        // Logout function (called by logout button)
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('tenantId');
+            localStorage.removeItem('debugMode'); // Clear debug mode on logout
+
+            // Hide main content, show login form
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('loginContainer').style.display = 'flex';
+
+            // Reset debug mode state
+            isDebugMode = false;
+            document.getElementById('debugIndicator').classList.add('hidden');
+        }
+
+        // Check auth on page load
+        checkAuth();
     </script>
 </body>
 </html>

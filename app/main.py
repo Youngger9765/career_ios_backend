@@ -33,7 +33,7 @@ from app.api import (
     sessions_keywords,
     ui_client_case_list,
 )
-from app.api.v1 import admin_counselors, admin_credits
+from app.api.v1 import admin_counselors, admin_credits, password_reset
 from app.core.config import settings
 
 # Templates
@@ -59,6 +59,9 @@ app.add_middleware(
 
 # Include auth routes
 app.include_router(auth.router, prefix="/api")
+
+# Include password reset routes (v1 API)
+app.include_router(password_reset.router, prefix="/api/v1")
 
 # Include admin credit management routes
 app.include_router(admin_credits.router, prefix="/api/v1")
@@ -192,6 +195,18 @@ async def admin_page(request: Request) -> Response:
 async def realtime_counseling_page(request: Request) -> Response:
     """Realtime STT Counseling page - AI-powered live counseling assistant"""
     return templates.TemplateResponse("realtime_counseling.html", {"request": request})
+
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(request: Request) -> Response:
+    """Forgot Password page - Request password reset"""
+    return templates.TemplateResponse("forgot_password.html", {"request": request})
+
+
+@app.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(request: Request) -> Response:
+    """Reset Password page - Set new password with token"""
+    return templates.TemplateResponse("reset_password.html", {"request": request})
 
 
 @app.get("/test-elevenlabs", response_class=HTMLResponse)

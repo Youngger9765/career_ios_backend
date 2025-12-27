@@ -32,6 +32,7 @@ from app.models.evaluation import (  # noqa: F401
     EvaluationTestSet,
 )
 from app.models.job import Job  # noqa: F401
+from app.models.password_reset import PasswordResetToken  # noqa: F401
 from app.models.pipeline import PipelineRun  # noqa: F401
 from app.models.refresh_token import RefreshToken  # noqa: F401
 from app.models.reminder import Reminder  # noqa: F401

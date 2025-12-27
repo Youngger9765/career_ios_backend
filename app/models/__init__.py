@@ -17,6 +17,7 @@ from .evaluation import (
     EvaluationTestSet,
 )
 from .job import Job
+from .password_reset import PasswordResetToken
 from .pipeline import PipelineRun
 from .refresh_token import RefreshToken
 from .reminder import Reminder
@@ -33,6 +34,7 @@ __all__ = [
     "Report",
     "Reminder",
     "RefreshToken",
+    "PasswordResetToken",
     # RAG models
     "Datasource",
     "Document",
