@@ -4,6 +4,34 @@
 
 ---
 
+## ✅ 已完成：密碼重設系統 (2025-12-27)
+
+### 功能概述
+- Web UI 頁面：`/forgot-password` 和 `/reset-password`
+- API 端點：`POST /api/v1/auth/password-reset/request`, `GET /verify`, `POST /confirm`
+- Admin API：新增諮詢師時自動發送密碼重設郵件（6 小時有效期）
+- Multi-tenant 支援：career, island, island_parents
+- SMTP 郵件發送：已配置並測試成功
+
+### 技術實現
+- Token 安全：32+ 字元加密隨機字串，6 小時過期，單次使用
+- Rate limiting：每 5 分鐘最多 1 次請求
+- 環境變數：SMTP_USER, SMTP_PASSWORD, FROM_EMAIL, APP_URL（已設定在 GitHub Secrets）
+- CI/CD：自動部署到 staging 並套用 SMTP 配置
+
+### 測試狀態
+- ✅ 23 個 integration tests，100% 通過
+- ✅ Staging 環境端到端測試通過
+- ✅ 郵件發送成功驗證（young.tsai.9765@gmail.com）
+
+### 相關文件
+- SMTP 配置：`SMTP_SETUP.md`
+- API 規格：`PRD.md`
+- 變更記錄：`CHANGELOG.md`, `CHANGELOG_zh-TW.md`
+- Commits: 217a5d8, 81e4e57, 75dbfc4
+
+---
+
 ## 任務一：Web 改版（Web Realtime Console）
 
 ### 1.1 紅綠燈卡片機制（視覺化風險等級）
