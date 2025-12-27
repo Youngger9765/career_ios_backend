@@ -377,8 +377,7 @@ class TestSessionUsageAPI:
             tenant_id="career",
             role="counselor",
             is_active=True,
-            total_credits=1000,  # Start with credits
-            credits_used=0,
+            available_credits=1000.0,  # Start with credits
         )
         db_session.add(counselor)
         db_session.commit()
@@ -819,8 +818,7 @@ class TestSessionUsageIntegration:
             tenant_id="career",
             role="counselor",
             is_active=True,
-            total_credits=1000,
-            credits_used=0,
+            available_credits=1000.0,
         )
         db_session.add(counselor)
         db_session.commit()

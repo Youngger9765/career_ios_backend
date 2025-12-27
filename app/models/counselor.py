@@ -59,3 +59,34 @@ class Counselor(Base, BaseModel):
     credit_logs = relationship(
         "CreditLog", back_populates="counselor", cascade="all, delete-orphan"
     )
+
+    # Computed properties for backward compatibility with admin API
+    @property
+    def total_credits(self) -> int:
+        """
+        Total credits purchased/added (sum of all positive deltas).
+        Computed from credit_logs for backward compatibility.
+        """
+        if not self.credit_logs:
+            return 0
+        return int(
+            sum(log.credits_delta for log in self.credit_logs if log.credits_delta > 0)
+        )
+
+    @property
+    def credits_used(self) -> int:
+        """
+        Total credits consumed (absolute value of sum of all negative deltas).
+        Computed from credit_logs for backward compatibility.
+        """
+        if not self.credit_logs:
+            return 0
+        return int(
+            abs(
+                sum(
+                    log.credits_delta
+                    for log in self.credit_logs
+                    if log.credits_delta < 0
+                )
+            )
+        )

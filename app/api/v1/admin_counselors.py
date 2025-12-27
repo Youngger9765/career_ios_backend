@@ -71,8 +71,7 @@ def require_admin(
             role=CounselorRole.ADMIN,
             is_active=True,
             hashed_password="",
-            total_credits=0,
-            credits_used=0,
+            available_credits=1000.0,
         )
 
     # PRODUCTION MODE or with credentials: Require authentication
@@ -479,14 +478,29 @@ async def create_counselor(
         tenant_id=target_tenant_id,  # Use admin's tenant_id
         role=CounselorRole(request.role),
         is_active=True,
-        total_credits=request.total_credits,
-        credits_used=0,
+        available_credits=float(request.total_credits),  # Set initial available credits
         subscription_expires_at=request.subscription_expires_at,
     )
 
     db.add(counselor)
     db.commit()
     db.refresh(counselor)
+
+    # Create initial credit log entry if total_credits > 0
+    if request.total_credits > 0:
+        from app.models.credit_log import CreditLog
+
+        credit_log = CreditLog(
+            counselor_id=counselor.id,
+            credits_delta=float(request.total_credits),
+            transaction_type="purchase",
+            raw_data={
+                "source": "admin_created",
+                "initial_credits": request.total_credits,
+            },
+        )
+        db.add(credit_log)
+        db.commit()
 
     # Send password reset email to new counselor
     # This allows them to set their own password via email link

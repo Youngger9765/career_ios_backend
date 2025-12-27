@@ -490,8 +490,7 @@ def test_counselors(db_session):
             tenant_id=tenant_id,
             role=CounselorRole.COUNSELOR,
             is_active=True,
-            total_credits=0,
-            credits_used=0,
+            available_credits=0.0,  # Start with zero for credit addition tests
         )
         db_session.add(counselor)
         counselors.append(counselor)
