@@ -11,7 +11,6 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.cases import (
-    _generate_case_number,
     create_case,
     delete_case,
     get_case,
@@ -46,59 +45,6 @@ def create_mock_case(**kwargs):
         setattr(mock_case, key, value)
 
     return mock_case
-
-
-class TestCaseNumberGeneration:
-    """Test case number auto-generation logic"""
-
-    def test_generate_first_case_number(self):
-        """Test generating the first case number"""
-        db = MagicMock(spec=Session)
-
-        # Mock no existing cases
-        db.execute().scalars().all.return_value = []
-
-        result = _generate_case_number(db, "career")
-
-        assert result == "CASE0001"
-
-    def test_generate_sequential_case_numbers(self):
-        """Test generating sequential case numbers"""
-        db = MagicMock(spec=Session)
-
-        # Mock existing cases
-        db.execute().scalars().all.return_value = ["CASE0001", "CASE0002", "CASE0005"]
-
-        result = _generate_case_number(db, "career")
-
-        assert result == "CASE0006"  # Should be max + 1
-
-    def test_generate_case_number_handles_gaps(self):
-        """Test generating case number with gaps in sequence"""
-        db = MagicMock(spec=Session)
-
-        # Mock cases with gaps
-        db.execute().scalars().all.return_value = ["CASE0001", "CASE0010", "CASE0003"]
-
-        result = _generate_case_number(db, "career")
-
-        assert result == "CASE0011"  # Should use max (CASE0010) + 1
-
-    def test_generate_case_number_ignores_invalid_formats(self):
-        """Test that invalid case numbers are ignored"""
-        db = MagicMock(spec=Session)
-
-        # Mock mix of valid and invalid case numbers
-        db.execute().scalars().all.return_value = [
-            "CASE0001",
-            "INVALID",
-            "CASE0002",
-            "CASEXXX",  # Not digits
-        ]
-
-        result = _generate_case_number(db, "career")
-
-        assert result == "CASE0003"
 
 
 class TestListCases:

@@ -48,10 +48,14 @@ skip_without_gcp = pytest.mark.skipif(
 )
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def gbq_service():
-    """Create GBQService instance for testing"""
-    return GBQService()
+    """Create GBQService instance for testing and ensure table has latest schema"""
+    service = GBQService()
+    # Recreate table with latest schema once per test session
+    if HAS_VALID_GCP_CREDENTIALS:
+        service.recreate_table()
+    return service
 
 
 @pytest.fixture
@@ -62,22 +66,33 @@ def test_record_id():
 
 @pytest.fixture
 def sample_analysis_data(test_record_id):
-    """Create sample analysis data for testing"""
+    """Create sample analysis data for testing (aligned with SessionAnalysisLog)"""
     return {
         "id": test_record_id,
         "tenant_id": "island_parents",
         "session_id": None,
+        "counselor_id": None,
         "analyzed_at": datetime.now(timezone.utc),
+        "created_at": datetime.now(timezone.utc),
         "analysis_type": "emergency",
         "safety_level": "yellow",
-        "matched_suggestions": [
-            "建議1：保持冷靜，先聆聽孩子的感受",
-            "建議2：使用同理心回應",
-            "建議3：避免立即批評或指責",
-        ],
+        "severity": "medium",
+        "display_text": "需要關注",
+        "action_suggestion": "建議保持冷靜，先聆聽孩子的感受",
+        "risk_indicators": ["情緒波動", "溝通困難"],
         "transcript_segment": "家長：你今天在學校過得如何？\n孩子：還不錯，老師稱讚我了。",
-        "response_time_ms": 1234,
-        "created_at": datetime.now(timezone.utc),
+        "result_data": {
+            "analysis": "positive_interaction",
+            "confidence": 0.85,
+        },
+        "transcript_length": 50,
+        "duration_seconds": 120,
+        "model_name": "gemini-1.5-flash",
+        "prompt_tokens": 100,
+        "completion_tokens": 50,
+        "total_tokens": 150,
+        "cached_tokens": 0,
+        "estimated_cost_usd": 0.001,
     }
 
 
@@ -147,16 +162,30 @@ class TestGBQServiceRealBigQuery:
             "id": (["STRING"], "REQUIRED"),
             "tenant_id": (["STRING"], "REQUIRED"),
             "session_id": (["STRING"], "NULLABLE"),
+            "counselor_id": (["STRING"], "NULLABLE"),
             "analyzed_at": (["TIMESTAMP"], "REQUIRED"),
-            "analysis_type": (["STRING"], "REQUIRED"),
-            "safety_level": (["STRING"], "REQUIRED"),
-            "matched_suggestions": (["STRING"], "REPEATED"),
+            "created_at": (["TIMESTAMP"], "NULLABLE"),
+            "updated_at": (["TIMESTAMP"], "NULLABLE"),
+            "deleted_at": (["TIMESTAMP"], "NULLABLE"),
+            "analysis_type": (["STRING"], "NULLABLE"),
             "transcript_segment": (["STRING"], "NULLABLE"),
-            "response_time_ms": (
-                ["INT64", "INTEGER"],
-                "REQUIRED",
-            ),  # BQ returns INTEGER
-            "created_at": (["TIMESTAMP"], "REQUIRED"),
+            "result_data": (["JSON"], "NULLABLE"),
+            "safety_level": (["STRING"], "NULLABLE"),
+            "severity": (["STRING"], "NULLABLE"),
+            "display_text": (["STRING"], "NULLABLE"),
+            "action_suggestion": (["STRING"], "NULLABLE"),
+            "risk_indicators": (["JSON"], "NULLABLE"),
+            "rag_documents": (["JSON"], "NULLABLE"),
+            "rag_sources": (["JSON"], "NULLABLE"),
+            "transcript_length": (["INT64", "INTEGER"], "NULLABLE"),
+            "duration_seconds": (["INT64", "INTEGER"], "NULLABLE"),
+            "model_name": (["STRING"], "NULLABLE"),
+            "token_usage": (["JSON"], "NULLABLE"),
+            "prompt_tokens": (["INT64", "INTEGER"], "NULLABLE"),
+            "completion_tokens": (["INT64", "INTEGER"], "NULLABLE"),
+            "total_tokens": (["INT64", "INTEGER"], "NULLABLE"),
+            "cached_tokens": (["INT64", "INTEGER"], "NULLABLE"),
+            "estimated_cost_usd": (["FLOAT64", "FLOAT"], "NULLABLE"),
         }
 
         for field_name, (expected_types, expected_mode) in expected_fields.items():
@@ -238,11 +267,21 @@ class TestGBQServiceRealBigQuery:
         assert row["id"] == sample_analysis_data["id"]
         assert row["tenant_id"] == sample_analysis_data["tenant_id"]
         assert row["session_id"] == sample_analysis_data["session_id"]
+        assert row["counselor_id"] == sample_analysis_data["counselor_id"]
         assert row["analysis_type"] == sample_analysis_data["analysis_type"]
         assert row["safety_level"] == sample_analysis_data["safety_level"]
-        assert row["matched_suggestions"] == sample_analysis_data["matched_suggestions"]
+        assert row["severity"] == sample_analysis_data["severity"]
+        assert row["display_text"] == sample_analysis_data["display_text"]
+        assert row["action_suggestion"] == sample_analysis_data["action_suggestion"]
         assert row["transcript_segment"] == sample_analysis_data["transcript_segment"]
-        assert row["response_time_ms"] == sample_analysis_data["response_time_ms"]
+        assert row["transcript_length"] == sample_analysis_data["transcript_length"]
+        assert row["duration_seconds"] == sample_analysis_data["duration_seconds"]
+        assert row["model_name"] == sample_analysis_data["model_name"]
+        assert row["prompt_tokens"] == sample_analysis_data["prompt_tokens"]
+        assert row["completion_tokens"] == sample_analysis_data["completion_tokens"]
+        assert row["total_tokens"] == sample_analysis_data["total_tokens"]
+        assert row["cached_tokens"] == sample_analysis_data["cached_tokens"]
+        assert row["estimated_cost_usd"] == sample_analysis_data["estimated_cost_usd"]
 
         # Verify timestamps (allow small difference due to serialization)
         assert row["analyzed_at"] is not None
@@ -261,7 +300,7 @@ class TestGBQServiceRealBigQuery:
         minimal_data = {
             "analysis_type": "practice",
             "safety_level": "green",
-            "matched_suggestions": ["建議1", "建議2", "建議3"],
+            "transcript_segment": "Test minimal data",
         }
 
         # Write record
@@ -314,9 +353,12 @@ class TestGBQServiceRealBigQuery:
             assert row["id"] is not None
             assert row["tenant_id"] == "island_parents"
             assert row["session_id"] is None
+            assert row["counselor_id"] is None
             assert row["analyzed_at"] is not None
             assert row["created_at"] is not None
-            assert row["response_time_ms"] == 0  # Default value
+            assert row["analysis_type"] == "practice"
+            assert row["safety_level"] == "green"
+            assert row["transcript_segment"] == "Test minimal data"
 
     @skip_without_gcp
     def test_write_with_session_id(
@@ -386,9 +428,8 @@ class TestGBQServiceRealBigQuery:
                 "analyzed_at": datetime.now(timezone.utc),
                 "analysis_type": "emergency",
                 "safety_level": level,
-                "matched_suggestions": [f"建議 for {level}"],
+                "action_suggestion": f"建議 for {level}",
                 "transcript_segment": f"Test transcript for {level}",
-                "response_time_ms": 1000,
                 "created_at": datetime.now(timezone.utc),
             }
 
@@ -441,12 +482,12 @@ class TestGBQServiceRealBigQuery:
             {
                 "id": f"{test_record_id}_emergency",
                 "analysis_type": "emergency",
-                "matched_suggestions": ["緊急建議"],
+                "action_suggestion": "緊急建議",
             },
             {
                 "id": f"{test_record_id}_practice",
                 "analysis_type": "practice",
-                "matched_suggestions": ["練習建議1", "練習建議2", "練習建議3"],
+                "action_suggestion": "練習建議1, 練習建議2, 練習建議3",
             },
         ]
 
@@ -460,9 +501,8 @@ class TestGBQServiceRealBigQuery:
                 "analyzed_at": datetime.now(timezone.utc),
                 "analysis_type": mode_data["analysis_type"],
                 "safety_level": "green",
-                "matched_suggestions": mode_data["matched_suggestions"],
+                "action_suggestion": mode_data["action_suggestion"],
                 "transcript_segment": f"Test for {mode_data['analysis_type']}",
-                "response_time_ms": 1500,
                 "created_at": datetime.now(timezone.utc),
             }
 
@@ -477,7 +517,7 @@ class TestGBQServiceRealBigQuery:
         # Verify records by analysis_type
         table_ref = gbq_service._get_table_ref()
         query = f"""
-        SELECT id, analysis_type, matched_suggestions
+        SELECT id, analysis_type, action_suggestion
         FROM `{table_ref}`
         WHERE id LIKE @pattern
         ORDER BY analysis_type
@@ -497,11 +537,11 @@ class TestGBQServiceRealBigQuery:
 
         # Verify emergency mode
         emergency_record = [r for r in results if r["analysis_type"] == "emergency"][0]
-        assert len(emergency_record["matched_suggestions"]) == 1
+        assert emergency_record["action_suggestion"] == "緊急建議"
 
         # Verify practice mode
         practice_record = [r for r in results if r["analysis_type"] == "practice"][0]
-        assert len(practice_record["matched_suggestions"]) == 3
+        assert "練習建議" in practice_record["action_suggestion"]
 
     @skip_without_gcp
     def test_query_performance_with_clustering(
@@ -527,9 +567,8 @@ class TestGBQServiceRealBigQuery:
                 "analyzed_at": datetime.now(timezone.utc),
                 "analysis_type": "emergency",
                 "safety_level": "yellow" if i % 2 == 0 else "green",
-                "matched_suggestions": [f"建議 {i}"],
+                "action_suggestion": f"建議 {i}",
                 "transcript_segment": f"Test transcript {i}",
-                "response_time_ms": 1000 + i * 100,
                 "created_at": datetime.now(timezone.utc),
             }
 

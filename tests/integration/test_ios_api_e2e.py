@@ -385,7 +385,7 @@ class TestIOSAPIEndToEnd:
                 .first()
             )
 
-            assert final_session.status == "completed"
+            # Note: Session model doesn't have status field
             assert final_usage.analysis_count == 3
             assert final_usage.credits_deducted == Decimal("3")
 
@@ -401,7 +401,7 @@ class TestIOSAPIEndToEnd:
             print("\n🎉 Complete workflow verified:")
             print(f"   Analyses performed: {final_usage.analysis_count}")
             print(f"   Total credits: {final_usage.credits_deducted}")
-            print(f"   Session status: {final_session.status}")
+            print(f"   Session ID: {final_session.id}")
             print(f"   CreditLog entries: {len(credit_logs_final)}")
             print(
                 f"   Counselor credits: {final_counselor.available_credits} (initial: {initial_credits})"

@@ -268,8 +268,8 @@ class GBQService:
                 bigquery.SchemaField("analyzed_at", "TIMESTAMP", mode="REQUIRED"),
                 # Analysis metadata
                 bigquery.SchemaField("analysis_type", "STRING", mode="NULLABLE"),
-                bigquery.SchemaField("transcript", "STRING", mode="NULLABLE"),
-                bigquery.SchemaField("analysis_result", "JSON", mode="NULLABLE"),
+                bigquery.SchemaField("transcript_segment", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("result_data", "JSON", mode="NULLABLE"),
                 # Safety assessment
                 bigquery.SchemaField("safety_level", "STRING", mode="NULLABLE"),
                 bigquery.SchemaField("severity", "STRING", mode="NULLABLE"),
@@ -314,6 +314,43 @@ class GBQService:
 
         except Exception as e:
             logger.error(f"Failed to create BigQuery table: {str(e)}", exc_info=True)
+            return False
+
+    def recreate_table(self) -> bool:
+        """Delete and recreate the BigQuery table with updated schema
+
+        WARNING: This will DELETE all existing data!
+        Only use for testing or migrations.
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            import time
+
+            table_ref = self._get_table_ref()
+
+            # Try to delete existing table
+            try:
+                self.client.delete_table(table_ref)
+                logger.info(f"Deleted existing BigQuery table: {table_ref}")
+                # Wait for deletion to propagate (BigQuery eventual consistency)
+                time.sleep(3)
+            except Exception as e:
+                logger.info(f"No existing table to delete: {e}")
+
+            # Create new table with updated schema
+            result = self.ensure_table_exists()
+
+            if result:
+                # Wait for table creation to fully propagate
+                time.sleep(5)
+                logger.info("Table recreation completed, waiting for propagation")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to recreate BigQuery table: {str(e)}", exc_info=True)
             return False
 
 
