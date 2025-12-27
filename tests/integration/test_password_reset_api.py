@@ -90,6 +90,7 @@ class TestPasswordResetRequest:
     async def test_request_password_reset_invalid_email(
         self,
         async_client: AsyncClient,
+        db_session: Session,
     ):
         """Test password reset request with non-existent email"""
         response = await async_client.post(
@@ -198,6 +199,7 @@ class TestPasswordResetVerify:
     async def test_verify_invalid_token(
         self,
         async_client: AsyncClient,
+        db_session: Session,
     ):
         """Test verifying an invalid token"""
         response = await async_client.get(
@@ -322,6 +324,7 @@ class TestPasswordResetConfirm:
     async def test_confirm_password_reset_invalid_token(
         self,
         async_client: AsyncClient,
+        db_session: Session,
     ):
         """Test password reset confirmation with invalid token"""
         response = await async_client.post(
