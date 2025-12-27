@@ -23,6 +23,7 @@ from app.schemas.session_usage import (
     SessionUsageResponse,
     SessionUsageUpdate,
 )
+from app.services.credit_billing import CreditBillingService
 
 router = APIRouter(tags=["Session Usage"])
 
@@ -234,9 +235,18 @@ def create_session_usage(
 
         # Deduct credits from counselor if completed
         if usage.credit_deducted:
-            current_user.credits_used = (
-                current_user.credits_used or 0
-            ) + credits_deducted
+            billing_service = CreditBillingService(db)
+            billing_service.add_credits(
+                counselor_id=current_user.id,
+                credits_delta=-credits_deducted,  # Negative for usage
+                transaction_type="usage",
+                resource_type="session",
+                resource_id=str(session_id),
+                raw_data={
+                    "pricing_rule": pricing_rule,
+                    "credits_deducted": credits_deducted,
+                },
+            )
 
         db.commit()
         db.refresh(usage)
@@ -333,7 +343,18 @@ def update_session_usage(
         usage.credit_deducted = True
 
         # Deduct credits from counselor
-        current_user.credits_used = (current_user.credits_used or 0) + credits_to_deduct
+        billing_service = CreditBillingService(db)
+        billing_service.add_credits(
+            counselor_id=current_user.id,
+            credits_delta=-credits_to_deduct,  # Negative for usage
+            transaction_type="usage",
+            resource_type="session",
+            resource_id=str(session_id),
+            raw_data={
+                "pricing_rule": pricing_rule,
+                "credits_deducted": credits_to_deduct,
+            },
+        )
 
     if request.credits_consumed is not None:
         usage.credits_consumed = request.credits_consumed

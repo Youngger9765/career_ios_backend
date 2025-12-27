@@ -407,7 +407,9 @@ class TestCrossTenantSupport:
 
         members = response.json()
         counselor2_data = next(m for m in members if m["id"] == str(counselor2["id"]))
+        # Counselor 2 should have no added credits, only default available_credits
         assert counselor2_data["total_credits"] == 0
+        assert counselor2_data["available_credits"] == 0
 
 
 # ============================================================================
@@ -508,12 +510,21 @@ def test_counselor_id(test_counselors):
 @pytest.fixture
 def test_counselor_with_credits(db_session, test_counselors):
     """Create counselor with existing credits"""
+    from app.models.credit_log import CreditLog
+
     counselor = test_counselors[0]
-    counselor.total_credits = 1000
-    counselor.credits_used = 0
+    # Add credits via CreditLog (proper way with new system)
+    credit_log = CreditLog(
+        counselor_id=counselor.id,
+        credits_delta=1000,
+        transaction_type="purchase",
+        raw_data={"notes": "Initial credits for testing"},
+    )
+    db_session.add(credit_log)
+    counselor.available_credits = 1000
     db_session.commit()
     db_session.refresh(counselor)
-    return {"id": counselor.id, "total_credits": 1000}
+    return {"id": counselor.id, "available_credits": 1000}
 
 
 @pytest.fixture

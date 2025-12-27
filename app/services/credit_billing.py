@@ -151,7 +151,8 @@ class CreditBillingService:
         credits_delta: int,
         transaction_type: str,
         raw_data: Optional[Dict] = None,
-        session_id: Optional[UUID] = None,
+        resource_type: Optional[str] = None,
+        resource_id: Optional[str] = None,
         rate_snapshot: Optional[Dict] = None,
         calculation_details: Optional[Dict] = None,
     ) -> CreditLog:
@@ -163,7 +164,8 @@ class CreditBillingService:
             credits_delta: Positive = add, negative = use/remove
             transaction_type: purchase, usage, admin_adjustment, refund
             raw_data: Optional raw data (e.g., duration_seconds)
-            session_id: Optional session ID if related to a session
+            resource_type: Optional resource type ('session', 'translation', 'ocr', etc.)
+            resource_id: Optional resource ID (UUID as string)
             rate_snapshot: Optional rate configuration snapshot
             calculation_details: Optional calculation breakdown
 
@@ -180,18 +182,14 @@ class CreditBillingService:
         if not counselor:
             raise ValueError(f"Counselor not found: {counselor_id}")
 
-        # Update counselor credits
-        if credits_delta > 0:
-            # Adding credits
-            counselor.total_credits += credits_delta
-        else:
-            # Using/removing credits
-            counselor.credits_used += abs(credits_delta)
+        # Update counselor available_credits (incremental billing)
+        counselor.available_credits += credits_delta
 
         # Create log entry
         credit_log = CreditLog(
             counselor_id=counselor_id,
-            session_id=session_id,
+            resource_type=resource_type,
+            resource_id=resource_id,
             credits_delta=credits_delta,
             transaction_type=transaction_type,
             raw_data=raw_data,
