@@ -60,10 +60,58 @@
 - 建立會談記錄：逐字稿 + 錄音片段列表 + 會談名稱（name）
 - 會談歷程時間線：`GET /sessions/timeline?client_id={id}`
 - 諮詢師反思：4 問題結構化反思（JSONB）
-- **🔍 即時關鍵字分析**: `POST /sessions/{id}/analyze-keywords` - AI 驅動的關鍵字提取
+- **🔍 即時片段分析（Multi-Tenant）**: `POST /sessions/{id}/analyze-partial` - 根據租戶回傳不同格式分析結果
 - **📊 分析歷程記錄**: `GET /sessions/{id}/analysis-logs` - 查看所有分析記錄
 - **🗑️ 管理分析記錄**: `DELETE /sessions/{id}/analysis-logs/{log_index}` - 刪除特定記錄
 - **iOS 專用**: `POST /sessions/{id}/recordings/append` - 追加錄音片段
+- **向後兼容**: `POST /sessions/{id}/analyze-keywords` - 舊版 API（內部調用 analyze-partial，回傳 career 格式）
+
+#### 即時片段分析 API 詳解
+**Endpoint**: `POST /api/v1/sessions/{session_id}/analyze-partial`
+
+**用途**：分析部分逐字稿，根據租戶（career / island_parents）回傳不同格式的分析結果
+
+**Request Body**:
+```json
+{
+  "transcript_segment": "最近 60 秒的逐字稿"
+}
+```
+
+**Response（island_parents 租戶）**:
+```json
+{
+  "safety_level": "red|yellow|green",
+  "severity": 1-3,
+  "display_text": "您注意到孩子提到「不想去學校」...",
+  "action_suggestion": "建議先同理孩子的感受",
+  "suggested_interval_seconds": 15,
+  "rag_documents": [...],
+  "keywords": ["焦慮", "學校"],
+  "categories": ["情緒"]
+}
+```
+
+**Response（career 租戶）**:
+```json
+{
+  "keywords": ["焦慮", "職涯"],
+  "categories": ["情緒", "職涯探索"],
+  "confidence": 0.95,
+  "counselor_insights": "個案提到對未來感到迷惘...",
+  "safety_level": "yellow",
+  "severity": 2,
+  "display_text": "...",
+  "action_suggestion": "..."
+}
+```
+
+**Multi-Tenant 特性**：
+- 根據 JWT token 的 `tenant_id` 自動選擇：
+  - RAG 知識庫（career 職涯 vs island_parents 親子教養）
+  - Prompt template
+  - Response 格式
+- 向後兼容：舊的 `POST /sessions/{id}/analyze-keywords` 仍可用，內部調用 analyze-partial，回傳 career 格式
 
 ### ✅ 報告生成 (`/api/v1/reports/*`)
 - **異步生成**: `POST /reports/generate` (HTTP 202 Accepted)
@@ -598,7 +646,8 @@ Input tokens = Σ(996 + 150×N) for N=1 to 60
 | GET | `/sessions/{id}/reflection` | 查看反思 |
 | PUT | `/sessions/{id}/reflection` | 更新反思 |
 | POST | `/sessions/{id}/recordings/append` | 🎙️ 追加錄音片段 (iOS) |
-| POST | `/sessions/{id}/analyze-keywords` | 🔍 即時關鍵字分析 |
+| POST | `/sessions/{id}/analyze-partial` | 🔍 即時片段分析（Multi-Tenant） |
+| POST | `/sessions/{id}/analyze-keywords` | 🔄 舊版 API（向後兼容） |
 | GET | `/sessions/{id}/analysis-logs` | 📊 取得分析歷程 |
 | DELETE | `/sessions/{id}/analysis-logs/{log_index}` | 🗑️ 刪除分析記錄 |
 

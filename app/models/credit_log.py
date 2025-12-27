@@ -1,7 +1,7 @@
 """
 Credit Log Model - Transaction history for credit system
 """
-from sqlalchemy import JSON, Column, ForeignKey, Index, Integer, String
+from sqlalchemy import JSON, Column, Float, ForeignKey, Index, String
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -23,17 +23,25 @@ class CreditLog(Base, BaseModel):
         index=True,
         comment="Counselor who owns this transaction",
     )
-    session_id = Column(
-        GUID(),
-        ForeignKey("sessions.id", ondelete="SET NULL"),
+
+    # Polymorphic association - can link to sessions, translations, OCR, reports, etc.
+    resource_type = Column(
+        String(50),
         nullable=True,
         index=True,
-        comment="Related session (if applicable)",
+        comment="Resource type: 'session', 'translation', 'ocr', 'report', etc. NULL for purchases/refunds.",
     )
+    resource_id = Column(
+        String,
+        nullable=True,
+        index=True,
+        comment="Resource ID (UUID as string, polymorphic). NULL for purchases/refunds.",
+    )
+
     credits_delta = Column(
-        Integer,
+        Float,
         nullable=False,
-        comment="Credit change (positive = added, negative = used)",
+        comment="Credit change (positive = added/refund, negative = usage)",
     )
     transaction_type = Column(
         String(20),
@@ -59,9 +67,9 @@ class CreditLog(Base, BaseModel):
 
     # Relationships
     counselor = relationship("Counselor", back_populates="credit_logs")
-    session = relationship("Session", back_populates="credit_logs")
 
     __table_args__ = (
         Index("ix_credit_logs_counselor_type", "counselor_id", "transaction_type"),
         Index("ix_credit_logs_created_at", "created_at"),
+        Index("ix_credit_logs_resource", "resource_type", "resource_id"),
     )

@@ -44,23 +44,28 @@
 
 ## 🎉 最新更新 (2025-11-29)
 
-### 1. 🔍 Session 關鍵字分析 APIs
+### 1. 🔍 Session 片段分析 APIs（Multi-Tenant）
 
-**新功能:** 即時逐字稿關鍵字分析 + 分析歷程記錄管理
+**新功能:** 即時逐字稿片段分析 + 多租戶格式支援 + 分析歷程記錄管理
 
 **新增 API:**
-- `POST /api/v1/sessions/{id}/analyze-keywords` - AI 驅動的即時關鍵字分析
+- `POST /api/v1/sessions/{id}/analyze-partial` - AI 驅動的即時片段分析（推薦使用）
+- `POST /api/v1/sessions/{id}/analyze-keywords` - 舊版 API（向後兼容，內部調用 analyze-partial）
 - `GET /api/v1/sessions/{id}/analysis-logs` - 取得分析歷程記錄
 - `DELETE /api/v1/sessions/{id}/analysis-logs/{log_index}` - 刪除特定分析記錄
+
+**Multi-Tenant 支援:**
+- **island_parents 租戶**: 回傳紅黃綠燈安全評估 + 教養建議 + 建議間隔時間
+- **career 租戶**: 回傳關鍵字 + 類別 + 諮詢師洞見
 
 **Session Name 欄位:**
 - Session 模型新增 `name` 欄位（可選），用於會談命名組織
 
 **自動儲存:**
-- 呼叫 analyze-keywords 時，分析結果自動儲存至 `analysis_logs` 欄位
+- 呼叫 analyze-partial/analyze-keywords 時，分析結果自動儲存至 `analysis_logs` 欄位
 - 記錄包含：時間戳記、關鍵字、類別、信心分數、諮詢師洞見、AI/備援標記
 
-**詳細文件:** 請參閱本文件「關鍵字分析 APIs」章節
+**詳細文件:** 請參閱本文件「片段分析 APIs」章節
 
 ---
 
@@ -511,8 +516,9 @@ func deleteClientCase(token: String, caseId: UUID) async throws -> DeleteRespons
 16. GET /api/v1/sessions/{id}/reflection - 取得反思內容
 17. PUT /api/v1/sessions/{id}/reflection - 更新反思內容
 
-### 🔍 關鍵字分析 APIs ⭐️ NEW
-18. POST /api/v1/sessions/{id}/analyze-keywords - 即時關鍵字分析
+### 🔍 片段分析 APIs（Multi-Tenant）⭐️ NEW
+18. POST /api/v1/sessions/{id}/analyze-partial - 即時片段分析（推薦使用）
+18b. POST /api/v1/sessions/{id}/analyze-keywords - 舊版 API（向後兼容）
 19. GET /api/v1/sessions/{id}/analysis-logs - 取得分析歷程記錄
 20. DELETE /api/v1/sessions/{id}/analysis-logs/{log_index} - 刪除特定分析記錄
 
@@ -1938,16 +1944,17 @@ func updateReflection(token: String, sessionId: UUID, reflection: ReflectionUpda
 
 ---
 
-## 🔍 關鍵字分析 APIs ⭐️ NEW
+## 🔍 片段分析 APIs (Multi-Tenant) ⭐️ NEW
 
-### 18. 即時關鍵字分析
+### 18. 即時片段分析（推薦使用）
 
-**Endpoint:** `POST /api/v1/sessions/{session_id}/analyze-keywords`
+**Endpoint:** `POST /api/v1/sessions/{session_id}/analyze-partial`
 
-**描述:** 使用 AI 分析逐字稿片段，提取關鍵字、類別、信心分數與諮詢師洞見。分析結果會**自動儲存**至 session 的 `analysis_logs` 欄位，建立完整的分析歷程記錄。
+**描述:** 使用 AI 分析逐字稿片段，**根據租戶自動選擇**分析方式和回傳格式。island_parents 租戶回傳紅黃綠燈安全評估，career 租戶回傳關鍵字分析。分析結果會**自動儲存**至 session 的 `analysis_logs` 欄位。
 
 **技術棧:**
 - **AI 引擎**: Google Vertex AI (Gemini 2.5 Flash)
+- **Multi-Tenant**: 基於 JWT token tenant_id 自動切換 RAG 知識庫與 prompt
 - **上下文來源**: Session → Case → Client 完整脈絡
 - **儲存機制**: 自動追加至 analysis_logs JSONB 欄位
 - **備援機制**: AI 失敗時使用啟發式關鍵字提取
@@ -1961,11 +1968,30 @@ Content-Type: application/json
 **Request Body:**
 ```json
 {
-  "transcript_segment": "個案提到最近工作壓力很大，主管經常在公開場合批評他的表現，讓他感到很挫折和焦慮。他開始懷疑自己的能力，甚至想要離職。"
+  "transcript_segment": "最近 60 秒的逐字稿內容"
 }
 ```
 
-**Response (200):**
+**Response（island_parents 租戶）- 親子教養場景:**
+```json
+{
+  "safety_level": "red",
+  "severity": 2,
+  "display_text": "您注意到孩子提到「不想去學校」，這可能是焦慮或學校適應問題的徵兆。",
+  "action_suggestion": "建議先同理孩子的感受，避免直接質問原因。可以說：「聽起來你最近在學校過得不太開心？」",
+  "suggested_interval_seconds": 15,
+  "rag_documents": [
+    {
+      "title": "依附理論與孩子安全感建立",
+      "excerpt": "當孩子表達負面情緒時..."
+    }
+  ],
+  "keywords": ["焦慮", "學校適應", "拒學"],
+  "categories": ["情緒", "學校議題"]
+}
+```
+
+**Response（career 租戶）- 職涯諮詢場景:**
 ```json
 {
   "keywords": [
@@ -1974,9 +2000,7 @@ Content-Type: application/json
     "挫折感",
     "焦慮",
     "自我懷疑",
-    "離職念頭",
-    "公開批評",
-    "職場壓力"
+    "離職念頭"
   ],
   "categories": [
     "職場議題",
@@ -1985,7 +2009,11 @@ Content-Type: application/json
     "自我認知"
   ],
   "confidence": 0.92,
-  "counselor_insights": "個案正經歷職場 PUA（職場霸凌），建議探索：(1) 主管行為模式與頻率 (2) 個案的應對策略 (3) 是否有組織內部支持資源。需評估心理健康風險。"
+  "counselor_insights": "個案正經歷職場 PUA（職場霸凌），建議探索：(1) 主管行為模式與頻率 (2) 個案的應對策略 (3) 是否有組織內部支持資源。需評估心理健康風險。",
+  "safety_level": "yellow",
+  "severity": 2,
+  "display_text": "個案提到工作壓力與主管批評",
+  "action_suggestion": "建議探索職場環境與支持資源"
 }
 ```
 
@@ -2003,31 +2031,69 @@ Content-Type: application/json
 }
 ```
 
-**Swift 範例:**
+**Swift 範例（island_parents 租戶）:**
 ```swift
-struct KeywordAnalysisRequest: Codable {
+struct PartialAnalysisRequest: Codable {
     let transcript_segment: String
 }
 
-struct KeywordAnalysisResponse: Codable {
-    let keywords: [String]           // 最多 10 個關鍵字
-    let categories: [String]         // 最多 5 個類別
-    let confidence: Double           // 0.0 - 1.0
-    let counselor_insights: String   // 最多 200 字
+struct IslandParentsAnalysisResponse: Codable {
+    let safety_level: String              // "red", "yellow", "green"
+    let severity: Int                      // 1-3
+    let display_text: String
+    let action_suggestion: String
+    let suggested_interval_seconds: Int    // 建議下次分析間隔
+    let rag_documents: [RAGDocument]?
+    let keywords: [String]
+    let categories: [String]
 }
 
-func analyzeKeywords(token: String, sessionId: UUID, segment: String) async throws -> KeywordAnalysisResponse {
-    let url = URL(string: "\(baseURL)/api/v1/sessions/\(sessionId.uuidString)/analyze-keywords")!
+struct RAGDocument: Codable {
+    let title: String
+    let excerpt: String
+}
+
+func analyzePartial(token: String, sessionId: UUID, segment: String) async throws -> IslandParentsAnalysisResponse {
+    let url = URL(string: "\(baseURL)/api/v1/sessions/\(sessionId.uuidString)/analyze-partial")!
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-    let body = KeywordAnalysisRequest(transcript_segment: segment)
+    let body = PartialAnalysisRequest(transcript_segment: segment)
     request.httpBody = try JSONEncoder().encode(body)
 
     let (data, _) = try await URLSession.shared.data(for: request)
-    return try JSONDecoder().decode(KeywordAnalysisResponse.self, from: data)
+    return try JSONDecoder().decode(IslandParentsAnalysisResponse.self, from: data)
+}
+```
+
+**iOS 端建議用法（island_parents）:**
+```swift
+// 每分鐘 Timer 觸發
+func onTimerTick() {
+    let segment = getLastMinuteTranscript()
+
+    // 並行發送兩個請求
+    Task {
+        async let appendResult = appendRecording(segment)
+        async let analysisResult = analyzePartial(token, sessionId, segment)
+
+        // 等待兩個結果
+        let (_, analysis) = try await (appendResult, analysisResult)
+
+        // 更新 UI
+        updateSafetyCard(analysis)
+
+        // 根據紅黃綠燈調整 Timer 間隔
+        if analysis.safety_level == "red" {
+            setTimerInterval(15) // 紅燈改 15 秒
+        } else if analysis.safety_level == "yellow" {
+            setTimerInterval(30) // 黃燈 30 秒
+        } else {
+            setTimerInterval(60) // 綠燈 60 秒
+        }
+    }
 }
 ```
 
@@ -2043,6 +2109,14 @@ func analyzeKeywords(token: String, sessionId: UUID, segment: String) async thro
 - `transcript_segment` 建議 50-500 字，過短分析效果差，過長影響效能
 - `confidence` < 0.5 時建議參考 `fallback` 欄位，可能使用了備援機制
 - 分析結果包含諮詢師 ID (`counselor_id`)，用於多諮詢師協作場景
+- **Multi-Tenant 自動切換**：根據 JWT token 的 tenant_id 自動選擇 RAG 知識庫與回傳格式
+
+**向後兼容 (Backward Compatibility):**
+
+舊的 `POST /api/v1/sessions/{session_id}/analyze-keywords` 仍可使用：
+- 內部調用 analyze-partial
+- 固定回傳 career 格式（關鍵字分析）
+- 建議新開發使用 analyze-partial
 
 ---
 

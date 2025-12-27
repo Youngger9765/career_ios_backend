@@ -1280,9 +1280,9 @@
                     </div>
                 `
             },
-            'analyze-keywords': {
-                title: '🔍 即時關鍵字分析',
-                subtitle: 'POST /api/v1/sessions/{session_id}/analyze-keywords',
+            'analyze-partial': {
+                title: '🔍 即時片段分析（Multi-Tenant）',
+                subtitle: 'POST /api/v1/sessions/{session_id}/analyze-partial',
                 init: async () => {
                     if (state.token) {
                         try {
@@ -1296,7 +1296,7 @@
                                 state.sessions = data.items;
                             }
 
-                            document.getElementById('action-form').innerHTML = steps['analyze-keywords'].renderForm();
+                            document.getElementById('action-form').innerHTML = steps['analyze-partial'].renderForm();
                         } catch (error) {
                             console.error('Failed to load sessions:', error);
                         }
@@ -1346,7 +1346,7 @@
                         transcript_segment: transcript
                     };
 
-                    const response = await fetch(`${BASE_URL}/api/v1/sessions/${sessionId}/analyze-keywords`, {
+                    const response = await fetch(`${BASE_URL}/api/v1/sessions/${sessionId}/analyze-partial`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${state.token}`,
@@ -5747,11 +5747,11 @@ Cl: 謝謝，我會的。`
             });
         };
 
-        // Execute analyze keywords function
-        window.executeAnalyzeKeywords = () => executeStep('analyze-keywords');
+        // Execute analyze partial function
+        window.executeAnalyzePartial = () => executeStep('analyze-partial');
 
-        // Quick fill function for analyze keywords
-        window.quickFillAnalyzeKeywords = () => {
+        // Quick fill function for analyze partial
+        window.quickFillAnalyzePartial = () => {
             const sampleTranscripts = [
                 '我最近在工作上遇到很多壓力，常常感到焦慮和無助。主管對我的要求越來越高，我不知道該如何應對。',
                 '最近家人關係變得很緊張，我覺得很難在家裡找到平靜的空間。每次回家都感到壓抑。',

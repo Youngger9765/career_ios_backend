@@ -33,7 +33,7 @@ from app.api import (
     sessions_keywords,
     ui_client_case_list,
 )
-from app.api.v1 import admin_counselors, admin_credits, password_reset
+from app.api.v1 import admin_counselors, admin_credits, password_reset, session_usage
 from app.core.config import settings
 
 # Templates
@@ -68,6 +68,9 @@ app.include_router(admin_credits.router, prefix="/api/v1")
 
 # Include admin counselor management routes
 app.include_router(admin_counselors.router, prefix="/api/v1")
+
+# Include session usage routes
+app.include_router(session_usage.router)
 
 # Include client routes
 app.include_router(clients.router)

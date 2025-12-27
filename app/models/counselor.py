@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Float, String, UniqueConstraint
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
@@ -40,11 +40,11 @@ class Counselor(Base, BaseModel):
 
     # Credit system fields (universal payment mechanism)
     phone = Column(String, nullable=True, comment="Contact phone number")
-    total_credits = Column(
-        Integer, default=0, nullable=False, comment="Total credits purchased/added"
-    )
-    credits_used = Column(
-        Integer, default=0, nullable=False, comment="Credits consumed/used"
+    available_credits = Column(
+        Float,
+        default=1000.0,
+        nullable=False,
+        comment="Available credits (current balance). Updated incrementally on each billing operation.",
     )
     subscription_expires_at = Column(
         DateTime(timezone=True), nullable=True, comment="Subscription expiry date"
@@ -59,8 +59,3 @@ class Counselor(Base, BaseModel):
     credit_logs = relationship(
         "CreditLog", back_populates="counselor", cascade="all, delete-orphan"
     )
-
-    @property
-    def available_credits(self) -> int:
-        """Calculate available credits (total - used)"""
-        return self.total_credits - self.credits_used

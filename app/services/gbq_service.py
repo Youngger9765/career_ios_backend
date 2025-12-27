@@ -34,20 +34,52 @@ class GBQService:
         return f"{self.project_id}.{self.dataset_id}.{self.table_id}"
 
     async def write_analysis_log(self, data: Dict[str, Any]) -> bool:
-        """Write realtime analysis result to BigQuery asynchronously
+        """Write session analysis log to BigQuery asynchronously
 
         Args:
-            data: Analysis data containing:
+            data: Analysis data containing (aligned with SessionAnalysisLog model):
+                Core identifiers:
                 - id: UUID string
-                - tenant_id: Tenant identifier (e.g., "island_parents")
-                - session_id: Session ID (None for web version)
-                - analyzed_at: Analysis timestamp
-                - analysis_type: "emergency" | "practice"
-                - safety_level: "green" | "yellow" | "red"
-                - matched_suggestions: List of suggestion strings
-                - transcript_segment: Analyzed transcript
-                - api_response_time_ms: API response time in milliseconds
+                - session_id: Session UUID
+                - counselor_id: Counselor UUID
+                - tenant_id: Tenant identifier (default: "island_parents")
+
+                Timestamps:
                 - created_at: Record creation timestamp
+                - updated_at: Last update timestamp (optional)
+                - deleted_at: Soft delete timestamp (optional)
+                - analyzed_at: Analysis timestamp
+
+                Analysis metadata:
+                - analysis_type: Type of analysis performed
+                - transcript_segment: Transcript segment analyzed
+                - result_data: Analysis results (JSON)
+
+                Safety assessment:
+                - safety_level: "green" | "yellow" | "red"
+                - severity: Severity level if applicable
+                - display_text: Display text for UI
+                - action_suggestion: Suggested actions
+                - risk_indicators: List of risk indicators (JSON)
+
+                RAG information:
+                - rag_documents: RAG documents used (JSON)
+                - rag_sources: RAG source references (JSON)
+
+                Technical metrics:
+                - transcript_length: Character count
+                - duration_seconds: Duration in seconds
+                - model_used: AI model used
+
+                Token usage:
+                - token_usage: Token usage details (JSON)
+                - prompt_tokens: Prompt tokens
+                - completion_tokens: Completion tokens
+                - total_tokens: Total tokens
+                - cached_tokens: Cached tokens
+
+                Cost:
+                - estimated_cost_usd: Estimated cost in USD
 
         Returns:
             bool: True if write successful, False otherwise
@@ -72,20 +104,6 @@ class GBQService:
                 else created_at
             )
 
-            # Get timestamps with defaults
-            start_time = data.get("start_time", analyzed_at)
-            end_time = data.get("end_time", created_at)
-
-            # Convert timestamps to ISO format
-            start_time_str = (
-                start_time.isoformat()
-                if isinstance(start_time, datetime)
-                else start_time
-            )
-            end_time_str = (
-                end_time.isoformat() if isinstance(end_time, datetime) else end_time
-            )
-
             # Serialize JSON fields (BigQuery JSON type expects JSON strings)
             import json as json_module
 
@@ -97,67 +115,67 @@ class GBQService:
                     return json_module.dumps(value, ensure_ascii=False)
                 return value
 
-            # Prepare comprehensive row for insertion
+            # Get optional timestamps
+            updated_at = data.get("updated_at")
+            deleted_at = data.get("deleted_at")
+
+            updated_at_str = (
+                (
+                    updated_at.isoformat()
+                    if isinstance(updated_at, datetime)
+                    else updated_at
+                )
+                if updated_at
+                else None
+            )
+
+            deleted_at_str = (
+                (
+                    deleted_at.isoformat()
+                    if isinstance(deleted_at, datetime)
+                    else deleted_at
+                )
+                if deleted_at
+                else None
+            )
+
+            # Prepare row for insertion (aligned with SessionAnalysisLog schema)
             row = {
-                # IDs and metadata
+                # Core identifiers
                 "id": data.get("id", str(uuid.uuid4())),
-                "tenant_id": data.get("tenant_id", "island_parents"),
                 "session_id": data.get("session_id"),
-                "request_id": data.get("request_id"),
+                "counselor_id": data.get("counselor_id"),
+                "tenant_id": data.get("tenant_id", "island_parents"),
                 # Timestamps
-                "analyzed_at": analyzed_at_str,
-                "start_time": start_time_str,
-                "end_time": end_time_str,
                 "created_at": created_at_str,
-                # Analysis type and result
+                "updated_at": updated_at_str,
+                "deleted_at": deleted_at_str,
+                "analyzed_at": analyzed_at_str,
+                # Analysis metadata
                 "analysis_type": data.get("analysis_type"),
+                "transcript_segment": data.get("transcript_segment"),
+                "result_data": serialize_json(data.get("result_data")),
+                # Safety assessment
                 "safety_level": data.get("safety_level"),
-                "matched_suggestions": data.get("matched_suggestions", []),
-                "analysis_result": serialize_json(
-                    data.get("analysis_result")
-                ),  # JSON field
-                "analysis_reasoning": data.get("analysis_reasoning"),
-                # Input data
-                "transcript": data.get("transcript", ""),
-                "time_range": data.get("time_range"),
-                "speakers": serialize_json(data.get("speakers")),  # JSON field
-                # Prompts
-                "system_prompt": data.get("system_prompt"),
-                "user_prompt": data.get("user_prompt"),
-                "prompt_template": data.get("prompt_template"),
+                "severity": data.get("severity"),
+                "display_text": data.get("display_text"),
+                "action_suggestion": data.get("action_suggestion"),
+                "risk_indicators": serialize_json(data.get("risk_indicators")),
                 # RAG information
-                "rag_used": data.get("rag_used"),
-                "rag_query": data.get("rag_query"),
-                "rag_documents": serialize_json(
-                    data.get("rag_documents")
-                ),  # JSON field
-                "rag_sources": data.get("rag_sources", []),
-                "rag_top_k": data.get("rag_top_k"),
-                "rag_similarity_threshold": data.get("rag_similarity_threshold"),
-                "rag_search_time_ms": data.get("rag_search_time_ms"),
-                # Model information
-                "provider": data.get("provider"),
+                "rag_documents": serialize_json(data.get("rag_documents")),
+                "rag_sources": serialize_json(data.get("rag_sources")),
+                # Technical metrics
+                "transcript_length": data.get("transcript_length"),
+                "duration_seconds": data.get("duration_seconds"),
                 "model_name": data.get("model_name"),
-                "model_version": data.get("model_version"),
-                # Timing breakdown
-                "duration_ms": data.get("duration_ms"),
-                "api_response_time_ms": data.get("api_response_time_ms", 0),
-                "llm_call_time_ms": data.get("llm_call_time_ms"),
-                # LLM response
-                "llm_raw_response": data.get("llm_raw_response"),
                 # Token usage
+                "token_usage": serialize_json(data.get("token_usage")),
                 "prompt_tokens": data.get("prompt_tokens"),
                 "completion_tokens": data.get("completion_tokens"),
                 "total_tokens": data.get("total_tokens"),
                 "cached_tokens": data.get("cached_tokens"),
+                # Cost
                 "estimated_cost_usd": data.get("estimated_cost_usd"),
-                # Cache info
-                "use_cache": data.get("use_cache"),
-                "cache_hit": data.get("cache_hit"),
-                "cache_key": data.get("cache_key"),
-                "gemini_cache_ttl": data.get("gemini_cache_ttl"),
-                # Mode
-                "mode": data.get("mode"),
             }
 
             # Insert row into BigQuery
@@ -236,18 +254,43 @@ class GBQService:
                 # Table doesn't exist, create it
                 pass
 
-            # Define schema
+            # Define schema (fully aligned with SessionAnalysisLog model)
             schema = [
+                # Core identifiers
                 bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("tenant_id", "STRING", mode="REQUIRED"),
                 bigquery.SchemaField("session_id", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("counselor_id", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("tenant_id", "STRING", mode="REQUIRED"),
+                # Timestamps
+                bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE"),
+                bigquery.SchemaField("updated_at", "TIMESTAMP", mode="NULLABLE"),
+                bigquery.SchemaField("deleted_at", "TIMESTAMP", mode="NULLABLE"),
                 bigquery.SchemaField("analyzed_at", "TIMESTAMP", mode="REQUIRED"),
-                bigquery.SchemaField("analysis_type", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("safety_level", "STRING", mode="REQUIRED"),
-                bigquery.SchemaField("matched_suggestions", "STRING", mode="REPEATED"),
-                bigquery.SchemaField("transcript_segment", "STRING", mode="NULLABLE"),
-                bigquery.SchemaField("response_time_ms", "INT64", mode="REQUIRED"),
-                bigquery.SchemaField("created_at", "TIMESTAMP", mode="REQUIRED"),
+                # Analysis metadata
+                bigquery.SchemaField("analysis_type", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("transcript", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("analysis_result", "JSON", mode="NULLABLE"),
+                # Safety assessment
+                bigquery.SchemaField("safety_level", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("severity", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("display_text", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("action_suggestion", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("risk_indicators", "JSON", mode="NULLABLE"),
+                # RAG information
+                bigquery.SchemaField("rag_documents", "JSON", mode="NULLABLE"),
+                bigquery.SchemaField("rag_sources", "JSON", mode="NULLABLE"),
+                # Technical metrics
+                bigquery.SchemaField("transcript_length", "INT64", mode="NULLABLE"),
+                bigquery.SchemaField("duration_seconds", "INT64", mode="NULLABLE"),
+                bigquery.SchemaField("model_name", "STRING", mode="NULLABLE"),
+                # Token usage
+                bigquery.SchemaField("token_usage", "JSON", mode="NULLABLE"),
+                bigquery.SchemaField("prompt_tokens", "INT64", mode="NULLABLE"),
+                bigquery.SchemaField("completion_tokens", "INT64", mode="NULLABLE"),
+                bigquery.SchemaField("total_tokens", "INT64", mode="NULLABLE"),
+                bigquery.SchemaField("cached_tokens", "INT64", mode="NULLABLE"),
+                # Cost
+                bigquery.SchemaField("estimated_cost_usd", "FLOAT64", mode="NULLABLE"),
             ]
 
             # Create table with partitioning and clustering
