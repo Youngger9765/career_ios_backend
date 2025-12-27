@@ -274,7 +274,7 @@ class TestPasswordResetVerify:
 
         assert response2.status_code == status.HTTP_400_BAD_REQUEST
         data = response2.json()
-        assert "already used" in data["detail"].lower()
+        assert "already been used" in data["detail"].lower()
 
 
 @pytest.mark.asyncio
@@ -411,7 +411,7 @@ class TestPasswordResetConfirm:
         )
         assert response3.status_code == status.HTTP_400_BAD_REQUEST
         data = response3.json()
-        assert "already used" in data["detail"].lower()
+        assert "already been used" in data["detail"].lower()
 
     async def test_confirm_password_reset_expired_token(
         self,
