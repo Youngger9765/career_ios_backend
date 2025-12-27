@@ -28,6 +28,14 @@
     - 各租戶專屬模板（career/island/island_parents）
     - 錯誤處理與重試邏輯
 
+### 修復
+- **Staging 部署的 SMTP 配置** (2025-12-27)
+  - 🔧 在 CI/CD pipeline 中新增 SMTP 環境變數
+  - 🔧 必要的 GitHub Secrets：SMTP_USER、SMTP_PASSWORD、FROM_EMAIL、APP_URL
+  - 🔧 修復 staging 環境郵件靜默發送失敗問題
+  - 🔧 建立 SMTP_SETUP.md 配置步驟文件
+  - 📝 參見：`.github/workflows/ci.yml`、`SMTP_SETUP.md`
+
 ### 新增
 - **Parents RAG 優化 - 完整可觀測性** (2025-12-26)
   - ✅ GBQ schema 覆蓋率從 23% 提升至 67%+（29/43 欄位）

@@ -28,6 +28,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Tenant-specific templates (career/island/island_parents)
     - Error handling and retry logic
 
+### Fixed
+- **SMTP Configuration for Staging Deployment** (2025-12-27)
+  - 🔧 Added SMTP environment variables to CI/CD pipeline
+  - 🔧 Required GitHub Secrets: SMTP_USER, SMTP_PASSWORD, FROM_EMAIL, APP_URL
+  - 🔧 Fixed silent email sending failure in staging environment
+  - 🔧 Created SMTP_SETUP.md documentation for configuration steps
+  - 📝 See: `.github/workflows/ci.yml`, `SMTP_SETUP.md`
+
 ### Added
 - **Parents RAG Refinement - Complete Observability** (2025-12-26)
   - ✅ Expanded GBQ schema coverage from 23% to 67%+ (29/43 fields)
