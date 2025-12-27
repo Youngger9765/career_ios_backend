@@ -7,6 +7,7 @@ description: |
   Keywords: feature, workflow, complete, end-to-end, build, 完整, 流程
 tools: Task
 model: sonnet
+color: red
 ---
 
 # TDD Orchestrator - 完整 TDD 流程協調器

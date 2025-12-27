@@ -6,6 +6,7 @@ description: |
   Keywords: implement, code, pass tests, make it work, 實作, 寫代碼
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: sonnet
+color: blue
 ---
 
 # Code Generator - 最小實作專家

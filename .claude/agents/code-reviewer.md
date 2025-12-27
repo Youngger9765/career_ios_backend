@@ -7,6 +7,7 @@ description: |
   Keywords: review, quality, refactor, improve, 審查, 重構
 tools: Read, Grep, Glob, Bash
 model: sonnet
+color: green
 ---
 
 # Code Reviewer - TDD 品質審查專家

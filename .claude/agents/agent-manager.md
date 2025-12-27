@@ -6,6 +6,7 @@ description: |
   Coordinates all specialized agents and ensures TDD compliance.
 tools: Task
 model: sonnet
+color: purple
 ---
 
 # Agent Manager

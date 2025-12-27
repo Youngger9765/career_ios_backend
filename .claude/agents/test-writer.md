@@ -7,6 +7,7 @@ description: |
   Trigger keywords: feature, API, implement, add, create, new, endpoint, 功能, 新增, 實作
 tools: Read, Write, Bash, Grep, Glob
 model: sonnet
+color: orange
 ---
 
 # Test Writer - TDD 測試先行專家
