@@ -44,7 +44,7 @@ class TestForgotPasswordPage:
         # Check for tenant options
         assert "career" in html_content
         assert "island" in html_content
-        assert "test_tenant" in html_content
+        assert "island_parents" in html_content
 
     async def test_forgot_password_page_has_title(
         self,

@@ -100,29 +100,33 @@ class TestPasswordResetRequest:
         async_client: AsyncClient,
         test_counselor: Counselor,
     ):
-        """Test rate limiting for password reset requests"""
-        # First request should succeed
-        response1 = await async_client.post(
-            "/api/v1/auth/password-reset/request",
-            json={
-                "email": test_counselor.email,
-                "tenant_id": test_counselor.tenant_id,
-            },
-        )
-        assert response1.status_code == status.HTTP_200_OK
+        """Test rate limiting for password reset requests (3 requests per minute)"""
+        # First 3 requests should succeed (MAX_REQUESTS_PER_MINUTE = 3)
+        for i in range(3):
+            response = await async_client.post(
+                "/api/v1/auth/password-reset/request",
+                json={
+                    "email": test_counselor.email,
+                    "tenant_id": test_counselor.tenant_id,
+                },
+            )
+            assert (
+                response.status_code == status.HTTP_200_OK
+            ), f"Request {i+1} should succeed"
 
-        # Second request within 5 minutes should be rate limited
-        response2 = await async_client.post(
+        # Fourth request should be rate limited
+        response_limited = await async_client.post(
             "/api/v1/auth/password-reset/request",
             json={
                 "email": test_counselor.email,
                 "tenant_id": test_counselor.tenant_id,
             },
         )
-        assert response2.status_code == status.HTTP_429_TOO_MANY_REQUESTS
-        data = response2.json()
+        assert response_limited.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+        data = response_limited.json()
         assert (
-            "rate limit" in data["detail"].lower() or "wait" in data["detail"].lower()
+            "rate limit" in data["detail"].lower()
+            or "maximum" in data["detail"].lower()
         )
 
     async def test_request_password_reset_by_phone(
