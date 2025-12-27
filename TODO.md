@@ -48,6 +48,10 @@
 
 ## 任務三：iOS API 改版 - island_parents 租戶
 
+**詳細規劃文檔**:
+- 📋 [浮島 App 完整任務清單](docs/ISLAND_APP_TASKS_REORGANIZED.md) - iOS API + Web Console + Infrastructure
+- 🔧 [Session 設計文檔](docs/SESSION_USAGE_CREDIT_DESIGN.md) - DB Log 持久化 + 點數扣除邏輯
+
 **參考 Notion SPEC**:
 - SPEC 1: 登入註冊、Onboarding
 - SPEC 2: AI 功能模組 (事前練習)
@@ -65,6 +69,8 @@
 - [ ] Query 自動過濾 tenant（避免跨租戶資料洩漏）
 
 #### 3.0.2 Session 資料結構擴充
+詳見 [Session 設計文檔](docs/SESSION_USAGE_CREDIT_DESIGN.md) 了解 DB Log 持久化和點數扣除邏輯
+
 - [ ] SessionAnalysisLog table（獨立存儲分析記錄）
 - [ ] SessionUsage table（使用量追蹤 + 點數扣除）
 - [ ] Session 新增欄位：scenario_topic, mode, partial_segments
@@ -103,6 +109,8 @@
   - 自訂情境（用戶輸入）
 
 #### 3.2.2 Practice Mode 錄音流程
+詳見 [Session 設計文檔](docs/SESSION_USAGE_CREDIT_DESIGN.md) 了解使用量追蹤和點數扣除機制
+
 - [ ] POST /api/v1/island/sessions - 開始練習（mode=practice）
 - [ ] POST /api/v1/island/sessions/{id}/analyze-partial - 即時分析
 - [ ] PATCH /api/v1/island/sessions/{id}/complete - 結束 + 扣點
@@ -126,6 +134,8 @@
 - [ ] 隱私政策與合規審查（GDPR, 個資法）
 
 #### 3.3.2 Emergency Mode 錄音流程
+詳見 [Session 設計文檔](docs/SESSION_USAGE_CREDIT_DESIGN.md) 了解使用量追蹤和點數扣除機制
+
 - [ ] POST /api/v1/island/sessions - 開始實戰（mode=emergency）
 - [ ] POST /api/v1/island/sessions/{id}/analyze-partial - 即時危機提醒
 - [ ] PATCH /api/v1/island/sessions/{id}/complete - 結束 + 扣點
@@ -166,6 +176,8 @@
 - [ ] 隱私設定（notification_enabled）
 
 #### 3.5.2 點數查詢與兌換
+詳見 [Session 設計文檔](docs/SESSION_USAGE_CREDIT_DESIGN.md) 了解點數系統設計
+
 - [ ] GET /api/v1/island/credits - 查詢點數餘額
 - [ ] POST /api/v1/island/redeem - 兌換碼兌換
 - [ ] RedeemCode Model + migration
