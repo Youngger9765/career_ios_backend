@@ -229,7 +229,12 @@ def verify_reset_token(
             detail="Reset token has already been used",
         )
 
-    if reset_token.expires_at < datetime.now(timezone.utc):
+    # Ensure expires_at is timezone-aware for comparison
+    expires_at = reset_token.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if expires_at < datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Reset token has expired",
@@ -279,7 +284,12 @@ def confirm_password_reset(
             detail="Reset token has already been used",
         )
 
-    if reset_token.expires_at < datetime.now(timezone.utc):
+    # Ensure expires_at is timezone-aware for comparison
+    expires_at = reset_token.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if expires_at < datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Reset token has expired",
