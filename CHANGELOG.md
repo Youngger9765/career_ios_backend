@@ -10,6 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Password Reset System** (2025-12-27)
+  - ✅ Web UI pages: `/forgot-password` (request) and `/reset-password` (confirmation)
+  - ✅ API endpoints for iOS integration:
+    - `POST /api/v1/password-reset/request` - Request password reset
+    - `POST /api/v1/password-reset/verify` - Verify reset token
+    - `POST /api/v1/password-reset/confirm` - Confirm new password
+  - ✅ Auto-send welcome email when creating new counselors via Admin API
+  - ✅ Multi-tenant support (career/island/island_parents) with tenant-specific email templates
+  - ✅ Token security: 32+ character encrypted random string, 6-hour expiration, single-use
+  - ✅ Rate limiting: Maximum one request per 5 minutes
+  - ✅ DEBUG mode: Cross-tenant admin access for development
+  - ✅ Database migration: `20251227_1049_f9b8a56ce021_add_password_reset_tokens_table.py`
+  - ✅ 23 integration tests with 100% pass rate
+  - ✅ Email service enhancements:
+    - SMTP delivery via Gmail
+    - Tenant-specific templates (career/island/island_parents)
+    - Error handling and retry logic
+
+### Added
 - **Parents RAG Refinement - Complete Observability** (2025-12-26)
   - ✅ Expanded GBQ schema coverage from 23% to 67%+ (29/43 fields)
   - ✅ Complete metadata tracking for parents_report API:

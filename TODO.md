@@ -198,28 +198,32 @@
 ## 任務四：密碼管理與通知系統
 
 ### 4.1 帳號建立後自動發送密碼信件
-- [ ] 整合 Email 服務（SendGrid / AWS SES / SMTP）
-- [ ] 設定 Email 模板（歡迎信件）
-- [ ] 修改 POST /api/v1/admin/counselors 觸發發送
+- [x] 整合 Email 服務（Gmail SMTP）
+- [x] 設定 Email 模板（歡迎信件）
+- [x] 修改 POST /api/v1/admin/counselors 觸發發送
+- [x] Tenant-specific email templates（career/island/island_parents）
 - [ ] EmailLog Model（記錄發送狀態）
 
 ### 4.2 密碼重設頁面（Web）
-- [ ] 密碼重設請求頁面（/reset-password）
-- [ ] PasswordResetToken Model（token, expires_at, used）
-- [ ] 密碼重設確認頁面（/reset-password/confirm?token={token}）
-- [ ] 發送密碼重設信件
+- [x] 密碼重設請求頁面（/forgot-password）
+- [x] PasswordResetToken Model（token, expires_at, used）
+- [x] 密碼重設確認頁面（/reset-password）
+- [x] 發送密碼重設信件
+- [x] Token 延長至 6 小時有效期（開發階段）
 
 ### 4.3 密碼重設 API（給 iOS 使用）
-- [ ] POST /api/v1/auth/password-reset/request
-- [ ] POST /api/v1/auth/password-reset/verify
-- [ ] POST /api/v1/auth/password-reset/confirm
-- [ ] Token 安全：加密隨機字串（32+ 字元）、1 小時有效期、只能使用一次
-- [ ] 請求頻率限制（5 分鐘內只能請求一次）
+- [x] POST /api/v1/password-reset/request - 請求密碼重設
+- [x] POST /api/v1/password-reset/verify - 驗證 token
+- [x] POST /api/v1/password-reset/confirm - 確認重設密碼
+- [x] Token 安全：加密隨機字串（32+ 字元）、6 小時有效期、只能使用一次
+- [x] 請求頻率限制（5 分鐘內只能請求一次）
+- [x] Multi-tenant 支援（支援 career/island/island_parents）
 
 ### 4.4 整合測試與文檔
-- [ ] 完整流程測試（建立帳號 → 歡迎信 → 密碼重設）
-- [ ] API 文檔更新（Swagger UI）
-- [ ] 開發者文檔（環境變數、部署指南）
+- [x] 完整流程測試（建立帳號 → 歡迎信 → 密碼重設）
+- [x] 23 個整合測試（100% 通過）
+- [x] API 文檔更新（Swagger UI）
+- [x] DEBUG mode 跨租戶管理員存取
 
 ### 4.5 登入失敗提示語統一（資安）
 - [ ] Backend: 統一 API 錯誤訊息（密碼錯誤 = 帳號不存在 = "登入資料有誤"）
@@ -227,9 +231,10 @@
 - [ ] 文檔: 登入失敗訊息規範
 
 ### 4.6 Email 發信系統與錯誤處理
-- [ ] 選擇並設定 Email 服務商（Gmail SMTP / SendGrid / AWS SES）
+- [x] 選擇並設定 Email 服務商（Gmail SMTP）
+- [x] Email Service 實作（發送 + 錯誤處理 + 退信處理）
+- [x] Tenant-specific email templates
 - [ ] EmailLog Model（status: pending/sent/delivered/bounced/failed）
-- [ ] Email Service 實作（發送 + 錯誤處理 + 退信處理）
 - [ ] GET /api/v1/admin/emails/logs API
 - [ ] POST /api/v1/admin/emails/resend API
 - [ ] 用戶端重發機制（5 分鐘限制）

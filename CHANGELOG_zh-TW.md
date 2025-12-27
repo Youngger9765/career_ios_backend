@@ -10,6 +10,25 @@
 ## [未發布]
 
 ### 新增
+- **密碼重設系統** (2025-12-27)
+  - ✅ Web UI 頁面：`/forgot-password`（請求）與 `/reset-password`（確認）
+  - ✅ iOS 整合 API 端點：
+    - `POST /api/v1/password-reset/request` - 請求密碼重設
+    - `POST /api/v1/password-reset/verify` - 驗證重設 token
+    - `POST /api/v1/password-reset/confirm` - 確認新密碼
+  - ✅ 透過 Admin API 建立新諮詢師時自動發送歡迎信
+  - ✅ Multi-tenant 支援（career/island/island_parents），包含各租戶專屬 email 模板
+  - ✅ Token 安全：32+ 字元加密隨機字串、6 小時有效期、單次使用
+  - ✅ 頻率限制：每 5 分鐘最多請求一次
+  - ✅ DEBUG 模式：開發階段跨租戶管理員存取
+  - ✅ 資料庫遷移：`20251227_1049_f9b8a56ce021_add_password_reset_tokens_table.py`
+  - ✅ 23 個整合測試，100% 通過率
+  - ✅ Email 服務增強：
+    - 透過 Gmail SMTP 發送
+    - 各租戶專屬模板（career/island/island_parents）
+    - 錯誤處理與重試邏輯
+
+### 新增
 - **Parents RAG 優化 - 完整可觀測性** (2025-12-26)
   - ✅ GBQ schema 覆蓋率從 23% 提升至 67%+（29/43 欄位）
   - ✅ parents_report API 完整 metadata 追蹤：
