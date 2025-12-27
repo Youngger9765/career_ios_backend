@@ -2,7 +2,6 @@
 Email Sender Service - Send HTML email reports
 """
 import logging
-import os
 import smtplib
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
@@ -16,18 +15,22 @@ class EmailSenderService:
     """Send HTML email reports via Gmail SMTP or SendGrid"""
 
     def __init__(self):
-        self.smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
-        self.smtp_user = os.getenv("SMTP_USER", "")
-        self.smtp_password = os.getenv("SMTP_PASSWORD", "")
-        self.from_email = os.getenv("FROM_EMAIL", self.smtp_user)
-        self.default_to_email = os.getenv("BILLING_REPORT_EMAIL", "dev02@example.com")
+        from app.core.config import settings
+
+        self.smtp_host = settings.SMTP_HOST
+        self.smtp_port = settings.SMTP_PORT
+        self.smtp_user = settings.SMTP_USER or ""
+        self.smtp_password = settings.SMTP_PASSWORD or ""
+        self.from_email = settings.FROM_EMAIL or self.smtp_user
+        self.default_to_email = settings.BILLING_REPORT_EMAIL
+        self.app_url = settings.APP_URL
 
     async def send_password_reset_email(
         self,
         to_email: str,
         reset_token: str,
         counselor_name: str = None,
+        tenant_id: str = "career",
     ) -> bool:
         """
         Send password reset email
@@ -36,18 +39,26 @@ class EmailSenderService:
             to_email: Recipient email
             reset_token: Password reset token
             counselor_name: Optional counselor name for personalization
+            tenant_id: Tenant ID for customizing email content
 
         Returns:
             True if sent successfully
         """
-        subject = "Password Reset Request - Career Counseling Platform"
+        # Tenant name mapping
+        tenant_names = {
+            "career": "Career",
+            "island": "浮島",
+            "island_parents": "浮島親子",
+        }
+        tenant_name = tenant_names.get(tenant_id, "Career")
 
-        # Generate password reset URL
-        # TODO: Update with actual frontend URL
-        reset_url = f"https://your-domain.com/reset-password?token={reset_token}"
+        subject = f"Password Reset Request - {tenant_name}"
+
+        # Generate password reset URL using configured APP_URL
+        reset_url = f"{self.app_url}/reset-password?token={reset_token}"
 
         html_body = self._generate_password_reset_html(
-            counselor_name or "User", reset_url, reset_token
+            counselor_name or "User", reset_url, tenant_name
         )
 
         try:
@@ -84,7 +95,7 @@ class EmailSenderService:
             raise
 
     def _generate_password_reset_html(
-        self, counselor_name: str, reset_url: str, reset_token: str
+        self, counselor_name: str, reset_url: str, tenant_name: str = "Career"
     ) -> str:
         """Generate password reset email HTML"""
         html = f"""
@@ -125,8 +136,8 @@ class EmailSenderService:
         }}
         .reset-button {{
             display: inline-block;
-            background-color: #1a73e8;
-            color: white;
+            background-color: #000000 !important;
+            color: #ffffff !important;
             text-decoration: none;
             padding: 14px 32px;
             border-radius: 6px;
@@ -134,22 +145,7 @@ class EmailSenderService:
             font-size: 16px;
         }}
         .reset-button:hover {{
-            background-color: #1557b0;
-        }}
-        .alternative {{
-            margin-top: 30px;
-            padding: 20px;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            font-size: 14px;
-        }}
-        .token {{
-            font-family: 'Courier New', monospace;
-            background-color: #e8f0fe;
-            padding: 12px;
-            border-radius: 4px;
-            word-break: break-all;
-            margin-top: 10px;
+            background-color: #333333 !important;
         }}
         .warning {{
             margin-top: 30px;
@@ -176,7 +172,7 @@ class EmailSenderService:
         <div class="content">
             <p>Hi {counselor_name},</p>
 
-            <p>We received a request to reset your password for your Career Counseling Platform account.</p>
+            <p>We received a request to reset your password for your <strong>{tenant_name}</strong> account.</p>
 
             <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
         </div>
@@ -185,22 +181,17 @@ class EmailSenderService:
             <a href="{reset_url}" class="reset-button">Reset Password</a>
         </div>
 
-        <div class="alternative">
-            <p><strong>Alternatively, you can copy and paste this reset token:</strong></p>
-            <div class="token">{reset_token}</div>
-        </div>
-
         <div class="warning">
             <p><strong>Security Notice:</strong></p>
             <ul style="margin: 10px 0 0 20px;">
                 <li>If you didn't request this password reset, please ignore this email.</li>
-                <li>Never share this link or token with anyone.</li>
+                <li>Never share this link with anyone.</li>
                 <li>This link will expire in 1 hour for your security.</li>
             </ul>
         </div>
 
         <div class="footer">
-            <p>Career Counseling Platform</p>
+            <p>{tenant_name} Platform</p>
             <p>This is an automated email. Please do not reply.</p>
         </div>
     </div>

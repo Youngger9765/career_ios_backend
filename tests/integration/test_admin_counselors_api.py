@@ -555,6 +555,91 @@ class TestAdminCreateCounselor:
 
         assert response.status_code == 403
 
+    def test_create_counselor_sends_password_reset_email(
+        self, client, admin_token, db_session
+    ):
+        """Creating counselor should send password reset email"""
+        from datetime import datetime, timedelta
+
+        request_data = {
+            "email": "withresetmail@test.com",
+            "username": "withresetmail",
+            "full_name": "User With Reset Email",
+            "phone": "+886900000000",
+            "password": "initial_password_123",
+            "tenant_id": "career",
+            "role": "counselor",
+            "total_credits": 100,
+            "subscription_expires_at": (
+                datetime.utcnow() + timedelta(days=365)
+            ).isoformat(),
+        }
+
+        response = client.post(
+            "/api/v1/admin/counselors",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json=request_data,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["counselor"]["email"] == "withresetmail@test.com"
+
+        # Verify password reset token was created
+        from app.models.password_reset import PasswordResetToken
+
+        reset_token = (
+            db_session.query(PasswordResetToken)
+            .filter(
+                PasswordResetToken.email == "withresetmail@test.com",
+                PasswordResetToken.tenant_id == "career",
+            )
+            .first()
+        )
+
+        assert reset_token is not None
+        assert reset_token.used is False
+        assert reset_token.expires_at > datetime.utcnow()
+
+    def test_create_counselor_email_send_failure_does_not_block_creation(
+        self, client, admin_token, monkeypatch
+    ):
+        """Counselor creation should succeed even if email send fails"""
+        from datetime import datetime, timedelta
+
+        # Mock email sender to raise exception
+        async def mock_send_email(*args, **kwargs):
+            raise Exception("SMTP connection failed")
+
+        from app.services import email_sender
+
+        monkeypatch.setattr(
+            email_sender.email_sender, "send_password_reset_email", mock_send_email
+        )
+
+        request_data = {
+            "email": "emailfail@test.com",
+            "username": "emailfail",
+            "full_name": "Email Fail User",
+            "password": "test_password_123",
+            "tenant_id": "career",
+            "role": "counselor",
+            "total_credits": 100,
+            "subscription_expires_at": (
+                datetime.utcnow() + timedelta(days=365)
+            ).isoformat(),
+        }
+
+        response = client.post(
+            "/api/v1/admin/counselors",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json=request_data,
+        )
+
+        # Creation should still succeed
+        assert response.status_code == 200
+        assert response.json()["counselor"]["email"] == "emailfail@test.com"
+
 
 # ============================================================================
 # Fixtures (reuse from test_admin_credits_api.py)

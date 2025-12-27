@@ -332,9 +332,11 @@
             box-shadow: 0 0 0 3px rgba(191, 228, 205, 0.45);
         }
 
-        .form-group input:disabled {
+        .form-group input:disabled,
+        .form-group select:disabled {
             background: #f7f9fc;
             cursor: not-allowed;
+            opacity: 0.7;
         }
 
         .form-group small {
@@ -1206,13 +1208,13 @@
             <form id="addMemberForm" onsubmit="submitAddMember(event)">
                 <div class="form-group">
                     <label for="newTenantId">Tenant ID *</label>
-                    <select id="newTenantId" required>
+                    <select id="newTenantId" required disabled>
                         <option value="career">Career</option>
                         <option value="island">Island</option>
                         <option value="island_parents">Island Parents</option>
                     </select>
-                    <small style="color: #657786;">
-                        <strong style="color: #f59e0b;">⚠️ Tenant ID 會自動使用您的租戶（後端會忽略此選項）</strong>
+                    <small style="color: #10B981;">
+                        <strong>✓ 已自動同步管理員租戶</strong>
                     </small>
                 </div>
                 <div class="form-group">
@@ -1685,6 +1687,11 @@
 
         function switchTenant() {
             currentTenant = document.getElementById('tenantSelector').value;
+            // Sync with Add Member form's tenant dropdown
+            const newTenantIdSelect = document.getElementById('newTenantId');
+            if (newTenantIdSelect) {
+                newTenantIdSelect.value = currentTenant;
+            }
             loadMembers();
         }
 
@@ -1774,6 +1781,8 @@
         function addMember() {
             document.getElementById('addMemberModal').style.display = 'block';
             document.getElementById('addMemberForm').reset();
+            // Sync tenant ID with current selected tenant
+            document.getElementById('newTenantId').value = currentTenant;
         }
 
         async function submitAddMember(event) {
@@ -1797,7 +1806,9 @@
             try {
                 console.log('Creating counselor with data:', data);
 
-                const res = await fetchWithAuth('/api/v1/admin/counselors', {
+                // Include tenant_id in query parameter for DEBUG mode authentication
+                const url = `/api/v1/admin/counselors?tenant_id=${data.tenant_id}`;
+                const res = await fetchWithAuth(url, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(data)

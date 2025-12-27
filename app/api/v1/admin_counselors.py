@@ -1,9 +1,10 @@
 """
 Admin Counselor Management API Endpoints
 """
+import logging
 import secrets
 import string
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -16,6 +17,7 @@ from app.core.config import settings
 from app.core.deps import get_db
 from app.core.security import hash_password
 from app.models.counselor import Counselor, CounselorRole
+from app.models.password_reset import PasswordResetToken
 from app.schemas.admin_counselor import (
     CounselorCreateRequest,
     CounselorCreateResponse,
@@ -24,6 +26,9 @@ from app.schemas.admin_counselor import (
     CounselorListResponse,
     CounselorUpdateRequest,
 )
+from app.services.email_sender import email_sender
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/counselors", tags=["admin-counselors"])
 
@@ -128,6 +133,12 @@ def resolve_tenant_id(
     """Resolve and validate tenant_id for admin access."""
     if requested_tenant_id is None:
         return current_admin.tenant_id
+
+    # In DEBUG mode, allow cross-tenant access for testing
+    if settings.DEBUG:
+        return requested_tenant_id
+
+    # In production, enforce strict tenant isolation
     if requested_tenant_id != current_admin.tenant_id:
         raise HTTPException(
             status_code=403,
@@ -140,6 +151,63 @@ def generate_temporary_password(length: int = 12) -> str:
     """Generate a secure temporary password"""
     alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
     return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def generate_secure_token() -> str:
+    """Generate a cryptographically secure random token for password reset"""
+    return secrets.token_urlsafe(32)
+
+
+async def send_password_reset_email_for_new_counselor(
+    counselor: Counselor,
+    db: Session,
+) -> None:
+    """
+    Generate password reset token and send email for newly created counselor.
+
+    This allows the new counselor to set their own password via email link.
+    Errors are logged but don't block counselor creation.
+
+    Args:
+        counselor: The newly created counselor object
+        db: Database session
+    """
+    try:
+        # Generate secure token
+        token = generate_secure_token()
+
+        # Create password reset token in database
+        reset_token = PasswordResetToken(
+            token=token,
+            email=counselor.email,
+            tenant_id=counselor.tenant_id,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=6),
+            used=False,
+            request_ip=None,  # Admin-initiated, no client IP
+        )
+
+        db.add(reset_token)
+        db.commit()
+
+        # Send password reset email
+        await email_sender.send_password_reset_email(
+            to_email=counselor.email,
+            reset_token=token,
+            counselor_name=counselor.full_name,
+            tenant_id=counselor.tenant_id,
+        )
+
+        logger.info(
+            f"Password reset email sent to new counselor: {counselor.email} "
+            f"(tenant: {counselor.tenant_id})"
+        )
+
+    except Exception as e:
+        # Log error but don't fail the counselor creation
+        logger.error(
+            f"Failed to send password reset email for {counselor.email}: {e}",
+            exc_info=True,
+        )
 
 
 @router.get("", response_model=CounselorListResponse)
@@ -419,6 +487,10 @@ async def create_counselor(
     db.add(counselor)
     db.commit()
     db.refresh(counselor)
+
+    # Send password reset email to new counselor
+    # This allows them to set their own password via email link
+    await send_password_reset_email_for_new_counselor(counselor, db)
 
     return CounselorCreateResponse(
         counselor=CounselorDetailResponse.model_validate(counselor),

@@ -32,7 +32,7 @@ router = APIRouter(prefix="/auth/password-reset", tags=["Password Reset"])
 _rate_limit_cache: dict[str, list[datetime]] = {}
 MAX_REQUESTS_PER_MINUTE = 3
 RATE_LIMIT_WINDOW_SECONDS = 60
-TOKEN_EXPIRY_HOURS = 1
+TOKEN_EXPIRY_HOURS = 6
 
 # Weak password blacklist
 WEAK_PASSWORDS = {
@@ -122,7 +122,7 @@ async def request_password_reset(
     Notes:
         - Always returns success to prevent user enumeration
         - Rate limited to 3 requests per minute
-        - Token expires in 1 hour
+        - Token expires in 6 hours
     """
     # Validate input
     if not request_data.email and not request_data.phone:
@@ -179,6 +179,7 @@ async def request_password_reset(
                 to_email=counselor.email,
                 reset_token=token,
                 counselor_name=counselor.full_name,
+                tenant_id=counselor.tenant_id,
             )
         except Exception as e:
             # Log error but don't expose to user

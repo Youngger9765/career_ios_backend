@@ -64,6 +64,14 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     API_ADMIN_KEY: Optional[str] = None
 
+    # Email / SMTP Configuration
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    FROM_EMAIL: Optional[str] = None
+    BILLING_REPORT_EMAIL: str = "dev02@careercreator.tw"
+
     # Google Cloud Storage
     GCS_BUCKET: Optional[str] = None
     GCS_PROJECT: Optional[str] = None

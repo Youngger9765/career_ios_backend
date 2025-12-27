@@ -127,6 +127,12 @@ def resolve_tenant_id(
     """Resolve and validate tenant_id for admin access."""
     if requested_tenant_id is None:
         return current_admin.tenant_id
+
+    # In DEBUG mode, allow cross-tenant access for testing
+    if settings.DEBUG:
+        return requested_tenant_id
+
+    # In production, enforce strict tenant isolation
     if requested_tenant_id != current_admin.tenant_id:
         raise HTTPException(
             status_code=403,
