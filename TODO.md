@@ -34,17 +34,18 @@
 
 ## 任務一：Web 改版（Web Realtime Console）
 
-### 1.1 紅綠燈卡片機制（視覺化風險等級）
+### 1.1 紅綠燈卡片機制（視覺化風險等級）✅ 已完成
 
 **Backend ✅ 已完成**
 - Response schema 包含 risk_level, severity, suggested_interval_seconds
 - 動態分析間隔：Green 60s / Yellow 30s / Red 15s
 
-**Frontend 待完成**:
-- [ ] 根據 suggested_interval_seconds 動態調整 Timer
-- [ ] 紅黃綠視覺化（顏色、大小、動畫）
+**Frontend ✅ 已完成**:
+- ✅ 根據 suggested_interval_seconds 動態調整 Timer (`updateAnalysisInterval()`)
+- ✅ 紅黃綠視覺化（顏色、大小、動畫）
+- ✅ 測試按鈕（🟢🟡🔴）用於快速測試不同風險等級
 
----
+**實作位置**: `app/templates/realtime_counseling.html`
 
 ## 任務三：iOS API 改版 - island_parents 租戶
 
