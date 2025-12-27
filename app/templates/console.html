@@ -1496,6 +1496,59 @@
         </div>
     </div>
 
+    <!-- Password Reset Testing -->
+    <div class="card mt-4" style="max-width: 800px; margin: 20px auto;">
+        <div class="card-header">
+            <h5>🔐 Password Reset Testing</h5>
+        </div>
+        <div class="card-body">
+            <!-- Request Reset -->
+            <div class="mb-4">
+                <h6>1. Request Password Reset</h6>
+                <div class="row">
+                    <div class="col-md-5">
+                        <input type="email" id="resetEmail" class="form-control" placeholder="Email">
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" id="resetTenantId" class="form-control" placeholder="Tenant ID" value="test_tenant">
+                    </div>
+                    <div class="col-md-3">
+                        <button onclick="requestPasswordReset()" class="btn btn-primary w-100">Send Reset Email</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verify Token -->
+            <div class="mb-4">
+                <h6>2. Verify Token</h6>
+                <div class="row">
+                    <div class="col-md-9">
+                        <input type="text" id="resetToken" class="form-control" placeholder="Reset Token">
+                    </div>
+                    <div class="col-md-3">
+                        <button onclick="verifyToken()" class="btn btn-info w-100">Verify</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confirm Reset -->
+            <div class="mb-4">
+                <h6>3. Confirm Password Reset</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <input type="password" id="newPassword" class="form-control" placeholder="New Password (min 8 chars)">
+                    </div>
+                    <div class="col-md-3">
+                        <button onclick="confirmReset()" class="btn btn-success w-100">Reset Password</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Display -->
+            <div id="resetStatus" class="alert" style="display:none;"></div>
+        </div>
+    </div>
+
     <script src="/static/js/console-steps.js"></script>
 
     <script>
@@ -1792,6 +1845,110 @@
                     }
                 });
             });
+        }
+
+        // ================================================
+        // Password Reset Functions
+        // ================================================
+        async function requestPasswordReset() {
+            const email = document.getElementById('resetEmail').value;
+            const tenantId = document.getElementById('resetTenantId').value;
+
+            if (!email) {
+                showResetStatus('warning', 'Please enter an email address');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/auth/password-reset/request', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email, tenant_id: tenantId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResetStatus('success', `✅ Reset email sent! Token: ${data.token || 'Sent to email'}`);
+                    if (data.token) {
+                        document.getElementById('resetToken').value = data.token;
+                    }
+                } else {
+                    showResetStatus('danger', `❌ Error: ${data.detail}`);
+                }
+            } catch (error) {
+                showResetStatus('danger', `❌ Network error: ${error.message}`);
+            }
+        }
+
+        async function verifyToken() {
+            const token = document.getElementById('resetToken').value;
+
+            if (!token) {
+                showResetStatus('warning', 'Please enter a reset token');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/auth/password-reset/verify?token=${encodeURIComponent(token)}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResetStatus('success', `✅ Token is valid! Email: ${data.email}`);
+                } else {
+                    showResetStatus('danger', `❌ Invalid token: ${data.detail}`);
+                }
+            } catch (error) {
+                showResetStatus('danger', `❌ Network error: ${error.message}`);
+            }
+        }
+
+        async function confirmReset() {
+            const token = document.getElementById('resetToken').value;
+            const newPassword = document.getElementById('newPassword').value;
+
+            if (!token || !newPassword) {
+                showResetStatus('warning', 'Please enter both token and new password');
+                return;
+            }
+
+            if (newPassword.length < 8) {
+                showResetStatus('warning', 'Password must be at least 8 characters');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/auth/password-reset/confirm', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ token, new_password: newPassword })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResetStatus('success', `✅ ${data.message}`);
+                    // Clear form
+                    document.getElementById('resetToken').value = '';
+                    document.getElementById('newPassword').value = '';
+                } else {
+                    showResetStatus('danger', `❌ Error: ${data.detail}`);
+                }
+            } catch (error) {
+                showResetStatus('danger', `❌ Network error: ${error.message}`);
+            }
+        }
+
+        function showResetStatus(type, message) {
+            const status = document.getElementById('resetStatus');
+            status.className = `alert alert-${type}`;
+            status.textContent = message;
+            status.style.display = 'block';
+
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 10000);
         }
     </script>
 </body>
