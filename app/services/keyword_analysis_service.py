@@ -220,9 +220,9 @@ class KeywordAnalysisService:
                 completion_tokens = getattr(token_usage, "candidates_token_count", 0)
                 total_tokens = getattr(token_usage, "total_token_count", 0)
 
-                # Estimate cost (Gemini Flash pricing: ~$0.075/1M input, ~$0.30/1M output)
-                input_cost = Decimal(prompt_tokens) * Decimal("0.000000075")
-                output_cost = Decimal(completion_tokens) * Decimal("0.00000030")
+                # Estimate cost (Gemini 3 Flash pricing: $0.50/1M input, $3/1M output)
+                input_cost = Decimal(prompt_tokens) * Decimal("0.00000050")
+                output_cost = Decimal(completion_tokens) * Decimal("0.000003")
                 estimated_cost = input_cost + output_cost
 
             # Calculate timing
@@ -257,8 +257,8 @@ class KeywordAnalysisService:
                 "rag_search_time_ms": None,  # Not tracked separately yet
                 # Model metadata
                 "provider": "gemini",
-                "model_name": "gemini-1.5-flash",
-                "model_version": "1.5",
+                "model_name": "gemini-3-flash-preview",
+                "model_version": "3.0",
                 # Timing breakdown
                 "start_time": analysis_start_time.isoformat(),
                 "end_time": end_time.isoformat(),
@@ -390,8 +390,8 @@ class KeywordAnalysisService:
                 rag_search_time_ms=metadata.get("rag_search_time_ms"),
                 # Model metadata
                 provider=metadata.get("provider", "gemini"),
-                model_name=metadata.get("model_name", "gemini-1.5-flash-002"),
-                model_version=metadata.get("model_version", "1.5"),
+                model_name=metadata.get("model_name", "gemini-3-flash-preview"),
+                model_version=metadata.get("model_version", "3.0"),
                 # Timing breakdown
                 start_time=start_time,
                 end_time=end_time,

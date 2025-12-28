@@ -9,6 +9,20 @@
 
 ## [未發布]
 
+### 變更
+- **Gemini 3 Flash 升級** (2025-12-28)
+  - ✅ 從 Gemini 2.5 Flash 升級至 Gemini 3 Flash (`gemini-3-flash-preview`)
+  - ✅ Pro 級智能，Flash 速度與定價
+  - ✅ 更新定價計算：
+    - 輸入：$0.50/1M tokens（原 $0.075/1M）
+    - 輸出：$3.00/1M tokens（原 $0.30/1M）
+    - 快取輸入：$0.125/1M tokens（原 $0.01875/1M）
+  - ✅ 更新所有 service 檔案、API endpoints 與測試
+  - ✅ 所有整合測試通過（22 個測試：計費、分析、GBQ 完整性）
+  - ✅ 無破壞性變更 - API 向後相容
+  - 📝 更新：`app/core/config.py`、`app/services/gemini_service.py`、`app/services/keyword_analysis_service.py`、`app/api/realtime.py`、定價計算
+  - 📝 來源：[Gemini 3 Flash 文件](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-flash)
+
 ### 新增
 - **密碼重設系統** (2025-12-27)
   - ✅ Web UI 頁面：`/forgot-password`（請求）與 `/reset-password`（確認）

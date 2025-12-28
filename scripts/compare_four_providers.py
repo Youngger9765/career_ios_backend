@@ -407,10 +407,10 @@ def evaluate_quality(response: dict, transcript: str) -> dict:
 def calculate_gemini_cost(usage_metadata: dict) -> dict:
     """Calculate Gemini API cost
 
-    Gemini 2.5 Flash pricing (as of 2025-12):
-    - Input: $0.075 per 1M tokens ($0.000000075 per token)
-    - Cached input: $0.01875 per 1M tokens ($0.00000001875 per token)
-    - Output: $0.30 per 1M tokens ($0.0000003 per token)
+    Gemini 3 Flash pricing (as of Dec 2025):
+    - Input: $0.50 per 1M tokens ($0.0000005 per token)
+    - Cached input: $0.125 per 1M tokens ($0.000000125 per token)
+    - Output: $3.00 per 1M tokens ($0.000003 per token)
 
     Args:
         usage_metadata: Dict with token counts from Gemini response
@@ -424,9 +424,9 @@ def calculate_gemini_cost(usage_metadata: dict) -> dict:
     output_tokens = usage_metadata.get("candidates_token_count", 0)
 
     # Calculate costs (USD)
-    input_cost = prompt_tokens * 0.000000075  # $0.075 per 1M
-    cached_cost = cached_tokens * 0.00000001875  # $0.01875 per 1M (75% discount)
-    output_cost = output_tokens * 0.0000003  # $0.30 per 1M
+    input_cost = prompt_tokens * 0.0000005  # $0.50 per 1M
+    cached_cost = cached_tokens * 0.000000125  # $0.125 per 1M (75% discount)
+    output_cost = output_tokens * 0.000003  # $3.00 per 1M
 
     total_cost = input_cost + cached_cost + output_cost
 
@@ -628,7 +628,7 @@ async def test_gemini_with_cache(
 
         return {
             "provider": "gemini",
-            "model": "gemini-2.5-flash",
+            "model": "gemini-3-flash-preview",
             "analysis": {
                 "summary": analysis.get("summary", ""),
                 "alerts": analysis.get("alerts", []),
@@ -645,7 +645,7 @@ async def test_gemini_with_cache(
         logger.error(f"Gemini test failed: {e}")
         return {
             "provider": "gemini",
-            "model": "gemini-2.5-flash",
+            "model": "gemini-3-flash-preview",
             "error": str(e),
             "latency_ms": int((time.time() - start_time) * 1000),
         }
@@ -864,7 +864,7 @@ async def run_experiment(
     durations = [8, 9, 10] if duration_filter is None else [duration_filter]
 
     providers_config = [
-        ("gemini", "gemini-2.5-flash"),
+        ("gemini", "gemini-3-flash-preview"),
         ("codeer", "claude-sonnet"),
         ("codeer", "gemini-flash"),
         ("codeer", "gpt5-mini"),
@@ -1013,7 +1013,7 @@ def analyze_results(results: List[dict]):
 
         table_speed.add_row(
             f"{duration} min",
-            f"{latencies.get('gemini-gemini-2.5-flash', 'N/A')}",
+            f"{latencies.get('gemini-gemini-3-flash-preview', 'N/A')}",
             f"{latencies.get('codeer-claude-sonnet', 'N/A')}",
             f"{latencies.get('codeer-gemini-flash', 'N/A')}",
             f"{latencies.get('codeer-gpt5-mini', 'N/A')}",
@@ -1047,7 +1047,7 @@ def analyze_results(results: List[dict]):
 
         table_quality.add_row(
             f"{duration} min",
-            quality_scores.get("gemini-gemini-2.5-flash", "N/A"),
+            quality_scores.get("gemini-gemini-3-flash-preview", "N/A"),
             quality_scores.get("codeer-claude-sonnet", "N/A"),
             quality_scores.get("codeer-gemini-flash", "N/A"),
             quality_scores.get("codeer-gpt5-mini", "N/A"),
@@ -1080,7 +1080,7 @@ def analyze_results(results: List[dict]):
 
         table_cost.add_row(
             f"{duration} min",
-            costs.get("gemini-gemini-2.5-flash", "N/A"),
+            costs.get("gemini-gemini-3-flash-preview", "N/A"),
             costs.get("codeer-claude-sonnet", "N/A"),
             costs.get("codeer-gemini-flash", "N/A"),
             costs.get("codeer-gpt5-mini", "N/A"),
@@ -1204,7 +1204,7 @@ def save_results(results: List[dict], output_path: str = "experiment_results.jso
                 "test_config": {
                     "durations": [8, 9, 10],
                     "providers": [
-                        "gemini-2.5-flash (with cache)",
+                        "gemini-3-flash (with cache)",
                         "codeer-claude-sonnet",
                         "codeer-gemini-flash",
                         "codeer-gpt5-mini",

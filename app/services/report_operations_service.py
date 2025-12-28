@@ -325,7 +325,9 @@ class ReportOperationsService:
             version=1,
             status=ReportStatus.PROCESSING,
             mode=report_type,
-            ai_model="gpt-4.1-mini" if rag_system == "openai" else "gemini-2.5-flash",
+            ai_model="gpt-4.1-mini"
+            if rag_system == "openai"
+            else "gemini-3-flash-preview",
         )
         self.db.add(report)
         self.db.commit()

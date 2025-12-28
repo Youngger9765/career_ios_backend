@@ -16,7 +16,7 @@ from vertexai.preview.generative_models import GenerativeModel
 # Project configuration
 PROJECT_ID = "groovy-iris-473015-h3"
 LOCATION = "us-central1"
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3-flash-preview"
 
 # 系統 Prompt (996 tokens, 固定不變的部分)
 SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。

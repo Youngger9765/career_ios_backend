@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     # Gemini / Vertex AI (主要 LLM)
     GEMINI_PROJECT_ID: str = "groovy-iris-473015-h3"
     GEMINI_LOCATION: str = "us-central1"
-    GEMINI_CHAT_MODEL: str = "gemini-2.5-flash"  # or "gemini-2.5-flash-lite"
+    GEMINI_CHAT_MODEL: str = "gemini-3-flash-preview"  # Gemini 3 Flash (Dec 2025)
 
     # LLM Provider Selection
     DEFAULT_LLM_PROVIDER: str = "gemini"  # "openai" or "gemini" - 預設使用 Gemini
@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     # Codeer Agents - Multiple Models
     # Each agent is pre-configured with a specific LLM model
     CODEER_AGENT_CLAUDE_SONNET: str = ""  # Claude Sonnet 4.5 agent
-    CODEER_AGENT_GEMINI_FLASH: str = ""  # Gemini 2.5 Flash agent
+    CODEER_AGENT_GEMINI_FLASH: str = ""  # Gemini 3 Flash agent
     CODEER_AGENT_GPT5_MINI: str = ""  # GPT-5 Mini agent (default)
 
     # CORS

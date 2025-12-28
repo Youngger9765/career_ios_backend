@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Gemini 3 Flash Upgrade** (2025-12-28)
+  - ✅ Upgraded from Gemini 2.5 Flash to Gemini 3 Flash (`gemini-3-flash-preview`)
+  - ✅ Pro-level intelligence at Flash speed and pricing
+  - ✅ Updated pricing calculations:
+    - Input: $0.50/1M tokens (was $0.075/1M)
+    - Output: $3.00/1M tokens (was $0.30/1M)
+    - Cached input: $0.125/1M tokens (was $0.01875/1M)
+  - ✅ Updated all service files, API endpoints, and tests
+  - ✅ All integration tests passing (22 tests: billing, analysis, GBQ integrity)
+  - ✅ No breaking changes - backward compatible API
+  - 📝 Updated: `app/core/config.py`, `app/services/gemini_service.py`, `app/services/keyword_analysis_service.py`, `app/api/realtime.py`, pricing calculations
+  - 📝 Source: [Gemini 3 Flash Documentation](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-flash)
+
 ### Added
 - **Password Reset System** (2025-12-27)
   - ✅ Web UI pages: `/forgot-password` (request) and `/reset-password` (confirmation)

@@ -658,10 +658,10 @@ YOU MUST return safety_level field in JSON response!"""
 def _calculate_gemini_cost(usage_metadata: dict) -> float:
     """Calculate estimated cost for Gemini API usage
 
-    Gemini 2.5 Flash pricing (as of 2025):
-    - Input: $0.000075 per 1K tokens
-    - Output: $0.0003 per 1K tokens
-    - Cached input: $0.00001875 per 1K tokens (75% discount)
+    Gemini 3 Flash pricing (as of Dec 2025):
+    - Input: $0.50 per 1M tokens
+    - Output: $3.00 per 1M tokens
+    - Cached input: $0.125 per 1M tokens (75% discount)
     """
     prompt_tokens = usage_metadata.get("prompt_token_count", 0)
     completion_tokens = usage_metadata.get("candidates_token_count", 0)
@@ -670,10 +670,10 @@ def _calculate_gemini_cost(usage_metadata: dict) -> float:
     # Subtract cached tokens from prompt tokens
     non_cached_prompt = max(0, prompt_tokens - cached_tokens)
 
-    # Calculate costs
-    prompt_cost = (non_cached_prompt / 1000) * 0.000075
-    cached_cost = (cached_tokens / 1000) * 0.00001875
-    completion_cost = (completion_tokens / 1000) * 0.0003
+    # Calculate costs (convert to per 1K tokens)
+    prompt_cost = (non_cached_prompt / 1000) * 0.0005  # $0.50/1M = $0.0005/1K
+    cached_cost = (cached_tokens / 1000) * 0.000125  # $0.125/1M = $0.000125/1K
+    completion_cost = (completion_tokens / 1000) * 0.003  # $3/1M = $0.003/1K
 
     return prompt_cost + cached_cost + completion_cost
 
@@ -1105,7 +1105,7 @@ async def analyze_transcript(
             # Calculate latency
             latency_ms = int((time.time() - start_time) * 1000)
             provider_metadata = ProviderMetadata(
-                provider="gemini", latency_ms=latency_ms, model="gemini-2.5-flash"
+                provider="gemini", latency_ms=latency_ms, model="gemini-3-flash-preview"
             )
 
         # Extract safety_level from LLM response, default to "green" if not present
@@ -1451,8 +1451,8 @@ async def generate_parents_report(
             "rag_search_time_ms": rag_search_time_ms if rag_start_time else None,
             # Model information
             "provider": "gemini",
-            "model_name": "gemini-2.5-flash",
-            "model_version": "2.5",
+            "model_name": "gemini-3-flash-preview",
+            "model_version": "3.0",
             # Timing breakdown
             "duration_ms": duration_ms,
             "api_response_time_ms": duration_ms,

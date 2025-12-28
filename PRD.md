@@ -16,7 +16,7 @@
 ### 技術棧
 - **後端**: Python 3.11 + FastAPI + SQLAlchemy 2.0
 - **資料庫**: PostgreSQL 15 + pgvector (Supabase 託管)
-- **AI**: OpenAI GPT-4 + text-embedding-3-small
+- **AI**: Gemini 3 Flash + OpenAI text-embedding-3-small
 - **部署**: Docker + Google Cloud Run
 - **測試**: pytest + Ruff + Mypy
 
@@ -192,10 +192,10 @@
   - 中文繁體支援（language_code: `zh`）
   - < 100ms 低延遲
   - 手動說話者切換（諮詢師/案主）
-- ✅ **AI 即時分析 - 多模型支援** (2025-12-11)
-  - **Gemini 2.5 Flash** (預設) - Explicit Caching 優化，< 3s 延遲
+- ✅ **AI 即時分析 - 多模型支援** (2025-12-28 升級)
+  - **Gemini 3 Flash** (預設) - Explicit Caching 優化，< 3s 延遲
   - **Codeer 親子專家** - 專業親子教養 agent，支援 3 種模型（已驗證可用）：
-    - 🔮 **Gemini 2.5 Flash** (推薦) - 10.6s 延遲，最佳品質/速度平衡
+    - 🔮 **Gemini 3 Flash** (推薦) - Pro-level intelligence at Flash speed
     - 🤖 **Claude Sonnet 4.5** - 10.3s 延遲，最高品質
     - ⚡ **GPT-5 Mini** - 22.6s 延遲，穩定可靠
   - 每 60 秒自動分析對話內容
@@ -216,7 +216,7 @@
 |--------|----------|------|
 | POST | `/api/v1/realtime/analyze` | AI 分析逐字稿（每 60 秒） |
 
-**技術選型**: ElevenLabs STT ($0.46/h) + Gemini Flash + Vanilla JS | 7種理論標籤（依附、正向教養、發展心理、家庭系統、認知行為、情緒教練、綜合）
+**技術選型**: ElevenLabs STT ($0.46/h) + Gemini 3 Flash + Vanilla JS | 7種理論標籤（依附、正向教養、發展心理、家庭系統、認知行為、情緒教練、綜合）
 
 #### 🔴🟡🟢 Annotated Safety Window Mechanism (2025-12-26)
 **功能定位**: 智能安全等級評估 - 平衡上下文感知與快速放鬆
@@ -302,11 +302,11 @@ ANNOTATED_SAFETY_WINDOW_TURNS = 5  # AI 評估用（標註最近 5 句話）
 
 | Model | Latency | Best For | Recommended |
 |-------|---------|----------|-------------|
-| Gemini 2.5 Flash | ~10.6s | Speed + Quality | ⭐ Default |
+| Gemini 3 Flash | ~10.6s | Speed + Quality | ⭐ Default |
 | Claude Sonnet 4.5 | ~10.3s | Complex reasoning | ✅ Production |
 | GPT-5 Mini | ~22.6s | Specialized knowledge | ✅ Production |
 
-**Recommendation**: Use Gemini 2.5 Flash as default for best balance of speed and quality.
+**Recommendation**: Use Gemini 3 Flash as default for best balance of speed and quality (Dec 2025 upgrade: Pro-level intelligence at Flash pricing).
 
 #### 🔬 Gemini Caching 技術細節與最佳實踐 (2025-12-10 實驗結論)
 
@@ -992,8 +992,8 @@ class RedeemCode(Base, BaseModel):
 
 #### AI API 成本（每小時會談）
 - ElevenLabs STT: $0.46/h
-- Gemini 2.5 Flash (即時分析): ~$0.02/h
-- **總成本**: ~$0.50/h
+- Gemini 3 Flash (即時分析): ~$0.10/h (upgraded pricing Dec 2025)
+- **總成本**: ~$0.56/h
 
 #### 定價策略
 - **60 小時方案**: $1,800 NTD（~$60 USD）

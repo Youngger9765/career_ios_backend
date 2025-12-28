@@ -14,11 +14,11 @@ try:
 
     PROJECT_ID = getattr(settings, "GEMINI_PROJECT_ID", "groovy-iris-473015-h3")
     LOCATION = getattr(settings, "GEMINI_LOCATION", "us-central1")
-    CHAT_MODEL = getattr(settings, "GEMINI_CHAT_MODEL", "gemini-2.5-flash")
+    CHAT_MODEL = getattr(settings, "GEMINI_CHAT_MODEL", "gemini-3-flash-preview")
 except ImportError:
     PROJECT_ID = os.getenv("GEMINI_PROJECT_ID", "groovy-iris-473015-h3")
     LOCATION = os.getenv("GEMINI_LOCATION", "us-central1")
-    CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-2.5-flash")
+    CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-3-flash-preview")
 
 
 class GeminiService:

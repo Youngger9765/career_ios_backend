@@ -26,7 +26,9 @@ class CacheManager:
             settings, "GEMINI_PROJECT_ID", "groovy-iris-473015-h3"
         )
         self.location = getattr(settings, "GEMINI_LOCATION", "us-central1")
-        self.model_name = getattr(settings, "GEMINI_CHAT_MODEL", "gemini-2.5-flash")
+        self.model_name = getattr(
+            settings, "GEMINI_CHAT_MODEL", "gemini-3-flash-preview"
+        )
         self._initialized = False
 
     def _ensure_initialized(self):

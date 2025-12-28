@@ -124,8 +124,8 @@ def save_analysis_log_and_gbq(
             "rag_search_time_ms": metadata.get("rag_search_time_ms"),
             # Model information
             "provider": metadata.get("provider", "gemini"),
-            "model_name": metadata.get("model_name", "gemini-1.5-flash"),
-            "model_version": metadata.get("model_version", "1.5"),
+            "model_name": metadata.get("model_name", "gemini-3-flash-preview"),
+            "model_version": metadata.get("model_version", "3.0"),
             # Timing breakdown
             "duration_ms": metadata.get("duration_ms"),
             "api_response_time_ms": metadata.get("api_response_time_ms"),

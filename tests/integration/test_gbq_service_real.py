@@ -87,7 +87,7 @@ def sample_analysis_data(test_record_id):
         },
         "transcript_length": 50,
         "duration_seconds": 120,
-        "model_name": "gemini-1.5-flash",
+        "model_name": "gemini-3-flash-preview",
         "prompt_tokens": 100,
         "completion_tokens": 50,
         "total_tokens": 150,
