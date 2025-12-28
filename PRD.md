@@ -991,15 +991,52 @@ class RedeemCode(Base, BaseModel):
 ### 成本與收益估算
 
 #### AI API 成本（每小時會談）
-- ElevenLabs STT: $0.46/h
-- Gemini 3 Flash (即時分析): ~$0.10/h (upgraded pricing Dec 2025)
-- **總成本**: ~$0.56/h
+
+**方案比較（2025-12 最新定價）：**
+
+| 方案 | STT | LLM | 總計 (USD) | 總計 (TWD) | 特色 |
+|------|-----|-----|-----------|-----------|------|
+| 🔹 **方案 A**<br>Gemini 2.5 Flash | $0.40<br>(NT$13) | $0.26<br>(NT$8) | **$0.66** | **NT$21** | 最便宜<br>適合簡單摘要 |
+| 🔸 **方案 B** ✅<br>Gemini 3 Flash | $0.40<br>(NT$13) | $0.40<br>(NT$13) | **$0.80** | **NT$26** | **CP 值最高**<br>能讀懂潛台詞<br>**目前採用** |
+| 💎 **方案 C**<br>Gemini 3 Pro | $0.40<br>(NT$13) | $1.57<br>(NT$50) | **$1.97** | **NT$63** | 邏輯最強<br>深度心理分析 |
+
+**技術細節：**
+- **STT**: ElevenLabs Scribe v2 Realtime ($0.40/hour)
+  - 90+ 語言支援（含中文）
+  - 150ms 超低延遲
+  - 業界最準確語音辨識
+- **LLM**: Gemini 3 Flash + RAG ($0.40/hour)
+  - 每分鐘累積分析（60 次/小時）
+  - 包含完整對話脈絡（平均 5,000 tokens/次）
+  - RAG 檢索專業知識（3-5 篇文檔）
+  - Prompt: 系統指令 + 背景 + 逐字稿 + JSON 格式定義
+
+**成本拆解（方案 B - 當前使用）：**
+```
+聽 (STT):  $0.40 (50%) ████████████████████
+想 (LLM):  $0.40 (50%) ████████████████████
+─────────────────────────────────────────────
+總計:      $0.80 = NT$26/小時
+```
+
+**年度成本估算（假設每天 8 小時諮商）：**
+- 每天：NT$208
+- 每月 (20 天)：NT$4,160
+- 每年 (240 天)：NT$49,920
+
+**官方定價來源（2025-12-29 驗證）：**
+- [ElevenLabs Scribe Pricing](https://elevenlabs.io/speech-to-text)
+- [Gemini 3 Flash Pricing](https://ai.google.dev/gemini-api/docs/pricing)
+- [Vertex AI Pricing](https://cloud.google.com/vertex-ai/generative-ai/pricing)
 
 #### 定價策略
 - **60 小時方案**: $1,800 NTD（~$60 USD）
-- **毛利**: ~40%（扣除 AI 成本 $30）
+- **AI 成本**: ~$48 USD (60 小時 × $0.80)
+- **毛利**: ~20%（扣除 AI 成本）
 - **目標用戶**: 50 位家長（首批）
 - **預期月營收**: ~$90,000 NTD
+
+**備註**：方案 B (Gemini 3 Flash) 只比方案 A (2.5 Flash) 貴 NT$5/小時 (+24%)，但提供 Pro 級智慧，CP 值最高。
 
 ---
 
@@ -1030,8 +1067,16 @@ class RedeemCode(Base, BaseModel):
 4. **API 架構**: 分離 RESTful (`/api/v1/*`) 和 UI (`/api/v1/ui/*`)
 
 ### Realtime STT 技術選型（2025-12-06）
-**決策**: ElevenLabs Scribe v2（$0.46/h）vs AssemblyAI（不支援中文）vs Google Chirp 3（貴5倍）
+**決策**: ElevenLabs Scribe v2（$0.40/h）vs AssemblyAI（不支援中文）vs Google Chirp 3（貴5倍）
 **教訓**: 第三方 API 必須先讀官方文檔（語言代碼：`cmn`→`zho`→`zh`）
+
+### AI Model 升級決策（2025-12-29）
+**決策**: Gemini 2.5 Flash → **Gemini 3 Flash**
+- **成本**: +$0.14/hour (+21%)，從 $0.66 → $0.80
+- **效益**: Pro 級智慧，frontier model，更好的分析品質
+- **定價**: Input $0.50/1M, Output $3.00/1M (vs 2.5 Flash: $0.30/$2.50)
+- **測試**: 22/22 tests 通過，無 breaking changes
+- **部署**: 已推送到 staging (commit 7135983)
 
 ### RAG 理論標籤系統（2025-12-09）
 **決策**: 7種教養理論標籤 + Color-coded badges | **價值**: AI建議可追溯理論框架
