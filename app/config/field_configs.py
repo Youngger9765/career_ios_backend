@@ -367,11 +367,11 @@ ISLAND_PARENTS_CLIENT_SECTIONS = [
         fields=[
             FieldSchema(
                 key="name",
-                label="孩子姓名",
+                label="孩子暱稱",
                 type=FieldType.TEXT,
                 required=True,
-                placeholder="請輸入孩子姓名",
-                help_text="孩子的真實姓名或代號",
+                placeholder="請輸入孩子暱稱",
+                help_text="孩子的暱稱或代號",
                 order=1,
             ),
             FieldSchema(
@@ -397,13 +397,22 @@ ISLAND_PARENTS_CLIENT_SECTIONS = [
                 order=2,
             ),
             FieldSchema(
+                key="relationship",
+                label="你是孩子的",
+                type=FieldType.SINGLE_SELECT,
+                required=True,
+                options=["爸爸", "媽媽", "爺爺", "奶奶", "外公", "外婆", "其他"],
+                help_text="請選擇您與孩子的關係",
+                order=3,
+            ),
+            FieldSchema(
                 key="birth_date",
                 label="出生日期",
                 type=FieldType.DATE,
                 required=False,
                 help_text="孩子的出生日期",
                 validation_rules={"min_year": 2000, "max_year": 2025},
-                order=3,
+                order=4,
             ),
             FieldSchema(
                 key="gender",
@@ -411,7 +420,7 @@ ISLAND_PARENTS_CLIENT_SECTIONS = [
                 type=FieldType.SINGLE_SELECT,
                 required=False,
                 options=["男", "女", "其他", "不願透露"],
-                order=4,
+                order=5,
             ),
             FieldSchema(
                 key="notes",
@@ -421,7 +430,7 @@ ISLAND_PARENTS_CLIENT_SECTIONS = [
                 placeholder="其他需要記錄的資訊",
                 help_text="家長備註或特殊需求",
                 validation_rules={"max_length": 1000},
-                order=5,
+                order=6,
             ),
         ],
     ),

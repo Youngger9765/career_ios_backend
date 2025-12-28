@@ -12,13 +12,14 @@
 
 ## 📋 目錄
 
-1. [認證 APIs](#認證-apis) (0-3)
-2. [個案管理 APIs](#個案管理-apis) (4-9)
-3. [會談記錄管理 APIs](#會談記錄管理-apis) (10-17)
-4. [諮詢師反思 APIs](#諮詢師反思-apis) (18-19)
-5. [報告 APIs](#報告-apis) (20-24)
-6. [完整使用流程](#完整使用流程)
-7. [錯誤處理](#錯誤處理)
+1. [island_parents (親子版) 完整操作指南](#island_parents-親子版-完整操作指南-new) ⭐️ NEW
+2. [認證 APIs](#認證-apis) (0-3)
+3. [個案管理 APIs](#個案管理-apis) (4-9)
+4. [會談記錄管理 APIs](#會談記錄管理-apis) (10-17)
+5. [諮詢師反思 APIs](#諮詢師反思-apis) (18-19)
+6. [報告 APIs](#報告-apis) (20-24)
+7. [完整使用流程](#完整使用流程)
+8. [錯誤處理](#錯誤處理)
 
 ---
 
@@ -480,6 +481,643 @@ func deleteClientCase(token: String, caseId: UUID) async throws -> DeleteRespons
     return try JSONDecoder().decode(DeleteResponse.self, from: data)
 }
 ```
+
+---
+
+## 🎯 island_parents (親子版) 完整操作指南 ⭐️ NEW
+
+**目標用戶**: 家長練習與孩子溝通
+**核心功能**: 即時對話分析 + 🟢🟡🔴 三級安全評估 + 親子教養建議
+
+### 與 career 租戶的差異
+
+| 功能 | career (職涯諮詢) | island_parents (親子版) |
+|------|------------------|------------------------|
+| **Client 表單** | 複雜（10+ 欄位） | 簡化（3個必填：孩子暱稱、年級、關係） |
+| **Case 表單** | 標準配置 | 與 island 一致 |
+| **即時分析** | 關鍵字 + 類別 | 🟢🟡🔴 安全等級 + 教養建議 |
+| **分析間隔** | 固定 | 動態（5-30秒，依安全等級調整） |
+| **RAG 知識庫** | 職涯輔導 | 親子教養（依附理論、情緒調節等） |
+
+---
+
+### 完整操作流程
+
+#### 1️⃣ 註冊/登入
+
+**註冊:**
+```http
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "email": "parent@example.com",
+  "username": "parent_user",
+  "password": "password123",
+  "full_name": "家長姓名",
+  "tenant_id": "island_parents",
+  "role": "counselor"
+}
+```
+
+**⚠️ 關鍵**: `tenant_id` 必須是 `"island_parents"`
+
+**登入:**
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "tenant_id": "island_parents",
+  "email": "parent@example.com",
+  "password": "password123"
+}
+```
+
+**回應:**
+```json
+{
+  "access_token": "eyJhbGc...",
+  "token_type": "bearer",
+  "expires_in": 7776000
+}
+```
+
+---
+
+#### 2️⃣ 取得表單配置
+
+**endpoint:**
+```http
+GET /api/v1/ui/field-schemas/client-case
+Authorization: Bearer {token}
+```
+
+**island_parents Client 表單（簡化版）:**
+```json
+{
+  "client": {
+    "form_type": "client",
+    "tenant_id": "island_parents",
+    "sections": [
+      {
+        "title": "孩子基本資料",
+        "fields": [
+          {
+            "key": "name",
+            "label": "孩子暱稱",
+            "type": "text",
+            "required": true,
+            "placeholder": "請輸入孩子暱稱",
+            "order": 1
+          },
+          {
+            "key": "grade",
+            "label": "年級",
+            "type": "single_select",
+            "required": true,
+            "options": ["1 (小一)", "2 (小二)", "3 (小三)", "4 (小四)", "5 (小五)", "6 (小六)",
+                       "7 (國一)", "8 (國二)", "9 (國三)", "10 (高一)", "11 (高二)", "12 (高三)"],
+            "order": 2
+          },
+          {
+            "key": "relationship",
+            "label": "你是孩子的",
+            "type": "single_select",
+            "required": true,
+            "options": ["爸爸", "媽媽", "爺爺", "奶奶", "外公", "外婆", "其他"],
+            "order": 3
+          },
+          {
+            "key": "birth_date",
+            "label": "出生日期",
+            "type": "date",
+            "required": false,
+            "order": 4
+          },
+          {
+            "key": "gender",
+            "label": "性別",
+            "type": "single_select",
+            "required": false,
+            "options": ["男", "女", "其他", "不願透露"],
+            "order": 5
+          },
+          {
+            "key": "notes",
+            "label": "備註",
+            "type": "textarea",
+            "required": false,
+            "order": 6
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Swift 範例:**
+```swift
+struct IslandParentsClient: Codable {
+    let name: String              // 孩子暱稱（必填）
+    let grade: String             // 年級 1-12（必填）
+    let relationship: String      // 你是孩子的（必填）
+    let birth_date: String?       // 出生日期（選填）
+    let gender: String?           // 性別（選填）
+    let notes: String?            // 備註（選填）
+}
+```
+
+---
+
+#### 3️⃣ 建立 Client (孩子資料)
+
+**endpoint:**
+```http
+POST /api/v1/clients
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "name": "小寶",
+  "other_info": {
+    "grade": "3 (小三)",
+    "relationship": "媽媽"
+  },
+  "email": "dummy@island-parents.com",
+  "gender": "男",
+  "birth_date": "2015-05-20",
+  "phone": "0912345678",
+  "identity_option": "學生",
+  "current_status": "親子溝通練習"
+}
+```
+
+**⚠️ 重要說明:**
+- `name`: 孩子暱稱（例如：小寶、阿明）
+- `grade` 和 `relationship`: 存放在 `other_info` JSON 欄位
+- `email`, `phone`: 雖然必填，但親子版可使用假值
+- `identity_option`, `current_status`: 必填，建議固定值
+
+**回應:**
+```json
+{
+  "id": "uuid",
+  "name": "小寶",
+  "code": "PAR0001",
+  "other_info": {
+    "grade": "3 (小三)",
+    "relationship": "媽媽"
+  },
+  "tenant_id": "island_parents",
+  "created_at": "2025-12-29T10:00:00Z"
+}
+```
+
+---
+
+#### 4️⃣ 建立 Case (預設案例)
+
+**endpoint:**
+```http
+POST /api/v1/cases
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "client_id": "uuid",
+  "case_number": "CASE0001",
+  "status": 1,
+  "problem_description": "親子溝通練習"
+}
+```
+
+**回應:**
+```json
+{
+  "id": "uuid",
+  "client_id": "uuid",
+  "case_number": "CASE0001",
+  "status": 1,
+  "created_at": "2025-12-29T10:05:00Z"
+}
+```
+
+---
+
+#### 5️⃣ 建立 Session (練習會談)
+
+**endpoint:**
+```http
+POST /api/v1/sessions
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "client_id": "uuid",
+  "session_date": "2025-12-29",
+  "name": "親子對話練習 #1",
+  "start_time": "2025-12-29 14:00",
+  "notes": "練習開放式提問與傾聽"
+}
+```
+
+**回應:**
+```json
+{
+  "id": "session-uuid",
+  "client_id": "uuid",
+  "session_number": 1,
+  "name": "親子對話練習 #1",
+  "session_date": "2025-12-29T00:00:00Z",
+  "start_time": "2025-12-29T14:00:00Z",
+  "created_at": "2025-12-29T14:00:00Z"
+}
+```
+
+---
+
+#### 6️⃣ 錄音循環（即時分析）
+
+**島嶼家長版的核心流程:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  家長與孩子對話（語音錄製）                                    │
+│  ↓                                                           │
+│  每 15-30 秒（根據 suggested_interval_seconds 調整）         │
+│  ↓                                                           │
+│  1. 語音轉文字（WebSocket STT）                              │
+│  2. 追加逐字稿片段（append API）                             │
+│  3. 即時分析（analyze-partial API）                          │
+│     ↓                                                        │
+│     AI 回傳：🟢 GREEN / 🟡 YELLOW / 🔴 RED                  │
+│     + 教養建議 + 建議下次分析間隔                            │
+│  ↓                                                           │
+│  iOS 顯示即時回饋 & 調整下次分析間隔                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**6.1 語音轉文字（取得 WebSocket Token）**
+
+```http
+POST /api/v1/realtime/elevenlabs-token
+Authorization: Bearer {token}
+```
+
+**回應:**
+```json
+{
+  "token": "elevenlabs-websocket-token",
+  "websocket_url": "wss://api.elevenlabs.io/v1/speech-to-text/realtime",
+  "language": "zh"
+}
+```
+
+**iOS 使用 ElevenLabs SDK 連接 WebSocket 進行即時錄音轉文字。**
+
+---
+
+**6.2 追加逐字稿片段**
+
+```http
+POST /api/v1/sessions/{session_id}/recordings/append
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "start_time": "2025-12-29 14:00",
+  "end_time": "2025-12-29 14:00:20",
+  "duration_seconds": 20,
+  "transcript_text": "家長：你今天在學校過得怎麼樣？\n孩子：還好啊。"
+}
+```
+
+**回應:**
+```json
+{
+  "session_id": "uuid",
+  "recording_added": {
+    "segment_number": 1,
+    "transcript_text": "..."
+  },
+  "total_recordings": 1,
+  "transcript_text": "完整逐字稿（累積）",
+  "updated_at": "2025-12-29T14:00:20Z"
+}
+```
+
+---
+
+**6.3 即時片段分析（🟢🟡🔴 安全評估）**
+
+```http
+POST /api/v1/sessions/{session_id}/analyze-partial
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "transcript_segment": "家長：你今天在學校過得怎麼樣？\n孩子：還好啊。"
+}
+```
+
+**回應（island_parents 特有格式）:**
+```json
+{
+  "safety_level": "green",
+  "severity": 1,
+  "display_text": "溝通順暢，家長使用開放式提問，孩子願意回應。",
+  "action_suggestion": "繼續保持開放式提問和傾聽，可進一步探問「還好」背後的感受。",
+  "suggested_interval_seconds": 20,
+  "rag_documents": [
+    {
+      "title": "開放式提問技巧",
+      "excerpt": "開放式問題能鼓勵孩子分享更多..."
+    }
+  ],
+  "keywords": ["開放式提問", "傾聽", "情緒穩定"],
+  "categories": ["良好溝通", "親子互動"]
+}
+```
+
+**🟢🟡🔴 安全等級說明:**
+
+| 等級 | severity | 說明 | 建議間隔 | iOS 顯示 |
+|------|----------|------|---------|---------|
+| 🟢 **GREEN** | 1-2 | 正向互動，家長有同理心，語氣溫和尊重 | 20-30 秒 | 綠色背景 |
+| 🟡 **YELLOW** | 3-4 | 有挫折感但仍可控，語氣開始緊繃或帶防衛 | 10-15 秒 | 黃色背景 + 提醒 |
+| 🔴 **RED** | 5 | 威脅、暴力語言、極端情緒、可能造成傷害 | 5-10 秒 | 紅色背景 + 警示 |
+
+**Swift 範例:**
+```swift
+struct AnalysisResponse: Codable {
+    let safety_level: String           // "green", "yellow", "red"
+    let severity: Int                  // 1-5
+    let display_text: String           // 給家長的即時回饋
+    let action_suggestion: String      // 建議採取的行動
+    let suggested_interval_seconds: Int // 建議下次分析間隔（5-30秒）
+    let rag_documents: [RAGDocument]?  // 相關教養知識
+    let keywords: [String]?
+    let categories: [String]?
+}
+
+struct RAGDocument: Codable {
+    let title: String
+    let excerpt: String
+}
+
+// 根據 safety_level 調整 UI
+func updateUI(analysis: AnalysisResponse) {
+    switch analysis.safety_level {
+    case "green":
+        backgroundColor = .systemGreen
+        showAlert = false
+    case "yellow":
+        backgroundColor = .systemYellow
+        showAlert = true
+        alertLevel = .warning
+    case "red":
+        backgroundColor = .systemRed
+        showAlert = true
+        alertLevel = .critical
+    default:
+        break
+    }
+
+    feedbackLabel.text = analysis.display_text
+    suggestionLabel.text = analysis.action_suggestion
+
+    // 調整下次分析間隔
+    nextAnalysisInterval = analysis.suggested_interval_seconds
+}
+```
+
+---
+
+#### 7️⃣ 查看分析歷程
+
+**endpoint:**
+```http
+GET /api/v1/sessions/{session_id}/analysis-logs
+Authorization: Bearer {token}
+```
+
+**回應:**
+```json
+{
+  "session_id": "uuid",
+  "total_logs": 10,
+  "logs": [
+    {
+      "log_index": 0,
+      "analyzed_at": "2025-12-29T14:00:20Z",
+      "transcript": "家長：你今天在學校過得怎麼樣？\n孩子：還好啊。",
+      "analysis_result": {
+        "safety_level": "green",
+        "display_text": "溝通順暢...",
+        "action_suggestion": "繼續保持...",
+        "suggested_interval_seconds": 20
+      },
+      "safety_level": "green",
+      "rag_documents": [...]
+    },
+    {
+      "log_index": 1,
+      "analyzed_at": "2025-12-29T14:00:40Z",
+      "transcript": "家長：還好是什麼意思？\n孩子：就... 沒什麼特別的。",
+      "analysis_result": {
+        "safety_level": "yellow",
+        "display_text": "孩子開始有些防衛...",
+        "suggested_interval_seconds": 15
+      },
+      "safety_level": "yellow"
+    }
+  ]
+}
+```
+
+---
+
+#### 8️⃣ 查看會談時間線
+
+**endpoint:**
+```http
+GET /api/v1/sessions/timeline?client_id={client_id}
+Authorization: Bearer {token}
+```
+
+**回應:**
+```json
+{
+  "client_id": "uuid",
+  "client_name": "小寶",
+  "client_code": "PAR0001",
+  "total_sessions": 5,
+  "sessions": [
+    {
+      "session_id": "uuid-1",
+      "session_number": 1,
+      "date": "2025-12-29",
+      "time_range": "14:00-14:30",
+      "summary": "親子對話練習 #1，家長練習開放式提問",
+      "has_report": false,
+      "report_id": null
+    },
+    {
+      "session_id": "uuid-2",
+      "session_number": 2,
+      "date": "2025-12-30",
+      "time_range": "15:00-15:30",
+      "summary": "親子對話練習 #2，孩子分享學校生活",
+      "has_report": false,
+      "report_id": null
+    }
+  ]
+}
+```
+
+---
+
+#### 9️⃣ 查看用量與計費
+
+**endpoint:**
+```http
+GET /api/v1/sessions/{session_id}/usage
+Authorization: Bearer {token}
+```
+
+**回應:**
+```json
+{
+  "session_id": "uuid",
+  "tenant_id": "island_parents",
+  "analysis_count": 8,
+  "credits_deducted": 4.0,
+  "credit_deducted": 0.5,
+  "last_analyzed_at": "2025-12-29T14:30:00Z"
+}
+```
+
+**計費說明:**
+- 每次 `analyze-partial` 調用會扣除 credits
+- 背景任務自動記錄到 `SessionUsage` 和 `CreditLog`
+- 支援 BigQuery 持久化記錄
+
+---
+
+### iOS 實作建議
+
+#### 錄音分析循環邏輯
+
+```swift
+class IslandParentsSession {
+    var nextAnalysisInterval: TimeInterval = 20  // 初始 20 秒
+    var isRecording = false
+    var currentTranscript = ""
+
+    func startRecording() {
+        isRecording = true
+        scheduleNextAnalysis()
+    }
+
+    func scheduleNextAnalysis() {
+        Timer.scheduledTimer(withTimeInterval: nextAnalysisInterval, repeats: false) { [weak self] _ in
+            guard let self = self, self.isRecording else { return }
+
+            Task {
+                await self.performAnalysis()
+            }
+        }
+    }
+
+    func performAnalysis() async {
+        // 1. 取得最近的逐字稿片段（例如最近 60 秒）
+        let segment = getRecentTranscript(seconds: 60)
+
+        // 2. 調用分析 API
+        let analysis = try await analyzePartial(sessionId: sessionId, segment: segment)
+
+        // 3. 更新 UI
+        updateUI(analysis: analysis)
+
+        // 4. 根據 suggested_interval_seconds 調整下次分析間隔
+        nextAnalysisInterval = TimeInterval(analysis.suggested_interval_seconds)
+
+        // 5. 排程下次分析
+        scheduleNextAnalysis()
+    }
+
+    func updateUI(analysis: AnalysisResponse) {
+        DispatchQueue.main.async {
+            // 根據 safety_level 更新 UI
+            switch analysis.safety_level {
+            case "green":
+                self.statusView.backgroundColor = .systemGreen
+                self.showAlert = false
+            case "yellow":
+                self.statusView.backgroundColor = .systemYellow
+                self.showWarning(analysis.action_suggestion)
+            case "red":
+                self.statusView.backgroundColor = .systemRed
+                self.showCriticalAlert(analysis.action_suggestion)
+            default:
+                break
+            }
+
+            self.feedbackLabel.text = analysis.display_text
+            self.suggestionLabel.text = analysis.action_suggestion
+        }
+    }
+}
+```
+
+---
+
+### 完整測試範例
+
+**測試檔案**: `tests/integration/test_island_parents_complete_workflow.py`
+
+已包含完整的 30 分鐘親子對話模擬測試：
+- ✅ 8 個場景（GREEN → YELLOW → RED → GREEN 轉換）
+- ✅ 驗證安全等級判斷邏輯
+- ✅ 驗證分析歷程記錄
+- ✅ 驗證計費與用量追蹤
+- ✅ 效能基準（< 30 秒完成 30 分鐘模擬）
+
+---
+
+### 常見問題 FAQ
+
+**Q1: 為什麼 Client 必填欄位這麼多（email, phone），但親子版不需要？**
+A: 資料庫 schema 是通用的，但親子版可以使用假值（例如 dummy@island-parents.com）。UI 只顯示 3 個必填欄位（name, grade, relationship）。
+
+**Q2: grade 和 relationship 欄位存在哪裡？**
+A: 存放在 `other_info` JSON 欄位中。動態表單 schema 會告訴 iOS 這些欄位的配置。
+
+**Q3: 安全等級的判斷標準是什麼？**
+A: AI（Gemini 2.5 Flash）基於親子教養知識庫（RAG）和對話內容，評估：
+- 🟢 GREEN: 同理、尊重、開放式溝通
+- 🟡 YELLOW: 開始有挫折、緊繃、防衛
+- 🔴 RED: 威脅、暴力語言、極端情緒
+
+**Q4: 建議的分析間隔為什麼會變化？**
+A: 為了節省成本和提供更好的體驗：
+- 🟢 GREEN: 20-30 秒（互動良好，無需頻繁監控）
+- 🟡 YELLOW: 10-15 秒（需要適度關注）
+- 🔴 RED: 5-10 秒（需要密集監控和即時介入）
+
+**Q5: 報告功能可用嗎？**
+A: island_parents 目前主要使用即時分析，報告生成功能暫未啟用。如需啟用，可使用 `POST /api/v1/reports/generate`。
+
+---
+
+### 相關資源
+
+- **Swagger 文件**: `https://your-api/docs`
+- **完整測試範例**: `tests/integration/test_island_parents_complete_workflow.py`
+- **Field Configs**: `app/config/field_configs.py` (line 358-532)
+- **分析服務**: `app/services/keyword_analysis_service.py`
 
 ---
 
