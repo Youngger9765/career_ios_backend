@@ -19,7 +19,9 @@ class Counselor(Base, BaseModel):
 
     # Authentication fields
     email = Column(String, index=True, nullable=False)  # Removed unique=True
-    username = Column(String, unique=True, index=True, nullable=False)
+    username = Column(
+        String, index=True, nullable=False
+    )  # Removed unique=True (allow duplicates)
     full_name = Column(String, nullable=False)
     hashed_password = Column(String, nullable=False)
 
