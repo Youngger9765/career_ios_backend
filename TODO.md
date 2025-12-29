@@ -1,6 +1,6 @@
 # TODO - 開發任務清單
 
-**最後更新**: 2025-12-29 (標記已完成項目：Multi-Tenant 架構、Admin Portal、Session 擴充、Email 系統；移除 SMS 登入認證)
+**最後更新**: 2025-12-29 (標記已完成項目：Multi-Tenant 架構、Admin Portal、Session 擴充、Email 系統；移除 SMS 登入認證、Session 新欄位需求)
 
 ---
 
@@ -140,13 +140,13 @@
 - 📝 Commits: 40bf98e, c620474, f0352df
 - 📋 完整多租戶隔離機制，支援 career, island, island_parents
 
-#### 3.0.2 Session 資料結構擴充 🟡 部分完成 (2025-12-15)
+#### 3.0.2 Session 資料結構擴充 ✅ 已完成 (2025-12-15)
 詳見 [Session 設計文檔](docs/SESSION_USAGE_CREDIT_DESIGN.md) 了解 DB Log 持久化和點數扣除邏輯
 
 - [x] ✅ SessionAnalysisLog table（獨立存儲分析記錄）- 2025-12-15
 - [x] ✅ SessionUsage table（使用量追蹤 + 點數扣除）- 2025-12-15
-- [ ] Session 新增欄位：scenario_topic, mode, partial_segments（待實作）
 - 📝 Commits: 1eed1d1 (SessionAnalysisLog), f071e4b (SessionUsage + Universal Credit System)
+- 📋 Note: mode/scenario_topic/partial_segments 欄位移除（現有 JSONB 欄位已足夠；mode 已在 Realtime API 實作為 request parameter）
 
 #### 3.0.3 Client 物件簡化（island_parents）
 - [x] ✅ 新增 `relationship` 欄位（爸爸/媽媽/爺爺/奶奶/外公/外婆/其他）- 2025-12-29
