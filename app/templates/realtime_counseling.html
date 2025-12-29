@@ -4895,11 +4895,9 @@
                     console.log('[LOGIN] Tenant ID:', tenantId);
 
                     if (tenantId === 'island_parents') {
-                        // Always show client selection for island_parents (may have multiple children)
-                        console.log('[ONBOARDING] Showing client selection/creation screen');
-                        document.getElementById('onboardingContainer').style.display = 'block';
-                        document.getElementById('onboardingScreen1').style.display = 'flex';
-                        document.getElementById('onboardingScreen2').style.display = 'none';
+                        // Load and show client list for island_parents
+                        console.log('[LOGIN] island_parents - loading client list');
+                        await loadAndShowClientList();
                     } else {
                         // Other tenants - show main content directly
                         console.log('[LOGIN] Other tenant, showing main content');
@@ -4939,6 +4937,107 @@
                     alertContainer.innerHTML = '';
                 }, 3000);
             }
+        }
+
+        // Load clients and show client list
+        async function loadAndShowClientList() {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                console.log('[CLIENT_LIST] Fetching clients...');
+
+                const response = await fetch('/api/v1/clients', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const clients = data.items || data || [];
+                    console.log('[CLIENT_LIST] Loaded clients:', clients.length);
+
+                    // Show onboarding container
+                    document.getElementById('onboardingContainer').style.display = 'block';
+
+                    // If no clients, show client form
+                    if (clients.length === 0) {
+                        console.log('[CLIENT_LIST] No clients, showing form');
+                        showClientForm();
+                        return;
+                    }
+
+                    // Show client list mode
+                    console.log('[CLIENT_LIST] Showing client list');
+                    document.getElementById('onboardingScreen1').style.display = 'flex';
+                    document.getElementById('clientListMode').style.display = 'flex';
+                    document.getElementById('clientFormMode').style.display = 'none';
+                    document.getElementById('onboardingScreen2').style.display = 'none';
+
+                    // Render client list
+                    renderClientList(clients);
+                } else {
+                    console.error('[CLIENT_LIST] Failed to fetch clients');
+                    // Show form as fallback
+                    showClientForm();
+                }
+            } catch (error) {
+                console.error('[CLIENT_LIST] Error:', error);
+                // Show form as fallback
+                showClientForm();
+            }
+        }
+
+        // Render client list
+        function renderClientList(clients) {
+            const container = document.getElementById('clientListContainer');
+            container.innerHTML = '';
+
+            clients.forEach(client => {
+                const clientCard = document.createElement('div');
+                clientCard.className = 'p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-black hover:bg-gray-50 transition-all';
+                clientCard.onclick = () => selectClient(client);
+
+                const grade = client.island_parents?.child_grade || '未設定年級';
+                const relation = client.island_parents?.parent_relation || '未設定關係';
+
+                clientCard.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-lg font-bold text-gray-800">${client.name}</div>
+                            <div class="text-sm text-gray-600 mt-1">${grade} · ${relation}</div>
+                        </div>
+                        <div class="text-2xl">👤</div>
+                    </div>
+                `;
+
+                container.appendChild(clientCard);
+            });
+        }
+
+        // Select a client
+        function selectClient(client) {
+            console.log('[CLIENT_SELECT] Selected client:', client.name);
+
+            // Store selected client info
+            localStorage.setItem('selectedClientId', client.id);
+            localStorage.setItem('selectedClientName', client.name);
+
+            // Hide onboarding container
+            document.getElementById('onboardingContainer').style.display = 'none';
+
+            // Show main content with practice/real choice
+            document.getElementById('mainContent').style.display = 'block';
+        }
+
+        // Show client form
+        function showClientForm() {
+            console.log('[CLIENT_FORM] Showing client creation form');
+            document.getElementById('onboardingContainer').style.display = 'block';
+            document.getElementById('onboardingScreen1').style.display = 'flex';
+            document.getElementById('clientListMode').style.display = 'none';
+            document.getElementById('clientFormMode').style.display = 'flex';
+            document.getElementById('onboardingScreen2').style.display = 'none';
         }
 
         // Check if user has client with island_parents data
@@ -5045,14 +5144,14 @@
                     // Client created successfully
                     console.log('Client created:', data);
 
-                    // Store client info
-                    localStorage.setItem('onboardingClientId', data.id);
-                    localStorage.setItem('onboardingClientName', childNickname);
+                    // Clear form
+                    document.getElementById('clientSetupForm').reset();
 
-                    // Show success screen
-                    document.getElementById('childNameDisplay').textContent = childNickname;
-                    document.getElementById('onboardingScreen1').style.display = 'none';
-                    document.getElementById('onboardingScreen2').style.display = 'flex';
+                    // Reload client list
+                    await loadAndShowClientList();
+
+                    // Show success message
+                    alert(`${childNickname} 已成功新增！`);
                 } else {
                     // Client creation failed
                     alert(data.detail || '建立失敗，請稍後再試');
