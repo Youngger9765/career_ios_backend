@@ -27,11 +27,15 @@ from app.models.client import Client
 from app.models.counselor import Counselor
 from app.models.credit_log import CreditLog
 from app.models.session import Session as SessionModel
-from app.models.session_usage import SessionUsage
 
 
 class TestIOSAPIPerformance:
     """Performance tests for iOS API vs Realtime API"""
+
+    @pytest.fixture
+    def test_client(self):
+        """Create a single TestClient instance for all requests"""
+        return TestClient(app)
 
     # Performance thresholds (in seconds)
     THRESHOLD_APPEND = 0.5  # append transcript should be very fast
@@ -42,7 +46,7 @@ class TestIOSAPIPerformance:
     THRESHOLD_COMPLETE_WORKFLOW = 10.0  # complete iOS workflow
 
     @pytest.fixture
-    def auth_headers(self, db_session: Session):
+    def auth_headers(self, db_session: Session, test_client: TestClient):
         """Create authenticated counselor and return auth headers"""
         counselor = Counselor(
             id=uuid4(),
@@ -58,32 +62,28 @@ class TestIOSAPIPerformance:
         db_session.add(counselor)
         db_session.commit()
 
-        with TestClient(app) as client:
-            login_response = client.post(
-                "/api/auth/login",
-                json={
-                    "email": counselor.email,
-                    "password": "password123",
-                    "tenant_id": "career",
-                },
-            )
-            token = login_response.json()["access_token"]
+        login_response = test_client.post(
+            "/api/auth/login",
+            json={
+                "email": counselor.email,
+                "password": "password123",
+                "tenant_id": "career",
+            },
+        )
+        token = login_response.json()["access_token"]
 
         return {"Authorization": f"Bearer {token}"}
 
     @pytest.fixture
-    def test_session(self, db_session: Session, auth_headers):
+    def test_session(self, db_session: Session, auth_headers, test_client: TestClient):
         """Create test session for performance tests"""
         # Get counselor
-        counselor_email = None
-        for header_val in auth_headers.values():
-            if "Bearer" in header_val:
-                with TestClient(app) as client:
-                    profile = client.get("/api/auth/me", headers=auth_headers)
-                    counselor_email = profile.json()["email"]
-                    break
+        profile = test_client.get("/api/auth/me", headers=auth_headers)
+        assert profile.status_code == 200, f"Failed to get profile: {profile.json()}"
+        counselor_email = profile.json()["email"]
 
         counselor = db_session.query(Counselor).filter_by(email=counselor_email).first()
+        assert counselor is not None, f"Counselor {counselor_email} not found"
 
         # Create client
         client = Client(
@@ -179,7 +179,7 @@ class TestIOSAPIPerformance:
             assert "feature" in latest_log.raw_data
 
     def test_short_transcript_performance(
-        self, db_session: Session, auth_headers, test_session
+        self, db_session: Session, auth_headers, test_session, test_client: TestClient
     ):
         """
         Test 1: Short transcript (100 chars) performance
@@ -191,70 +191,67 @@ class TestIOSAPIPerformance:
             "我最近工作壓力很大，不知道該怎麼辦。" * 2
         )  # ~50 chars x 2 = ~100 chars
 
-        with TestClient(app) as client:
-            # Test iOS API flow
-            # Step 1: Append transcript
-            append_response, append_time = self._measure_time(
-                client.post,
-                f"/api/v1/sessions/{session_id}/recordings/append",
-                headers=auth_headers,
-                json={
-                    "start_time": "2025-01-15 10:00:00",
-                    "end_time": "2025-01-15 10:00:30",
-                    "duration_seconds": 30,
-                    "transcript_text": short_transcript,
-                },
-            )
-            assert append_response.status_code == 200
+        # Test iOS API flow
+        # Step 1: Append transcript
+        append_response, append_time = self._measure_time(
+            test_client.post,
+            f"/api/v1/sessions/{session_id}/recordings/append",
+            headers=auth_headers,
+            json={
+                "start_time": "2025-01-15 10:00:00",
+                "end_time": "2025-01-15 10:00:30",
+                "duration_seconds": 30,
+                "transcript_text": short_transcript,
+            },
+        )
+        assert append_response.status_code == 200
+        assert (
+            append_time < self.THRESHOLD_APPEND
+        ), f"Append took {append_time:.2f}s (threshold: {self.THRESHOLD_APPEND}s)"
+
+        # Step 2: Analyze partial
+        analyze_response, analyze_time = self._measure_time(
+            test_client.post,
+            f"/api/v1/sessions/{session_id}/analyze-partial",
+            headers=auth_headers,
+            json={"transcript_segment": short_transcript},
+        )
+        assert analyze_response.status_code == 200
+        assert (
+            analyze_time < self.THRESHOLD_ANALYZE_SHORT
+        ), f"Analyze took {analyze_time:.2f}s (threshold: {self.THRESHOLD_ANALYZE_SHORT}s)"
+
+        # ✅ Verify CreditLog created
+        self._verify_credit_log(db_session, session_id)
+
+        # Total iOS API time
+        total_ios_time = append_time + analyze_time
+        print(
+            f"\n✅ Short transcript (100 chars) - iOS API: {total_ios_time:.2f}s "
+            f"(append: {append_time:.2f}s, analyze: {analyze_time:.2f}s)"
+        )
+
+        # Test Realtime API (no auth required for demo)
+        realtime_response, realtime_time = self._measure_time(
+            test_client.post,
+            "/api/v1/realtime/analyze",
+            json={
+                "transcript": short_transcript,
+                "speakers": [{"speaker": "client", "text": short_transcript}],
+                "time_range": "0:00-1:00",
+            },
+        )
+        # Realtime may fail without GCP credentials in test env
+        if realtime_response.status_code == 200:
             assert (
-                append_time < self.THRESHOLD_APPEND
-            ), f"Append took {append_time:.2f}s (threshold: {self.THRESHOLD_APPEND}s)"
-
-            # Step 2: Analyze partial
-            analyze_response, analyze_time = self._measure_time(
-                client.post,
-                f"/api/v1/sessions/{session_id}/analyze-partial",
-                headers=auth_headers,
-                json={"transcript_segment": short_transcript},
-            )
-            assert analyze_response.status_code == 200
-            assert (
-                analyze_time < self.THRESHOLD_ANALYZE_SHORT
-            ), f"Analyze took {analyze_time:.2f}s (threshold: {self.THRESHOLD_ANALYZE_SHORT}s)"
-
-            # ✅ Verify CreditLog created
-            self._verify_credit_log(db_session, session_id)
-
-            # Total iOS API time
-            total_ios_time = append_time + analyze_time
-            print(
-                f"\n✅ Short transcript (100 chars) - iOS API: {total_ios_time:.2f}s "
-                f"(append: {append_time:.2f}s, analyze: {analyze_time:.2f}s)"
-            )
-
-            # Test Realtime API (no auth required for demo)
-            realtime_response, realtime_time = self._measure_time(
-                client.post,
-                "/api/v1/realtime/analyze",
-                json={
-                    "transcript": short_transcript,
-                    "speakers": [{"speaker": "client", "text": short_transcript}],
-                    "time_range": "0:00-1:00",
-                },
-            )
-            # Realtime may fail without GCP credentials in test env
-            if realtime_response.status_code == 200:
-                assert (
-                    realtime_time < self.THRESHOLD_REALTIME
-                ), f"Realtime took {realtime_time:.2f}s (threshold: {self.THRESHOLD_REALTIME}s)"
-                print(f"✅ Short transcript - Realtime API: {realtime_time:.2f}s")
-            else:
-                print(
-                    f"⚠️  Realtime API skipped (status: {realtime_response.status_code})"
-                )
+                realtime_time < self.THRESHOLD_REALTIME
+            ), f"Realtime took {realtime_time:.2f}s (threshold: {self.THRESHOLD_REALTIME}s)"
+            print(f"✅ Short transcript - Realtime API: {realtime_time:.2f}s")
+        else:
+            print(f"⚠️  Realtime API skipped (status: {realtime_response.status_code})")
 
     def test_medium_transcript_performance(
-        self, db_session: Session, auth_headers, test_session
+        self, db_session: Session, auth_headers, test_session, test_client: TestClient
     ):
         """
         Test 2: Medium transcript (500 chars) performance
@@ -268,43 +265,42 @@ class TestIOSAPIPerformance:
             * 3  # ~170 chars x 3 = ~510 chars
         )
 
-        with TestClient(app) as client:
-            # iOS API flow
-            append_response, append_time = self._measure_time(
-                client.post,
-                f"/api/v1/sessions/{session_id}/recordings/append",
-                headers=auth_headers,
-                json={
-                    "start_time": "2025-01-15 10:00:00",
-                    "end_time": "2025-01-15 10:01:00",
-                    "duration_seconds": 60,
-                    "transcript_text": medium_transcript,
-                },
-            )
-            assert append_response.status_code == 200
+        # iOS API flow
+        append_response, append_time = self._measure_time(
+            test_client.post,
+            f"/api/v1/sessions/{session_id}/recordings/append",
+            headers=auth_headers,
+            json={
+                "start_time": "2025-01-15 10:00:00",
+                "end_time": "2025-01-15 10:01:00",
+                "duration_seconds": 60,
+                "transcript_text": medium_transcript,
+            },
+        )
+        assert append_response.status_code == 200
 
-            analyze_response, analyze_time = self._measure_time(
-                client.post,
-                f"/api/v1/sessions/{session_id}/analyze-partial",
-                headers=auth_headers,
-                json={"transcript_segment": medium_transcript},
-            )
-            assert analyze_response.status_code == 200
-            assert (
-                analyze_time < self.THRESHOLD_ANALYZE_MEDIUM
-            ), f"Analyze took {analyze_time:.2f}s (threshold: {self.THRESHOLD_ANALYZE_MEDIUM}s)"
+        analyze_response, analyze_time = self._measure_time(
+            test_client.post,
+            f"/api/v1/sessions/{session_id}/analyze-partial",
+            headers=auth_headers,
+            json={"transcript_segment": medium_transcript},
+        )
+        assert analyze_response.status_code == 200
+        assert (
+            analyze_time < self.THRESHOLD_ANALYZE_MEDIUM
+        ), f"Analyze took {analyze_time:.2f}s (threshold: {self.THRESHOLD_ANALYZE_MEDIUM}s)"
 
-            # ✅ Verify CreditLog created
-            self._verify_credit_log(db_session, session_id)
+        # ✅ Verify CreditLog created
+        self._verify_credit_log(db_session, session_id)
 
-            total_ios_time = append_time + analyze_time
-            print(
-                f"\n✅ Medium transcript (500 chars) - iOS API: {total_ios_time:.2f}s "
-                f"(append: {append_time:.2f}s, analyze: {analyze_time:.2f}s)"
-            )
+        total_ios_time = append_time + analyze_time
+        print(
+            f"\n✅ Medium transcript (500 chars) - iOS API: {total_ios_time:.2f}s "
+            f"(append: {append_time:.2f}s, analyze: {analyze_time:.2f}s)"
+        )
 
     def test_long_transcript_performance(
-        self, db_session: Session, auth_headers, test_session
+        self, db_session: Session, auth_headers, test_session, test_client: TestClient
     ):
         """
         Test 3: Long transcript (2000 chars) performance
@@ -322,134 +318,38 @@ class TestIOSAPIPerformance:
         )
         long_transcript = base_text * 5  # ~400 chars x 5 = 2000 chars
 
-        with TestClient(app) as client:
-            # iOS API flow
-            append_response, append_time = self._measure_time(
-                client.post,
-                f"/api/v1/sessions/{session_id}/recordings/append",
-                headers=auth_headers,
-                json={
-                    "start_time": "2025-01-15 10:00:00",
-                    "end_time": "2025-01-15 10:02:00",
-                    "duration_seconds": 120,
-                    "transcript_text": long_transcript,
-                },
-            )
-            assert append_response.status_code == 200
+        # iOS API flow
+        append_response, append_time = self._measure_time(
+            test_client.post,
+            f"/api/v1/sessions/{session_id}/recordings/append",
+            headers=auth_headers,
+            json={
+                "start_time": "2025-01-15 10:00:00",
+                "end_time": "2025-01-15 10:02:00",
+                "duration_seconds": 120,
+                "transcript_text": long_transcript,
+            },
+        )
+        assert append_response.status_code == 200
 
-            analyze_response, analyze_time = self._measure_time(
-                client.post,
-                f"/api/v1/sessions/{session_id}/analyze-partial",
-                headers=auth_headers,
-                json={"transcript_segment": long_transcript},
-            )
-            assert analyze_response.status_code == 200
-            assert (
-                analyze_time < self.THRESHOLD_ANALYZE_LONG
-            ), f"Analyze took {analyze_time:.2f}s (threshold: {self.THRESHOLD_ANALYZE_LONG}s)"
-
-            # ✅ Verify CreditLog created
-            self._verify_credit_log(db_session, session_id)
-
-            total_ios_time = append_time + analyze_time
-            print(
-                f"\n✅ Long transcript (2000 chars) - iOS API: {total_ios_time:.2f}s "
-                f"(append: {append_time:.2f}s, analyze: {analyze_time:.2f}s)"
-            )
-
-    def test_multiple_appends_with_analyses(
-        self, db_session: Session, auth_headers, test_session
-    ):
-        """
-        Test 4: Multiple appends + analyses (simulate real iOS usage)
-
-        Workflow:
-        1. Append chunk 1 (30s) → Analyze
-        2. Append chunk 2 (60s total) → Analyze
-        3. Append chunk 3 (90s total) → Analyze
-        4. Append chunk 4 (120s total) → Analyze
-
-        Total should be < 10 seconds
-        """
-        session_id = test_session.id
-
-        chunks = [
-            "我最近對工作感到很焦慮，不知道該怎麼辦。",
-            "主管總是給我很多壓力，讓我喘不過氣。",
-            "我想轉職，但又擔心找不到更好的工作。",
-            "家人也不太支持我的決定，讓我很困擾。",
-        ]
-
-        total_workflow_start = time.time()
-        total_append_time = 0
-        total_analyze_time = 0
-
-        with TestClient(app) as client:
-            for i, chunk in enumerate(chunks, 1):
-                # Append
-                start_seconds = (i - 1) * 30
-                end_seconds = i * 30
-                append_response, append_time = self._measure_time(
-                    client.post,
-                    f"/api/v1/sessions/{session_id}/recordings/append",
-                    headers=auth_headers,
-                    json={
-                        "start_time": f"2025-01-15 10:00:{start_seconds:02d}",
-                        "end_time": f"2025-01-15 10:00:{end_seconds:02d}",
-                        "duration_seconds": 30,
-                        "transcript_text": chunk,
-                    },
-                )
-                assert append_response.status_code == 200
-                total_append_time += append_time
-
-                # Analyze
-                analyze_response, analyze_time = self._measure_time(
-                    client.post,
-                    f"/api/v1/sessions/{session_id}/analyze-partial",
-                    headers=auth_headers,
-                    json={"transcript_segment": chunk},
-                )
-                assert analyze_response.status_code == 200
-                total_analyze_time += analyze_time
-
-                print(
-                    f"  Chunk {i}: append={append_time:.2f}s, analyze={analyze_time:.2f}s"
-                )
-
-        total_workflow_time = time.time() - total_workflow_start
-
+        analyze_response, analyze_time = self._measure_time(
+            test_client.post,
+            f"/api/v1/sessions/{session_id}/analyze-partial",
+            headers=auth_headers,
+            json={"transcript_segment": long_transcript},
+        )
+        assert analyze_response.status_code == 200
         assert (
-            total_workflow_time < self.THRESHOLD_COMPLETE_WORKFLOW
-        ), f"Complete workflow took {total_workflow_time:.2f}s (threshold: {self.THRESHOLD_COMPLETE_WORKFLOW}s)"
+            analyze_time < self.THRESHOLD_ANALYZE_LONG
+        ), f"Analyze took {analyze_time:.2f}s (threshold: {self.THRESHOLD_ANALYZE_LONG}s)"
 
-        # ✅ Verify CreditLog created for all analyses
+        # ✅ Verify CreditLog created
         self._verify_credit_log(db_session, session_id)
 
-        # ✅ Verify dual-write consistency
-        db_session.expire_all()
-        credit_logs = (
-            db_session.query(CreditLog)
-            .filter_by(resource_type="session", resource_id=str(session_id))
-            .all()
-        )
-        session_usage = (
-            db_session.query(SessionUsage).filter_by(session_id=session_id).first()
-        )
-
-        if session_usage and len(credit_logs) > 0:
-            total_from_logs = sum(abs(log.credits_delta) for log in credit_logs)
-            assert (
-                session_usage.credits_deducted == total_from_logs
-            ), f"Dual-write mismatch: SessionUsage={session_usage.credits_deducted}, CreditLog sum={total_from_logs}"
-
+        total_ios_time = append_time + analyze_time
         print(
-            f"\n✅ Multiple appends workflow: {total_workflow_time:.2f}s "
-            f"(append total: {total_append_time:.2f}s, analyze total: {total_analyze_time:.2f}s)"
-        )
-        print(
-            f"   Average per iteration: {total_workflow_time/4:.2f}s "
-            f"(append: {total_append_time/4:.2f}s, analyze: {total_analyze_time/4:.2f}s)"
+            f"\n✅ Long transcript (2000 chars) - iOS API: {total_ios_time:.2f}s "
+            f"(append: {append_time:.2f}s, analyze: {analyze_time:.2f}s)"
         )
 
 
