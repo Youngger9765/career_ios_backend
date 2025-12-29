@@ -501,10 +501,10 @@ class TestAdminCreateCounselor:
     def test_create_counselor_duplicate_username(
         self, client, admin_token, test_counselors
     ):
-        """Creating counselor with duplicate username fails"""
+        """Creating counselor with duplicate username succeeds (usernames can be duplicated)"""
         request_data = {
             "email": "another@test.com",
-            "username": "test_career",  # Already exists
+            "username": "test_career",  # Already exists - but allowed
             "full_name": "Another User",
             "password": "test_password_123",
             "tenant_id": "career",
@@ -517,7 +517,9 @@ class TestAdminCreateCounselor:
             json=request_data,
         )
 
-        assert response.status_code == 400
+        # Now allows duplicate usernames per user request
+        assert response.status_code in [200, 201]
+        assert response.json()["username"] == "test_career"
 
     def test_create_counselor_duplicate_email_same_tenant(
         self, client, admin_token, test_counselors
