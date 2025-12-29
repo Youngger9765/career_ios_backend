@@ -1,6 +1,6 @@
 # TODO - 開發任務清單
 
-**最後更新**: 2025-12-29
+**最後更新**: 2025-12-29 (標記已完成項目：Multi-Tenant 架構、Admin Portal、Session 擴充、Email 系統)
 
 ---
 
@@ -67,6 +67,40 @@
 
 ---
 
+## ✅ 已完成：多租戶架構 + Admin Portal + Session 擴充 (2025-12-15)
+
+### Multi-Tenant 架構擴充 (2025-12-15)
+- ✅ 所有 table 都有 tenant_id 欄位（自動注入與過濾）
+- ✅ API 自動注入 tenant_id（基於 JWT 解析）
+- ✅ Query 自動過濾 tenant（避免跨租戶資料洩漏）
+- ✅ 支援三租戶：career, island, island_parents
+- 📝 Commits: 40bf98e, c620474, f0352df
+
+### Session 資料結構擴充 (2025-12-15)
+- ✅ SessionAnalysisLog table（獨立存儲分析記錄）
+- ✅ SessionUsage table（使用量追蹤 + 點數扣除）
+- ✅ Universal Credit System（增量計費 + 天花板捨入）
+- ✅ GBQ 持久化整合（完整可觀測性）
+- 📝 Commits: 1eed1d1, f071e4b, 432eeef
+
+### Admin Portal 功能 (2025-12-15)
+- ✅ 諮詢師管理（CRUD + 跨租戶管理）
+- ✅ 點數管理（查詢、手動加點、費率設定）
+- ✅ 點數異動記錄查詢
+- ✅ Credit Admin Guide 文檔
+- 📝 Commits: b740768, 318350b, 379fabe
+- 📋 Files: admin_counselors.py, admin_credits.py
+
+### Email 發信系統 (2025-12-27)
+- ✅ Gmail SMTP 整合（環境變數配置）
+- ✅ Tenant-specific email templates
+- ✅ 密碼重設郵件自動發送
+- ✅ 新增諮詢師自動發送歡迎信
+- 📝 Commits: 3e40091, 217a5d8, 81e4e57
+- 📋 File: email_service.py
+
+---
+
 ## 任務一：Web 改版（Web Realtime Console）
 
 ### 1.1 紅綠燈卡片機制（視覺化風險等級）✅ 已完成
@@ -99,17 +133,20 @@
 
 ### 3.0 基礎架構（Infrastructure）
 
-#### 3.0.1 Multi-Tenant 架構擴充
-- [ ] 所有 table 都有 tenant_id 欄位
-- [ ] API 自動注入 tenant_id（基於 JWT）
-- [ ] Query 自動過濾 tenant（避免跨租戶資料洩漏）
+#### 3.0.1 Multi-Tenant 架構擴充 ✅ 已完成 (2025-12-15)
+- [x] ✅ 所有 table 都有 tenant_id 欄位
+- [x] ✅ API 自動注入 tenant_id（基於 JWT）
+- [x] ✅ Query 自動過濾 tenant（避免跨租戶資料洩漏）
+- 📝 Commits: 40bf98e, c620474, f0352df
+- 📋 完整多租戶隔離機制，支援 career, island, island_parents
 
-#### 3.0.2 Session 資料結構擴充
+#### 3.0.2 Session 資料結構擴充 🟡 部分完成 (2025-12-15)
 詳見 [Session 設計文檔](docs/SESSION_USAGE_CREDIT_DESIGN.md) 了解 DB Log 持久化和點數扣除邏輯
 
-- [ ] SessionAnalysisLog table（獨立存儲分析記錄）
-- [ ] SessionUsage table（使用量追蹤 + 點數扣除）
-- [ ] Session 新增欄位：scenario_topic, mode, partial_segments
+- [x] ✅ SessionAnalysisLog table（獨立存儲分析記錄）- 2025-12-15
+- [x] ✅ SessionUsage table（使用量追蹤 + 點數扣除）- 2025-12-15
+- [ ] Session 新增欄位：scenario_topic, mode, partial_segments（待實作）
+- 📝 Commits: 1eed1d1 (SessionAnalysisLog), f071e4b (SessionUsage + Universal Credit System)
 
 #### 3.0.3 Client 物件簡化（island_parents）
 - [x] ✅ 新增 `relationship` 欄位（爸爸/媽媽/爺爺/奶奶/外公/外婆/其他）- 2025-12-29
@@ -245,18 +282,34 @@
 
 ### 3.6 WEB Admin 功能
 
-#### 3.6.1 浮島用戶管理
-- [ ] GET /api/v1/admin/island/users - 列出所有浮島用戶
-- [ ] GET /api/v1/admin/island/users/{id} - 用戶詳情
-- [ ] PATCH /api/v1/admin/island/users/{id} - 更新用戶狀態（active/inactive）
+#### 3.6.1 諮詢師管理 ✅ 已完成 (2025-12-15)
+- [x] ✅ GET /api/v1/admin/counselors - 列出所有諮詢師
+- [x] ✅ GET /api/v1/admin/counselors/{id} - 諮詢師詳情
+- [x] ✅ POST /api/v1/admin/counselors - 新增諮詢師（自動發送密碼重設郵件）
+- [x] ✅ PATCH /api/v1/admin/counselors/{id} - 更新諮詢師狀態
+- [x] ✅ DELETE /api/v1/admin/counselors/{id} - 刪除諮詢師
+- [x] ✅ 多租戶隔離（支援跨租戶管理）
+- 📝 Commits: b740768, 318350b, 379fabe
+- 📋 File: app/api/v1/admin_counselors.py
 
-#### 3.6.2 兌換碼管理
+#### 3.6.1-B 點數管理 ✅ 已完成 (2025-12-15)
+- [x] ✅ GET /api/v1/admin/credits/members - 列出所有會員點數
+- [x] ✅ GET /api/v1/admin/credits/members/{id} - 單一會員點數詳情
+- [x] ✅ POST /api/v1/admin/credits/members/{id}/add - 手動加點
+- [x] ✅ GET /api/v1/admin/credits/logs - 查詢點數異動記錄
+- [x] ✅ POST /api/v1/admin/credits/rates - 設定費率
+- [x] ✅ GET /api/v1/admin/credits/rates - 查詢費率
+- 📝 Commits: 4e5dee1, f071e4b
+- 📋 File: app/api/v1/admin_credits.py
+
+#### 3.6.2 兌換碼管理（待實作）
 - [ ] POST /api/v1/admin/redeem-codes/generate - 批次生成兌換碼
 - [ ] GET /api/v1/admin/redeem-codes - 列出所有兌換碼
 - [ ] PATCH /api/v1/admin/redeem-codes/{code}/revoke - 停權兌換碼
 - [ ] POST /api/v1/admin/credits/extend-expiry - 手動延期點數
+- [ ] RedeemCode Model + migration
 
-#### 3.6.3 使用記錄爭議處理
+#### 3.6.3 使用記錄爭議處理（待實作）
 - [ ] 定義邊界情境規則（中途取消、離線、靜音）
 - [ ] Admin 查看詳細使用記錄
 - [ ] Admin 手動調整扣點（需註記原因）
@@ -311,14 +364,19 @@
 - [ ] iOS/Web: 統一前端錯誤提示 UI
 - [ ] 文檔: 登入失敗訊息規範
 
-### 4.6 Email 發信系統與錯誤處理
-- [x] 選擇並設定 Email 服務商（Gmail SMTP）
-- [x] Email Service 實作（發送 + 錯誤處理 + 退信處理）
-- [x] Tenant-specific email templates
-- [ ] EmailLog Model（status: pending/sent/delivered/bounced/failed）
-- [ ] GET /api/v1/admin/emails/logs API
-- [ ] POST /api/v1/admin/emails/resend API
-- [ ] 用戶端重發機制（5 分鐘限制）
+### 4.6 Email 發信系統與錯誤處理 🟡 部分完成 (2025-12-27)
+- [x] ✅ 選擇並設定 Email 服務商（Gmail SMTP）- 2025-12-27
+- [x] ✅ Email Service 實作（發送 + 錯誤處理）- 2025-12-27
+- [x] ✅ Tenant-specific email templates（career/island/island_parents）- 2025-12-27
+- [x] ✅ SMTP 環境變數配置（GitHub Secrets）- 2025-12-27
+- [x] ✅ 密碼重設郵件自動發送（新增諮詢師時）- 2025-12-27
+- [ ] EmailLog Model（status: pending/sent/delivered/bounced/failed）- 待實作
+- [ ] GET /api/v1/admin/emails/logs API - 待實作
+- [ ] POST /api/v1/admin/emails/resend API - 待實作
+- [ ] 退信處理機制 - 待實作
+- [ ] 用戶端重發機制（5 分鐘限制）- 待實作
+- 📝 Commits: 3e40091, 217a5d8, 81e4e57, 75dbfc4
+- 📋 File: app/services/email_service.py
 
 ### 4.7 密碼強度政策與安全策略
 - [ ] 定義密碼規則（最低 8 字元，英文 + 數字）
