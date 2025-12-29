@@ -519,7 +519,7 @@ class TestAdminCreateCounselor:
 
         # Now allows duplicate usernames per user request
         assert response.status_code in [200, 201]
-        assert response.json()["username"] == "test_career"
+        assert response.json()["counselor"]["username"] == "test_career"
 
     def test_create_counselor_duplicate_email_same_tenant(
         self, client, admin_token, test_counselors
