@@ -1226,10 +1226,6 @@
                     <input type="text" id="newUsername" required placeholder="username">
                 </div>
                 <div class="form-group">
-                    <label for="newFullName">Full Name *</label>
-                    <input type="text" id="newFullName" required placeholder="John Doe">
-                </div>
-                <div class="form-group">
                     <label for="newPhone">Phone</label>
                     <input type="tel" id="newPhone" placeholder="+886 912 345 678">
                 </div>
@@ -1788,10 +1784,11 @@
         async function submitAddMember(event) {
             event.preventDefault();
 
+            const username = document.getElementById('newUsername').value;
             const data = {
                 email: document.getElementById('newEmail').value,
-                username: document.getElementById('newUsername').value,
-                full_name: document.getElementById('newFullName').value,
+                username: username,
+                full_name: username,  // Use username as full_name
                 phone: document.getElementById('newPhone').value || undefined,
                 password: document.getElementById('newPassword').value,
                 tenant_id: document.getElementById('newTenantId').value,

@@ -443,16 +443,7 @@ async def create_counselor(
     """
     target_tenant_id = resolve_tenant_id(current_admin, request.tenant_id)
 
-    # Check if username already exists (global check across all tenants for username uniqueness)
-    existing_username = db.execute(
-        select(Counselor).where(Counselor.username == request.username)
-    ).scalar_one_or_none()
-
-    if existing_username:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Username '{request.username}' already exists",
-        )
+    # Username uniqueness check removed per user request (allow duplicate usernames)
 
     # Check if email exists in the same tenant
     existing_email = db.execute(
