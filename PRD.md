@@ -178,10 +178,17 @@
 - ✅ 21 個整合測試（TDD RED 階段完成）
 - ✅ 涵蓋所有 admin 端點、權限控制、跨租戶功能
 
-#### 待實作功能（Phase 2）
-- ⚠️ 自動扣點機制（會談結束時自動扣除點數）
-- ⚠️ 點數餘額不足警告
-- ⚠️ 訂閱到期提醒
+#### ✅ Session Billing Integration (Phase 2 - 已完成, 2025-12-28)
+- **Incremental Billing**: 會談進行時即時扣點（每分鐘累積計費）
+  - 計費公式: `credits = ceil(duration_seconds / 60) * 1.0`
+  - 無痛中斷: 中斷時已扣點數保留（已計費分鐘數追蹤）
+  - SessionUsage 整合: `last_billed_minutes` 欄位追蹤計費進度
+- **詳細設計**: 參見 `docs/SESSION_USAGE_CREDIT_DESIGN.md`
+- **測試覆蓋**: 參見 `tests/integration/test_incremental_billing.py`
+
+#### 待實作功能（Phase 3）
+- ⚠️ 點數餘額不足警告（前端提示）
+- ⚠️ 訂閱到期提醒（Email/推播通知）
 
 ### ✅ 即時語音諮詢系統 (Realtime STT Counseling)
 **功能定位**: AI 輔助即時諮詢督導系統
@@ -982,9 +989,19 @@ class RedeemCode(Base, BaseModel):
 - Query 自動過濾 tenant（避免跨租戶資料洩漏）
 
 **island_parents 特殊設定**:
-- Client 簡化：只需 `name` + `grade`（1-12）
-- Session 新增：`scenario_topic`（事前練習情境）
-- Case 管理：預設 Case 自動建立（「親子溝通成長」）
+- **Client 簡化欄位**（必填）:
+  - `name` - 孩子暱稱（可用代號保護隱私）
+  - `grade` - 年級（1-12，對應小一至高三）
+  - `relationship` - 家長與孩子關係（爸爸/媽媽/爺爺/奶奶/外公/外婆/其他）
+- **Client 選填欄位**: `birth_date`, `gender`, `notes`
+- **Session 新增**: `scenario_topic`（事前練習情境）
+- **Case 管理**: 預設 Case 自動建立（「親子溝通成長」）
+- **安全等級系統** (Safety Levels):
+  - 🟢 **GREEN** (severity 1-2): 良好溝通，建議間隔 20-30 秒分析
+  - 🟡 **YELLOW** (severity 3-4): 溝通需調整，建議間隔 10-15 秒分析
+  - 🔴 **RED** (severity 5): 危機狀態，建議間隔 5-10 秒分析
+- **動態分析間隔**: AI 根據安全等級自動調整下次分析時間
+- **完整測試**: 9/9 integration tests 通過，參見 `docs/testing/ISLAND_PARENTS_WORKFLOW_TEST_REPORT.md`
 
 ---
 
