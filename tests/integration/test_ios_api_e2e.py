@@ -33,7 +33,12 @@ class TestIOSAPIEndToEnd:
     """End-to-end tests for complete iOS API workflow"""
 
     @pytest.fixture
-    def auth_headers(self, db_session: Session):
+    def test_client(self):
+        """Create a single TestClient instance for all requests"""
+        return TestClient(app)
+
+    @pytest.fixture
+    def auth_headers(self, db_session: Session, test_client: TestClient):
         """Create authenticated counselor and return auth headers"""
         counselor = Counselor(
             id=uuid4(),
@@ -48,29 +53,33 @@ class TestIOSAPIEndToEnd:
         )
         db_session.add(counselor)
         db_session.commit()
+        db_session.refresh(counselor)
 
-        with TestClient(app) as client:
-            login_response = client.post(
-                "/api/auth/login",
-                json={
-                    "email": counselor.email,
-                    "password": "password123",
-                    "tenant_id": "career",
-                },
-            )
-            token = login_response.json()["access_token"]
+        login_response = test_client.post(
+            "/api/auth/login",
+            json={
+                "email": counselor.email,
+                "password": "password123",
+                "tenant_id": "career",
+            },
+        )
+        assert (
+            login_response.status_code == 200
+        ), f"Login failed: {login_response.json()}"
+        token = login_response.json()["access_token"]
 
         return {"Authorization": f"Bearer {token}"}
 
     @pytest.fixture
-    def test_session(self, db_session: Session, auth_headers):
+    def test_session(self, db_session: Session, auth_headers, test_client: TestClient):
         """Create test session for E2E tests"""
         # Get counselor
-        with TestClient(app) as client:
-            profile = client.get("/api/auth/me", headers=auth_headers)
-            counselor_email = profile.json()["email"]
+        profile = test_client.get("/api/auth/me", headers=auth_headers)
+        assert profile.status_code == 200, f"Failed to get profile: {profile.json()}"
+        counselor_email = profile.json()["email"]
 
         counselor = db_session.query(Counselor).filter_by(email=counselor_email).first()
+        assert counselor is not None, f"Counselor {counselor_email} not found"
 
         # Create client
         client_obj = Client(
@@ -109,6 +118,7 @@ class TestIOSAPIEndToEnd:
         )
         db_session.add(session)
         db_session.commit()
+        db_session.refresh(session)
 
         return session
 
@@ -139,7 +149,13 @@ class TestIOSAPIEndToEnd:
             yield mock_gemini_instance
 
     def _mock_analyze_with_time(
-        self, db_session: Session, session_id, transcript, auth_headers, elapsed_seconds
+        self,
+        db_session: Session,
+        test_client: TestClient,
+        session_id,
+        transcript,
+        auth_headers,
+        elapsed_seconds,
     ):
         """Perform analysis at specific elapsed time (for billing simulation)"""
         session_usage = (
@@ -155,16 +171,15 @@ class TestIOSAPIEndToEnd:
         else:
             analysis_time = datetime.now(timezone.utc)
 
-        with TestClient(app) as client:
-            with patch("app.services.keyword_analysis_service.datetime") as mock_dt:
-                mock_dt.now.return_value = analysis_time
-                mock_dt.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+        with patch("app.services.keyword_analysis_service.datetime") as mock_dt:
+            mock_dt.now.return_value = analysis_time
+            mock_dt.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
 
-                response = client.post(
-                    f"/api/v1/sessions/{session_id}/analyze-partial",
-                    headers=auth_headers,
-                    json={"transcript_segment": transcript},
-                )
+            response = test_client.post(
+                f"/api/v1/sessions/{session_id}/analyze-partial",
+                headers=auth_headers,
+                json={"transcript_segment": transcript},
+            )
 
         return response
 
@@ -213,7 +228,7 @@ class TestIOSAPIEndToEnd:
             ), f"Dual-write mismatch: SessionUsage={session_usage.credits_deducted}, CreditLog sum={total_from_logs}"
 
     def test_complete_ios_workflow(
-        self, db_session: Session, auth_headers, test_session
+        self, db_session: Session, auth_headers, test_session, test_client: TestClient
     ):
         """
         Test 1: Complete iOS workflow with incremental billing
@@ -226,10 +241,8 @@ class TestIOSAPIEndToEnd:
         5. Complete session → Verify final state
         """
         session_id = test_session.id
-        counselor_email = None
-        with TestClient(app) as client:
-            profile = client.get("/api/auth/me", headers=auth_headers)
-            counselor_email = profile.json()["email"]
+        profile = test_client.get("/api/auth/me", headers=auth_headers)
+        counselor_email = profile.json()["email"]
 
         initial_credits = (
             db_session.query(Counselor)
@@ -243,169 +256,172 @@ class TestIOSAPIEndToEnd:
         chunk2 = "案主：我覺得工作壓力很大，不知道該怎麼辦。"
         chunk3 = "諮詢師：能多說一些嗎？是什麼讓你感到壓力？"
 
-        with TestClient(app) as client:
-            # Step 1: Append chunk 1
-            print("\n📝 Step 1: Append chunk 1")
-            append1 = client.post(
-                f"/api/v1/sessions/{session_id}/recordings/append",
-                headers=auth_headers,
-                json={
-                    "start_time": "2025-01-15 10:00:00",
-                    "end_time": "2025-01-15 10:00:30",
-                    "duration_seconds": 30,
-                    "transcript_text": chunk1,
-                },
-            )
-            assert append1.status_code == 200
+        # Step 1: Append chunk 1
+        print("\n📝 Step 1: Append chunk 1")
+        append1 = test_client.post(
+            f"/api/v1/sessions/{session_id}/recordings/append",
+            headers=auth_headers,
+            json={
+                "start_time": "2025-01-15 10:00:00",
+                "end_time": "2025-01-15 10:00:30",
+                "duration_seconds": 30,
+                "transcript_text": chunk1,
+            },
+        )
+        assert append1.status_code == 200
 
-            # Step 2: Analyze at 30s
-            print("📊 Step 2: Analyze at 30s")
-            analyze1 = self._mock_analyze_with_time(
-                db_session, session_id, chunk1, auth_headers, 30
-            )
-            assert analyze1.status_code == 200
+        # Step 2: Analyze at 30s
+        print("📊 Step 2: Analyze at 30s")
+        analyze1 = self._mock_analyze_with_time(
+            db_session, test_client, session_id, chunk1, auth_headers, 30
+        )
+        assert analyze1.status_code == 200
 
-            # Verify billing: 30s → ceiling(30/60) = 1 minute → 1 credit
-            db_session.expire_all()
-            usage1 = (
-                db_session.query(SessionUsage)
-                .filter(SessionUsage.session_id == session_id)
-                .first()
-            )
-            assert usage1.credits_deducted == Decimal(
-                "1"
-            ), f"Expected 1 credit at 30s, got {usage1.credits_deducted}"
-            assert usage1.last_billed_minutes == 1
-            print(f"✅ Billing verified: {usage1.credits_deducted} credits (1 minute)")
+        # Verify billing: 30s → ceiling(30/60) = 1 minute → 1 credit
+        db_session.expire_all()
+        usage1 = (
+            db_session.query(SessionUsage)
+            .filter(SessionUsage.session_id == session_id)
+            .first()
+        )
+        assert usage1.credits_deducted == Decimal(
+            "1"
+        ), f"Expected 1 credit at 30s, got {usage1.credits_deducted}"
+        assert usage1.last_billed_minutes == 1
+        print(f"✅ Billing verified: {usage1.credits_deducted} credits (1 minute)")
 
-            # ✅ Verify CreditLog after first analysis
-            self._verify_credit_logs(db_session, session_id)
-            self._verify_dual_write_consistency(db_session, session_id)
+        # ✅ Verify CreditLog after first analysis
+        self._verify_credit_logs(db_session, session_id)
+        self._verify_dual_write_consistency(db_session, session_id)
 
-            # Step 3: Append chunk 2
-            print("\n📝 Step 3: Append chunk 2")
-            append2 = client.post(
-                f"/api/v1/sessions/{session_id}/recordings/append",
-                headers=auth_headers,
-                json={
-                    "start_time": "2025-01-15 10:00:30",
-                    "end_time": "2025-01-15 10:01:00",
-                    "duration_seconds": 30,
-                    "transcript_text": chunk2,
-                },
-            )
-            assert append2.status_code == 200
+        # Step 3: Append chunk 2
+        print("\n📝 Step 3: Append chunk 2")
+        append2 = test_client.post(
+            f"/api/v1/sessions/{session_id}/recordings/append",
+            headers=auth_headers,
+            json={
+                "start_time": "2025-01-15 10:00:30",
+                "end_time": "2025-01-15 10:01:00",
+                "duration_seconds": 30,
+                "transcript_text": chunk2,
+            },
+        )
+        assert append2.status_code == 200
 
-            # Step 4: Analyze at 60s
-            print("📊 Step 4: Analyze at 60s")
-            analyze2 = self._mock_analyze_with_time(
-                db_session, session_id, chunk1 + "\n" + chunk2, auth_headers, 60
-            )
-            assert analyze2.status_code == 200
+        # Step 4: Analyze at 60s
+        print("📊 Step 4: Analyze at 60s")
+        analyze2 = self._mock_analyze_with_time(
+            db_session,
+            test_client,
+            session_id,
+            chunk1 + "\n" + chunk2,
+            auth_headers,
+            60,
+        )
+        assert analyze2.status_code == 200
 
-            # Verify billing: 60s → ceiling(60/60) = 1 minute → still 1 credit (same minute)
-            db_session.expire_all()
-            usage2 = (
-                db_session.query(SessionUsage)
-                .filter(SessionUsage.session_id == session_id)
-                .first()
-            )
-            assert usage2.credits_deducted == Decimal(
-                "1"
-            ), f"Expected 1 credit at 60s, got {usage2.credits_deducted}"
-            assert usage2.last_billed_minutes == 1
-            print(
-                f"✅ Billing verified: {usage2.credits_deducted} credits (still 1 minute)"
-            )
+        # Verify billing: 60s → ceiling(60/60) = 1 minute → still 1 credit (same minute)
+        db_session.expire_all()
+        usage2 = (
+            db_session.query(SessionUsage)
+            .filter(SessionUsage.session_id == session_id)
+            .first()
+        )
+        assert usage2.credits_deducted == Decimal(
+            "1"
+        ), f"Expected 1 credit at 60s, got {usage2.credits_deducted}"
+        assert usage2.last_billed_minutes == 1
+        print(
+            f"✅ Billing verified: {usage2.credits_deducted} credits (still 1 minute)"
+        )
 
-            # ✅ Verify CreditLog consistency
-            self._verify_dual_write_consistency(db_session, session_id)
+        # ✅ Verify CreditLog consistency
+        self._verify_dual_write_consistency(db_session, session_id)
 
-            # Step 5: Append chunk 3
-            print("\n📝 Step 5: Append chunk 3")
-            append3 = client.post(
-                f"/api/v1/sessions/{session_id}/recordings/append",
-                headers=auth_headers,
-                json={
-                    "start_time": "2025-01-15 10:01:00",
-                    "end_time": "2025-01-15 10:02:05",
-                    "duration_seconds": 65,
-                    "transcript_text": chunk3,
-                },
-            )
-            assert append3.status_code == 200
+        # Step 5: Append chunk 3
+        print("\n📝 Step 5: Append chunk 3")
+        append3 = test_client.post(
+            f"/api/v1/sessions/{session_id}/recordings/append",
+            headers=auth_headers,
+            json={
+                "start_time": "2025-01-15 10:01:00",
+                "end_time": "2025-01-15 10:02:05",
+                "duration_seconds": 65,
+                "transcript_text": chunk3,
+            },
+        )
+        assert append3.status_code == 200
 
-            # Step 6: Analyze at 125s
-            print("📊 Step 6: Analyze at 125s")
-            analyze3 = self._mock_analyze_with_time(
-                db_session,
-                session_id,
-                chunk1 + "\n" + chunk2 + "\n" + chunk3,
-                auth_headers,
-                125,
-            )
-            assert analyze3.status_code == 200
+        # Step 6: Analyze at 125s
+        print("📊 Step 6: Analyze at 125s")
+        analyze3 = self._mock_analyze_with_time(
+            db_session,
+            test_client,
+            session_id,
+            chunk1 + "\n" + chunk2 + "\n" + chunk3,
+            auth_headers,
+            125,
+        )
+        assert analyze3.status_code == 200
 
-            # Verify billing: 125s → ceiling(125/60) = 3 minutes → 3 credits
-            db_session.expire_all()
-            usage3 = (
-                db_session.query(SessionUsage)
-                .filter(SessionUsage.session_id == session_id)
-                .first()
-            )
-            assert usage3.credits_deducted == Decimal(
-                "3"
-            ), f"Expected 3 credits at 125s, got {usage3.credits_deducted}"
-            assert usage3.last_billed_minutes == 3
-            print(f"✅ Billing verified: {usage3.credits_deducted} credits (3 minutes)")
+        # Verify billing: 125s → ceiling(125/60) = 3 minutes → 3 credits
+        db_session.expire_all()
+        usage3 = (
+            db_session.query(SessionUsage)
+            .filter(SessionUsage.session_id == session_id)
+            .first()
+        )
+        assert usage3.credits_deducted == Decimal(
+            "3"
+        ), f"Expected 3 credits at 125s, got {usage3.credits_deducted}"
+        assert usage3.last_billed_minutes == 3
+        print(f"✅ Billing verified: {usage3.credits_deducted} credits (3 minutes)")
 
-            # ✅ Verify CreditLog consistency
-            credit_logs_final = self._verify_credit_logs(db_session, session_id)
-            self._verify_dual_write_consistency(db_session, session_id)
+        # ✅ Verify CreditLog consistency
+        credit_logs_final = self._verify_credit_logs(db_session, session_id)
+        self._verify_dual_write_consistency(db_session, session_id)
 
-            # Step 7: Complete session
-            print("\n✅ Step 7: Complete session")
-            complete = client.patch(
-                f"/api/v1/sessions/{session_id}",
-                headers=auth_headers,
-                json={"status": "completed"},
-            )
-            assert complete.status_code == 200
+        # Step 7: Complete session
+        print("\n✅ Step 7: Complete session")
+        complete = test_client.patch(
+            f"/api/v1/sessions/{session_id}",
+            headers=auth_headers,
+            json={"status": "completed"},
+        )
+        assert complete.status_code == 200
 
-            # Verify final state
-            db_session.expire_all()
-            final_usage = (
-                db_session.query(SessionUsage)
-                .filter(SessionUsage.session_id == session_id)
-                .first()
-            )
-            final_session = (
-                db_session.query(SessionModel)
-                .filter(SessionModel.id == session_id)
-                .first()
-            )
+        # Verify final state
+        db_session.expire_all()
+        final_usage = (
+            db_session.query(SessionUsage)
+            .filter(SessionUsage.session_id == session_id)
+            .first()
+        )
+        final_session = (
+            db_session.query(SessionModel).filter(SessionModel.id == session_id).first()
+        )
 
-            # Note: Session model doesn't have status field
-            assert final_usage.analysis_count == 3
-            assert final_usage.credits_deducted == Decimal("3")
+        # Note: Session model doesn't have status field
+        assert final_usage.analysis_count == 3
+        assert final_usage.credits_deducted == Decimal("3")
 
-            # ✅ Verify counselor credits updated
-            final_counselor = (
-                db_session.query(Counselor).filter_by(email=counselor_email).first()
-            )
-            expected_final = initial_credits - 3.0
-            assert (
-                final_counselor.available_credits == expected_final
-            ), f"Counselor credits mismatch: expected={expected_final}, actual={final_counselor.available_credits}"
+        # ✅ Verify counselor credits updated
+        final_counselor = (
+            db_session.query(Counselor).filter_by(email=counselor_email).first()
+        )
+        expected_final = initial_credits - 3.0
+        assert (
+            final_counselor.available_credits == expected_final
+        ), f"Counselor credits mismatch: expected={expected_final}, actual={final_counselor.available_credits}"
 
-            print("\n🎉 Complete workflow verified:")
-            print(f"   Analyses performed: {final_usage.analysis_count}")
-            print(f"   Total credits: {final_usage.credits_deducted}")
-            print(f"   Session ID: {final_session.id}")
-            print(f"   CreditLog entries: {len(credit_logs_final)}")
-            print(
-                f"   Counselor credits: {final_counselor.available_credits} (initial: {initial_credits})"
-            )
+        print("\n🎉 Complete workflow verified:")
+        print(f"   Analyses performed: {final_usage.analysis_count}")
+        print(f"   Total credits: {final_usage.credits_deducted}")
+        print(f"   Session ID: {final_session.id}")
+        print(f"   CreditLog entries: {len(credit_logs_final)}")
+        print(
+            f"   Counselor credits: {final_counselor.available_credits} (initial: {initial_credits})"
+        )
 
     def test_ios_api_performance_benchmarks(
         self, db_session: Session, auth_headers, test_session
