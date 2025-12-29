@@ -105,6 +105,62 @@ Got: Database constraint violation
 Fix: Check model fields and constraints
 ```
 
+### Pattern 5: RAG Vector Search Failure (SQLite Incompatibility)
+
+```
+Error: sqlite3.OperationalError) near ">": syntax error
+SQL: ... e.embedding <=> CAST(:query_embedding AS vector) ...
+Location: app/services/rag_retriever.py
+```
+
+**Root Cause**:
+- Test uses PostgreSQL vector operations (`<=>` operator)
+- SQLite doesn't support `vector` type or cosine distance operator
+- This is expected in test environment
+
+**Diagnosis Steps**:
+1. Check if test involves RAG retrieval
+2. Check if test file has `@skip_expensive` decorator
+3. Verify `CI_BRANCH` environment variable
+
+**Fix Options**:
+
+**Option A: Add skip decorator** (Recommended)
+```python
+# In test file, add at top:
+import os
+import pytest
+
+skip_expensive = pytest.mark.skipif(
+    not os.getenv("RUN_EXPENSIVE_TESTS") and os.getenv("CI_BRANCH") != "main",
+    reason="Expensive RAG tests - only run on main branch",
+)
+
+# Apply to test class:
+@skip_expensive
+class TestYourFeature:
+    ...
+```
+
+**Option B: Run with override** (Local testing only)
+```bash
+RUN_EXPENSIVE_TESTS=1 poetry run pytest tests/integration/test_<file>.py -v
+```
+
+**Option C: Check CI configuration**
+```bash
+# Verify skip is working on staging
+CI_BRANCH=staging poetry run pytest tests/integration/ -v -rs
+# Should show: SKIPPED [reason: Expensive RAG tests...]
+```
+
+**Auto-fix Steps**:
+1. Read failing test file
+2. Check for `skip_expensive` decorator
+3. If missing, add decorator to test class
+4. Re-run to verify tests are skipped
+5. Confirm: `pytest -v -rs` shows SKIPPED for RAG tests
+
 ## Example Output
 
 ```

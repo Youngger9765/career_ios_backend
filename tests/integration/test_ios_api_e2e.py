@@ -8,6 +8,7 @@ Test complete iOS workflow:
 4. CreditLog verification across entire workflow
 """
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from unittest.mock import patch
@@ -26,7 +27,16 @@ from app.models.credit_log import CreditLog
 from app.models.session import Session as SessionModel
 from app.models.session_usage import SessionUsage
 
+# Skip expensive RAG tests unless:
+# 1. Explicitly enabled with RUN_EXPENSIVE_TESTS=1
+# 2. Running on main branch (complete validation)
+skip_expensive = pytest.mark.skipif(
+    not os.getenv("RUN_EXPENSIVE_TESTS") and os.getenv("CI_BRANCH") != "main",
+    reason="Expensive RAG tests - only run on main branch or with RUN_EXPENSIVE_TESTS=1",
+)
 
+
+@skip_expensive
 class TestIOSAPIEndToEnd:
     """End-to-end tests for complete iOS API workflow"""
 

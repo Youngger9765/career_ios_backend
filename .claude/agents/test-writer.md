@@ -86,6 +86,65 @@ async def test_<feature>_<action>_success(auth_headers):
 Next step: Invoke code-generator subagent to implement the endpoint.
 ```
 
+---
+
+## RAG 测试特殊处理 (PostgreSQL vs SQLite)
+
+**关键规则**: 所有使用 RAG 功能的测试必须标记为 expensive
+
+### 标记模板
+
+在测试文件顶部添加（imports 之后）：
+
+```python
+import os
+import pytest
+
+# Skip expensive tests on staging/feature branches (SQLite doesn't support vector ops)
+skip_expensive = pytest.mark.skipif(
+    not os.getenv("RUN_EXPENSIVE_TESTS") and os.getenv("CI_BRANCH") != "main",
+    reason="Expensive RAG tests - only run on main branch or with RUN_EXPENSIVE_TESTS=1",
+)
+```
+
+在测试类或方法上使用：
+
+```python
+@skip_expensive
+class TestYourFeature:
+    ...
+```
+
+### 触发条件（任一即需要标记）
+
+- ✅ 测试调用 RAG 检索 (`rag_retriever.search`)
+- ✅ 测试调用分析 API (`analyze_partial`, `analyze_complete`)
+- ✅ 测试涉及向量数据库查询（embedding, similarity）
+- ✅ 测试名称包含 "performance", "e2e", "benchmark"
+- ✅ 测试涉及 keyword_analysis_service 的 RAG 功能
+
+### 原因
+
+**技术限制**:
+- 生产环境: PostgreSQL + pgvector (支持 `<=>` 向量操作符)
+- 测试环境: SQLite (不支持向量类型和操作符)
+
+**SQL 示例**（会在 SQLite 失败）:
+```sql
+-- ❌ SQLite Error: near ">": syntax error
+1 - (e.embedding <=> CAST(:query_embedding AS vector))
+```
+
+### 参考示例
+
+查看这些文件的正确实现：
+- `tests/integration/test_enhanced_formats.py`
+- `tests/integration/test_legacy_formats.py`
+- `tests/integration/test_ios_api_e2e.py` (已修复)
+- `tests/integration/test_ios_api_performance.py` (已修复)
+
+---
+
 ## IMPORTANT
 - DO NOT write implementation code
 - DO NOT modify existing tests

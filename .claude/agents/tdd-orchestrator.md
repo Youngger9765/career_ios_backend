@@ -56,6 +56,36 @@ Task(
 - Skip this invocation
 - Just provide a plan
 
+**⚠️  RAG Feature Detection**:
+
+Before invoking test-writer, check if feature involves:
+- RAG retrieval (`search`, `similarity`, `embedding`)
+- Analysis APIs (`analyze_partial`, `analyze_complete`)
+- Vector database queries
+- Performance benchmarks
+
+If YES, include in prompt to test-writer:
+
+```
+"IMPORTANT: This feature uses RAG/vector operations.
+Add skip_expensive decorator to test file:
+
+import os
+import pytest
+
+skip_expensive = pytest.mark.skipif(
+    not os.getenv('RUN_EXPENSIVE_TESTS') and os.getenv('CI_BRANCH') != 'main',
+    reason='Expensive RAG tests - only run on main branch',
+)
+
+@skip_expensive
+class Test<Feature>:
+    ...
+"
+```
+
+**Why**: RAG uses PostgreSQL vector ops, SQLite tests will fail without skip marker.
+
 **Verification after test-writer returns:**
 - Confirm test file was created
 - Confirm tests fail (RED state)

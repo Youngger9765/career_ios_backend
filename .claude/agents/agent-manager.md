@@ -83,6 +83,10 @@ Complex Research:
 - [ ] Test defines clear expectations
 
 **Before commit**:
+- [ ] Tests written first (TDD)
+- [ ] Test is RED (failing)
+- [ ] Test defines clear expectations
+- [ ] **RAG tests have @skip_expensive decorator** ⭐ NEW
 - [ ] All tests pass (GREEN)
 - [ ] `ruff check` passes
 - [ ] No hardcoded credentials
@@ -355,6 +359,34 @@ For detailed workflows, refer to Skills (auto-activated):
 - **third-party-apis**: External API integration
 
 **Don't duplicate Skill content here** - reference them instead.
+
+---
+
+---
+
+## RAG Test Compliance Check
+
+**Before allowing any commit with test changes**:
+
+```yaml
+Check if ANY test file involves RAG:
+  Keywords: "rag", "embedding", "similarity", "analyze_partial", "analyze_complete"
+
+  IF found:
+    ✅ Verify @skip_expensive decorator present
+    ✅ Verify skip reason matches template
+    ✅ Test locally: pytest -v -rs shows SKIPPED
+
+  IF missing:
+    ❌ BLOCK commit
+    ❌ Message: "RAG test missing @skip_expensive decorator"
+    ❌ Reference: .claude/agents/test-writer.md (RAG 测试特殊处理)
+```
+
+**Reference Files** (Correct Implementation):
+- `tests/integration/test_enhanced_formats.py`
+- `tests/integration/test_ios_api_e2e.py`
+- `tests/integration/test_ios_api_performance.py`
 
 ---
 

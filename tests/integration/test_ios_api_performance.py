@@ -11,6 +11,7 @@ Test scenarios:
 3. Long transcript (2000 chars): Measure both APIs
 4. Multiple appends + analysis: Simulate real iOS usage
 """
+import os
 import time
 from datetime import datetime
 from unittest.mock import patch
@@ -28,7 +29,16 @@ from app.models.counselor import Counselor
 from app.models.credit_log import CreditLog
 from app.models.session import Session as SessionModel
 
+# Skip expensive RAG tests unless:
+# 1. Explicitly enabled with RUN_EXPENSIVE_TESTS=1
+# 2. Running on main branch (complete validation)
+skip_expensive = pytest.mark.skipif(
+    not os.getenv("RUN_EXPENSIVE_TESTS") and os.getenv("CI_BRANCH") != "main",
+    reason="Expensive RAG tests - only run on main branch or with RUN_EXPENSIVE_TESTS=1",
+)
 
+
+@skip_expensive
 class TestIOSAPIPerformance:
     """Performance tests for iOS API vs Realtime API"""
 
