@@ -4869,26 +4869,15 @@
                     // Hide login form
                     document.getElementById('loginContainer').style.display = 'none';
 
-                    // Check if onboarding needed (island_parents tenant only)
+                    // island_parents: Always show client selection/creation screen
                     console.log('[LOGIN] Tenant ID:', tenantId);
 
                     if (tenantId === 'island_parents') {
-                        // Check if user has client with island_parents data
-                        console.log('[ONBOARDING] Checking client existence...');
-                        const hasClient = await checkClientExists(data.access_token);
-                        console.log('[ONBOARDING] Has valid client:', hasClient);
-
-                        if (!hasClient) {
-                            // No client or missing island_parents data - show onboarding
-                            console.log('[ONBOARDING] Showing onboarding screen');
-                            document.getElementById('onboardingContainer').style.display = 'block';
-                            document.getElementById('onboardingScreen1').style.display = 'flex';
-                            document.getElementById('onboardingScreen2').style.display = 'none';
-                        } else {
-                            // Client exists - show main content
-                            console.log('[ONBOARDING] Client exists, showing main content');
-                            document.getElementById('mainContent').style.display = 'block';
-                        }
+                        // Always show client selection for island_parents (may have multiple children)
+                        console.log('[ONBOARDING] Showing client selection/creation screen');
+                        document.getElementById('onboardingContainer').style.display = 'block';
+                        document.getElementById('onboardingScreen1').style.display = 'flex';
+                        document.getElementById('onboardingScreen2').style.display = 'none';
                     } else {
                         // Other tenants - show main content directly
                         console.log('[LOGIN] Other tenant, showing main content');
