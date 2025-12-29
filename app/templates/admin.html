@@ -1423,6 +1423,46 @@
 
             <!-- Content (hidden until loaded) -->
             <div id="sidePanelContent" style="display: none;">
+                <!-- Password Change View (hidden by default) -->
+                <div id="passwordChangeView" style="display: none;">
+                    <!-- Back Button -->
+                    <button onclick="showPanelDetailsView()" style="background: none; border: none; color: #6B7280; font-size: 14px; cursor: pointer; padding: 16px 24px; display: flex; align-items: center; gap: 8px; width: 100%;">
+                        <span>←</span>
+                        <span>返回詳細資訊</span>
+                    </button>
+
+                    <div class="side-panel-section">
+                        <h4>🔑 變更密碼</h4>
+                        <p style="color: #6B7280; font-size: 14px; margin-bottom: 24px;">
+                            為 <strong id="pwChangeEmail"></strong> 設定新密碼
+                        </p>
+
+                        <form id="panelPasswordForm" onsubmit="submitPanelPasswordChange(event)">
+                            <div style="margin-bottom: 16px;">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">新密碼 *</label>
+                                <input type="password" id="panelNewPassword" required minlength="6" placeholder="輸入新密碼" style="width: 100%; padding: 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px;">
+                                <small style="color: #6B7280; font-size: 12px;">至少 6 個字元</small>
+                            </div>
+
+                            <div style="margin-bottom: 24px;">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">確認新密碼 *</label>
+                                <input type="password" id="panelConfirmPassword" required minlength="6" placeholder="再次輸入新密碼" style="width: 100%; padding: 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px;">
+                            </div>
+
+                            <div style="display: flex; gap: 12px;">
+                                <button type="button" onclick="showPanelDetailsView()" style="flex: 1; padding: 12px; background: #F3F4F6; color: #374151; border: none; border-radius: 8px; font-weight: 500; cursor: pointer;">
+                                    取消
+                                </button>
+                                <button type="submit" style="flex: 1; padding: 12px; background: #F59E0B; color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer;">
+                                    變更密碼
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Details View (default) -->
+                <div id="panelDetailsView">
                 <!-- Basic Information Section -->
                 <div class="side-panel-section">
                     <h4>Basic Information</h4>
@@ -1530,7 +1570,8 @@
                         ⚠️ 此操作無法復原，刪除後資料將永久移除
                     </p>
                 </div>
-            </div>
+                </div><!-- End panelDetailsView -->
+            </div><!-- End sidePanelContent -->
         </div>
     </div>
 
@@ -2365,7 +2406,74 @@
          */
         function openChangePasswordFromPanel() {
             if (!currentPanelUserData) return;
-            showChangePasswordModal(currentPanelUserId, currentPanelUserData.email);
+            showPanelPasswordView();
+        }
+
+        /**
+         * Show password change view in panel
+         */
+        function showPanelPasswordView() {
+            // Hide details view
+            document.getElementById('panelDetailsView').style.display = 'none';
+            // Show password view
+            document.getElementById('passwordChangeView').style.display = 'block';
+            // Set email
+            document.getElementById('pwChangeEmail').textContent = currentPanelUserData.email;
+            // Update panel title
+            document.getElementById('sidePanelTitle').textContent = 'Change Password';
+            // Reset form
+            document.getElementById('panelPasswordForm').reset();
+        }
+
+        /**
+         * Show details view in panel (back button)
+         */
+        function showPanelDetailsView() {
+            // Show details view
+            document.getElementById('panelDetailsView').style.display = 'block';
+            // Hide password view
+            document.getElementById('passwordChangeView').style.display = 'none';
+            // Restore panel title
+            document.getElementById('sidePanelTitle').textContent = currentPanelUserData?.full_name || 'User Details';
+        }
+
+        /**
+         * Submit password change from panel
+         */
+        async function submitPanelPasswordChange(event) {
+            event.preventDefault();
+
+            const newPassword = document.getElementById('panelNewPassword').value;
+            const confirmPassword = document.getElementById('panelConfirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                alert('❌ 密碼不一致，請重新輸入');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/admin/counselors/${currentPanelUserId}/password`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ password: newPassword })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    const errorMessage = error.detail || '變更失敗';
+                    alert('❌ 變更密碼失敗\n\n' + errorMessage);
+                    return;
+                }
+
+                alert('✅ 密碼變更成功！');
+                showPanelDetailsView();
+            } catch (e) {
+                console.error('Error changing password:', e);
+                alert('❌ 錯誤: ' + e.message);
+            }
         }
 
         /**
