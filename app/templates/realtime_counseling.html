@@ -4816,19 +4816,15 @@
                 localStorage.setItem('userEmail', email || 'debug@example.com');
                 localStorage.setItem('tenantId', tenantId);
 
-                // Check if onboarding needed (island_parents tenant only)
-                const needsOnboarding = tenantId === 'island_parents' && !localStorage.getItem('onboardingComplete');
-
                 // Hide login form
                 document.getElementById('loginContainer').style.display = 'none';
 
-                if (needsOnboarding) {
-                    // Show onboarding for island_parents
+                // In debug mode, always show onboarding for island_parents (for testing)
+                if (tenantId === 'island_parents') {
                     document.getElementById('onboardingContainer').style.display = 'block';
                     document.getElementById('onboardingScreen1').style.display = 'flex';
                     document.getElementById('onboardingScreen2').style.display = 'none';
                 } else {
-                    // Show main content directly
                     document.getElementById('mainContent').style.display = 'block';
                 }
 
@@ -4870,19 +4866,25 @@
                     localStorage.setItem('userEmail', email);
                     localStorage.setItem('tenantId', tenantId);
 
-                    // Check if onboarding needed (island_parents tenant only)
-                    const needsOnboarding = tenantId === 'island_parents' && !localStorage.getItem('onboardingComplete');
-
                     // Hide login form
                     document.getElementById('loginContainer').style.display = 'none';
 
-                    if (needsOnboarding) {
-                        // Show onboarding for island_parents
-                        document.getElementById('onboardingContainer').style.display = 'block';
-                        document.getElementById('onboardingScreen1').style.display = 'flex';
-                        document.getElementById('onboardingScreen2').style.display = 'none';
+                    // Check if onboarding needed (island_parents tenant only)
+                    if (tenantId === 'island_parents') {
+                        // Check if user has client with island_parents data
+                        const hasClient = await checkClientExists(data.access_token);
+
+                        if (!hasClient) {
+                            // No client or missing island_parents data - show onboarding
+                            document.getElementById('onboardingContainer').style.display = 'block';
+                            document.getElementById('onboardingScreen1').style.display = 'flex';
+                            document.getElementById('onboardingScreen2').style.display = 'none';
+                        } else {
+                            // Client exists - show main content
+                            document.getElementById('mainContent').style.display = 'block';
+                        }
                     } else {
-                        // Show main content directly
+                        // Other tenants - show main content directly
                         document.getElementById('mainContent').style.display = 'block';
                     }
 
@@ -4921,16 +4923,45 @@
             }
         }
 
+        // Check if user has client with island_parents data
+        async function checkClientExists(authToken) {
+            try {
+                const response = await fetch('/api/v1/clients', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const clients = data.items || data || [];
+
+                    // Check if user has at least one client with island_parents data
+                    const hasValidClient = clients.length > 0 && clients.some(client => {
+                        return client.island_parents &&
+                               client.island_parents.child_grade &&
+                               client.island_parents.parent_relation;
+                    });
+
+                    return hasValidClient;
+                }
+
+                return false;
+            } catch (error) {
+                console.error('Error checking client:', error);
+                return false;
+            }
+        }
+
         // Onboarding: Skip onboarding and go to main content
         function skipOnboarding() {
-            localStorage.setItem('onboardingComplete', 'true');
             document.getElementById('onboardingContainer').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
         }
 
         // Onboarding: Complete onboarding and go to main content
         function completeOnboarding() {
-            localStorage.setItem('onboardingComplete', 'true');
             document.getElementById('onboardingContainer').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
         }
@@ -5016,12 +5047,10 @@
             localStorage.removeItem('userEmail');
             localStorage.removeItem('tenantId');
             localStorage.removeItem('debugMode'); // Clear debug mode on logout
-            localStorage.removeItem('onboardingComplete'); // Clear onboarding state
-            localStorage.removeItem('onboardingClientId');
-            localStorage.removeItem('onboardingClientName');
 
-            // Hide main content, show login form
+            // Hide main content and onboarding, show login form
             document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('onboardingContainer').style.display = 'none';
             document.getElementById('loginContainer').style.display = 'flex';
 
             // Reset debug mode state
