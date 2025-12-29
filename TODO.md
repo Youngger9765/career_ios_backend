@@ -1,6 +1,6 @@
 # TODO - 開發任務清單
 
-**最後更新**: 2025-12-29 (標記已完成項目：Multi-Tenant 架構、Admin Portal、Session 擴充、Email 系統)
+**最後更新**: 2025-12-29 (標記已完成項目：Multi-Tenant 架構、Admin Portal、Session 擴充、Email 系統；移除 SMS 登入認證)
 
 ---
 
@@ -159,14 +159,7 @@
 
 ### 3.1 SPEC 1：登入註冊、Onboarding
 
-#### 3.1.1 SMS 登入認證
-- [ ] POST /api/v1/auth/sms/send-code - 發送驗證碼
-- [ ] POST /api/v1/auth/sms/verify-code - 驗證並登入
-- [ ] SMSVerification Model + migration
-- [ ] SMS provider 整合（Twilio / AWS SNS）
-- [ ] 防濫用機制（rate limiting）
-
-#### 3.1.2 孩子資料管理（沿用 Client API）✅ 已完成
+#### 3.1.1 孩子資料管理（沿用 Client API）✅ 已完成
 - [x] ✅ POST /api/v1/clients - 新增孩子（tenant_id=island_parents）
 - [x] ✅ GET /api/v1/clients - 列出孩子（自動過濾 tenant）
 - [x] ✅ PATCH /api/v1/clients/{id} - 編輯孩子資料
