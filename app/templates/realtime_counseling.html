@@ -440,6 +440,132 @@
         </div>
     </div>
 
+    <!-- Onboarding Container (shown after login for island_parents) -->
+    <div id="onboardingContainer" class="fixed inset-0 z-50 bg-white" style="display: none;">
+        <!-- Screen 1: Client Setup Form -->
+        <div id="onboardingScreen1" class="h-full flex flex-col p-6 safe-area-inset-top safe-area-inset-bottom">
+            <!-- Skip Button (Top Right) -->
+            <div class="flex justify-end mb-6">
+                <button
+                    type="button"
+                    id="skipOnboardingBtn"
+                    class="text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors"
+                    onclick="skipOnboarding()"
+                >
+                    跳過
+                </button>
+            </div>
+
+            <!-- Form Content -->
+            <div class="flex-1 flex flex-col">
+                <h2 class="text-2xl font-bold text-gray-800 mb-8">設定孩子資料</h2>
+
+                <form id="clientSetupForm" class="space-y-6 flex-1 flex flex-col">
+                    <!-- Child Name Input -->
+                    <div>
+                        <label for="childNickname" class="block text-gray-800 font-medium text-base mb-3">輸入孩子暱稱</label>
+                        <input
+                            type="text"
+                            id="childNickname"
+                            class="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all text-base"
+                            placeholder="ex.小寶"
+                            required
+                        >
+                    </div>
+
+                    <!-- Child Grade Dropdown -->
+                    <div>
+                        <label for="childGrade" class="block text-gray-800 font-medium text-base mb-3">孩子年級</label>
+                        <select
+                            id="childGrade"
+                            class="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all text-base appearance-none bg-white"
+                            required
+                        >
+                            <option value="" disabled selected>輸入年級</option>
+                            <option value="幼兒園">幼兒園</option>
+                            <option value="小學1年級">小學1年級</option>
+                            <option value="小學2年級">小學2年級</option>
+                            <option value="小學3年級">小學3年級</option>
+                            <option value="小學4年級">小學4年級</option>
+                            <option value="小學5年級">小學5年級</option>
+                            <option value="小學6年級">小學6年級</option>
+                            <option value="國中1年級">國中1年級</option>
+                            <option value="國中2年級">國中2年級</option>
+                            <option value="國中3年級">國中3年級</option>
+                            <option value="高中1年級">高中1年級</option>
+                            <option value="高中2年級">高中2年級</option>
+                            <option value="高中3年級">高中3年級</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+
+                    <!-- Parent Relationship Dropdown -->
+                    <div>
+                        <label for="parentRelation" class="block text-gray-800 font-medium text-base mb-3">你是孩子的</label>
+                        <select
+                            id="parentRelation"
+                            class="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all text-base appearance-none bg-white"
+                            required
+                        >
+                            <option value="" disabled selected>選擇關係</option>
+                            <option value="爸爸">爸爸</option>
+                            <option value="媽媽">媽媽</option>
+                            <option value="爺爺">爺爺</option>
+                            <option value="奶奶">奶奶</option>
+                            <option value="外公">外公</option>
+                            <option value="外婆">外婆</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+
+                    <!-- Submit Button - Large Black Button at Bottom -->
+                    <div class="mt-auto pt-8">
+                        <button
+                            type="submit"
+                            id="clientSetupSubmitBtn"
+                            class="w-full py-4 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all duration-300 text-lg relative"
+                        >
+                            <span id="clientSetupBtnText">下一步</span>
+                            <span id="clientSetupBtnSpinner" class="hidden">建立中...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Screen 2: Success Confirmation -->
+        <div id="onboardingScreen2" class="h-full flex flex-col items-center justify-center p-6 safe-area-inset-top safe-area-inset-bottom" style="display: none;">
+            <!-- Success Header -->
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">建立完成🎉</h2>
+            </div>
+
+            <!-- Avatar Circle -->
+            <div class="mb-8">
+                <div class="w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                    <span class="text-white text-4xl font-bold">u</span>
+                </div>
+            </div>
+
+            <!-- Child Name Display -->
+            <div class="mb-16">
+                <p id="childNameDisplay" class="text-2xl font-semibold text-gray-800"></p>
+            </div>
+
+            <!-- Next Button - Large Black Button -->
+            <div class="w-full max-w-md">
+                <button
+                    type="button"
+                    id="completeOnboardingBtn"
+                    class="w-full py-4 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all duration-300 text-lg"
+                    onclick="completeOnboarding()"
+                >
+                    下一步
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content (hidden until logged in) -->
     <div id="mainContent" style="display: none;">
     <!-- Header - Commercial Grade with Gradient - Hidden on mobile, visible on desktop -->
@@ -4690,9 +4816,21 @@
                 localStorage.setItem('userEmail', email || 'debug@example.com');
                 localStorage.setItem('tenantId', tenantId);
 
-                // Hide login form, show main content
+                // Check if onboarding needed (island_parents tenant only)
+                const needsOnboarding = tenantId === 'island_parents' && !localStorage.getItem('onboardingComplete');
+
+                // Hide login form
                 document.getElementById('loginContainer').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
+
+                if (needsOnboarding) {
+                    // Show onboarding for island_parents
+                    document.getElementById('onboardingContainer').style.display = 'block';
+                    document.getElementById('onboardingScreen1').style.display = 'flex';
+                    document.getElementById('onboardingScreen2').style.display = 'none';
+                } else {
+                    // Show main content directly
+                    document.getElementById('mainContent').style.display = 'block';
+                }
 
                 showLoginAlert('Debug login successful!', 'success');
                 return;
@@ -4732,9 +4870,21 @@
                     localStorage.setItem('userEmail', email);
                     localStorage.setItem('tenantId', tenantId);
 
-                    // Hide login form, show main content
+                    // Check if onboarding needed (island_parents tenant only)
+                    const needsOnboarding = tenantId === 'island_parents' && !localStorage.getItem('onboardingComplete');
+
+                    // Hide login form
                     document.getElementById('loginContainer').style.display = 'none';
-                    document.getElementById('mainContent').style.display = 'block';
+
+                    if (needsOnboarding) {
+                        // Show onboarding for island_parents
+                        document.getElementById('onboardingContainer').style.display = 'block';
+                        document.getElementById('onboardingScreen1').style.display = 'flex';
+                        document.getElementById('onboardingScreen2').style.display = 'none';
+                    } else {
+                        // Show main content directly
+                        document.getElementById('mainContent').style.display = 'block';
+                    }
 
                     showLoginAlert('登入成功！', 'success');
                 } else {
@@ -4771,12 +4921,104 @@
             }
         }
 
+        // Onboarding: Skip onboarding and go to main content
+        function skipOnboarding() {
+            localStorage.setItem('onboardingComplete', 'true');
+            document.getElementById('onboardingContainer').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+        }
+
+        // Onboarding: Complete onboarding and go to main content
+        function completeOnboarding() {
+            localStorage.setItem('onboardingComplete', 'true');
+            document.getElementById('onboardingContainer').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+        }
+
+        // Onboarding: Handle client setup form submission
+        document.getElementById('clientSetupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const childNickname = document.getElementById('childNickname').value;
+            const childGrade = document.getElementById('childGrade').value;
+            const parentRelation = document.getElementById('parentRelation').value;
+
+            const submitBtn = document.getElementById('clientSetupSubmitBtn');
+            const btnText = document.getElementById('clientSetupBtnText');
+            const btnSpinner = document.getElementById('clientSetupBtnSpinner');
+
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.classList.add('hidden');
+            btnSpinner.classList.remove('hidden');
+
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const tenantId = localStorage.getItem('tenantId');
+
+                // Create client via API
+                const response = await fetch('/api/v1/clients', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        tenant_id: tenantId,
+                        name: childNickname,
+                        code: `CHILD_${Date.now()}`, // Auto-generate code
+                        email: `${childNickname.toLowerCase()}@island-parents.local`,
+                        gender: '不透露',
+                        birth_date: '2015-01-01', // Default birth date
+                        phone: '0900000000',
+                        identity_option: '其他',
+                        current_status: '進行中',
+                        island_parents: {
+                            child_grade: childGrade,
+                            parent_relation: parentRelation
+                        }
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Client created successfully
+                    console.log('Client created:', data);
+
+                    // Store client info
+                    localStorage.setItem('onboardingClientId', data.id);
+                    localStorage.setItem('onboardingClientName', childNickname);
+
+                    // Show success screen
+                    document.getElementById('childNameDisplay').textContent = childNickname;
+                    document.getElementById('onboardingScreen1').style.display = 'none';
+                    document.getElementById('onboardingScreen2').style.display = 'flex';
+                } else {
+                    // Client creation failed
+                    alert(data.detail || '建立失敗，請稍後再試');
+                    console.error('Client creation failed:', data);
+                }
+            } catch (error) {
+                console.error('Client setup error:', error);
+                alert('網路錯誤，請稍後再試');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                btnText.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
+            }
+        });
+
         // Logout function (called by logout button)
         function logout() {
             localStorage.removeItem('authToken');
             localStorage.removeItem('userEmail');
             localStorage.removeItem('tenantId');
             localStorage.removeItem('debugMode'); // Clear debug mode on logout
+            localStorage.removeItem('onboardingComplete'); // Clear onboarding state
+            localStorage.removeItem('onboardingClientId');
+            localStorage.removeItem('onboardingClientName');
 
             // Hide main content, show login form
             document.getElementById('mainContent').style.display = 'none';
