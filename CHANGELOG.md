@@ -24,6 +24,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 📝 Source: [Gemini 3 Flash Documentation](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-flash)
 
 ### Added
+- **Island Parents Relationship Field** (2025-12-29)
+  - ✅ New `relationship` field for island_parents Client form
+    - Options: 爸爸 (father), 媽媽 (mother), 爺爺 (grandfather), 奶奶 (grandmother), 外公 (maternal grandfather), 外婆 (maternal grandmother), 其他 (other)
+    - Required field for island_parents tenant
+    - Field order optimized for better UX (order=3)
+  - ✅ Updated Client field labels:
+    - "孩子姓名" → "孩子暱稱" (Child Name → Child Nickname)
+  - ✅ Comprehensive iOS API integration guide
+    - 9-step complete workflow documentation
+    - Safety level analysis explanation (🟢🟡🔴)
+    - Dynamic analysis intervals (5-30s based on safety level)
+    - Swift code examples for iOS implementation
+    - FAQ section and related resources
+  - ✅ Complete workflow integration tests (681 lines)
+  - 📝 Updated: `app/config/field_configs.py`, `IOS_API_GUIDE.md`
+  - 📝 New test: `tests/integration/test_island_parents_complete_workflow.py`
+  - 📝 Test report: `docs/testing/ISLAND_PARENTS_WORKFLOW_TEST_REPORT.md`
+
+- **Documentation Organization and Infrastructure Cost Analysis** (2025-12-29)
+  - ✅ Reorganized documentation structure:
+    - Moved test reports to `docs/testing/`
+    - Centralized technical docs in `docs/`
+    - Improved file organization by functional areas
+  - ✅ PRD Updates:
+    - Added island_parents Safety Level system details
+    - Marked Incremental Billing (Phase 2) as complete
+    - Updated field configurations and descriptions
+  - ✅ Infrastructure cost analysis added to PRD:
+    - Cloud Run cost estimates (low/medium/high traffic)
+    - Supabase pricing tiers and recommendations
+    - Gemini 3 Flash AI model cost calculations
+    - Total monthly cost projections: $10-25 (prototype), $65-125 (production)
+    - Cost optimization strategies (caching, rate limiting, monitoring)
+  - 📝 Updated: `PRD.md` with cost analysis and feature status
+  - 📝 Source: [Gemini 3 Flash Pricing](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-flash)
+
 - **Password Reset System** (2025-12-27)
   - ✅ Web UI pages: `/forgot-password` (request) and `/reset-password` (confirmation)
   - ✅ API endpoints for iOS integration:

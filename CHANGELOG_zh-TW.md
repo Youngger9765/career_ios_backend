@@ -24,6 +24,42 @@
   - 📝 來源：[Gemini 3 Flash 文件](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-flash)
 
 ### 新增
+- **Island Parents 關係欄位** (2025-12-29)
+  - ✅ 新增 island_parents Client 表單的 `relationship` 欄位
+    - 選項：爸爸、媽媽、爺爺、奶奶、外公、外婆、其他
+    - island_parents 租戶必填欄位
+    - 欄位順序優化以提升 UX（order=3）
+  - ✅ 更新 Client 欄位標籤：
+    - "孩子姓名" → "孩子暱稱"
+  - ✅ 完整的 iOS API 整合指南
+    - 9 步驟完整工作流程文件
+    - 安全等級分析說明（🟢🟡🔴）
+    - 動態分析間隔（5-30 秒，依安全等級調整）
+    - iOS 實作的 Swift 程式碼範例
+    - FAQ 章節與相關資源
+  - ✅ 完整工作流程整合測試（681 行）
+  - 📝 更新：`app/config/field_configs.py`、`IOS_API_GUIDE.md`
+  - 📝 新增測試：`tests/integration/test_island_parents_complete_workflow.py`
+  - 📝 測試報告：`docs/testing/ISLAND_PARENTS_WORKFLOW_TEST_REPORT.md`
+
+- **文件整理與基礎設施成本分析** (2025-12-29)
+  - ✅ 重組文件結構：
+    - 測試報告移至 `docs/testing/`
+    - 技術文件集中於 `docs/`
+    - 依功能領域改善檔案組織
+  - ✅ PRD 更新：
+    - 新增 island_parents 安全等級系統細節
+    - 標記增量計費（Phase 2）為已完成
+    - 更新欄位配置與說明
+  - ✅ 基礎設施成本分析加入 PRD：
+    - Cloud Run 成本估算（低/中/高流量）
+    - Supabase 定價方案與建議
+    - Gemini 3 Flash AI 模型成本計算
+    - 每月總成本預估：$10-25（原型階段）、$65-125（正式環境）
+    - 成本優化策略（快取、頻率限制、監控）
+  - 📝 更新：`PRD.md` 包含成本分析與功能狀態
+  - 📝 來源：[Gemini 3 Flash 定價](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-flash)
+
 - **密碼重設系統** (2025-12-27)
   - ✅ Web UI 頁面：`/forgot-password`（請求）與 `/reset-password`（確認）
   - ✅ iOS 整合 API 端點：
