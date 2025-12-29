@@ -4870,21 +4870,28 @@
                     document.getElementById('loginContainer').style.display = 'none';
 
                     // Check if onboarding needed (island_parents tenant only)
+                    console.log('[LOGIN] Tenant ID:', tenantId);
+
                     if (tenantId === 'island_parents') {
                         // Check if user has client with island_parents data
+                        console.log('[ONBOARDING] Checking client existence...');
                         const hasClient = await checkClientExists(data.access_token);
+                        console.log('[ONBOARDING] Has valid client:', hasClient);
 
                         if (!hasClient) {
                             // No client or missing island_parents data - show onboarding
+                            console.log('[ONBOARDING] Showing onboarding screen');
                             document.getElementById('onboardingContainer').style.display = 'block';
                             document.getElementById('onboardingScreen1').style.display = 'flex';
                             document.getElementById('onboardingScreen2').style.display = 'none';
                         } else {
                             // Client exists - show main content
+                            console.log('[ONBOARDING] Client exists, showing main content');
                             document.getElementById('mainContent').style.display = 'block';
                         }
                     } else {
                         // Other tenants - show main content directly
+                        console.log('[LOGIN] Other tenant, showing main content');
                         document.getElementById('mainContent').style.display = 'block';
                     }
 
@@ -4926,6 +4933,7 @@
         // Check if user has client with island_parents data
         async function checkClientExists(authToken) {
             try {
+                console.log('[CHECK_CLIENT] Fetching clients...');
                 const response = await fetch('/api/v1/clients', {
                     method: 'GET',
                     headers: {
@@ -4933,23 +4941,32 @@
                     }
                 });
 
+                console.log('[CHECK_CLIENT] Response status:', response.status);
+
                 if (response.ok) {
                     const data = await response.json();
                     const clients = data.items || data || [];
 
+                    console.log('[CHECK_CLIENT] Total clients:', clients.length);
+                    console.log('[CHECK_CLIENT] Clients data:', clients);
+
                     // Check if user has at least one client with island_parents data
                     const hasValidClient = clients.length > 0 && clients.some(client => {
-                        return client.island_parents &&
+                        const hasData = client.island_parents &&
                                client.island_parents.child_grade &&
                                client.island_parents.parent_relation;
+                        console.log('[CHECK_CLIENT] Client', client.id || client.name, 'has island_parents data:', hasData);
+                        return hasData;
                     });
 
+                    console.log('[CHECK_CLIENT] Has valid client:', hasValidClient);
                     return hasValidClient;
                 }
 
+                console.log('[CHECK_CLIENT] API call failed, returning false');
                 return false;
             } catch (error) {
-                console.error('Error checking client:', error);
+                console.error('[CHECK_CLIENT] Error:', error);
                 return false;
             }
         }
