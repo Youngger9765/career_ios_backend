@@ -1,25 +1,28 @@
 {
-  "hooks": [
-    {
-      "matcher": "*",
-      "hooks": [
-        {
-          "eventName": "UserPromptSubmit",
-          "type": "command",
-          "command": "./.claude/hooks/skill-activation-hook.sh",
-          "timeout": 5,
-          "description": "Auto-activate skills based on keyword matching"
-        },
-        {
-          "eventName": "UserPromptSubmit",
-          "type": "command",
-          "command": "./.claude/hooks/check-agent-rules.py",
-          "timeout": 5,
-          "description": "Check if task requires agent-manager for TDD compliance"
-        }
-      ]
-    }
-  ],
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/skill-activation-hook.sh",
+            "timeout": 5,
+            "description": "Auto-activate skills based on keyword matching"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/check-agent-rules.py",
+            "timeout": 5,
+            "description": "Check if task requires agent-manager for TDD compliance"
+          }
+        ]
+      }
+    ]
+  },
   "projectName": "Career iOS Backend",
   "defaultBranch": "staging",
   "testCommand": "poetry run pytest tests/integration/ -v",

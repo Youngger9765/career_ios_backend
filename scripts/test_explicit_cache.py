@@ -15,7 +15,7 @@ from vertexai.preview.generative_models import GenerativeModel
 
 # Project configuration
 PROJECT_ID = "groovy-iris-473015-h3"
-LOCATION = "us-central1"
+LOCATION = "global"
 MODEL_NAME = "gemini-3-flash-preview"
 
 # 系統 Prompt (996 tokens, 固定不變的部分)
