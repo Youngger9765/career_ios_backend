@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
     # Gemini / Vertex AI (主要 LLM)
     GEMINI_PROJECT_ID: str = "groovy-iris-473015-h3"
-    GEMINI_LOCATION: str = "us-central1"
+    GEMINI_LOCATION: str = "global"  # Gemini 3 requires global endpoint
     GEMINI_CHAT_MODEL: str = "gemini-3-flash-preview"  # Gemini 3 Flash (Dec 2025)
 
     # LLM Provider Selection

@@ -6,14 +6,18 @@ Gemini Implicit Caching 性能测试 - 累积性逐字稿
 
 import asyncio
 import json
+import sys
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict
 
-import httpx
+# Add parent directory to path for test_config import (must be before test_config import)
+sys.path.insert(0, str(Path(__file__).parent))
 
-# API Configuration
-API_BASE_URL = "https://career-app-api-staging-kxaznpplqq-uc.a.run.app/api/v1"
+import httpx  # noqa: E402
+from test_config import API_BASE_URL  # noqa: E402
+
 REALTIME_ENDPOINT = f"{API_BASE_URL}/realtime/analyze"
 
 # 逐字稿数据：模拟连续 10 分钟的亲子教养咨询

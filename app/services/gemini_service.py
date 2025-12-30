@@ -1,24 +1,13 @@
 """Gemini service for chat completions using Vertex AI"""
 
 import logging
-import os
 from typing import Any, Dict, List, Optional
 
 import vertexai
 from vertexai.generative_models import GenerationConfig, GenerativeModel
 from vertexai.preview import caching
 
-# Import settings when available
-try:
-    from app.core.config import settings
-
-    PROJECT_ID = getattr(settings, "GEMINI_PROJECT_ID", "groovy-iris-473015-h3")
-    LOCATION = getattr(settings, "GEMINI_LOCATION", "us-central1")
-    CHAT_MODEL = getattr(settings, "GEMINI_CHAT_MODEL", "gemini-3-flash-preview")
-except ImportError:
-    PROJECT_ID = os.getenv("GEMINI_PROJECT_ID", "groovy-iris-473015-h3")
-    LOCATION = os.getenv("GEMINI_LOCATION", "us-central1")
-    CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-3-flash-preview")
+from app.core.config import settings
 
 
 class GeminiService:
@@ -30,9 +19,9 @@ class GeminiService:
         Args:
             model_name: Model name to use (default: from config)
         """
-        self.project_id = PROJECT_ID
-        self.location = LOCATION
-        self.model_name = model_name or CHAT_MODEL
+        self.project_id = settings.GEMINI_PROJECT_ID
+        self.location = settings.GEMINI_LOCATION
+        self.model_name = model_name or settings.GEMINI_CHAT_MODEL
         self._chat_model = None
         self._initialized = False
 

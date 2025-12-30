@@ -22,13 +22,9 @@ class CacheManager:
 
     def __init__(self):
         """Initialize cache manager"""
-        self.project_id = getattr(
-            settings, "GEMINI_PROJECT_ID", "groovy-iris-473015-h3"
-        )
-        self.location = getattr(settings, "GEMINI_LOCATION", "us-central1")
-        self.model_name = getattr(
-            settings, "GEMINI_CHAT_MODEL", "gemini-3-flash-preview"
-        )
+        self.project_id = settings.GEMINI_PROJECT_ID
+        self.location = settings.GEMINI_LOCATION
+        self.model_name = settings.GEMINI_CHAT_MODEL
         self._initialized = False
 
     def _ensure_initialized(self):
