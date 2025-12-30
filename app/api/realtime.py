@@ -1127,7 +1127,8 @@ async def analyze_transcript(
             "tenant_id": "island_parents",  # Fixed for web version
             "session_id": None,  # Web version has no session concept
             "analyzed_at": datetime.now(timezone.utc),
-            "analysis_type": request.mode.value,  # "emergency" or "practice"
+            "analysis_type": "realtime_analysis",  # Fixed: analysis method type
+            "mode": request.mode.value,  # "emergency" or "practice" - separate field
             "safety_level": safety_level,  # "green", "yellow", or "red"
             "matched_suggestions": analysis.get("suggestions", []),
             "transcript_segment": request.transcript[:1000],  # Limit to 1000 chars
