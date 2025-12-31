@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>AI 即時親子諮詢分析 - Parenting Counseling</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Session Workflow Modules (New Architecture) -->
+    <script type="module" src="/static/js/api-client.js"></script>
+    <script type="module" src="/static/js/session-workflow.js"></script>
     <style>
         /* Custom CSS for commercial-grade UI */
         * {
@@ -1367,7 +1370,7 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
         // === Feature Flags ===
         // Check URL parameter for Codeer feature flag
         const urlParams = new URLSearchParams(window.location.search);
@@ -1377,6 +1380,26 @@
             console.log('🔒 Codeer models hidden (default). Use ?show_codeer=true to enable.');
         } else {
             console.log('🔓 Codeer models enabled via URL parameter');
+        }
+
+        // === New Session Workflow Feature Flag ===
+        // Set to true to use new modular session workflow (iOS-style)
+        // Set to false to use legacy realtime analyze API
+        const USE_NEW_SESSION_WORKFLOW = true;
+        console.log(`🔧 Session Workflow: ${USE_NEW_SESSION_WORKFLOW ? 'NEW (modular)' : 'LEGACY (realtime)'}`);
+
+        // Import SessionWorkflow module dynamically
+        let SessionWorkflow = null;
+        let sessionWorkflow = null;
+
+        if (USE_NEW_SESSION_WORKFLOW) {
+            import('/static/js/session-workflow.js').then(module => {
+                SessionWorkflow = module.SessionWorkflow;
+                sessionWorkflow = new SessionWorkflow();
+                console.log('✅ SessionWorkflow module loaded');
+            }).catch(error => {
+                console.error('❌ Failed to load SessionWorkflow module:', error);
+            });
         }
 
         // === State Management ===
@@ -3277,36 +3300,83 @@
                     return;
                 }
 
-                // === 真實 API 呼叫（需要認證） ===
-                const requestBody = {
-                    mode: counselingMode,  // Emergency or Practice mode
-                    transcript: transcriptText,
-                    speakers: transcriptSegments,
-                    time_range: timeRange,
-                    recording_timestamp: recordingTimestamp,
-                    provider: currentProvider,
-                    session_id: currentSessionId,  // Unified session ID
-                    use_cache: true  // Enable Gemini caching
-                };
+                // === API 路徑選擇：New Session Workflow vs Legacy Realtime API ===
+                let analysis;
 
-                // Add codeer_model parameter when using Codeer provider
-                if (currentProvider === 'codeer') {
-                    requestBody.codeer_model = currentCodeerModel;
+                if (USE_NEW_SESSION_WORKFLOW && sessionWorkflow) {
+                    // === NEW: Use modular Session Workflow (iOS-style) ===
+                    console.log('🚀 Using NEW Session Workflow (modular architecture)');
+
+                    // Initialize session if not already done
+                    if (!sessionWorkflow.isSessionActive()) {
+                        console.log('[Web] Initializing session...');
+
+                        // Create client data from form (if available) or use defaults
+                        const clientData = {
+                            name: '網頁即時諮詢用戶',
+                            email: 'web-realtime@example.com',
+                            gender: '不透露',
+                            birth_date: '2010-01-01',
+                            phone: '0900000000',
+                            identity_option: '家長',
+                            current_status: '即時諮詢中',
+                            case_summary: `即時親子諮詢 - ${new Date().toLocaleString('zh-TW')}`,
+                            case_goals: '改善親子關係',
+                            problem_description: '網頁即時諮詢'
+                        };
+
+                        try {
+                            const sessionId = await sessionWorkflow.initializeSession(clientData);
+                            console.log('[Web] Session initialized:', sessionId);
+                        } catch (error) {
+                            console.error('[Web] Session initialization failed:', error);
+                            throw new Error(`Session 初始化失敗: ${error.message}`);
+                        }
+                    }
+
+                    // Perform analysis using new workflow
+                    try {
+                        analysis = await sessionWorkflow.performAnalysis(transcriptText, counselingMode);
+                        console.log('[Web] Analysis complete (new workflow):', analysis);
+                    } catch (error) {
+                        console.error('[Web] Analysis failed:', error);
+                        throw new Error(`新架構分析失敗: ${error.message}`);
+                    }
+
+                } else {
+                    // === LEGACY: Use Realtime Analyze API ===
+                    console.log('📡 Using LEGACY Realtime API');
+
+                    const requestBody = {
+                        mode: counselingMode,  // Emergency or Practice mode
+                        transcript: transcriptText,
+                        speakers: transcriptSegments,
+                        time_range: timeRange,
+                        recording_timestamp: recordingTimestamp,
+                        provider: currentProvider,
+                        session_id: currentSessionId,  // Unified session ID
+                        use_cache: true  // Enable Gemini caching
+                    };
+
+                    // Add codeer_model parameter when using Codeer provider
+                    if (currentProvider === 'codeer') {
+                        requestBody.codeer_model = currentCodeerModel;
+                    }
+
+                    const response = await fetch('/api/v1/realtime/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error(`API error ${response.status}:`, errorText);
+                        throw new Error(`分析失敗 (HTTP ${response.status})`);
+                    }
+
+                    analysis = await response.json();
                 }
-
-                const response = await fetch('/api/v1/realtime/analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error(`API error ${response.status}:`, errorText);
-                    throw new Error(`分析失敗 (HTTP ${response.status})`);
-                }
-
-                const analysis = await response.json();
 
                 // Check if this is an error response (backend returned error structure)
                 if (analysis.summary && analysis.summary.includes('失敗')) {

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Workflow Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #555;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .result {
+            background-color: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .error {
+            border-left-color: #f44336;
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.active {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+        }
+        .status.inactive {
+            background-color: #ffecb3;
+            color: #f57c00;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            color: #555;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Session Workflow Module Test</h1>
+
+    <div class="section">
+        <h2>Session Status</h2>
+        <div id="sessionStatus" class="status inactive">Session 未初始化</div>
+        <div id="sessionMetadata" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="section">
+        <h2>Step 1: Initialize Session</h2>
+        <label>孩子名稱:</label>
+        <input type="text" id="childName" value="測試孩子" />
+
+        <label>Email:</label>
+        <input type="email" id="childEmail" value="test@example.com" />
+
+        <label>年級:</label>
+        <input type="text" id="childGrade" value="國小三年級" />
+
+        <button id="initBtn" onclick="initializeSession()">初始化 Session</button>
+        <div id="initResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="section">
+        <h2>Step 2: Perform Analysis</h2>
+        <label>逐字稿:</label>
+        <textarea id="transcript" rows="4">家長：你今天在學校怎麼樣？
+孩子：還好啦...</textarea>
+
+        <label>模式:</label>
+        <select id="mode">
+            <option value="practice">Practice (練習模式)</option>
+            <option value="emergency">Emergency (緊急模式)</option>
+        </select>
+
+        <button id="analyzeBtn" onclick="performAnalysis()" disabled>執行分析</button>
+        <div id="analyzeResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="section">
+        <h2>Step 3: End Session</h2>
+        <button id="endBtn" onclick="endSession()" disabled>結束 Session</button>
+        <div id="endResult" class="result" style="display:none;"></div>
+    </div>
+
+    <script type="module">
+        import { SessionWorkflow } from '/static/js/session-workflow.js';
+
+        // Make workflow accessible globally for button clicks
+        window.sessionWorkflow = new SessionWorkflow();
+
+        // Update UI state
+        function updateUI() {
+            const isActive = window.sessionWorkflow.isSessionActive();
+            const statusDiv = document.getElementById('sessionStatus');
+            const metadataDiv = document.getElementById('sessionMetadata');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const endBtn = document.getElementById('endBtn');
+
+            if (isActive) {
+                statusDiv.textContent = 'Session 已啟動';
+                statusDiv.className = 'status active';
+                analyzeBtn.disabled = false;
+                endBtn.disabled = false;
+
+                const metadata = window.sessionWorkflow.getSessionMetadata();
+                metadataDiv.textContent = JSON.stringify(metadata, null, 2);
+                metadataDiv.style.display = 'block';
+            } else {
+                statusDiv.textContent = 'Session 未初始化';
+                statusDiv.className = 'status inactive';
+                analyzeBtn.disabled = true;
+                endBtn.disabled = true;
+                metadataDiv.style.display = 'none';
+            }
+        }
+
+        // Make functions global for onclick handlers
+        window.initializeSession = async function() {
+            const childName = document.getElementById('childName').value;
+            const childEmail = document.getElementById('childEmail').value;
+            const childGrade = document.getElementById('childGrade').value;
+            const resultDiv = document.getElementById('initResult');
+
+            try {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result';
+                resultDiv.textContent = '初始化中...';
+
+                // Note: This will fail without auth
+                // You need to login first and set localStorage.authToken
+                const sessionId = await window.sessionWorkflow.initializeSession({
+                    name: childName,
+                    email: childEmail,
+                    gender: '不透露',
+                    birth_date: '2015-01-01',
+                    phone: '0900000000',
+                    identity_option: '其他',
+                    current_status: '進行中',
+                    case_summary: `${childName} 的親子諮詢`,
+                    case_goals: '改善親子溝通',
+                    problem_description: `孩子年級：${childGrade}`
+                });
+
+                resultDiv.textContent = `成功！Session ID: ${sessionId}`;
+                updateUI();
+
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `錯誤: ${error.message}`;
+            }
+        };
+
+        window.performAnalysis = async function() {
+            const transcript = document.getElementById('transcript').value;
+            const mode = document.getElementById('mode').value;
+            const resultDiv = document.getElementById('analyzeResult');
+
+            try {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result';
+                resultDiv.textContent = '分析中...';
+
+                const analysis = await window.sessionWorkflow.performAnalysis(transcript, mode);
+
+                resultDiv.textContent = JSON.stringify(analysis, null, 2);
+
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `錯誤: ${error.message}`;
+            }
+        };
+
+        window.endSession = function() {
+            const resultDiv = document.getElementById('endResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+
+            window.sessionWorkflow.endSession();
+            resultDiv.textContent = 'Session 已結束';
+            updateUI();
+        };
+
+        // Initial UI update
+        updateUI();
+    </script>
+</body>
+</html>
