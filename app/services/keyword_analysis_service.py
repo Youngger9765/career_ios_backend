@@ -23,6 +23,7 @@ from app.models.credit_log import CreditLog  # For dual-write pattern
 from app.models.session import Session
 from app.models.session_analysis_log import SessionAnalysisLog
 from app.models.session_usage import SessionUsage
+from app.schemas.realtime import CounselingMode
 from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
 from app.services.rag_retriever import RAGRetriever
@@ -75,7 +76,43 @@ class KeywordAnalysisService:
 - severity: 1=輕微, 2=中等, 3=嚴重
 - 分析重點：最近逐字稿，完整對話僅作為背景參考
 """,
-        "island_parents": """你是親子教養專家，分析家長與孩子的對話，評估溝通品質和情緒狀態。
+        "island_parents_emergency": """你是親子教養專家，提供即時危機提醒。這是事中提醒模式，需要快速判斷和簡潔建議。
+
+背景資訊：
+{context}
+
+完整對話逐字稿（供參考）：
+{full_transcript}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【最近對話 - 用於安全評估】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{transcript_segment}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+請分析並返回 JSON 格式：
+{{
+    "safety_level": "green|yellow|red",
+    "severity": 1-3,
+    "display_text": "簡短狀況描述（1句話）",
+    "action_suggestion": "1-2句最關鍵建議",
+    "suggested_interval_seconds": 15,
+    "keywords": ["關鍵詞1", "關鍵詞2"],
+    "categories": ["類別1"]
+}}
+
+紅黃綠燈判斷標準：
+- 🔴 RED (嚴重): 情緒崩潰、失控、衝突升級、語言暴力
+- 🟡 YELLOW (需調整): 溝通不良、情緒緊張、忽略感受
+- 🟢 GREEN (良好): 溝通順暢、情緒穩定、互相尊重
+
+⚠️ EMERGENCY MODE 要求：
+- 聚焦當前最需要處理的問題
+- 建議必須快速可執行
+- 選擇 1-2 句最關鍵建議即可
+- 避免冗長說明
+""",
+        "island_parents_practice": """你是親子教養專家，提供詳細教學指導。這是事前練習模式，可以提供更完整的分析和建議。
 
 背景資訊：
 {context}
@@ -95,10 +132,10 @@ class KeywordAnalysisService:
     "safety_level": "green|yellow|red",
     "severity": 1-3,
     "display_text": "給家長的提示文字",
-    "action_suggestion": "建議採取的行動或調整方式",
-    "suggested_interval_seconds": 15,
-    "keywords": ["關鍵詞1", "關鍵詞2", ...],
-    "categories": ["類別1", "類別2", ...]
+    "action_suggestion": "詳細建議（3-4句），包含 Bridge 技巧說明",
+    "suggested_interval_seconds": 30,
+    "keywords": ["關鍵詞1", "關鍵詞2", "關鍵詞3"],
+    "categories": ["類別1", "類別2"]
 }}
 
 紅黃綠燈判斷標準：
@@ -106,13 +143,19 @@ class KeywordAnalysisService:
 - 🟡 YELLOW (需調整): 溝通不良、情緒緊張、單向指責、忽略感受
 - 🟢 GREEN (良好): 溝通順暢、情緒穩定、互相尊重、有效傾聽
 
+⚠️ PRACTICE MODE 要求：
+- 提供 3-4 句詳細建議
+- 說明 Bridge 技巧和溝通策略
+- 幫助家長理解孩子行為背後的需求
+- 建議具體對話方式和調整方法
+
 ⚠️ CRITICAL: 安全等級評估請只根據「【最近對話 - 用於安全評估】」區塊判斷，
 完整對話僅作為理解脈絡參考。如果最近對話已緩和，即使之前有危險內容，
 也應評估為較低風險。
 
 注意：
 - display_text: 描述當前親子互動狀況，給家長具體的觀察提示
-- action_suggestion: 具體可行的溝通調整建議
+- action_suggestion: 具體可行的溝通調整建議，包含教學性內容
 - severity: 1=輕微, 2=中等, 3=嚴重
 """,
     }
@@ -131,6 +174,7 @@ class KeywordAnalysisService:
         transcript_segment: str,
         counselor_id: UUID,
         tenant_id: str,
+        mode: CounselingMode = CounselingMode.practice,
     ) -> Dict:
         """
         Multi-tenant partial analysis with RAG support.
@@ -162,10 +206,19 @@ class KeywordAnalysisService:
             # Get full transcript from session
             full_transcript = session.transcript_text or "（尚無完整逐字稿）"
 
-            # Get tenant-specific prompt template
-            prompt_template = self.TENANT_PROMPTS.get(
-                tenant_id, self.TENANT_PROMPTS["career"]
-            )
+            # Get tenant-specific prompt template (with mode support for island_parents)
+            if tenant_id == "island_parents":
+                # island_parents tenant: select prompt based on mode
+                prompt_key = f"island_parents_{mode.value}"
+                prompt_template = self.TENANT_PROMPTS.get(
+                    prompt_key, self.TENANT_PROMPTS["island_parents_practice"]
+                )
+            else:
+                # Other tenants: use tenant_id directly (mode not applicable)
+                prompt_template = self.TENANT_PROMPTS.get(
+                    tenant_id, self.TENANT_PROMPTS["career"]
+                )
+
             prompt = prompt_template.format(
                 context=context_str,
                 full_transcript=full_transcript,
@@ -239,14 +292,16 @@ class KeywordAnalysisService:
             result_data["_metadata"] = {
                 # Request metadata
                 "request_id": str(uuid.uuid4()),
-                "mode": "analyze_partial",
+                "mode": mode.value,  # counseling mode: emergency or practice
                 # Input data
                 "time_range": None,  # Not applicable for partial
                 "speakers": None,  # Not applicable for partial
                 # Prompts
                 "system_prompt": None,  # Could extract from template if needed
                 "user_prompt": prompt,  # The actual prompt sent to Gemini
-                "prompt_template": f"{tenant_id}_partial_v1",
+                "prompt_template": f"{tenant_id}_{mode.value}_v1"
+                if tenant_id == "island_parents"
+                else f"{tenant_id}_partial_v1",
                 # RAG information
                 "rag_used": len(rag_documents) > 0,
                 "rag_query": transcript_segment[:200],

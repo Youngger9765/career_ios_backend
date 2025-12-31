@@ -6,6 +6,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from app.schemas.realtime import CounselingMode
+
 
 class AnalyzePartialRequest(BaseModel):
     """通用 partial 分析請求（支援所有租戶）"""
@@ -15,12 +17,17 @@ class AnalyzePartialRequest(BaseModel):
         min_length=1,
         description="最近 60 秒的逐字稿",
     )
+    mode: Optional[CounselingMode] = Field(
+        default=CounselingMode.practice,
+        description="諮詢模式：practice (詳細教學) 或 emergency (快速建議)",
+    )
 
     class Config:
         json_schema_extra = {
             "examples": [
                 {
                     "transcript_segment": "個案：我最近對未來感到很焦慮...",
+                    "mode": "practice",
                 }
             ]
         }

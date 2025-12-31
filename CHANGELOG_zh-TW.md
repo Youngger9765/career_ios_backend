@@ -9,6 +9,29 @@
 
 ## [未發布]
 
+### 新增
+- **性能分析與測試基礎設施** (2025-12-31)
+  - ✅ 性能分析文檔：
+    - `docs/LIGHT_VS_HEAVY_ANALYSIS.md` - 速度對比報告（規則式 vs Gemini 輕量 vs Gemini 重量）
+    - `docs/OPTIMIZATION_OPPORTUNITIES.md` - 優化機會分析與優先級排序
+  - ✅ 性能測試腳本（7 個）：
+    - `scripts/test_vertex_ai_caching.py` - Vertex AI Context Caching 性能測試
+    - `scripts/test_gemini_context_caching.py` - Gemini Context Caching 測試
+    - `scripts/test_light_vs_heavy_analysis.py` - 輕量 vs 重量分析對比
+    - `scripts/test_timing_average.py` - 平均時間測試（5 次迭代）
+    - `scripts/test_detailed_timing.py` - 詳細計時分解
+    - `scripts/test_real_api_e2e.py` - 真實 API 端到端測試
+    - `scripts/test_real_gemini_speed.py` - Gemini API 速度測試
+  - ✅ 工具腳本：
+    - `scripts/check_test_account.py` - 測試帳號驗證
+    - `scripts/verify_password.py` - 密碼驗證工具
+  - 📊 關鍵發現：
+    - Gemini 3 Flash：平均 5.61 秒（比 Gemini 2.5 Flash 快 45%）
+    - Context Caching：28.4% 改善（非宣稱的 50%，API 將於 2026-06 棄用）
+    - 主要瓶頸：Gemini API（4.64 秒，83%）+ RAG 檢索（0.97 秒，17%）
+    - 建議：專注於 Streaming 改善感知延遲（5.61 秒 → 1-2 秒）
+  - 📝 相關於 TODO.md P0-A（RAG Bug 修復）和 P1-2（性能優化）
+
 ### 變更
 - **Gemini 3 Flash 升級** (2025-12-28)
   - ✅ 從 Gemini 2.5 Flash 升級至 Gemini 3 Flash (`gemini-3-flash-preview`)

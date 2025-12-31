@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Performance Analysis and Testing Infrastructure** (2025-12-31)
+  - ✅ Performance analysis documentation:
+    - `docs/LIGHT_VS_HEAVY_ANALYSIS.md` - Speed comparison report (rule-based vs Gemini Light vs Gemini Heavy)
+    - `docs/OPTIMIZATION_OPPORTUNITIES.md` - Optimization opportunities analysis with priority rankings
+  - ✅ Performance testing scripts (7 scripts):
+    - `scripts/test_vertex_ai_caching.py` - Vertex AI Context Caching performance test
+    - `scripts/test_gemini_context_caching.py` - Gemini Context Caching test
+    - `scripts/test_light_vs_heavy_analysis.py` - Light vs Heavy analysis comparison
+    - `scripts/test_timing_average.py` - Average timing test (5 iterations)
+    - `scripts/test_detailed_timing.py` - Detailed timing breakdown
+    - `scripts/test_real_api_e2e.py` - Real API end-to-end test
+    - `scripts/test_real_gemini_speed.py` - Gemini API speed test
+  - ✅ Utility scripts:
+    - `scripts/check_test_account.py` - Test account verification
+    - `scripts/verify_password.py` - Password verification utility
+  - 📊 Key findings:
+    - Gemini 3 Flash: 5.61s average (45% faster than Gemini 2.5 Flash)
+    - Context Caching: 28.4% improvement (not 50% as claimed, API deprecated 2026-06)
+    - Main bottleneck: Gemini API (4.64s, 83%) + RAG retrieval (0.97s, 17%)
+    - Recommendation: Focus on Streaming for perceived latency improvement (5.61s → 1-2s)
+  - 📝 Related to TODO.md P0-A (RAG Bug Fix) and P1-2 (Performance Optimization)
+
 ### Changed
 - **Gemini 3 Flash Upgrade** (2025-12-28)
   - ✅ Upgraded from Gemini 2.5 Flash to Gemini 3 Flash (`gemini-3-flash-preview`)

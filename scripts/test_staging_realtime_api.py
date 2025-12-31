@@ -8,6 +8,7 @@ This script tests:
 3. Performance - Measure actual response time
 4. Data quality - Check if summary, alerts, suggestions are meaningful
 """
+
 import json
 import time
 from typing import Any, Dict, List

@@ -215,6 +215,7 @@ async def analyze_partial(
         request.transcript_segment,
         current_user.id,
         tenant_id,
+        mode=request.mode,
     )
 
     # Schedule background task: Save to PostgreSQL + GBQ

@@ -1,6 +1,7 @@
 """
 Test creating a counselor with duplicate username across different tenants.
 """
+
 from sqlalchemy import select
 
 from app.core.database import SessionLocal

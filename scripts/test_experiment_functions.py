@@ -6,6 +6,7 @@ Tests:
 2. Quality evaluation functions work
 3. Cost calculation functions work
 """
+
 import json
 import sys
 from pathlib import Path

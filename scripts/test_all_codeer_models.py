@@ -10,6 +10,7 @@ This script sends the same test input to all three Codeer models and compares:
 Usage:
     poetry run python scripts/test_all_codeer_models.py
 """
+
 import asyncio
 import json
 import time

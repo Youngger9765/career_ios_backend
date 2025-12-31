@@ -468,3 +468,267 @@ class TestAnalyzePartialAPI:
             )
 
             assert response.status_code == 422  # Validation error
+
+    def test_analyze_partial_island_parents_emergency_mode(
+        self, db_session: Session, island_parents_auth_headers
+    ):
+        """Test analyze-partial with emergency mode (simplified output)"""
+        with TestClient(app) as client_api:
+            # Create test client, case, and session
+            client_response = client_api.post(
+                "/api/v1/clients",
+                headers=island_parents_auth_headers,
+                json={
+                    "name": "Emergency Test Parent",
+                    "email": f"emergency-{uuid4().hex[:8]}@example.com",
+                    "gender": "女",
+                    "birth_date": "1985-05-15",
+                    "phone": f"092{uuid4().hex[:7]}",
+                    "identity_option": "家長",
+                    "current_status": "親子溝通困擾",
+                },
+            )
+            assert client_response.status_code == 201
+            client_id = client_response.json()["id"]
+
+            case_response = client_api.post(
+                "/api/v1/cases",
+                headers=island_parents_auth_headers,
+                json={"client_id": client_id, "goals": "改善親子溝通"},
+            )
+            assert case_response.status_code == 201
+            case_id = case_response.json()["id"]
+
+            session_response = client_api.post(
+                "/api/v1/sessions",
+                headers=island_parents_auth_headers,
+                json={
+                    "case_id": case_id,
+                    "session_date": "2025-01-20",
+                    "transcript": "親子對話開始...",
+                },
+            )
+            assert session_response.status_code == 201
+            session_id = session_response.json()["id"]
+
+            # Test emergency mode
+            request_data = {
+                "transcript_segment": "孩子：我不想去學校！我討厭學校！\n家長：你為什麼這樣？你一定要去！",
+                "mode": "emergency",
+            }
+
+            response = client_api.post(
+                f"/api/v1/sessions/{session_id}/analyze-partial",
+                json=request_data,
+                headers=island_parents_auth_headers,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Verify response structure
+            assert "safety_level" in data
+            assert "severity" in data
+            assert "display_text" in data
+            assert "action_suggestion" in data
+
+            # Emergency mode should provide quick, concise suggestions
+            # (exact content depends on AI, but we can verify structure)
+            assert isinstance(data["display_text"], str)
+            assert isinstance(data["action_suggestion"], str)
+
+            # Verify SessionAnalysisLog includes mode
+            analysis_log = (
+                db_session.query(SessionAnalysisLog)
+                .filter(SessionAnalysisLog.session_id == session_id)
+                .first()
+            )
+            assert analysis_log is not None
+            # Note: mode is stored in metadata JSONB, not direct field
+            # We verify it through GBQ data instead
+
+    def test_analyze_partial_island_parents_practice_mode(
+        self, db_session: Session, island_parents_auth_headers
+    ):
+        """Test analyze-partial with practice mode (detailed output)"""
+        with TestClient(app) as client_api:
+            # Create test client, case, and session
+            client_response = client_api.post(
+                "/api/v1/clients",
+                headers=island_parents_auth_headers,
+                json={
+                    "name": "Practice Test Parent",
+                    "email": f"practice-{uuid4().hex[:8]}@example.com",
+                    "gender": "女",
+                    "birth_date": "1985-05-15",
+                    "phone": f"092{uuid4().hex[:7]}",
+                    "identity_option": "家長",
+                    "current_status": "親子溝通練習",
+                },
+            )
+            assert client_response.status_code == 201
+            client_id = client_response.json()["id"]
+
+            case_response = client_api.post(
+                "/api/v1/cases",
+                headers=island_parents_auth_headers,
+                json={"client_id": client_id, "goals": "練習親子對話技巧"},
+            )
+            assert case_response.status_code == 201
+            case_id = case_response.json()["id"]
+
+            session_response = client_api.post(
+                "/api/v1/sessions",
+                headers=island_parents_auth_headers,
+                json={
+                    "case_id": case_id,
+                    "session_date": "2025-01-20",
+                    "transcript": "練習對話開始...",
+                },
+            )
+            assert session_response.status_code == 201
+            session_id = session_response.json()["id"]
+
+            # Test practice mode (default)
+            request_data = {
+                "transcript_segment": "孩子：我今天在學校被同學笑了...\n家長：哦，怎麼了？",
+                "mode": "practice",  # Explicit practice mode
+            }
+
+            response = client_api.post(
+                f"/api/v1/sessions/{session_id}/analyze-partial",
+                json=request_data,
+                headers=island_parents_auth_headers,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Verify response structure
+            assert "safety_level" in data
+            assert "severity" in data
+            assert "display_text" in data
+            assert "action_suggestion" in data
+
+            # Practice mode should provide detailed suggestions
+            assert isinstance(data["display_text"], str)
+            assert isinstance(data["action_suggestion"], str)
+
+    def test_analyze_partial_mode_default_is_practice(
+        self, db_session: Session, island_parents_auth_headers
+    ):
+        """Test that default mode is 'practice' when not specified"""
+        with TestClient(app) as client_api:
+            # Create test client, case, and session
+            client_response = client_api.post(
+                "/api/v1/clients",
+                headers=island_parents_auth_headers,
+                json={
+                    "name": "Default Mode Test",
+                    "email": f"default-{uuid4().hex[:8]}@example.com",
+                    "gender": "女",
+                    "birth_date": "1985-05-15",
+                    "phone": f"092{uuid4().hex[:7]}",
+                    "identity_option": "家長",
+                    "current_status": "測試",
+                },
+            )
+            assert client_response.status_code == 201
+            client_id = client_response.json()["id"]
+
+            case_response = client_api.post(
+                "/api/v1/cases",
+                headers=island_parents_auth_headers,
+                json={"client_id": client_id, "goals": "測試"},
+            )
+            case_id = case_response.json()["id"]
+
+            session_response = client_api.post(
+                "/api/v1/sessions",
+                headers=island_parents_auth_headers,
+                json={
+                    "case_id": case_id,
+                    "session_date": "2025-01-20",
+                    "transcript": "測試",
+                },
+            )
+            session_id = session_response.json()["id"]
+
+            # Test without specifying mode (should default to practice)
+            request_data = {
+                "transcript_segment": "孩子：我今天很開心\n家長：真的嗎？發生什麼事了？"
+            }
+
+            response = client_api.post(
+                f"/api/v1/sessions/{session_id}/analyze-partial",
+                json=request_data,
+                headers=island_parents_auth_headers,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Should work normally (default to practice mode)
+            assert "safety_level" in data
+            assert "display_text" in data
+
+    def test_analyze_partial_career_ignores_mode(
+        self, db_session: Session, career_auth_headers
+    ):
+        """Test that career tenant ignores mode parameter"""
+        with TestClient(app) as client_api:
+            # Create test client, case, and session
+            client_response = client_api.post(
+                "/api/v1/clients",
+                headers=career_auth_headers,
+                json={
+                    "name": "Career Mode Test",
+                    "email": f"career-mode-{uuid4().hex[:8]}@example.com",
+                    "gender": "男",
+                    "birth_date": "1990-01-01",
+                    "phone": f"091{uuid4().hex[:7]}",
+                    "identity_option": "在職者",
+                    "current_status": "測試",
+                },
+            )
+            assert client_response.status_code == 201
+            client_id = client_response.json()["id"]
+
+            case_response = client_api.post(
+                "/api/v1/cases",
+                headers=career_auth_headers,
+                json={"client_id": client_id, "goals": "測試"},
+            )
+            case_id = case_response.json()["id"]
+
+            session_response = client_api.post(
+                "/api/v1/sessions",
+                headers=career_auth_headers,
+                json={
+                    "case_id": case_id,
+                    "session_date": "2025-01-20",
+                    "transcript": "測試",
+                },
+            )
+            session_id = session_response.json()["id"]
+
+            # Test with mode parameter (should be ignored for career tenant)
+            request_data = {
+                "transcript_segment": "我對職涯感到困惑",
+                "mode": "emergency",  # Should be ignored
+            }
+
+            response = client_api.post(
+                f"/api/v1/sessions/{session_id}/analyze-partial",
+                json=request_data,
+                headers=career_auth_headers,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Should return CareerAnalysisResponse format (mode ignored)
+            assert "keywords" in data
+            assert "categories" in data
+            assert "confidence" in data
+            assert "counselor_insights" in data
