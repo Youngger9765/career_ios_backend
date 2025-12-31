@@ -9,14 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Reduced Dan Siegel Weight in 8 Schools Prompts** (2026-01-01)
+  - Added scientific controversy warning to Dan Siegel's "Whole-Brain Child" theory
+  - Reordered analysis framework to prioritize ABC behavioral model over brain dichotomy
+  - Replaced "上層腦/下層腦" (upper/lower brain) terminology with neutral "情緒狀態" (emotional state)
+  - Updated: `app/prompts/parenting.py` - Practice and Emergency mode prompts
+  - Based on Solomon's feedback: prioritize evidence-based approaches over controversial theories
+
 ### Added
 - **Quick Feedback API for Real-Time Encouragement** (2026-01-01)
   - New `/api/v1/realtime/quick-feedback` endpoint for lightweight AI-powered encouragement messages
   - Provides 1-2 second AI-generated feedback to fill gaps between full analysis cycles
-  - Dynamic frequency coordination with realtime/analyze to avoid conflicts:
-    - 🟢 Green: 30-second interval (supplements 60-second full analysis)
-    - 🟡 Yellow: 15-second interval (supplements 30-second full analysis)
-    - 🔴 Red: Disabled (15-second full analysis is already fast enough)
+  - **Unified 10-second polling interval** for consistent user experience:
+    - 🟢 Green: 60-second full analysis + **10-second quick-feedback** (6 encouragements/minute)
+    - 🟡 Yellow: 30-second full analysis + **10-second quick-feedback** (3 encouragements/30s)
+    - 🔴 Red: 15-second full analysis only (quick-feedback disabled - already fast enough)
   - Features:
     - Context-aware AI responses using Gemini Flash (≤ 20 characters)
     - Reads recent 10-second transcript to generate appropriate encouragement

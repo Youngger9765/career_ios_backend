@@ -9,6 +9,14 @@
 
 ## [未發布]
 
+### 變更
+- **降低 8 大流派 Prompt 中 Dan Siegel 的權重** (2026-01-01)
+  - 為 Dan Siegel 的「全腦教養」理論添加科學爭議警告
+  - 重新排序分析架構，優先使用 ABC 行為模型，而非腦部二分法
+  - 將「上層腦/下層腦」術語替換為中性的「情緒狀態」
+  - 更新：`app/prompts/parenting.py` - Practice 和 Emergency 模式 prompts
+  - 基於 Solomon 的反饋：優先使用實證基礎的方法，而非有爭議的理論
+
 ### 新增
 - **即時鼓勵快速回饋 API** (2026-01-01)
   - 新增 `/api/v1/realtime/quick-feedback` 端點，提供輕量級 AI 驅動的鼓勵訊息
