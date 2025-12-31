@@ -468,31 +468,31 @@ ISLAND_PARENTS_EMERGENCY_PROMPT = """
 - 📊 否則維持現狀（維護成本可接受）
 
 #### Task 1: 建立統一服務 (3-4h) - ⏸️ 暫緩
-- [ ] ~~**新建**: `app/services/unified_analysis_service.py`~~ (不做)
-- [ ] ~~**移植**: Sliding Window 邏輯~~ (已在 Phase 1 用 prompt 註解完成)
-- [ ] ~~**移植**: Multi-Tenant Prompts~~ (已存在於 keyword_analysis_service)
-- [ ] ~~**移植**: RAG 整合~~ (已存在於 keyword_analysis_service)
-- [ ] ~~**修復**: RAG 執行順序 bug~~ (P0-A 已完成)
-- [ ] ~~**合併**: Prompt 最佳實踐~~ (Phase 1 已完成)
-- [ ] ~~**統一**: Response Schema~~ (已統一)
+- [x] ~~**新建**: `app/services/unified_analysis_service.py`~~ (不做)
+- [x] ~~**移植**: Sliding Window 邏輯~~ (已在 Phase 1 用 prompt 註解完成)
+- [x] ~~**移植**: Multi-Tenant Prompts~~ (已存在於 keyword_analysis_service)
+- [x] ~~**移植**: RAG 整合~~ (已存在於 keyword_analysis_service)
+- [x] ~~**修復**: RAG 執行順序 bug~~ (P0-A 已完成)
+- [x] ~~**合併**: Prompt 最佳實踐~~ (Phase 1 已完成)
+- [x] ~~**統一**: Response Schema~~ (已統一)
 
 #### Task 2: 更新 analyze-partial API (1-2h) - ⏸️ 暫緩
-- [ ] ~~**修改**: `app/api/sessions_keywords.py`~~ (不需要，現有邏輯已完善)
-- [ ] ~~**改用**: `UnifiedAnalysisService`~~ (不創建新 service)
+- [x] ~~**修改**: `app/api/sessions_keywords.py`~~ (不需要，現有邏輯已完善)
+- [x] ~~**改用**: `UnifiedAnalysisService`~~ (不創建新 service)
 - [x] **保持**: API 接口不變 (已達成 ✅)
 - [x] **測試**: 681 行整合測試通過 (已達成 ✅)
 
 #### Task 3: Web Console 遷移 (2-3h) - ⏸️ 暫緩
-- [ ] ~~**修改**: `app/templates/realtime_counseling.html`~~ (暫不遷移)
-- [ ] ~~**前端**: 改呼叫 `/api/v1/sessions/{id}/analyze-partial`~~ (暫不遷移)
-- [ ] ~~**移除**: 對 `/api/v1/realtime/analyze` 的調用~~ (暫不遷移)
+- [x] ~~**修改**: `app/templates/realtime_counseling.html`~~ (暫不遷移)
+- [x] ~~**前端**: 改呼叫 `/api/v1/sessions/{id}/analyze-partial`~~ (暫不遷移)
+- [x] ~~**移除**: 對 `/api/v1/realtime/analyze` 的調用~~ (暫不遷移)
 - 📋 **理由**: Web Console 運作正常，遷移風險高於收益
 
 #### Task 4: 淘汰 realtime.py (1-2h) - ⏸️ 暫緩
-- [ ] ~~**標記**: `/api/v1/realtime/analyze` 為 Deprecated~~ (暫不標記)
+- [x] ~~**標記**: `/api/v1/realtime/analyze` 為 Deprecated~~ (暫不標記)
 - [x] **保留**: `/api/v1/realtime/stt` (STT 功能) - 保持現狀 ✅
 - [x] **保留**: `/api/v1/realtime/report` (報告生成) - 保持現狀 ✅
-- [ ] ~~**移除**: `analyze_transcript()` 函數~~ (暫不移除)
+- [x] ~~**移除**: `analyze_transcript()` 函數~~ (暫不移除)
 - 📋 **理由**: realtime.py 仍為 Web Console 提供穩定服務
 - [x] **移除**: `CACHE_SYSTEM_INSTRUCTION` (已移至統一服務)
 - [x] **文檔**: 更新 CHANGELOG 說明棄用

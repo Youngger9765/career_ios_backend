@@ -22,22 +22,27 @@
 
 ---
 
-## 當前可用功能 (2025-12-29)
+## 當前可用功能 (2025-12-31)
 
-### ✅ Codeer AI API 整合
-- **CodeerClient Service** - 完整的 Codeer AI API 客戶端
-  - 異步 HTTP 請求（httpx）
-  - SSE (Server-Sent Events) 串流支援
-  - 自動錯誤處理與重試機制
-- **支援的功能**:
-  - 📝 聊天對話（Chat）- 標準 JSON 回應
-  - 🌊 串流聊天（Stream Chat）- SSE 即時串流
-  - 📚 知識庫查詢（RAG Search）
-  - 🎙️ 語音轉文字（STT）
-  - 🔊 文字轉語音（TTS）
-  - 🌐 網頁搜尋（Web Search）
-- **測試覆蓋**: 27 個整合測試，100% 通過
-- **配置**: 支援自定義 API key、base URL、default agent
+### ✅ AI Provider 架構 (Updated 2025-12-31)
+- **統一使用 Gemini** - 簡化為單一 AI provider
+  - 移除 CodeerProvider 支援（實測效果不佳，commit: 2244b2d）
+  - 程式碼減少 ~1,800 行，降低維護複雜度
+  - 統一使用 Gemini 3 Flash 提供一致性體驗
+- **核心功能**:
+  - 🤖 關鍵詞分析（Keyword Analysis）- JSON 結構化回應
+  - 📚 RAG 知識庫整合（island_parents 親子教養知識）
+  - 🎯 多租戶支援（career, island_parents）
+  - 🔄 雙模式支援（Emergency/Practice mode）
+  - 📖 8 大教養流派理論框架整合
+- **測試覆蓋**: 280 個整合測試通過，0 失敗，100% pass rate
+- **文檔**: 完整的 8 Schools of Parenting 理論文檔
+
+### ~~✅ Codeer AI API 整合~~ (已移除 2025-12-31)
+- **狀態**: 已於 2025-12-31 移除 CodeerProvider
+- **原因**: 實測效果不佳，統一使用 Gemini 降低複雜度
+- **影響**: iOS app 需移除 API 請求中的 `provider` 參數
+- **Commit**: 2244b2d - refactor: remove CodeerProvider, unify to Gemini-only
 
 ### ✅ 認證系統
 - `POST /api/auth/login` - JWT 登入（24h 有效期）
@@ -345,16 +350,13 @@
   - 中文繁體支援（language_code: `zh`）
   - < 100ms 低延遲
   - 手動說話者切換（諮詢師/案主）
-- ✅ **AI 即時分析 - 多模型支援** (2025-12-28 升級)
-  - **Gemini 3 Flash** (預設) - Explicit Caching 優化，< 3s 延遲
-  - **Codeer 親子專家** - 專業親子教養 agent，支援 3 種模型（已驗證可用）：
-    - 🔮 **Gemini 3 Flash** (推薦) - Pro-level intelligence at Flash speed
-    - 🤖 **Claude Sonnet 4.5** - 10.3s 延遲，最高品質
-    - ⚡ **GPT-5 Mini** - 22.6s 延遲，穩定可靠
+- ✅ **AI 即時分析** (Updated 2025-12-31)
+  - **Gemini 3 Flash** (唯一支援) - 統一 AI provider
+  - < 3s 延遲，Pro-level intelligence at Flash speed
   - 每 60 秒自動分析對話內容
   - 提供：對話歸納、提醒事項、建議回應
-  - **前端模型選擇器** - 用戶可即時切換 AI 模型（含性能提示）
   - Cache 效能追蹤：usage_metadata 記錄（cached tokens, prompt tokens, output tokens）
+  - **已移除**: Codeer 多模型支援（2025-12-31 簡化架構）
 - ✅ **RAG 知識庫整合**
   - 7 種教養理論標籤（依附理論、正向教養、發展心理學等）
   - Color-coded badges 視覺化
@@ -451,15 +453,15 @@ ANNOTATED_SAFETY_WINDOW_TURNS = 5  # AI 評估用（標註最近 5 句話）
 
 ---
 
-#### Codeer Model Performance Comparison (實測數據 2025-12-11)
+#### ~~Codeer Model Performance Comparison~~ (已移除 2025-12-31)
+**狀態**: 已移除 Codeer 多模型支援，統一使用 Gemini 3 Flash
 
-| Model | Latency | Best For | Recommended |
-|-------|---------|----------|-------------|
-| Gemini 3 Flash | ~10.6s | Speed + Quality | ⭐ Default |
-| Claude Sonnet 4.5 | ~10.3s | Complex reasoning | ✅ Production |
-| GPT-5 Mini | ~22.6s | Specialized knowledge | ✅ Production |
+**技術決策**:
+- 移除原因: Codeer integration 實測效果不佳
+- 簡化架構: 單一 AI provider (Gemini) 降低維護複雜度
+- 性能優勢: Gemini 3 Flash 提供 < 3s 延遲，Pro-level intelligence at Flash pricing
 
-**Recommendation**: Use Gemini 3 Flash as default for best balance of speed and quality (Dec 2025 upgrade: Pro-level intelligence at Flash pricing).
+---
 
 #### 🔬 Gemini Caching 技術細節與最佳實踐 (2025-12-10 實驗結論)
 
@@ -1328,9 +1330,47 @@ Cloud Run:             $0   (Free Tier)
 
 ---
 
-## 近期更新（2025-12-29）
+## 近期更新（2025-12-31）
 
-### 本週完成（2025-12-29）🎉
+### 本週完成（2025-12-31）🎉
+
+1. **🐛 RAG 執行順序修正** (commit: 59e0a5b)
+   - ✅ 修復 RAG 在 Gemini 調用**之後**執行的問題
+   - ✅ RAG context 現在正確包含在 AI prompts 中（執行順序: RAG → Gemini）
+   - ✅ island_parents 知識庫功能恢復正常
+   - ✅ 提升 AI 回應品質，充分利用知識庫內容
+
+2. **🧪 測試可靠性提升 - 100% Pass Rate 達成** (commit: 14a4fea)
+   - ✅ 修復 GCP credential 驗證邏輯（跳過 local dev 環境的證書檢查）
+   - ✅ 修復時間計算 bug（`this_month_start` 定義錯誤）
+   - ✅ 測試結果: **280 passed, 90 skipped, 0 failed** (100% pass rate)
+   - ✅ 所有整合測試穩定可靠
+
+3. **📚 文檔完善**
+   - ✅ **8 大教養流派理論文檔** (`docs/PARENTING_THEORIES.md`)
+     - 完整說明 8 種教養理論框架
+     - API 整合範例與使用準則
+   - ✅ **登入安全規範文檔** (`docs/LOGIN_ERROR_MESSAGES.md`)
+     - 防止帳號列舉攻擊
+     - OWASP 安全最佳實踐
+
+4. **🗑️ 程式碼簡化 - 架構優化**
+   - ✅ **移除 CacheManager** (commit: f369895, ~889 行)
+     - 刪除效能不佳的快取機制
+     - Vertex AI Context Caching API 即將於 2026-06-24 棄用
+   - ✅ **移除 CodeerProvider** (commit: 2244b2d, ~1,800 行)
+     - 刪除 Codeer integration（實測效果不佳）
+     - 統一使用 Gemini 降低維護複雜度
+     - iOS app 需移除 API 請求中的 `provider` 參數
+
+5. **📖 8 Schools of Parenting Prompt 整合** (commit: 9bca6e6)
+   - ✅ 建立 8 大教養流派 prompt 基礎架構
+   - ✅ Practice/Emergency mode 雙模式支援
+   - ✅ Schema 擴充: `DetailedScript`, `IslandParentAnalysisResponse`
+   - ✅ 整合測試: `tests/integration/test_8_schools_prompt_integration.py`
+   - 📝 詳細說明見本文檔 "8 Schools of Parenting 整合" 章節
+
+### 上週完成（2025-12-29）🎉
 
 1. **Gemini 3 Flash 升級** (2025-12-28) - AI 模型重大升級
    - ✅ 從 Gemini 2.5 Flash 升級至 Gemini 3 Flash (`gemini-3-flash-preview`)
