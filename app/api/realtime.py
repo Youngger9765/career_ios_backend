@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.realtime import (
-    CodeerTokenMetadata,
     CounselingMode,
     ImprovementSuggestion,
     ParentsReportRequest,
@@ -693,203 +692,6 @@ async def write_to_gbq_async(data: dict) -> None:
         )
 
 
-async def _analyze_with_codeer(
-    transcript: str,
-    speakers: List[dict],
-    rag_context: str,
-    db: Session,
-    session_id: str = "",
-    model: str = "gpt5-mini",
-    custom_prompt: str = "",
-) -> dict:
-    """Analyze transcript using Codeer 親子專家 agent.
-
-    Args:
-        transcript: Full transcript text
-        speakers: List of speaker segments
-        rag_context: RAG knowledge context
-        db: Database session
-        session_id: Session ID for session pooling (optional)
-        model: Codeer model selection (claude-sonnet, gemini-flash, or gpt5-mini)
-
-    Returns:
-        Dict with summary, alerts, suggestions
-    """
-    import json
-
-    from app.services.codeer_client import CodeerClient, get_codeer_agent_id
-    from app.services.codeer_session_pool import get_codeer_session_pool
-
-    # Get agent ID based on model selection
-    try:
-        agent_id = get_codeer_agent_id(model)
-        logger.info(f"Using Codeer model: {model}, agent_id: {agent_id}")
-    except Exception as e:
-        logger.error(f"Failed to get Codeer agent ID: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
-
-    # Create client with longer timeout for analysis
-    client = CodeerClient()
-    # Extend timeout to 60 seconds for LLM response
-    client.client.timeout = httpx.Timeout(60.0)
-
-    try:
-        # Use custom prompt if provided (for mode-based routing)
-        # Otherwise, use default system instruction
-        if custom_prompt:
-            prompt = custom_prompt
-        else:
-            # Build analysis prompt similar to Gemini's
-            # Format: system instruction + RAG context + transcript
-            prompt = f"""{CACHE_SYSTEM_INSTRUCTION}
-
-{rag_context if rag_context else ""}
-
-【對話內容】
-{transcript}
-
-請分析以上對話，提供 JSON 格式回應。
-"""
-
-        # Create or reuse chat session with selected agent
-        if session_id:
-            # Use session pool for reuse
-            pool = get_codeer_session_pool()
-            chat = await pool.get_or_create_session(
-                session_id, client, agent_id=agent_id
-            )
-            logger.info(f"Using session pool for {session_id} with agent {agent_id}")
-        else:
-            # Fallback: create new chat with selected agent
-            # Use microsecond precision + model name to ensure unique chat names
-            import uuid
-
-            unique_suffix = (
-                f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
-            )
-            chat = await client.create_chat(
-                name=f"Realtime-{model}-{unique_suffix}",
-                agent_id=agent_id,
-            )
-            logger.info(
-                f"Created new chat (no session_id) with agent {agent_id}: {chat['name']}"
-            )
-
-        # Send message to Codeer agent (non-streaming for now)
-        # CRITICAL: Must pass agent_id to match the agent used to create the chat
-        try:
-            response = await client.send_message(
-                chat_id=chat["id"], message=prompt, stream=False, agent_id=agent_id
-            )
-        except Exception as api_error:
-            # Handle Codeer API errors (e.g., agent mismatch, timeout, rate limit)
-            logger.error(f"Codeer send_message failed: {api_error}")
-            return {
-                "summary": "Codeer 分析失敗",
-                "alerts": [f"⚠️ API 錯誤: {str(api_error)}"],
-                "suggestions": ["💡 請檢查 Codeer API 連線或稍後再試"],
-                "token_usage": None,
-            }
-
-        # Fetch token usage from the latest assistant message
-        token_usage_data = None
-        try:
-            # Fetch latest messages (limit=10 to ensure we get assistant response)
-            # The order is: [latest system, latest assistant, user, ...]
-            messages = await client.list_chat_messages(chat_id=chat["id"], limit=10)
-            if messages and len(messages) > 0:
-                # Find the latest assistant message (role='assistant')
-                assistant_message = None
-                for msg in messages:
-                    if msg.get("role") == "assistant":
-                        assistant_message = msg
-                        break
-
-                # Extract token_usage from assistant message's meta.token_usage
-                if (
-                    assistant_message
-                    and "meta" in assistant_message
-                    and "token_usage" in assistant_message["meta"]
-                    and assistant_message["meta"]["token_usage"] is not None
-                ):
-                    token_usage = assistant_message["meta"]["token_usage"]
-                    token_usage_data = {
-                        "total_prompt_tokens": token_usage.get(
-                            "total_prompt_tokens", 0
-                        ),
-                        "total_completion_tokens": token_usage.get(
-                            "total_completion_tokens", 0
-                        ),
-                        "total_tokens": token_usage.get("total_tokens", 0),
-                        "total_calls": token_usage.get("total_calls", 0),
-                    }
-                    logger.info(f"Codeer token usage: {token_usage_data}")
-                else:
-                    logger.warning(
-                        "No assistant message found or token_usage not available"
-                    )
-        except Exception as e:
-            logger.warning(f"Failed to fetch Codeer token usage: {e}")
-
-        # Parse Codeer response
-        # Codeer returns dict with 'content', 'text', or 'message' field
-        try:
-            # Extract text from response
-            if isinstance(response, dict):
-                response_text = (
-                    response.get("content")
-                    or response.get("text")
-                    or response.get("message")
-                    or str(response)
-                )
-            else:
-                response_text = str(response)
-
-            # Extract JSON from response
-            if "```json" in response_text:
-                json_start = response_text.find("```json") + 7
-                json_end = response_text.find("```", json_start)
-                json_text = response_text[json_start:json_end].strip()
-            elif "{" in response_text:
-                json_start = response_text.find("{")
-                json_end = response_text.rfind("}") + 1
-                json_text = response_text[json_start:json_end]
-            else:
-                # Fallback: treat as plain text
-                json_text = response_text
-
-            analysis = json.loads(json_text)
-
-            # Ensure required fields exist
-            if "summary" not in analysis:
-                analysis["summary"] = "分析結果"
-            if "alerts" not in analysis:
-                analysis["alerts"] = []
-            if "suggestions" not in analysis:
-                analysis["suggestions"] = []
-
-            # Add token usage to analysis result
-            analysis["token_usage"] = token_usage_data
-
-            return analysis
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse Codeer response as JSON: {e}")
-            logger.error(f"Response text: {response_text[:500]}")
-
-            # Fallback response
-            return {
-                "summary": "Codeer 回應解析失敗",
-                "alerts": [f"⚠️ 無法解析回應: {str(e)}"],
-                "suggestions": ["💡 請檢查 Codeer agent 設定"],
-                "token_usage": token_usage_data,
-            }
-
-    finally:
-        # Always close the client
-        await client.close()
-
-
 @router.post("/analyze", response_model=RealtimeAnalyzeResponse)
 async def analyze_transcript(
     request: RealtimeAnalyzeRequest,
@@ -901,8 +703,7 @@ async def analyze_transcript(
     Returns summary, alerts, and suggestions for the counselor based on
     the conversation in the past 60 seconds.
 
-    Supports multiple LLM providers: Gemini (default) and Codeer.
-    Gemini supports explicit context caching for improved performance.
+    Uses Gemini for analysis with context caching for improved performance.
 
     This is a demo feature with no authentication required.
     """
@@ -968,61 +769,22 @@ async def analyze_transcript(
         cache_metadata = None
         provider_metadata = None
 
-        # Route to appropriate provider
-        if request.provider == "codeer":
-            logger.info(
-                f"Using Codeer provider for analysis (model: {request.codeer_model})"
-            )
-            analysis = await _analyze_with_codeer(
-                transcript=request.transcript,
-                speakers=speakers_dict,
-                rag_context=rag_context,
-                db=db,
-                session_id=request.session_id,
-                model=request.codeer_model,
-                custom_prompt=custom_prompt,
-            )
+        # Use Gemini for analysis
+        logger.info("Using Gemini provider for analysis")
 
-            # Calculate latency
-            latency_ms = int((time.time() - start_time) * 1000)
+        # Use standard analysis (cache removed - API deprecating 2026-06-24)
+        analysis = await gemini_service.analyze_realtime_transcript(
+            transcript=request.transcript,
+            speakers=speakers_dict,
+            rag_context=rag_context,
+            custom_prompt=custom_prompt,
+        )
 
-            # Extract token usage from analysis result
-            codeer_token_metadata = None
-            if analysis.get("token_usage"):
-                token_data = analysis["token_usage"]
-                codeer_token_metadata = CodeerTokenMetadata(
-                    total_prompt_tokens=token_data.get("total_prompt_tokens", 0),
-                    total_completion_tokens=token_data.get(
-                        "total_completion_tokens", 0
-                    ),
-                    total_tokens=token_data.get("total_tokens", 0),
-                    total_calls=token_data.get("total_calls", 0),
-                )
-
-            provider_metadata = ProviderMetadata(
-                provider="codeer",
-                latency_ms=latency_ms,
-                model=f"親子專家 (codeer-{request.codeer_model})",
-                codeer_token_usage=codeer_token_metadata,
-            )
-
-        # Default to Gemini
-        else:
-            logger.info("Using Gemini provider for analysis")
-
-            # Use standard analysis (cache removed - API deprecating 2026-06-24)
-            analysis = await gemini_service.analyze_realtime_transcript(
-                transcript=request.transcript,
-                speakers=speakers_dict,
-                rag_context=rag_context,
-                custom_prompt=custom_prompt,
-            )
-
-            # Calculate latency
-            latency_ms = int((time.time() - start_time) * 1000)
-            provider_metadata = ProviderMetadata(
-                provider="gemini", latency_ms=latency_ms, model="gemini-3-flash-preview"
-            )
+        # Calculate latency
+        latency_ms = int((time.time() - start_time) * 1000)
+        provider_metadata = ProviderMetadata(
+            provider="gemini", latency_ms=latency_ms, model="gemini-3-flash-preview"
+        )
 
         # Extract safety_level from LLM response, default to "green" if not present
         safety_level = analysis.get("safety_level", "green")

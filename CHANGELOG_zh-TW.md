@@ -9,6 +9,28 @@
 
 ## [未發布]
 
+### 移除
+- **CodeerProvider 支援** (2025-12-31)
+  - 移除 Codeer AI provider 整合以簡化程式碼
+  - 現在統一使用 Gemini 進行所有分析
+  - 影響：降低複雜度、更易維護、提供者一致
+  - 原因：Codeer 實測效果不佳
+  - 修改檔案：
+    - `app/schemas/realtime.py` - 從 `RealtimeAnalyzeRequest` 移除 `provider` 和 `codeer_model` 參數
+    - `app/schemas/realtime.py` - 移除 `CodeerTokenMetadata` schema
+    - `app/api/realtime.py` - 移除 Codeer provider 路由邏輯
+    - `app/api/realtime.py` - 移除 `_analyze_with_codeer()` 函數
+    - `app/core/config.py` - 移除所有 CODEER_* 設定欄位
+    - `app/models/session_analysis_log.py` - 更新 provider 註解移除 "codeer"
+  - 刪除檔案：
+    - `app/services/codeer_client.py` - Codeer API 客戶端
+    - `app/services/codeer_session_pool.py` - Codeer session pooling
+    - `tests/integration/test_realtime_codeer_provider.py` - Codeer provider 測試
+    - `scripts/list_codeer_agents.py` - Agent 列表腳本
+    - `scripts/validate_codeer_cache.py` - Cache 驗證腳本
+    - `scripts/test_all_codeer_models.py` - 模型測試腳本
+  - 注意：iOS app 應移除 API 請求中的 `provider` 參數
+
 ### 新增
 - **文檔** (2025-12-31)
   - 建立 `docs/PARENTING_THEORIES.md` - 8 大教養流派理論完整指南

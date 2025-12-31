@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **CodeerProvider Support** (2025-12-31)
+  - Removed Codeer AI provider integration to simplify codebase
+  - Now exclusively uses Gemini for all analysis
+  - Impact: Reduced complexity, easier maintenance, consistent provider
+  - Reason: Codeer实测效果不佳 (poor real-world performance)
+  - Modified:
+    - `app/schemas/realtime.py` - Removed `provider` and `codeer_model` parameters from `RealtimeAnalyzeRequest`
+    - `app/schemas/realtime.py` - Removed `CodeerTokenMetadata` schema
+    - `app/api/realtime.py` - Removed Codeer provider routing logic
+    - `app/api/realtime.py` - Removed `_analyze_with_codeer()` function
+    - `app/core/config.py` - Removed all CODEER_* configuration fields
+    - `app/models/session_analysis_log.py` - Updated provider comment to remove "codeer"
+  - Deleted:
+    - `app/services/codeer_client.py` - Codeer API client
+    - `app/services/codeer_session_pool.py` - Codeer session pooling
+    - `tests/integration/test_realtime_codeer_provider.py` - Codeer provider tests
+    - `scripts/list_codeer_agents.py` - Agent listing script
+    - `scripts/validate_codeer_cache.py` - Cache validation script
+    - `scripts/test_all_codeer_models.py` - Model testing script
+  - Note: iOS app should remove `provider` parameter from API requests
+
 ### Added
 - **Documentation** (2025-12-31)
   - Created `docs/PARENTING_THEORIES.md` - Comprehensive guide to 8 Schools of Parenting theories

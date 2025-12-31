@@ -239,7 +239,7 @@ class SessionAnalysisLog(Base, BaseModel):
     provider = Column(
         String(50),
         nullable=True,
-        comment="LLM provider: gemini, openai, codeer",
+        comment="LLM provider: gemini, openai",
     )
     model_version = Column(
         String(50),
