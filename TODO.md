@@ -17,15 +17,15 @@
 ### Phase 3: 🟢 體驗優化 (第 3 週，6-8h) ← ⏸️ **暫緩**
 5. ~~**P1-B: Streaming 支援** (6-8h)~~ ← ⏸️ **暫緩** (iOS 不需要 Streaming 體驗，Web 也先不做)
 
-### Phase 4: 🔵 產品增強 (第 4 週+，10-12h) ← 🎯 **當前優先**
-6. **P2: Prompt 升級 - 8 大流派** (10-12h) ← 產品功能擴充，**下一個任務**
+### Phase 4: 🔵 產品增強 (第 4 週+，10-12h) ← ✅ **已完成**
+6. **P2: Prompt 升級 - 8 大流派** (10-12h) ← ✅ **已完成** (2025-12-31)
 
 **關鍵決策邏輯** (更新 2025-12-31):
-- ✅ 先修 Bug (RAG 失效) → 再清架構 (配置) → 再統一 API (部分完成) → **現在產品增強**
+- ✅ 先修 Bug (RAG 失效) → 再清架構 (配置) → 再統一 API (部分完成) → **產品增強完成**
 - ⏸️ P1-B Streaming 暫緩（iOS 不需要，Web 也先不做）
-- 🎯 **優先 P2 Prompt 升級**（8 大流派產品功能擴充，直接提升價值）
-- ✅ API 統一依賴 Mode 支援 (先加 mode → 再統一)
-- ✅ 架構穩定後再做產品增強 (8 大流派)
+- ✅ **P2 Prompt 升級完成**（8 大流派產品功能擴充，價值提升）
+- ✅ API 統一依賴 Mode 支援 (先加 mode → 再統一) - 已完成
+- ✅ 架構穩定後再做產品增強 (8 大流派) - 已完成
 
 ---
 
@@ -518,13 +518,13 @@ ISLAND_PARENTS_EMERGENCY_PROMPT = """
 ### Phase 4: 後續改進 (可選)
 
 #### 4.1 移除不需要的功能
-- [ ] **移除**: CacheManager (實測效果 28%，不值得)
+- [x] **移除**: CacheManager (實測效果 28%，不值得) ✅ 已完成 2025-12-31
 - [ ] **簡化**: Provider 切換邏輯 (只用 Gemini)
 
 #### 4.2 新增改進
 - [ ] **新增**: Streaming 支援 (P1 優化)
-- [ ] **新增**: Mode 支援 (emergency/practice)
-- [ ] **新增**: 8 大流派整合 (P2 產品需求)
+- [x] **新增**: Mode 支援 (emergency/practice) ✅ 已完成 2025-12-31
+- [x] **新增**: 8 大流派整合 (P2 產品需求) ✅ 已完成 2025-12-31
 
 ---
 
@@ -609,15 +609,15 @@ app/core/config.py (Settings class - 唯一的配置來源)
 ### 重構任務清單
 
 #### Task 1: 清理 gemini_service.py (15 分鐘)
-- [ ] **移除**: Lines 12-21 的所有 `getattr()` 和 fallback defaults
-- [ ] **修改**: 直接使用 `settings.GEMINI_PROJECT_ID` 等
-- [ ] **修改前**:
+- [x] **移除**: Lines 12-21 的所有 `getattr()` 和 fallback defaults
+- [x] **修改**: 直接使用 `settings.GEMINI_PROJECT_ID` 等
+- [x] **修改前**:
   ```python
   PROJECT_ID = getattr(settings, "GEMINI_PROJECT_ID", "groovy-iris-473015-h3")
   LOCATION = getattr(settings, "GEMINI_LOCATION", "global")
   CHAT_MODEL = getattr(settings, "GEMINI_CHAT_MODEL", "gemini-3-flash-preview")
   ```
-- [ ] **修改後**:
+- [x] **修改後**:
   ```python
   from app.core.config import settings
 
@@ -626,16 +626,16 @@ app/core/config.py (Settings class - 唯一的配置來源)
   LOCATION = settings.GEMINI_LOCATION
   CHAT_MODEL = settings.GEMINI_CHAT_MODEL
   ```
-- [ ] **移除**: `try/except ImportError` 區塊（不再需要）
-- [ ] **簡化**: `__init__` 方法直接使用 settings
+- [x] **移除**: `try/except ImportError` 區塊（不再需要）
+- [x] **簡化**: `__init__` 方法直接使用 settings
 
 #### Task 2: 清理 cache_manager.py (10 分鐘)
-- [ ] **移除**: Lines 25-31 的 `getattr()` fallback defaults
-- [ ] **修改**: 直接使用 `settings.GEMINI_*`
-- [ ] **簡化**: 初始化邏輯
+- [x] **移除**: Lines 25-31 的 `getattr()` fallback defaults
+- [x] **修改**: 直接使用 `settings.GEMINI_*`
+- [x] **簡化**: 初始化邏輯
 
 #### Task 3: 統一測試腳本配置 (15 分鐘)
-- [ ] **建立**: `scripts/test_config.py` - 測試腳本專用配置模組
+- [x] **建立**: `scripts/test_config.py` - 測試腳本專用配置模組
   ```python
   # scripts/test_config.py
   import sys
@@ -649,8 +649,8 @@ app/core/config.py (Settings class - 唯一的配置來源)
   LOCATION = settings.GEMINI_LOCATION
   CHAT_MODEL = settings.GEMINI_CHAT_MODEL
   ```
-- [ ] **更新**: 所有 `scripts/test_*.py` 改用 `from test_config import *`
-- [ ] **檔案清單**:
+- [x] **更新**: 所有 `scripts/test_*.py` 改用 `from test_config import *`
+- [x] **檔案清單**:
   - `test_vertex_ai_caching.py`
   - `test_gemini_context_caching.py`
   - `test_explicit_cache.py`
@@ -659,7 +659,7 @@ app/core/config.py (Settings class - 唯一的配置來源)
   - `test_real_api_e2e.py`
 
 #### Task 4: 更新文檔 (10 分鐘)
-- [ ] **建立**: `docs/CONFIGURATION.md` - 配置管理指南
+- [x] **建立**: `docs/CONFIGURATION.md` - 配置管理指南
   ```markdown
   # 配置管理指南
 
@@ -680,13 +680,13 @@ app/core/config.py (Settings class - 唯一的配置來源)
   - ❌ 不要使用 `getattr(settings, "KEY", "fallback")`
   - ❌ 不要在測試腳本直接寫死配置
   ```
-- [ ] **更新**: README.md 加入配置管理說明連結
+- [x] **更新**: README.md 加入配置管理說明連結
 
 #### Task 5: 驗證測試 (15 分鐘)
-- [ ] **單元測試**: 驗證所有模組正確讀取 settings
-- [ ] **整合測試**: 運行 `poetry run pytest tests/integration/` 確保沒有破壞
-- [ ] **腳本測試**: 運行所有 `scripts/test_*.py` 確保配置正確
-- [ ] **環境變數測試**: 修改 `.env` 後驗證生效
+- [x] **單元測試**: 驗證所有模組正確讀取 settings
+- [x] **整合測試**: 運行 `poetry run pytest tests/integration/` 確保沒有破壞
+- [x] **腳本測試**: 運行所有 `scripts/test_*.py` 確保配置正確
+- [x] **環境變數測試**: 修改 `.env` 後驗證生效
 
 ### 預期成果
 
@@ -920,8 +920,8 @@ app/core/config.py (Settings class - 唯一的配置來源)
 
 ### 任務清單
 
-#### 1. Response Schema 擴充
-- [ ] **新增 DetailedScript Model** (app/schemas/analysis.py):
+#### 1. Response Schema 擴充 ✅
+- [x] **新增 DetailedScript Model** (app/schemas/analysis.py):
   ```python
   class DetailedScript(BaseModel):
       situation: str  # "當孩子拒絕寫作業時"
@@ -930,7 +930,7 @@ app/core/config.py (Settings class - 唯一的配置來源)
       theory_basis: str  # "薩提爾模式 + Dr. Becky"
       step: str  # "同理連結" | "解決策略"
   ```
-- [ ] **擴充 IslandParentAnalysisResponse**:
+- [x] **擴充 IslandParentAnalysisResponse**:
   ```python
   class IslandParentAnalysisResponse(BaseModel):
       # 現有欄位（保留）
@@ -948,8 +948,8 @@ app/core/config.py (Settings class - 唯一的配置來源)
 
 #### 2. Prompt Template 升級
 
-**2.1 Practice Mode Prompt 整合 8 大流派**
-- [ ] 在 ISLAND_PARENTS_PRACTICE_PROMPT 中新增：
+**2.1 Practice Mode Prompt 整合 8 大流派** ✅
+- [x] 在 ISLAND_PARENTS_PRACTICE_PROMPT 中新增：
   - **角色定義**: "你是專業親子教養顧問，精通 8 大流派"
   - **8 大流派明確列出**:
     1. 阿德勒正向教養
@@ -970,8 +970,8 @@ app/core/config.py (Settings class - 唯一的配置來源)
     5. 具體話術 (Dr. Becky): 提供逐字稿級別對話範例
     ```
 
-**2.2 新增 detailed_scripts 輸出指令**
-- [ ] Prompt 中新增：
+**2.2 新增 detailed_scripts 輸出指令** ✅
+- [x] Prompt 中新增：
   ```
   【輸出格式】JSON:
   {
@@ -997,9 +997,9 @@ app/core/config.py (Settings class - 唯一的配置來源)
   }
   ```
 
-**2.3 Emergency Mode Prompt 調整**
-- [ ] Emergency Mode 不提供 detailed_scripts（保持簡短快速）
-- [ ] 但仍整合 8 大流派思考（內化，不輸出）
+**2.3 Emergency Mode Prompt 調整** ✅
+- [x] Emergency Mode 不提供 detailed_scripts（保持簡短快速）
+- [x] 但仍整合 8 大流派思考（內化，不輸出）
 
 #### 3. 建議句庫擴充
 
@@ -1019,20 +1019,20 @@ app/core/config.py (Settings class - 唯一的配置來源)
 
 #### 4. Service Layer 實作
 
-**4.1 keyword_analysis_service.py 調整**
-- [ ] `analyze_partial()` 方法新增 `include_detailed_scripts: bool = False` 參數
-- [ ] Practice Mode 預設 `include_detailed_scripts=True`
-- [ ] Emergency Mode 預設 `include_detailed_scripts=False`
-- [ ] AI Response 解析：新增 detailed_scripts 欄位提取
+**4.1 keyword_analysis_service.py 調整** ✅
+- [x] `analyze_partial()` 方法新增 `include_detailed_scripts: bool = False` 參數
+- [x] Practice Mode 預設 `include_detailed_scripts=True`
+- [x] Emergency Mode 預設 `include_detailed_scripts=False`
+- [x] AI Response 解析：新增 detailed_scripts 欄位提取
 
-**4.2 Prompt 動態組裝**
-- [ ] Practice Mode: 完整 prompt（8 流派 + 5 步驟 + detailed_scripts 要求）
-- [ ] Emergency Mode: 簡化 prompt（8 流派思考 + 簡短建議）
+**4.2 Prompt 動態組裝** ✅
+- [x] Practice Mode: 完整 prompt（8 流派 + 5 步驟 + detailed_scripts 要求）
+- [x] Emergency Mode: 簡化 prompt（8 流派思考 + 簡短建議）
 
 #### 5. API 層調整
 
-**5.1 Request Schema** (app/schemas/analysis.py)
-- [ ] AnalyzePartialRequest 新增可選參數：
+**5.1 Request Schema** (app/schemas/analysis.py) ✅
+- [x] AnalyzePartialRequest 新增可選參數：
   ```python
   class AnalyzePartialRequest(BaseModel):
       transcript_segment: str
@@ -1040,34 +1040,34 @@ app/core/config.py (Settings class - 唯一的配置來源)
       include_detailed_scripts: Optional[bool] = None  # 新增，預設根據 mode 決定
   ```
 
-**5.2 sessions_keywords.py**
-- [ ] 根據 mode 自動設定 `include_detailed_scripts`:
+**5.2 sessions_keywords.py** ✅
+- [x] 根據 mode 自動設定 `include_detailed_scripts`:
   - practice → True
   - emergency → False
 
 #### 6. 測試
 
-**6.1 Integration Tests**
-- [ ] test_practice_mode_detailed_scripts.py:
+**6.1 Integration Tests** ✅
+- [x] test_practice_mode_detailed_scripts.py:
   - 驗證 Practice Mode 返回 detailed_scripts（1-3 個範例）
   - 驗證話術長度（150-300 字）
   - 驗證包含理論來源標註
-- [ ] test_emergency_mode_no_scripts.py:
+- [x] test_emergency_mode_no_scripts.py:
   - 驗證 Emergency Mode 不返回 detailed_scripts
-- [ ] test_theoretical_frameworks_tracking.py:
+- [x] test_theoretical_frameworks_tracking.py:
   - 驗證 theoretical_frameworks 欄位正確標註
 
-**6.2 Prompt 品質測試**
-- [ ] 手動測試 10 個真實對話場景
-- [ ] 驗證 AI 是否真正整合 8 大流派思考
-- [ ] 驗證話術是否達到"逐字稿級別"
+**6.2 Prompt 品質測試** ✅
+- [x] 手動測試 10 個真實對話場景
+- [x] 驗證 AI 是否真正整合 8 大流派思考
+- [x] 驗證話術是否達到"逐字稿級別"
 
-#### 7. 文檔更新
+#### 7. 文檔更新 ✅
 
-- [ ] PRD.md - 新增 "8 大流派整合" 章節
-- [ ] IOS_API_GUIDE.md - 更新 Response 範例（含 detailed_scripts）
-- [ ] CHANGELOG.md - 記錄此重大升級
-- [ ] 新增 `docs/PARENTING_THEORIES.md` - 8 大流派理論說明文檔
+- [x] PRD.md - 新增 "8 大流派整合" 章節
+- [x] IOS_API_GUIDE.md - 更新 Response 範例（含 detailed_scripts）
+- [x] CHANGELOG.md - 記錄此重大升級
+- [ ] 新增 `docs/PARENTING_THEORIES.md` - 8 大流派理論說明文檔 (未完成)
 
 ### 技術細節
 

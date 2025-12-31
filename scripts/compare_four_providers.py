@@ -37,7 +37,6 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import services (must be after path setup)
-from app.services.cache_manager import CacheManager  # noqa: E402
 from app.services.codeer_client import CodeerClient, get_codeer_agent_id  # noqa: E402
 from app.services.codeer_session_pool import get_codeer_session_pool  # noqa: E402
 from app.services.gemini_service import GeminiService  # noqa: E402
@@ -581,45 +580,23 @@ async def test_gemini_with_cache(
 
     # Initialize services
     gemini_service = GeminiService()
-    cache_manager = CacheManager()
 
     try:
-        # Get or create cache
-        cached_content, is_new = await cache_manager.get_or_create_cache(
-            session_id=session_id,
-            system_instruction=CACHE_SYSTEM_INSTRUCTION,
-            accumulated_transcript=transcript,
-            ttl_seconds=7200,
-        )
-
         # Search RAG knowledge base
         rag_context = await _search_rag_for_experiment(transcript)
         logger.info(
             f"Gemini RAG enabled: {bool(rag_context)}, length: {len(rag_context)}"
         )
 
-        if cached_content is None:
-            # Content too short, use standard analysis
-            logger.info("Content too short for caching, using standard analysis")
-            analysis = await gemini_service.analyze_realtime_transcript(
-                transcript=transcript,
-                speakers=speakers,
-                rag_context=rag_context,
-            )
+        # Use standard analysis (cache removed - API deprecating 2026-06-24)
+        analysis = await gemini_service.analyze_realtime_transcript(
+            transcript=transcript,
+            speakers=speakers,
+            rag_context=rag_context,
+        )
 
-            usage_metadata = {}
-            cache_hit = False
-        else:
-            # Use cached analysis
-            analysis = await gemini_service.analyze_with_cache(
-                cached_content=cached_content,
-                transcript=transcript,
-                speakers=speakers,
-                rag_context=rag_context,
-            )
-
-            usage_metadata = analysis.get("usage_metadata", {})
-            cache_hit = not is_new
+        usage_metadata = {}
+        cache_hit = False
 
         latency = time.time() - start_time
 

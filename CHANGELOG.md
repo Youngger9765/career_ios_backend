@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **CacheManager removed** (2025-12-31)
+  - Removed Gemini Context Caching implementation (实测效果 28%，预期 50%)
+  - Vertex AI Context Caching API将于 2026-06-24 弃用
+  - Deleted files:
+    - `app/services/cache_manager.py` (216 lines)
+    - `scripts/cleanup_caches.py` (49 lines)
+    - `tests/integration/test_realtime_cache.py` (full test file)
+  - Modified files:
+    - `app/api/realtime.py` - Removed cache_manager import and caching logic
+    - `app/services/gemini_service.py` - Removed analyze_with_cache method and caching import
+    - `scripts/compare_four_providers.py` - Removed cache usage
+  - Result: Simplified architecture, -300 lines of code, reduced maintenance cost
+
 ### Added
 - **8 Schools of Parenting Prompt Integration** (2025-12-31)
   - ✅ Integrated 8 major parenting theories into island_parents tenant prompts

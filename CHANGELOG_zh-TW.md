@@ -9,6 +9,20 @@
 
 ## [未發布]
 
+### 移除
+- **移除 CacheManager** (2025-12-31)
+  - 移除 Gemini Context Caching 實作（實測效果 28%，預期 50%）
+  - Vertex AI Context Caching API 將於 2026-06-24 棄用
+  - 刪除檔案：
+    - `app/services/cache_manager.py` (216 行)
+    - `scripts/cleanup_caches.py` (49 行)
+    - `tests/integration/test_realtime_cache.py` (完整測試檔案)
+  - 修改檔案：
+    - `app/api/realtime.py` - 移除 cache_manager import 和快取邏輯
+    - `app/services/gemini_service.py` - 移除 analyze_with_cache 方法和快取 import
+    - `scripts/compare_four_providers.py` - 移除快取使用
+  - 成果：簡化架構、減少 300 行代碼、降低維護成本
+
 ### 新增
 - **8 大流派親子教養 Prompt 整合** (2025-12-31)
   - ✅ 整合 8 大親子教養理論至 island_parents 租戶 prompts

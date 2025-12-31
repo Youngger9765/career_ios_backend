@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.realtime import (
-    CacheMetadata,
     CodeerTokenMetadata,
     CounselingMode,
     ImprovementSuggestion,
@@ -25,7 +24,6 @@ from app.schemas.realtime import (
     RealtimeAnalyzeResponse,
     SafetyLevel,
 )
-from app.services.cache_manager import CacheManager
 from app.services.gbq_service import gbq_service
 from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
@@ -38,7 +36,6 @@ router = APIRouter(prefix="/api/v1/realtime", tags=["Realtime Counseling"])
 # Initialize services
 gemini_service = GeminiService()
 openai_service = OpenAIService()
-cache_manager = CacheManager()
 
 # Safety assessment sliding window configuration
 SAFETY_WINDOW_SPEAKER_TURNS = (
@@ -1013,94 +1010,13 @@ async def analyze_transcript(
         else:
             logger.info("Using Gemini provider for analysis")
 
-            # Use cache if enabled and session_id is provided
-            if request.use_cache and request.session_id:
-                try:
-                    logger.info(
-                        f"Cache enabled for session {request.session_id}, "
-                        f"attempting to get or create cache"
-                    )
-
-                    # Get or create cache with accumulated transcript
-                    cached_content, is_new = await cache_manager.get_or_create_cache(
-                        session_id=request.session_id,
-                        system_instruction=CACHE_SYSTEM_INSTRUCTION,
-                        accumulated_transcript=request.transcript,
-                        ttl_seconds=7200,  # 2 hours
-                    )
-
-                    # Check if content is too short for caching
-                    if cached_content is None:
-                        logger.info(
-                            "Content too short for caching, using standard analysis"
-                        )
-                        analysis = await gemini_service.analyze_realtime_transcript(
-                            transcript=request.transcript,
-                            speakers=speakers_dict,
-                            rag_context=rag_context,
-                            custom_prompt=custom_prompt,
-                        )
-                        cache_metadata = CacheMetadata(
-                            cache_name="",
-                            cache_created=False,
-                            cached_tokens=0,
-                            prompt_tokens=0,
-                            message="對話內容較短，尚未啟用 cache（需 >= 1024 tokens）",
-                        )
-                    else:
-                        # Analyze with cache
-                        analysis = await gemini_service.analyze_with_cache(
-                            cached_content=cached_content,
-                            transcript=request.transcript,
-                            speakers=speakers_dict,
-                            rag_context=rag_context,
-                            custom_prompt=custom_prompt,
-                        )
-
-                        # Extract cache metadata from usage_metadata
-                        usage_metadata = analysis.get("usage_metadata", {})
-                        cache_metadata = CacheMetadata(
-                            cache_name=cached_content.name,
-                            cache_created=is_new,
-                            cached_tokens=usage_metadata.get(
-                                "cached_content_token_count", 0
-                            ),
-                            prompt_tokens=usage_metadata.get("prompt_token_count", 0),
-                        )
-
-                        logger.info(
-                            f"Cache analysis completed. Cache created: {is_new}, "
-                            f"Cached tokens: {cache_metadata.cached_tokens}, "
-                            f"Prompt tokens: {cache_metadata.prompt_tokens}"
-                        )
-
-                except Exception as cache_error:
-                    # Cache failed, fallback to non-cached analysis
-                    logger.warning(
-                        f"Cache analysis failed, falling back to non-cached: {cache_error}"
-                    )
-                    analysis = await gemini_service.analyze_realtime_transcript(
-                        transcript=request.transcript,
-                        speakers=speakers_dict,
-                        rag_context=rag_context,
-                        custom_prompt=custom_prompt,
-                    )
-                    cache_metadata = CacheMetadata(
-                        cache_name="",
-                        cache_created=False,
-                        cached_tokens=0,
-                        prompt_tokens=0,
-                        error=str(cache_error),
-                    )
-            else:
-                # Cache disabled or no session_id, use standard analysis
-                logger.info("Cache disabled or no session_id, using standard analysis")
-                analysis = await gemini_service.analyze_realtime_transcript(
-                    transcript=request.transcript,
-                    speakers=speakers_dict,
-                    rag_context=rag_context,
-                    custom_prompt=custom_prompt,
-                )
+            # Use standard analysis (cache removed - API deprecating 2026-06-24)
+            analysis = await gemini_service.analyze_realtime_transcript(
+                transcript=request.transcript,
+                speakers=speakers_dict,
+                rag_context=rag_context,
+                custom_prompt=custom_prompt,
+            )
 
             # Calculate latency
             latency_ms = int((time.time() - start_time) * 1000)
