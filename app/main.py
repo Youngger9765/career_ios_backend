@@ -1,10 +1,12 @@
 from typing import Dict
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # API routers
 from app.api import (
@@ -35,6 +37,11 @@ from app.api import (
 )
 from app.api.v1 import admin_counselors, admin_credits, password_reset, session_usage
 from app.core.config import settings
+from app.middleware.error_handler import (
+    generic_exception_handler,
+    http_exception_handler,
+    validation_exception_handler,
+)
 
 # Templates
 templates = Jinja2Templates(directory="app/templates")
@@ -56,6 +63,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add RFC 7807 error handlers
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 # Include auth routes
 app.include_router(auth.router, prefix="/api")

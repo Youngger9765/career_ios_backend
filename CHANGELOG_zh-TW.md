@@ -9,6 +9,89 @@
 
 ## [未發布]
 
+### 新增
+- **8 大教養流派 - 詳細話術與理論框架** (2025-12-31)
+  - 整合 8 大親子教養理論至 island_parents 租戶 prompts
+  - Practice Mode 新增回應欄位：
+    - `detailed_scripts`: 逐步對話指導（100-300 字具體對話範例）
+    - `theoretical_frameworks`: 理論歸因（標註使用的流派）
+  - Schema 擴充：
+    - 新增 `DetailedScript` 模型，包含欄位：situation, parent_script, child_likely_response, theory_basis, step
+    - 擴充 `IslandParentAnalysisResponse`，新增選填欄位 detailed_scripts 與 theoretical_frameworks
+  - Prompt 檔案：
+    - `app/prompts/island_parents_8_schools_practice_v1.py`（Practice Mode - 詳細教學版）
+    - `app/prompts/island_parents_8_schools_emergency_v1.py`（Emergency Mode - 快速建議版）
+  - 向後相容：所有新欄位皆為 Optional，Emergency Mode 保持簡潔，Career 租戶不受影響
+  - 整合測試：`tests/integration/test_8_schools_prompt_integration.py`
+  - 測試場景：Practice/Emergency 模式選擇、Schema 驗證、安全等級評估、Token 追蹤
+  - 更新：`app/services/keyword_analysis_service.py`、`app/schemas/analysis.py`、`PRD.md`
+  - 基礎檔案：`scripts/README_8_SCHOOLS_PROMPT.md`、`scripts/PROMPT_COMPARISON.md`、`scripts/test_8_schools_prompt.py`
+  - 參考：`docs/PARENTING_THEORIES.md` - 8 大教養流派理論完整指南
+
+- **analyze-partial API 諮詢模式支援** (2025-12-31)
+  - island_parents 租戶新增 `mode` 參數
+    - `emergency`: 快速、簡化分析（1-2 個關鍵建議）
+    - `practice`: 詳細教學模式（3-4 個建議含技巧說明）
+  - 向後相容：選填參數，預設為 `practice`
+  - Career 租戶：忽略 mode 參數（不適用）
+  - realtime.py bug 修復：GBQ 中分離 `analysis_type` 與 `mode` 欄位
+  - 4 個整合測試：emergency 模式、practice 模式、預設值、career 忽略
+  - 更新：`app/schemas/analysis.py`、`app/api/sessions_keywords.py`、`app/services/keyword_analysis_service.py`、`app/api/realtime.py`
+  - 測試：`tests/integration/test_analyze_partial_api.py`（第 472-730 行）
+
+- **配置管理文檔** (2025-12-31)
+  - 建立 `docs/CONFIGURATION.md` - Single Source of Truth 配置指南
+  - 模型選擇指南（Gemini 3 Flash、2.0 Flash、1.5 Pro）
+  - 區域相容性文檔（global vs us-central1）
+  - 反模式警告與疑難排解指南
+
+- **RFC 7807 標準化錯誤處理** (2025-12-31)
+  - 實作 RFC 7807（HTTP API 問題詳情）標準，統一所有錯誤回應格式
+  - 所有 API 錯誤現在返回一致的 JSON 格式，包含 `type`、`title`、`status`、`detail` 和 `instance` 欄位
+  - 新增完整的錯誤處理模組：
+    - `app/core/exceptions.py` - 自定義例外類別（BadRequestError、UnauthorizedError、ForbiddenError、NotFoundError、ConflictError、UnprocessableEntityError、InternalServerError）
+    - `app/core/errors.py` - 錯誤格式化工具，支援多語言（英文/中文）
+    - `app/middleware/error_handler.py` - 全域錯誤處理中介軟體
+  - 更新端點以使用 RFC 7807 格式：
+    - `app/api/auth.py` - 所有認證端點（註冊、登入、個人資料更新）
+    - `app/api/sessions.py` - 所有會談管理端點
+  - 錯誤狀態碼改進：
+    - 將重複資源錯誤從 400 改為 409（Conflict）- 語意更正確
+    - 維持錯誤訊息內容的向後相容性
+  - 新增 31 個單元測試（`tests/unit/test_errors.py`）涵蓋所有錯誤類型和邊界情況
+  - 新增 18 個整合測試（`tests/integration/test_error_handling.py`）驗證端對端錯誤格式
+  - 優點：
+    - **一致性**：所有錯誤遵循相同可預測的結構
+    - **符合標準**：遵循 IETF RFC 7807 規範
+    - **前端友善**：iOS app 更容易解析和顯示錯誤
+    - **國際化**：內建中文錯誤訊息支援
+    - **除錯**：instance 欄位顯示失敗的確切端點
+  - 錯誤回應範例：
+    ```json
+    {
+      "type": "https://api.career-counseling.app/errors/not-found",
+      "title": "Not Found",
+      "status": 404,
+      "detail": "Session not found",
+      "instance": "/api/v1/sessions/123e4567-e89b-12d3-a456-426614174000"
+    }
+    ```
+
+### 變更
+- **配置管理重構 - Single Source of Truth** (2025-12-31)
+  - 重構配置管理以建立 Single Source of Truth 模式
+  - 從 service 模組移除所有 `getattr()` fallback defaults
+  - 所有模組現在直接使用 `app/core/config.py` 的 `settings`
+  - 修改檔案：
+    - `app/services/gemini_service.py` - 移除第 12-21 行 fallbacks，直接使用 settings
+    - `app/services/cache_manager.py` - 移除第 25-31 行 fallbacks，簡化初始化
+    - `scripts/test_config.py` - 建立集中式測試配置模組
+  - 更新 3 個測試腳本以使用統一配置
+  - 影響：模型變更現在只需更新 .env 或 config.py（Single Source of Truth）
+  - 驗證：29/29 整合測試通過，配置加載已驗證
+  - 節省時間：模型變更從 5 個檔案 → 1 個檔案
+  - 參考：`docs/CONFIGURATION.md`
+
 ### 移除
 - **CodeerProvider 支援** (2025-12-31)
   - 移除 Codeer AI provider 整合以簡化程式碼
@@ -53,14 +136,20 @@
     - `tests/integration/test_token_usage_response.py` - 新增正確的 GCP 認證驗證
     - `tests/integration/test_session_usage_api.py` - 修復分鐘溢位問題（使用 timedelta）
 
-- **RAG 執行順序** (2025-12-31)
+- **RAG 執行順序 Bug - 關鍵修復** (2025-12-31)
   - 修復重大 bug：RAG 檢索在 Gemini 調用之後執行
-  - RAG 上下文現在正確地包含在 AI prompts 中
-  - 影響：RAG 知識現在實際被 AI 使用，回應品質更好
+  - RAG 上下文現在在 AI 分析前正確包含在 AI prompts 中
+  - 影響：RAG 知識現在實際被 AI 使用，回應品質更好（200+ 專家建議）
+  - 根本原因：RAG 在 Gemini 之後調用，導致完全失效
   - 修改檔案：`app/services/keyword_analysis_service.py`
     - 將 RAG 檢索移到 prompt 建構之前（第 143-177 行）
     - 將 RAG 上下文加入 prompt 模板（第 194 行）
     - 新增清晰的步驟註解以提高可讀性
+  - 驗證：113/113 測試通過（新增 7 個 RAG 測試）
+  - 品質提升：AI 分析現在使用親子教養資料庫的專家知識
+  - 性能影響：0 秒（僅執行順序變更）
+  - 文檔：`docs/bugfix_rag_integration.md`
+  - Git commit: 82cd8d1
 
 - **Token Usage 回應** (2025-12-31)
   - 修復 API 回應 fallback 場景中缺少 token_usage 的問題

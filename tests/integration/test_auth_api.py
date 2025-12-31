@@ -293,7 +293,7 @@ class TestAuthAPI:
             assert counselor.is_active is True
 
     def test_register_duplicate_email_tenant(self, db_session: Session):
-        """Test registration with duplicate email+tenant_id returns 400"""
+        """Test registration with duplicate email+tenant_id returns 409"""
         # Create existing counselor
         counselor = Counselor(
             id=uuid4(),
@@ -321,11 +321,14 @@ class TestAuthAPI:
                 },
             )
 
-            assert response.status_code == 400
-            assert "already exists" in response.json()["detail"].lower()
+            assert response.status_code == 409
+            response_data = response.json()
+            assert "type" in response_data  # RFC 7807 format
+            assert "detail" in response_data
+            assert "already exists" in response_data["detail"].lower()
 
     def test_register_duplicate_username(self, db_session: Session):
-        """Test registration with duplicate username returns 400"""
+        """Test registration with duplicate username returns 409"""
         # Create existing counselor
         counselor = Counselor(
             id=uuid4(),
@@ -353,9 +356,12 @@ class TestAuthAPI:
                 },
             )
 
-            assert response.status_code == 400
-            assert "username" in response.json()["detail"].lower()
-            assert "already exists" in response.json()["detail"].lower()
+            assert response.status_code == 409
+            response_data = response.json()
+            assert "type" in response_data  # RFC 7807 format
+            assert "detail" in response_data
+            assert "username" in response_data["detail"].lower()
+            assert "already exists" in response_data["detail"].lower()
 
     def test_register_same_email_different_tenant(self, db_session: Session):
         """Test registration with same email but different tenant_id succeeds"""

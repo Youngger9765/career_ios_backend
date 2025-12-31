@@ -9,6 +9,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **8 Schools of Parenting - Detailed Scripts and Theoretical Frameworks** (2025-12-31)
+  - Integrated 8 major parenting theories into island_parents tenant prompts
+  - New response fields for Practice Mode:
+    - `detailed_scripts`: Step-by-step dialogue guidance (100-300 word specific conversation examples)
+    - `theoretical_frameworks`: Theory attribution (marks which schools are used)
+  - Schema extensions:
+    - New `DetailedScript` model with fields: situation, parent_script, child_likely_response, theory_basis, step
+    - Extended `IslandParentAnalysisResponse` with optional detailed_scripts and theoretical_frameworks
+  - Prompt files:
+    - `app/prompts/island_parents_8_schools_practice_v1.py` (Practice Mode - detailed teaching version)
+    - `app/prompts/island_parents_8_schools_emergency_v1.py` (Emergency Mode - quick suggestions version)
+  - Backward compatible: All new fields are Optional, Emergency Mode remains concise, Career tenant unaffected
+  - Integration tests: `tests/integration/test_8_schools_prompt_integration.py`
+  - Test scenarios: Practice/Emergency mode selection, Schema validation, Safety level evaluation, Token tracking
+  - Updated: `app/services/keyword_analysis_service.py`, `app/schemas/analysis.py`, `PRD.md`
+  - Foundation: `scripts/README_8_SCHOOLS_PROMPT.md`, `scripts/PROMPT_COMPARISON.md`, `scripts/test_8_schools_prompt.py`
+  - Reference: `docs/PARENTING_THEORIES.md` - Comprehensive guide to 8 Schools of Parenting theories
+
+- **Counseling Mode Support for analyze-partial API** (2025-12-31)
+  - New `mode` parameter for island_parents tenant
+    - `emergency`: Fast, simplified analysis (1-2 critical suggestions)
+    - `practice`: Detailed teaching mode (3-4 suggestions with techniques)
+  - Backward compatible: Optional parameter, defaults to `practice`
+  - Career tenant: Ignores mode parameter (not applicable)
+  - realtime.py bug fix: Separate `analysis_type` and `mode` fields in GBQ
+  - 4 integration tests: emergency mode, practice mode, default, career ignore
+  - Updated: `app/schemas/analysis.py`, `app/api/sessions_keywords.py`, `app/services/keyword_analysis_service.py`, `app/api/realtime.py`
+  - Tests: `tests/integration/test_analyze_partial_api.py` (lines 472-730)
+
+- **Configuration Management Documentation** (2025-12-31)
+  - Created `docs/CONFIGURATION.md` - Single Source of Truth configuration guide
+  - Model selection guide (Gemini 3 Flash, 2.0 Flash, 1.5 Pro)
+  - Region compatibility documentation (global vs us-central1)
+  - Anti-pattern warnings and troubleshooting guide
+
+- **RFC 7807 Standardized Error Handling** (2025-12-31)
+  - Implemented RFC 7807 (Problem Details for HTTP APIs) standard for all error responses
+  - All API errors now return consistent JSON format with `type`, `title`, `status`, `detail`, and `instance` fields
+  - Added comprehensive error handling modules:
+    - `app/core/exceptions.py` - Custom exception classes (BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError, UnprocessableEntityError, InternalServerError)
+    - `app/core/errors.py` - Error formatting utilities with multi-language support (English/Chinese)
+    - `app/middleware/error_handler.py` - Global error handler middleware
+  - Updated endpoints to use RFC 7807 format:
+    - `app/api/auth.py` - All authentication endpoints (register, login, profile update)
+    - `app/api/sessions.py` - All session management endpoints
+  - Error status code improvements:
+    - Changed duplicate resource errors from 400 to 409 (Conflict) - more semantically correct
+    - Maintained backward compatibility for error message content
+  - Added 31 unit tests (`tests/unit/test_errors.py`) covering all error types and edge cases
+  - Added 18 integration tests (`tests/integration/test_error_handling.py`) verifying end-to-end error format
+  - Benefits:
+    - **Consistency**: All errors follow the same predictable structure
+    - **Standards Compliance**: Follows IETF RFC 7807 specification
+    - **Client-Friendly**: Easier for iOS app to parse and display errors
+    - **Internationalization**: Built-in support for Chinese error messages
+    - **Debugging**: Instance field shows exact endpoint that failed
+  - Example error response:
+    ```json
+    {
+      "type": "https://api.career-counseling.app/errors/not-found",
+      "title": "Not Found",
+      "status": 404,
+      "detail": "Session not found",
+      "instance": "/api/v1/sessions/123e4567-e89b-12d3-a456-426614174000"
+    }
+    ```
+
+### Changed
+- **Configuration Management Refactoring - Single Source of Truth** (2025-12-31)
+  - Refactored configuration management to establish Single Source of Truth pattern
+  - Removed all `getattr()` fallback defaults from service modules
+  - All modules now directly use `settings` from `app/core/config.py`
+  - Modified files:
+    - `app/services/gemini_service.py` - Removed Lines 12-21 fallbacks, direct settings usage
+    - `app/services/cache_manager.py` - Removed Lines 25-31 fallbacks, simplified initialization
+    - `scripts/test_config.py` - Created centralized test configuration module
+  - Updated 3 test scripts to use unified configuration
+  - Impact: Model changes now only require updating .env or config.py (Single Source of Truth)
+  - Validation: 29/29 integration tests pass, configuration loading verified
+  - Time saved: Model changes from 5 files → 1 file
+  - Reference: `docs/CONFIGURATION.md`
+
 ### Removed
 - **CodeerProvider Support** (2025-12-31)
   - Removed Codeer AI provider integration to simplify codebase
@@ -53,14 +136,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `tests/integration/test_token_usage_response.py` - Added proper GCP auth validation
     - `tests/integration/test_session_usage_api.py` - Fixed minute overflow bug (use timedelta)
 
-- **RAG Execution Order** (2025-12-31)
+- **RAG Execution Order Bug - Critical Fix** (2025-12-31)
   - Fixed critical bug where RAG retrieval occurred AFTER Gemini call
-  - RAG context now properly included in AI prompts
-  - Impact: RAG knowledge is now actually used by the AI for better responses
+  - RAG context now properly included in AI prompts before AI analysis
+  - Impact: RAG knowledge is now actually used by the AI for better responses (200+ expert suggestions)
+  - Root cause: RAG was called after Gemini, making it completely ineffective
   - Modified: `app/services/keyword_analysis_service.py`
     - Moved RAG retrieval before prompt building (line 143-177)
     - Added RAG context to prompt template (line 194)
     - Added clear step-by-step comments for flow clarity
+  - Validation: 113/113 tests pass (added 7 new RAG tests)
+  - Quality improvement: AI analysis now uses expert knowledge from parenting database
+  - Performance impact: 0s (only execution order change)
+  - Documentation: `docs/bugfix_rag_integration.md`
+  - Git commit: 82cd8d1
 
 - **Token Usage Response** (2025-12-31)
   - Fixed missing token_usage in API response fallback scenarios

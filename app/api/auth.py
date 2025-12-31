@@ -3,13 +3,20 @@ Authentication API endpoints
 """
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.core.database import get_db
 from app.core.deps import get_current_user
+from app.core.exceptions import (
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    InternalServerError,
+    UnauthorizedError,
+)
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.counselor import Counselor
 from app.schemas.auth import (
@@ -29,6 +36,7 @@ settings = Settings()
 )
 def register(
     register_data: RegisterRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> TokenResponse:
     """
@@ -52,9 +60,9 @@ def register(
         )
     )
     if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+        raise ConflictError(
             detail=f"Email '{register_data.email}' already exists for tenant '{register_data.tenant_id}'",
+            instance=str(request.url.path),
         )
 
     # Check if username already exists
@@ -62,9 +70,9 @@ def register(
         select(Counselor).where(Counselor.username == register_data.username)
     )
     if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+        raise ConflictError(
             detail=f"Username '{register_data.username}' already exists",
+            instance=str(request.url.path),
         )
 
     try:
@@ -97,19 +105,20 @@ def register(
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
         )
 
-    except HTTPException:
+    except (ConflictError, BadRequestError):
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        raise InternalServerError(
             detail=f"Failed to register: {str(e)}",
+            instance=str(request.url.path),
         )
 
 
 @router.post("/login", response_model=TokenResponse)
 def login(
     credentials: LoginRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> TokenResponse:
     """
@@ -138,17 +147,16 @@ def login(
     if counselor is None or not verify_password(
         credentials.password, counselor.hashed_password
     ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+        raise UnauthorizedError(
             detail="Incorrect email, password, or tenant ID",
-            headers={"WWW-Authenticate": "Bearer"},
+            instance=str(request.url.path),
         )
 
     # Check if account is active
     if not counselor.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+        raise ForbiddenError(
             detail="Account is inactive",
+            instance=str(request.url.path),
         )
 
     try:
@@ -173,9 +181,9 @@ def login(
     except Exception:
         # Rollback on any database error
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        raise InternalServerError(
             detail="Failed to complete login",
+            instance=str(request.url.path),
         )
 
 
@@ -198,6 +206,7 @@ def get_current_counselor(
 @router.patch("/me", response_model=CounselorInfo)
 def update_current_counselor(
     update_data: CounselorUpdate,
+    request: Request,
     current_user: Counselor = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> CounselorInfo:
@@ -224,9 +233,9 @@ def update_current_counselor(
         }
 
         if not update_fields:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+            raise BadRequestError(
                 detail="No valid fields to update",
+                instance=str(request.url.path),
             )
 
         # Check username uniqueness if being updated (only if different from current)
@@ -241,9 +250,9 @@ def update_current_counselor(
                 )
             )
             if result.scalar_one_or_none():
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                raise ConflictError(
                     detail=f"Username '{update_fields['username']}' already exists",
+                    instance=str(request.url.path),
                 )
 
         # Update fields
@@ -255,11 +264,11 @@ def update_current_counselor(
 
         return CounselorInfo.model_validate(current_user)
 
-    except HTTPException:
+    except (BadRequestError, ConflictError):
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        raise InternalServerError(
             detail=f"Failed to update counselor info: {str(e)}",
+            instance=str(request.url.path),
         )

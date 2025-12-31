@@ -839,6 +839,121 @@ Input tokens = Σ(996 + 150×N) for N=1 to 60
 
 ---
 
+## API Error Handling (RFC 7807)
+
+### 標準化錯誤格式
+所有 API 錯誤現在遵循 **RFC 7807 (Problem Details for HTTP APIs)** 標準，提供一致且結構化的錯誤回應。
+
+#### 錯誤回應格式
+```json
+{
+  "type": "https://api.career-counseling.app/errors/not-found",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "Session not found",
+  "instance": "/api/v1/sessions/123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+#### 欄位說明
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `type` | string (URI) | 錯誤類型的唯一識別符，連結到錯誤說明文件 |
+| `title` | string | 人類可讀的錯誤標題（對應 HTTP 狀態碼） |
+| `status` | integer | HTTP 狀態碼 |
+| `detail` | string | 具體的錯誤訊息，描述此次錯誤的詳細資訊 |
+| `instance` | string (URI) | 發生錯誤的 API 端點路徑 |
+
+#### 支援的錯誤類型
+| 狀態碼 | Type URI | Title | 使用場景 |
+|--------|----------|-------|----------|
+| 400 | `/errors/bad-request` | Bad Request | 請求參數無效、缺少必填欄位 |
+| 401 | `/errors/unauthorized` | Unauthorized | 未提供認證 token 或 token 無效 |
+| 403 | `/errors/forbidden` | Forbidden | 沒有權限存取資源 |
+| 404 | `/errors/not-found` | Not Found | 資源不存在 |
+| 409 | `/errors/conflict` | Conflict | 資源衝突（如重複的 email/username） |
+| 422 | `/errors/unprocessable-entity` | Unprocessable Entity | 請求格式正確但語意無效（Pydantic 驗證錯誤） |
+| 500 | `/errors/internal-server-error` | Internal Server Error | 伺服器內部錯誤 |
+
+#### 多語言支援
+- 錯誤訊息支援中英文
+- `detail` 欄位會保留原始語言
+- 未來可透過 `Accept-Language` header 自動切換語言
+
+#### 範例
+
+**404 Not Found**
+```json
+{
+  "type": "https://api.career-counseling.app/errors/not-found",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "Session not found",
+  "instance": "/api/v1/sessions/00000000-0000-0000-0000-000000000000"
+}
+```
+
+**409 Conflict（重複 email）**
+```json
+{
+  "type": "https://api.career-counseling.app/errors/conflict",
+  "title": "Conflict",
+  "status": 409,
+  "detail": "Email 'test@example.com' already exists for tenant 'career'",
+  "instance": "/api/auth/register"
+}
+```
+
+**422 Unprocessable Entity（驗證錯誤）**
+```json
+{
+  "type": "https://api.career-counseling.app/errors/unprocessable-entity",
+  "title": "Unprocessable Entity",
+  "status": 422,
+  "detail": "Validation failed: 2 error(s)",
+  "instance": "/api/v1/sessions",
+  "errors": [
+    {
+      "field": "body -> case_id",
+      "message": "value is not a valid uuid",
+      "type": "uuid_error"
+    }
+  ]
+}
+```
+
+#### iOS 整合建議
+```swift
+// Swift 錯誤處理範例
+struct RFC7807Error: Decodable {
+    let type: String
+    let title: String
+    let status: Int
+    let detail: String
+    let instance: String
+}
+
+func handleAPIError(_ data: Data) {
+    if let error = try? JSONDecoder().decode(RFC7807Error.self, from: data) {
+        // 統一的錯誤處理
+        print("Error: \(error.detail) (Status: \(error.status))")
+        // 根據 status code 顯示不同 UI
+        switch error.status {
+        case 401:
+            // 導向登入頁
+        case 404:
+            // 顯示「資源不存在」訊息
+        case 409:
+            // 顯示「資料衝突」訊息
+        default:
+            // 顯示通用錯誤訊息
+        }
+    }
+}
+```
+
+---
+
 ## 開發時程
 
 ### ✅ Phase 1: RAG 生產線基礎（已完成）

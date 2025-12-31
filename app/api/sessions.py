@@ -5,11 +5,17 @@ import logging
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.orm import Session as DBSession
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_tenant_id
+from app.core.exceptions import (
+    BadRequestError,
+    ForbiddenError,
+    InternalServerError,
+    NotFoundError,
+)
 from app.models.case import Case
 from app.models.client import Client
 from app.models.counselor import Counselor
@@ -61,24 +67,25 @@ def _build_session_response(
     )
 
 
-def _handle_value_error(e: ValueError):
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+def _handle_value_error(e: ValueError, instance: str):
+    raise NotFoundError(detail=str(e), instance=instance)
 
 
-def _handle_permission_error(e: PermissionError):
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+def _handle_permission_error(e: PermissionError, instance: str):
+    raise ForbiddenError(detail=str(e), instance=instance)
 
 
-def _handle_generic_error(e: Exception, operation: str):
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+def _handle_generic_error(e: Exception, operation: str, instance: str):
+    raise InternalServerError(
         detail=f"Failed to {operation}: {str(e)}",
+        instance=instance,
     )
 
 
 @router.post("", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
 def create_session(
-    request: SessionCreateRequest,
+    session_data: SessionCreateRequest,
+    request: Request,
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
@@ -86,16 +93,17 @@ def create_session(
     """創建逐字稿記錄（不生成報告）"""
     service = SessionService(db)
     repo = SessionRepository(db)
+    instance = str(request.url.path)
     try:
-        session = service.create_session(request, current_user, tenant_id)
+        session = service.create_session(session_data, current_user, tenant_id)
         case = repo.get_case_by_id(session.case_id, tenant_id)
         client = repo.get_client_by_id(case.client_id)
         return _build_session_response(session, client, case, has_report=False)
     except ValueError as e:
-        _handle_value_error(e)
+        _handle_value_error(e, instance)
     except Exception as e:
         db.rollback()
-        _handle_generic_error(e, "create session")
+        _handle_generic_error(e, "create session", instance)
 
 
 @router.get("", response_model=SessionListResponse)
@@ -128,12 +136,14 @@ def list_sessions(
 @router.get("/timeline", response_model=SessionTimelineResponse)
 def get_session_timeline(
     client_id: UUID = Query(..., description="個案 UUID"),
+    request: Request = None,
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
 ) -> SessionTimelineResponse:
     """取得個案的會談歷程時間線"""
     service = TimelineService(db)
+    instance = str(request.url.path) if request else "/api/v1/sessions/timeline"
     try:
         client, timeline_items = service.get_session_timeline(
             client_id, current_user.id, tenant_id
@@ -146,12 +156,13 @@ def get_session_timeline(
             sessions=timeline_items,
         )
     except ValueError as e:
-        _handle_value_error(e)
+        _handle_value_error(e, instance)
 
 
 @router.get("/{session_id}", response_model=SessionResponse)
 def get_session(
     session_id: UUID,
+    request: Request,
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
@@ -160,8 +171,9 @@ def get_session(
     service = SessionService(db)
     result = service.get_session_with_details(session_id, current_user, tenant_id)
     if not result:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        raise NotFoundError(
+            detail="Session not found",
+            instance=str(request.url.path),
         )
     session, client, case, has_report = result
     return _build_session_response(session, client, case, has_report)
@@ -170,64 +182,70 @@ def get_session(
 @router.patch("/{session_id}", response_model=SessionResponse)
 def update_session(
     session_id: UUID,
-    request: SessionUpdateRequest,
+    update_data: SessionUpdateRequest,
+    request: Request,
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
 ) -> SessionResponse:
     """更新逐字稿"""
     service = SessionService(db)
+    instance = str(request.url.path)
     try:
         session, client, case, has_report = service.update_session(
-            session_id, request, current_user, tenant_id
+            session_id, update_data, current_user, tenant_id
         )
         return _build_session_response(session, client, case, has_report)
     except ValueError as e:
-        _handle_value_error(e)
+        _handle_value_error(e, instance)
     except Exception as e:
         db.rollback()
-        _handle_generic_error(e, "update session")
+        _handle_generic_error(e, "update session", instance)
 
 
 @router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_session(
     session_id: UUID,
+    request: Request,
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
 ):
     """軟刪除逐字稿 (如果有關聯報告會失敗)"""
     service = SessionService(db)
+    instance = str(request.url.path)
     try:
         service.delete_session(session_id, current_user, tenant_id)
     except ValueError as e:
         error_msg = str(e)
         if "with associated reports" in error_msg:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+            raise BadRequestError(
                 detail=error_msg,
+                instance=instance,
             )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+        raise NotFoundError(
             detail=error_msg,
+            instance=instance,
         )
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        raise InternalServerError(
             detail=f"Failed to delete session: {str(e)}",
+            instance=instance,
         )
 
 
 @router.get("/{session_id}/reflection", response_model=ReflectionResponse)
 def get_reflection(
     session_id: UUID,
+    request: Request,
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
 ) -> ReflectionResponse:
     """取得會談的諮詢師反思"""
     service = ReflectionService(db)
+    instance = str(request.url.path)
     try:
         reflection, session = service.get_reflection(
             session_id, current_user.id, tenant_id
@@ -238,21 +256,23 @@ def get_reflection(
             updated_at=session.updated_at or session.created_at,
         )
     except ValueError as e:
-        _handle_value_error(e)
+        _handle_value_error(e, instance)
     except PermissionError as e:
-        _handle_permission_error(e)
+        _handle_permission_error(e, instance)
 
 
 @router.put("/{session_id}/reflection", response_model=ReflectionResponse)
 def update_reflection(
     session_id: UUID,
     reflection_data: ReflectionRequest,
+    request: Request,
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
 ) -> ReflectionResponse:
     """更新或建立會談的諮詢師反思"""
     service = ReflectionService(db)
+    instance = str(request.url.path)
     try:
         reflection, session = service.update_reflection(
             session_id, reflection_data.reflection, current_user.id, tenant_id
@@ -263,26 +283,28 @@ def update_reflection(
             updated_at=session.updated_at,
         )
     except ValueError as e:
-        _handle_value_error(e)
+        _handle_value_error(e, instance)
     except PermissionError as e:
-        _handle_permission_error(e)
+        _handle_permission_error(e, instance)
     except Exception as e:
-        _handle_generic_error(e, "update reflection")
+        _handle_generic_error(e, "update reflection", instance)
 
 
 @router.post("/{session_id}/recordings/append", response_model=AppendRecordingResponse)
 def append_recording(
     session_id: UUID,
-    request: AppendRecordingRequest,
+    recording_data: AppendRecordingRequest,
+    request: Request,
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
 ) -> AppendRecordingResponse:
     """Append新錄音片段（自動計算segment_number，重新聚合transcript）"""
     service = RecordingService(db)
+    instance = str(request.url.path)
     try:
         session, new_recording, total_recordings = service.append_recording(
-            session_id, request, current_user.id, tenant_id
+            session_id, recording_data, current_user.id, tenant_id
         )
 
         return AppendRecordingResponse(
@@ -293,8 +315,8 @@ def append_recording(
             updated_at=session.updated_at or session.created_at,
         )
     except ValueError as e:
-        _handle_value_error(e)
+        _handle_value_error(e, instance)
     except PermissionError as e:
-        _handle_permission_error(e)
+        _handle_permission_error(e, instance)
     except Exception as e:
-        _handle_generic_error(e, "append recording")
+        _handle_generic_error(e, "append recording", instance)
