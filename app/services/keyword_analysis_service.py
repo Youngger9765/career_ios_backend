@@ -34,6 +34,10 @@ logger = logging.getLogger(__name__)
 class KeywordAnalysisService:
     """Service for AI-powered keyword analysis of session transcripts"""
 
+    # Sliding window configuration (aligned with realtime.py)
+    SAFETY_WINDOW_SPEAKER_TURNS = 10  # Number of recent speaker turns to evaluate
+    ANNOTATED_WINDOW_TURNS = 5  # Highlighted turns for AI focus
+
     def __init__(self, db: DBSession):
         self.db = db
         self.gemini_service = GeminiService()
@@ -51,11 +55,14 @@ class KeywordAnalysisService:
 {full_transcript}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【最近逐字稿 - 主要分析對象】
+【最近對話 - 主要分析對象】
 （請根據此區塊進行關鍵字分析）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {transcript_segment}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ CRITICAL: 分析焦點請以「【最近對話 - 主要分析對象】」區塊為主，
+完整對話僅作為理解背景脈絡參考。
 
 請分析並返回 JSON 格式：
 {{
@@ -74,21 +81,25 @@ class KeywordAnalysisService:
 - categories: 職涯類別（職涯探索、工作壓力、人際關係等）
 - safety_level: green=穩定, yellow=需關注, red=危機
 - severity: 1=輕微, 2=中等, 3=嚴重
-- 分析重點：最近逐字稿，完整對話僅作為背景參考
 """,
         "island_parents_emergency": """你是親子教養專家，提供即時危機提醒。這是事中提醒模式，需要快速判斷和簡潔建議。
 
 背景資訊：
 {context}
 
-完整對話逐字稿（供參考）：
+完整對話逐字稿（供參考，理解背景脈絡）：
 {full_transcript}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 【最近對話 - 用於安全評估】
+（請根據此區塊判斷當前安全等級）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {transcript_segment}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ CRITICAL: 安全等級評估請只根據「【最近對話 - 用於安全評估】」區塊判斷，
+完整對話僅作為理解脈絡參考。如果最近對話已緩和，即使之前有危險內容，
+也應評估為較低風險。
 
 請分析並返回 JSON 格式：
 {{
