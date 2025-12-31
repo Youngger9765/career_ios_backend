@@ -1,353 +1,298 @@
 ---
 name: debugging
+version: 2.0
 description: |
-  Debug issues in career_ios_backend FastAPI application.
-  Auto-activates on "bug", "error", "debug", "不work", "壞掉", "失敗" keywords.
-  Provides systematic debugging workflow for API, database, and integration issues.
-allowed-tools: [Bash, Read, Grep, Edit]
+  Self-diagnostic debugging - Agent decides diagnostic approach.
+  Auto-activates on "bug", "error", "debug", "不work", "壞掉" keywords.
+  AMP principle: Think > Follow - Agent writes own debug tools.
+allowed-tools: [Bash, Read, Grep, Edit, Write]
+trigger_keywords:
+  - bug
+  - error
+  - debug
+  - 不work
+  - 不 work
+  - 壞掉
+  - 錯誤
+  - broken
+  - failing
+  - 失敗
+auto_activate: true
+priority: high
 ---
 
-# Debugging Skill
+# Debugging - 自主诊断和修复
 
-## Purpose
-Systematic debugging workflow for career_ios_backend API issues.
+**Purpose**: 让 Agent 自己决定诊断方法，而非遵循固定步骤
 
-## Auto-Activation
-
-Triggers on:
-- ✅ "bug", "error", "debug"
-- ✅ "不 work", "壞掉", "失敗"
-- ✅ "API 失敗", "測試失敗"
+**AMP Principle**: "告诉它「你想理解什么」，而非「怎么测试」"
 
 ---
 
-## Quick Debug Workflow
+## 核心思维
 
-**Copy this checklist**:
+### ❌ 旧方式（固定步骤）
 ```
-Debugging Progress:
-- [ ] Step 1: Reproduce the issue
-- [ ] Step 2: Check logs and error messages
-- [ ] Step 3: Identify root cause
-- [ ] Step 4: Fix and verify
-- [ ] Step 5: Add test to prevent regression
+第1步: 运行测试
+第2步: 检查日志
+第3步: 添加 print
+第4步: 重现错误
+第5步: 修复
+```
+
+### ✅ 新方式（自主诊断）
+```
+问自己:
+  - 我想理解什么？
+  - 需要什么信息来诊断？
+  - 最快的方法是什么？
+
+然后:
+  - 自己写诊断脚本
+  - 执行并分析结果
+  - 迭代直到找到根因
+  - 用完删除临时工具
 ```
 
 ---
 
-## Step 1: Reproduce the Issue
+## 诊断模式示例
 
-### API Issues
+### Pattern 1: 写临时诊断脚本
 
+**场景**: API 返回 500 错误
+
+**不要**: 遵循固定步骤
+
+**应该**:
 ```bash
+# 自己写临时诊断脚本
+cat > /tmp/debug_api.sh << 'EOF'
+#!/bin/bash
+
+# Create logs directory
+mkdir -p logs
+rm -f logs/*.log
+
+# Run API with verbose logging
+export DEBUG=true
+export LOG_LEVEL=DEBUG
+
+cd /Users/young/project/career_ios_backend
+poetry run uvicorn app.main:app \
+  --reload \
+  --log-level debug \
+  > logs/api.log 2>&1 &
+
+API_PID=$!
+
+# Wait for startup
+sleep 2
+
 # Test the failing endpoint
-poetry run pytest tests/integration/test_<feature>_api.py -v -k "test_name"
+curl -X POST http://localhost:8000/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"name": "test"}' \
+  -v > logs/curl.log 2>&1
 
-# Or manual test with httpx
-python -c "
-import httpx
-import asyncio
+# Analyze logs
+echo "=== Errors ==="
+grep -i "error\|exception" logs/api.log
 
-async def test():
-    async with httpx.AsyncClient(base_url='http://localhost:8000') as client:
-        response = await client.get('/api/v1/endpoint')
-        print(f'Status: {response.status_code}')
-        print(f'Body: {response.json()}')
+echo "=== Response ==="
+cat logs/curl.log
 
-asyncio.run(test())
-"
+# Cleanup
+kill $API_PID
+EOF
+
+chmod +x /tmp/debug_api.sh
+/tmp/debug_api.sh
+
+# 用完就删
+rm /tmp/debug_api.sh
 ```
 
-### Database Issues
+### Pattern 2: 动态添加日志
 
-```bash
-# Check database state
-poetry run python -c "
-from app.db.session import SessionLocal
-from app.models.user import User
+**场景**: 不确定哪里出错
 
-db = SessionLocal()
-users = db.query(User).all()
-print(f'Users count: {len(users)}')
-db.close()
-"
-```
+**不要**: 预设添加日志的位置
 
----
-
-## Step 2: Check Logs and Errors
-
-### Read Application Logs
-
-```bash
-# Check recent logs
-tail -100 logs/app.log
-
-# Search for errors
-grep -i "error\|exception\|traceback" logs/app.log | tail -20
-
-# Filter by specific endpoint
-grep "/api/v1/clients" logs/app.log | tail -10
-```
-
-### FastAPI Development Server
-
-```bash
-# Run with verbose logging
-poetry run uvicorn app.main:app --reload --log-level debug
-```
-
-### Test Output
-
-```bash
-# Run tests with full output
-poetry run pytest tests/integration/ -v -s
-
-# Show print statements
-poetry run pytest tests/integration/test_clients_api.py -v -s -k "test_name"
-```
-
----
-
-## Step 3: Identify Root Cause
-
-### Common Issue Patterns
-
-**Authentication Issues**:
+**应该**:
 ```python
-# Check token validity
-import jwt
+# TEMP: Add detailed logging
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# 在怀疑的函数添加
+def problematic_function(input_data):
+    logger.debug(f"Input: {input_data}")
+    logger.debug(f"Processing...")
+    result = some_operation()
+    logger.debug(f"Result: {result}")
+    return result
+
+# 运行、分析、然后移除日志
+```
+
+### Pattern 3: 数据库诊断
+
+**场景**: 数据不一致
+
+**不要**: 手动查询
+
+**应该**:
+```bash
+# 写临时分析脚本
+cat > /tmp/analyze_db.py << 'EOF'
+from sqlalchemy import create_engine, text
+import os
+import sys
+
+# Add project root to path
+sys.path.insert(0, '/Users/young/project/career_ios_backend')
+
 from app.core.config import settings
 
-token = "your_token_here"
-try:
-    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-    print(f"Valid token for user: {payload['sub']}")
-except jwt.ExpiredSignatureError:
-    print("Token expired")
-except jwt.InvalidTokenError:
-    print("Invalid token")
-```
+engine = create_engine(settings.DATABASE_URL)
 
-**Database Connection Issues**:
-```bash
-# Test database connection
-poetry run python -c "
-from app.db.session import engine
-from sqlalchemy import text
-
-with engine.connect() as conn:
-    result = conn.execute(text('SELECT 1'))
-    print('Database connected:', result.fetchone())
-"
-```
-
-**Import/Dependency Issues**:
-```bash
-# Check installed packages
-poetry show | grep -i "package_name"
-
-# Verify imports work
-poetry run python -c "
-try:
-    from app.api.clients import router
-    print('Import successful')
-except ImportError as e:
-    print(f'Import error: {e}')
-"
-```
-
----
-
-## Step 4: Fix and Verify
-
-### Fix the Code
-
-1. **Read the relevant file**:
-   ```bash
-   # Find the file
-   find app/ -name "*clients*" -type f
-   ```
-
-2. **Apply fix** using Edit tool
-
-3. **Verify fix locally**:
-   ```bash
-   # Re-run failing test
-   poetry run pytest tests/integration/test_<feature>_api.py -v
-   ```
-
-### Validation Checklist
-
-- [ ] Test passes locally
-- [ ] No new errors in logs
-- [ ] Code follows existing patterns
-- [ ] No hardcoded values
-
----
-
-## Step 5: Prevent Regression
-
-**Add test if missing**:
-
-```python
-# tests/integration/test_<feature>_api.py
-
-@pytest.mark.asyncio
-async def test_bug_fix_<issue_description>():
+queries = {
+    "orphaned_sessions": """
+        SELECT s.id, s.name, s.client_id
+        FROM sessions s
+        LEFT JOIN clients c ON s.client_id = c.id
+        WHERE c.id IS NULL
+    """,
+    "duplicate_codes": """
+        SELECT client_code, COUNT(*)
+        FROM clients
+        GROUP BY client_code
+        HAVING COUNT(*) > 1
+    """,
+    "invalid_timestamps": """
+        SELECT * FROM sessions
+        WHERE created_at > updated_at
     """
-    Test for bug: <describe the issue>
+}
 
-    Previously failed because: <root cause>
-    Fixed by: <solution>
-    """
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        response = await client.get(
-            "/api/v1/endpoint",
-            headers=auth_headers
-        )
+for name, query in queries.items():
+    print(f"\n=== {name} ===")
+    result = engine.execute(text(query))
+    for row in result:
+        print(row)
+EOF
 
-    assert response.status_code == 200
-    # Add specific assertion that would catch the bug
+cd /Users/young/project/career_ios_backend
+poetry run python /tmp/analyze_db.py
+rm /tmp/analyze_db.py
 ```
 
 ---
 
-## Common Debug Scenarios
+## 诊断思维流程
 
-### Scenario 1: API Returns 500 Error
-
-```bash
-# 1. Check server logs
-tail -50 logs/app.log | grep -i "error"
-
-# 2. Run with debugger
-poetry run pytest tests/integration/test_api.py -v -s --pdb
-
-# 3. Check database state
-poetry run python scripts/check_db.py
 ```
-
-### Scenario 2: Test Fails Randomly
-
-```bash
-# Run test multiple times
-for i in {1..10}; do
-    echo "Run $i:"
-    poetry run pytest tests/integration/test_api.py -v -k "test_name"
-done
-
-# Check for async/race conditions
-# Check for database cleanup issues
-```
-
-### Scenario 3: Import Error
-
-```bash
-# Check Python path
-poetry run python -c "import sys; print('\n'.join(sys.path))"
-
-# Verify package installation
-poetry install
-
-# Check for circular imports
-poetry run python -c "import app.main"
-```
-
-### Scenario 4: Database Query Fails
-
-```bash
-# Enable SQL logging
-export SQLALCHEMY_ECHO=1
-poetry run pytest tests/integration/test_db.py -v -s
-
-# Check database schema
-poetry run python -c "
-from app.db.base import Base
-from app.db.session import engine
-
-Base.metadata.create_all(bind=engine)
-print('Tables:', engine.table_names())
-"
+遇到 Bug
+  ↓
+问: "我需要理解什么？"
+  - 错误发生在哪一层？(API/Service/DB)
+  - 输入数据是什么？
+  - 预期 vs 实际输出？
+  ↓
+问: "最快的验证方法是什么？"
+  - 写临时脚本？
+  - 添加日志？
+  - 直接测试 SQL？
+  ↓
+执行诊断
+  - 不要担心代码质量
+  - 不要过度工程化
+  - 快速迭代
+  ↓
+找到根因
+  ↓
+修复
+  ↓
+清理临时工具
+  - 删除临时脚本
+  - 移除调试日志
+  - 恢复正常代码
 ```
 
 ---
 
-## Debug Tools
+## 快速诊断工具箱
 
-### Python Debugger
+### 1. HTTP 请求诊断
+```bash
+# 详细查看 HTTP 交互
+curl -v http://localhost:8000/api/endpoint
 
+# 添加 timing 信息
+curl -w "Time: %{time_total}s\n" http://localhost:8000/api/endpoint
+
+# 保存响应详情
+curl -v http://localhost:8000/api/endpoint > /tmp/response.log 2>&1
+```
+
+### 2. Python 交互式调试
 ```python
-# Add breakpoint in code
+# 在怀疑的地方添加断点
 import pdb; pdb.set_trace()
 
-# Or use breakpoint() (Python 3.7+)
+# 或使用 breakpoint() (Python 3.7+)
 breakpoint()
-
-# Run test with debugger
-poetry run pytest --pdb
 ```
 
-### Print Debugging
+### 3. 数据库实时查询
+```bash
+# PostgreSQL
+cd /Users/young/project/career_ios_backend
+poetry run python -c "
+from app.core.config import settings
+import psycopg2
 
-```python
-# Strategic print statements
-print(f"DEBUG: variable = {variable}")
-print(f"DEBUG: type = {type(variable)}")
-print(f"DEBUG: dir = {dir(variable)}")
-
-# Pretty print
-import pprint
-pprint.pprint(complex_object)
+conn = psycopg2.connect(settings.DATABASE_URL)
+cur = conn.cursor()
+cur.execute('SELECT * FROM sessions LIMIT 5')
+print(cur.fetchall())
+"
 ```
 
-### Logging
+### 4. 日志实时监控
+```bash
+# 实时查看日志
+tail -f /Users/young/project/career_ios_backend/logs/app.log | grep -i error
 
-```python
-import logging
-logger = logging.getLogger(__name__)
-
-logger.debug("Debug info")
-logger.info("Info message")
-logger.warning("Warning message")
-logger.error("Error message", exc_info=True)
+# 过滤特定关键词
+tail -f /Users/young/project/career_ios_backend/logs/app.log | grep "session\|client"
 ```
 
 ---
 
-## When Stuck
+## AMP 原则应用
 
-1. **Search codebase for similar patterns**:
-   ```bash
-   grep -r "similar_function_name" app/
-   ```
+**Graham 的例子**:
+> "Agent 自己写了一整个 bash 脚本: 建立 logs 目录、每次执行前清空、设环境变数、把输出写入 log 档、用 grep 找出失败的地方。这个 script 不是人要求的，是 Agent 自己判断需要而产生的。"
 
-2. **Check existing tests**:
-   ```bash
-   grep -r "test_similar_feature" tests/
-   ```
-
-3. **Review recent changes**:
-   ```bash
-   git log --oneline -10
-   git diff HEAD~5
-   ```
-
-4. **Ask for clarification**:
-   - What was the expected behavior?
-   - What actually happened?
-   - Can you reproduce it manually?
+**我们应该**:
+- 让 Agent 自己决定需要什么工具
+- 鼓励临时脚本和一次性工具
+- 用完就删，不要保留
+- 不要预设固定流程
 
 ---
 
-## Related Skills
+## IMPORTANT
 
-- **api-development**: API patterns and testing
-- **tdd-workflow**: Test-first development
-- **error-handling**: Proper error handling patterns
+- **No Fixed Checklist** - 每个 bug 都不同
+- **Think, Don't Follow** - 理解问题，自主决策
+- **Temporary is OK** - 诊断脚本可以很丑
+- **Clean Up After** - 修复后删除临时工具
 
 ---
 
-**Skill Version**: v1.0
-**Last Updated**: 2025-12-25
-**Project**: career_ios_backend (Prototype Phase)
+**Version**: 2.0 (Self-Diagnostic refactor)
+**Size**: ~230 lines
+**Philosophy**: Think > Follow

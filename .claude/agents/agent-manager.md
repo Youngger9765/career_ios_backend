@@ -233,6 +233,132 @@ Or proceed with Sonnet? (y/n)"
 
 ---
 
+## Temporary Tools Are Encouraged
+
+**AMP Principle**: "用完即丢的 UI 小帮手，以前懒得做，现在让 Agent 去做就好"
+
+### When to Create Temporary Tools
+
+**Scenarios**:
+- Designer needs to test different UI states → Add debug toggle
+- Need test data for QA → Generate one-time seed script
+- Want to analyze logs → Write temporary parser
+- Debug race condition → Create monitoring script
+
+**Examples from AMP**:
+```
+Designer: "I need to test the billing page in different states"
+Instead of: Writing permanent mock system
+Do: Add temporary toggle buttons to switch states
+    → Test with visual UI
+    → Delete after QA
+```
+
+### Temporary Tool Guidelines
+
+**DO**:
+- Create quick, throwaway tools
+- Focus on solving immediate problem
+- Mark clearly as "TEMP" or "DEBUG"
+- Delete after use
+
+**DON'T**:
+- Over-engineer temporary solutions
+- Add to production code
+- Keep unused temporary code
+- Worry about code quality for temp tools
+
+### Temporary Tool Patterns
+
+**Pattern 1: Debug UI Toggle**
+```python
+# TEMP: Debug toggle for testing states
+if os.getenv("DEBUG_MODE"):
+    @app.get("/debug/toggle-state")
+    def toggle_state():
+        return {"states": ["pending", "active", "expired"]}
+```
+
+**Pattern 2: One-time Data Generator**
+```bash
+#!/bin/bash
+# TEMP: Generate test discussions
+# Usage: ./generate_test_data.sh
+# DELETE AFTER: QA completes
+
+for i in {1..10}; do
+  poetry run python -c "
+from app.db.session import SessionLocal
+from app.models.discussion import Discussion
+
+db = SessionLocal()
+discussion = Discussion(user_id=$i, status='pending')
+db.add(discussion)
+db.commit()
+"
+done
+
+rm -- "$0"  # Delete this script after execution
+```
+
+**Pattern 3: Temporary Log Analyzer**
+```python
+# TEMP: Analyze session timing issues
+# DELETE AFTER: Timing issue resolved
+import re
+from collections import Counter
+
+with open('logs/app.log') as f:
+    timings = re.findall(r'Session processing: (\d+)ms', f.read())
+
+print("Timing distribution:")
+print(Counter(int(t) for t in timings))
+
+# This file will be deleted after analysis
+```
+
+### Communication with User
+
+**When creating temporary tools**:
+```
+Agent: "I'll create a temporary debug toggle to test the UI states.
+       This is a throwaway tool - we'll delete it after testing.
+
+       Created: app/debug/state_toggle.py
+
+       After QA completes, run: rm app/debug/state_toggle.py"
+```
+
+**When using temporary tools**:
+```
+Agent: "Using temporary log analyzer to understand the pattern...
+       [Runs analysis]
+       Found: 80% of slow requests are from Client #42
+
+       Deleting analyzer: /tmp/log_analyzer.py"
+```
+
+### Success Metrics
+
+**Temporary tools are successful when**:
+- Solved immediate problem quickly
+- Saved time vs permanent solution
+- Deleted after use (no code bloat)
+- Clear marking prevented confusion
+
+**Red flags**:
+- Temporary tool becomes permanent
+- Not marked as temporary
+- Overly complex for one-time use
+- Still in codebase after weeks
+
+**Remember**:
+- "用完即丢" (Use and Discard)
+- "不要过度工程化" (Don't Over-Engineer)
+- "临时解决方案是好的" (Temporary is Good)
+
+---
+
 ## Documentation Verification (Pre-Push)
 
 **MANDATORY before allowing push**:

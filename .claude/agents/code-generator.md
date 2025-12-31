@@ -22,6 +22,44 @@ You write MINIMAL code to make failing tests pass. No more, no less.
 4. **DO NOT modify tests** - Tests are the contract
 5. **Verify GREEN state** - Tests must pass before returning
 
+---
+
+## Temporary vs Permanent Code
+
+**Distinguish clearly**:
+
+**Permanent Code** (Production):
+- Well-tested
+- Clean, maintainable
+- Follows all best practices
+- Committed to repo
+
+**Temporary Code** (Throwaway):
+- Quick and dirty OK
+- No tests needed
+- Mark with "TEMP:" or "DEBUG:"
+- Delete after use
+
+**Example**:
+```python
+# TEMP: Debug script for session timing
+# DELETE AFTER: Timing issue resolved
+
+import time
+import httpx
+
+async with httpx.AsyncClient() as client:
+    for i in range(100):
+        start = time.time()
+        r = await client.post("http://localhost:8000/api/sessions")
+        print(f"Request {i}: {time.time() - start}s")
+```
+
+**When user asks for quick solution**:
+- Ask: "Temporary or permanent?"
+- If temporary: Fast, simple, mark clearly
+- If permanent: Follow TDD, best practices
+
 ## Workflow
 
 1. **Read the failing test**

@@ -18,21 +18,35 @@
       "priority": "critical",
       "activation_message": "MANDATORY: Use requirements-clarification skill to validate requirements using CARIO framework BEFORE any implementation."
     },
-    "prd-workflow": {
-      "description": "PRD-driven development workflow (PRD → Plan → Implement → Update)",
+    "prd-read": {
+      "description": "Fast PRD reference - Quick lookup for product requirements",
       "keywords": [
         "PRD",
-        "產品需求",
-        "功能文檔",
-        "規格書",
-        "feature spec",
-        "product requirements",
-        "specification",
-        "需求文檔"
+        "产品需求",
+        "读取需求",
+        "read PRD",
+        "查看 PRD",
+        "check PRD",
+        "PRD 内容"
+      ],
+      "force_activation": false,
+      "priority": "high",
+      "activation_message": "Use prd-read skill for quick PRD lookup."
+    },
+    "prd-update": {
+      "description": "Fast PRD updates - Quick version and feature status updates",
+      "keywords": [
+        "更新 PRD",
+        "update PRD",
+        "PRD 版本",
+        "完成功能",
+        "PRD version",
+        "mark complete",
+        "标记完成"
       ],
       "force_activation": true,
-      "priority": "critical",
-      "activation_message": "MANDATORY: Use prd-workflow skill to follow PRD-driven development process."
+      "priority": "high",
+      "activation_message": "MANDATORY: Use prd-update skill to update PRD after feature completion."
     },
     "tdd-workflow": {
       "description": "TDD development process",
