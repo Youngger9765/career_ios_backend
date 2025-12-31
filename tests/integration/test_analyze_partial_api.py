@@ -223,6 +223,12 @@ class TestAnalyzePartialAPI:
             assert "display_text" in data
             assert "action_suggestion" in data
 
+            # ✅ VERIFY token_usage is returned (Issue fix verification)
+            assert "token_usage" in data, "token_usage field missing from response!"
+            assert data["token_usage"] is None or isinstance(
+                data["token_usage"], dict
+            ), f"token_usage should be None or dict, got {type(data['token_usage'])}"
+
             # Verify data types
             assert isinstance(data["keywords"], list)
             assert isinstance(data["categories"], list)

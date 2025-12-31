@@ -2,7 +2,7 @@
 Analysis Schemas - Multi-tenant partial analysis support
 Supports both career and island_parents tenants with different response formats
 """
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -83,6 +83,10 @@ class IslandParentAnalysisResponse(BaseModel):
         default_factory=list,
         description="類別（可選）",
     )
+    token_usage: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Token usage details (prompt_tokens, completion_tokens, total_tokens)",
+    )
 
     class Config:
         json_schema_extra = {
@@ -148,6 +152,10 @@ class CareerAnalysisResponse(BaseModel):
     rag_documents: Optional[List[RAGDocument]] = Field(
         default=None,
         description="相關的職涯諮詢文獻（可選）",
+    )
+    token_usage: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Token usage details (prompt_tokens, completion_tokens, total_tokens)",
     )
 
     class Config:

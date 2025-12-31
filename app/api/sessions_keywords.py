@@ -229,6 +229,10 @@ async def analyze_partial(
         db=db,
     )
 
+    # Extract token usage from metadata
+    metadata = result_data.get("_metadata", {})
+    token_usage = metadata.get("token_usage")
+
     # Return tenant-specific response immediately (non-blocking)
     if tenant_id == "island_parents":
         return IslandParentAnalysisResponse(
@@ -242,6 +246,7 @@ async def analyze_partial(
             rag_documents=result_data.get("rag_documents", []),
             keywords=result_data.get("keywords", []),
             categories=result_data.get("categories", []),
+            token_usage=token_usage,
         )
     else:  # career (default)
         return CareerAnalysisResponse(
@@ -254,6 +259,7 @@ async def analyze_partial(
             display_text=result_data.get("display_text"),
             action_suggestion=result_data.get("action_suggestion"),
             rag_documents=result_data.get("rag_documents"),
+            token_usage=token_usage,
         )
 
 
