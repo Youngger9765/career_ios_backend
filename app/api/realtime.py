@@ -5,7 +5,6 @@ import logging
 import os
 import uuid
 from datetime import datetime, timezone
-from typing import List
 
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -13,7 +12,6 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.realtime import (
-    CounselingMode,
     ImprovementSuggestion,
     ParentsReportRequest,
     ParentsReportResponse,
@@ -21,34 +19,27 @@ from app.schemas.realtime import (
     RAGSource,
     RealtimeAnalyzeRequest,
     RealtimeAnalyzeResponse,
-    SafetyLevel,
 )
 from app.services.gbq_service import gbq_service
 from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
-from app.services.rag_chat_service import RAGChatService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/realtime", tags=["Realtime Counseling"])
 
-# Initialize services
+# Initialize services (still needed for generate_parents_report)
 gemini_service = GeminiService()
 openai_service = OpenAIService()
 
-# Safety assessment sliding window configuration
-SAFETY_WINDOW_SPEAKER_TURNS = (
-    10  # Number of recent speaker turns to evaluate (~1 minute)
-)
-SAFETY_WINDOW_CHARACTERS = 300  # Fallback: character count for sliding window
+# REMOVED: SAFETY_WINDOW_SPEAKER_TURNS, SAFETY_WINDOW_CHARACTERS, ANNOTATED_SAFETY_WINDOW_TURNS
+# These constants are now defined in KeywordAnalysisService
 
-# Annotated window configuration for AI safety assessment
-ANNOTATED_SAFETY_WINDOW_TURNS = (
-    5  # Last 5-10 turns highlighted for AI safety evaluation
-)
+# REMOVED: CACHE_SYSTEM_INSTRUCTION
+# System instruction is now part of keyword_analysis_service prompt templates
 
-# System instruction for cache (固定不變的部分)
-CACHE_SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
+# Legacy system instruction (kept for reference, but no longer used by analyze_transcript)
+_LEGACY_CACHE_SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
 
 【角色定義】CRITICAL - 必須嚴格遵守：
 - "counselor" = 諮詢師/輔導師（專業助人者，提供協助的一方）
@@ -115,115 +106,11 @@ CACHE_SYSTEM_INSTRUCTION = """你是專業諮詢督導，分析即時諮詢對�
 - 如果知識庫內容相關，請在建議中融入（不需明確標注來源）
 """
 
-# Parenting-related keywords that trigger RAG search
-# Keywords organized by category for better maintainability
-PARENTING_KEYWORDS = [
-    # === 基本詞彙 (Basic Terms) ===
-    "親子",
-    "孩子",
-    "小孩",
-    "兒童",
-    "青少年",
-    "教養",
-    "育兒",
-    "管教",
-    "父母",
-    "媽媽",
-    "爸爸",
-    "親職",
-    "家庭",
-    # === 情緒相關 (Emotions) ===
-    "情緒",
-    "生氣",
-    "憤怒",
-    "難過",
-    "傷心",
-    "害怕",
-    "焦慮",
-    "擔心",
-    "壓力",
-    "哭",
-    "哭泣",
-    "失望",
-    "挫折",
-    # === 行為問題 (Behavior Issues) ===
-    "行為",
-    "打人",
-    "攻擊",
-    "拒絕",
-    "發脾氣",
-    "叛逆",
-    "不聽話",
-    "頂嘴",
-    # === 日常場景 (Daily Situations) ===
-    "功課",
-    "作業",
-    "睡覺",
-    "睡眠",
-    "吃飯",
-    "用餐",
-    "收玩具",
-    "刷牙",
-    # === 人際關係 (Relationships) ===
-    "手足",
-    "兄弟",
-    "姊妹",
-    "朋友",
-    "同學",
-    "老師",
-    "衝突",
-    "爭吵",
-    # === 教養概念 (Parenting Concepts) ===
-    "溝通",
-    "陪伴",
-    "關係",
-    "鼓勵",
-    "讚美",
-    "處罰",
-    "獎勵",
-    "尊重",
-    "責任",
-    "界限",
-    "規則",
-    "選擇",
-    "後果",
-    "分享",
-    # === 發展相關 (Development) ===
-    "發展",
-    "成長",
-    "學習",
-    "青春期",
-    "教育",
-    "獨立",
-    "自律",
-    "自信",
-    "自尊",
-    # === 依附相關 (Attachment) ===
-    "依附",
-    "安全感",
-    "信任",
-    "分離",
-    "連結",
-]
+# REMOVED: PARENTING_KEYWORDS, _detect_parenting_keywords(), _detect_parenting_theory()
+# These functions are now handled by keyword_analysis_service.analyze_keywords()
 
 
-def _detect_parenting_keywords(transcript: str) -> bool:
-    """Detect if transcript contains parenting-related keywords.
-
-    Args:
-        transcript: The transcript text
-
-    Returns:
-        True if parenting keywords detected, False otherwise
-    """
-    transcript_lower = transcript.lower()
-    for keyword in PARENTING_KEYWORDS:
-        if keyword in transcript_lower:
-            logger.info(f"Parenting keyword detected: {keyword}")
-            return True
-    return False
-
-
+# Note: _search_rag_knowledge() is kept for generate_parents_report endpoint
 def _detect_parenting_theory(title: str) -> str:
     """Detect which parenting theory a document belongs to based on title.
 
@@ -260,21 +147,23 @@ def _detect_parenting_theory(title: str) -> str:
 
 async def _search_rag_knowledge(
     transcript: str, db: Session, top_k: int = 3, similarity_threshold: float = 0.5
-) -> List[RAGSource]:
+):
     """Search RAG knowledge base for relevant parenting content.
+
+    NOTE: Only used by generate_parents_report endpoint.
+    analyze_transcript now uses keyword_analysis_service which has built-in RAG.
 
     Args:
         transcript: The transcript text to search
         db: Database session
         top_k: Number of top results to return
-        similarity_threshold: Minimum similarity score (default 0.5)
-            Note: Lowered from 0.7 to 0.5 based on production data analysis.
-            Real-world similarity scores for relevant content typically max out
-            at ~0.54-0.59, so 0.7 was too strict and prevented retrieval.
+        similarity_threshold: Minimum similarity score
 
     Returns:
         List of RAG sources with title, content, and score
     """
+    from app.services.rag_chat_service import RAGChatService
+
     try:
         # Initialize RAG service
         rag_service = RAGChatService(db=db)
@@ -314,341 +203,14 @@ async def _search_rag_knowledge(
         return []
 
 
-def _assess_safety_level(transcript: str, speakers: List[dict]) -> SafetyLevel:
-    """Assess safety level based on RECENT conversation (sliding window).
-
-    Only evaluates the last ~1 minute of dialogue to allow rapid safety relaxation.
-    This prevents dangerous keywords from earlier in the conversation from keeping
-    the safety level elevated indefinitely.
-
-    Safety levels:
-    - RED: Violent language, extreme emotions, crisis indicators (high risk)
-    - YELLOW: Escalating conflict, frustration, raised emotions (warning)
-    - GREEN: Calm, positive interaction (safe)
-
-    Args:
-        transcript: The full conversation transcript (cumulative)
-        speakers: List of speaker segments (used for sliding window)
-
-    Returns:
-        SafetyLevel enum: red, yellow, or green
-    """
-    # Strategy: Use last N speaker segments (approximate 1 minute)
-    # Extract recent transcript from speakers array
-    if speakers and len(speakers) > 0:
-        # Take last N segments to approximate 1 minute of conversation
-        recent_speakers = speakers[-SAFETY_WINDOW_SPEAKER_TURNS:]
-        recent_transcript = "\n".join(
-            [
-                f"{seg.get('speaker', 'unknown')}: {seg.get('text', '')}"
-                for seg in recent_speakers
-            ]
-        )
-        logger.info(
-            f"Using sliding window: last {len(recent_speakers)} speaker turns "
-            f"({len(recent_transcript)} chars)"
-        )
-    else:
-        # Fallback: use last N characters (approximate 1 minute)
-        if len(transcript) > SAFETY_WINDOW_CHARACTERS:
-            recent_transcript = transcript[-SAFETY_WINDOW_CHARACTERS:]
-            logger.info(
-                f"Using fallback window: last {SAFETY_WINDOW_CHARACTERS} characters"
-            )
-        else:
-            recent_transcript = transcript
-            logger.info("Using full transcript (shorter than window)")
-
-    # Convert to lowercase for keyword matching
-    text_lower = recent_transcript.lower()
-
-    # RED indicators (high risk) - violence, extreme emotions, crisis
-    red_keywords = [
-        "打死",
-        "滾",
-        "殺",
-        "恨死",
-        "暴力",
-        "打人",
-        "揍",
-        "受不了",
-        "不想活",
-        "去死",
-    ]
-    for keyword in red_keywords:
-        if keyword in text_lower:
-            logger.info(
-                f"Safety level: RED detected (keyword: '{keyword}' in recent window)"
-            )
-            return SafetyLevel.red
-
-    # YELLOW indicators (medium risk) - frustration, escalating conflict
-    yellow_keywords = [
-        "氣死",
-        "煩死",
-        "受夠",
-        "不聽話",
-        "說謊",
-        "快瘋",
-        "崩潰",
-        "發火",
-    ]
-    for keyword in yellow_keywords:
-        if keyword in text_lower:
-            logger.info(
-                f"Safety level: YELLOW detected (keyword: '{keyword}' in recent window)"
-            )
-            return SafetyLevel.yellow
-
-    # GREEN (safe/positive) - default if no risk indicators found in recent window
-    logger.info("Safety level: GREEN (calm/positive interaction in recent window)")
-    return SafetyLevel.green
+# REMOVED: _assess_safety_level() and _build_annotated_transcript()
+# These functions are now handled internally by keyword_analysis_service
+# via the island_parents prompt templates which include sliding window logic
 
 
-def _build_annotated_transcript(transcript: str, speakers: List[dict]) -> str:
-    """Build annotated transcript with recent window highlighted for safety assessment.
-
-    Args:
-        transcript: Full conversation transcript
-        speakers: List of speaker segments
-
-    Returns:
-        Annotated transcript with recent window marked for safety evaluation
-    """
-    # Build full transcript
-    full_transcript = "\n".join(
-        [f"{seg.get('speaker', 'unknown')}: {seg.get('text', '')}" for seg in speakers]
-    )
-
-    # Extract recent window for annotation
-    recent_speakers = (
-        speakers[-ANNOTATED_SAFETY_WINDOW_TURNS:]
-        if len(speakers) > ANNOTATED_SAFETY_WINDOW_TURNS
-        else speakers
-    )
-    recent_transcript = "\n".join(
-        [
-            f"{seg.get('speaker', 'unknown')}: {seg.get('text', '')}"
-            for seg in recent_speakers
-        ]
-    )
-
-    # Construct annotated prompt
-    annotated = f"""完整對話逐字稿（供參考，理解背景脈絡）：
-{full_transcript}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【最近對話 - 用於安全評估】
-（請根據此區塊判斷當前安全等級）
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{recent_transcript}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-⚠️ CRITICAL: 安全等級評估請只根據「【最近對話 - 用於安全評估】」區塊判斷，
-完整對話僅作為理解脈絡參考。如果最近對話已緩和，即使之前有危險內容，
-也應評估為較低風險。"""
-
-    return annotated
-
-
-def _build_emergency_prompt(transcript: str, rag_context: str) -> str:
-    """Build simplified prompt for emergency mode using 200 expert suggestions.
-
-    Emergency mode: Select 1-2 suggestions from expert pool, organized with Bridge technique.
-    Bridge structure for RED scenarios: 穩住 → 同理 → 修正
-
-    Args:
-        transcript: The conversation transcript
-        rag_context: RAG knowledge context (if available)
-
-    Returns:
-        Simplified prompt for emergency situations with expert suggestions
-    """
-    from app.config.parenting_suggestions import (
-        GREEN_SUGGESTIONS,
-        RED_SUGGESTIONS,
-        YELLOW_SUGGESTIONS,
-    )
-
-    # Format suggestion lists for prompt
-    green_list = "\n".join([f"  - {s}" for s in GREEN_SUGGESTIONS])
-    yellow_list = "\n".join([f"  - {s}" for s in YELLOW_SUGGESTIONS])
-    red_list = "\n".join([f"  - {s}" for s in RED_SUGGESTIONS])
-
-    prompt = f"""你是親子諮詢 AI 督導。緊急模式 - 從專家建議中選 1-2 句！
-
-【情境】
-{transcript}
-
-【專家建議句庫】請從以下 200 句專家建議中選擇最符合當前對話的：
-
-🟢 綠色｜對話安全（選 1-2 句）：
-{green_list}
-
-🟡 黃色｜需要調整（選 1-2 句）：
-{yellow_list}
-
-🔴 紅色｜立刻修正（選 1-2 句）：
-{red_list}
-
-【分析步驟】：
-1. 判斷對話安全等級（green/yellow/red）
-   - green: 正向互動，家長有同理心，語氣溫和尊重
-   - yellow: 有挫折感但仍可控，語氣開始緊繃或帶防衛
-   - red: 威脅、暴力語言、極端情緒、可能造成傷害
-2. 從對應顏色的建議句中選出最符合的 1-2 句
-3. 建議必須是原句，不要改寫或自創
-
-【Bridge 技巧】請按照以下結構組織回饋：
-- 🟢 綠色：讚美 → 橋樑 → 延伸
-- 🟡 黃色：肯定 → 提醒 → 替代
-- 🔴 紅色：穩住 → 同理 → 修正（最重要！）
-
-【紅色燈號的三階段設計】：
-1. 先穩住：「理解在教養壓力下，情緒失控是很正常的」
-2. 降低防衛：「你一定也很辛苦，想要孩子好但不知道怎麼做」
-3. 再提醒：「這句話可能會讓孩子感到害怕，我們可以試試這樣說...」
-
-【輸出格式】JSON 格式，必須包含以下欄位：
-{{
-  "safety_level": "green|yellow|red",
-  "suggestions": [
-    "從專家建議中選的句子1",
-    "從專家建議中選的句子2"
-  ]
-}}
-
-CRITICAL 規則：
-- 只能選 1-2 個建議（從 200 句專家建議中選）
-- 每句建議必須是原本的專家建議句，逐字照抄，不要自己改寫或創作
-- 根據對話危險程度選擇對應顏色的建議
-- 必須回傳 safety_level: "green" | "yellow" | "red"（此欄位必須存在）
-- safety_level 和 suggestions 的顏色必須一致
-- Emergency 模式重點：快速、精準、可立即執行
-
-YOU MUST select 1-2 suggestions from the 200 expert suggestions above!
-YOU MUST return safety_level field in JSON response!"""
-
-    return prompt
-
-
-def _build_practice_prompt(
-    transcript: str, rag_context: str, annotated_transcript: str = ""
-) -> str:
-    """Build detailed prompt for practice mode using 200 expert suggestions (~1500 tokens).
-
-    Practice mode: Select 3-4 suggestions from expert pool, organized with Bridge technique.
-    Bridge structure varies by safety level (讚美→橋樑→延伸 for green, etc.)
-
-    Args:
-        transcript: The conversation transcript
-        rag_context: RAG knowledge context (if available)
-        annotated_transcript: Optional annotated transcript with safety window highlighted
-
-    Returns:
-        Detailed prompt for practice/learning situations with expert suggestions
-    """
-    from app.config.parenting_suggestions import (
-        GREEN_SUGGESTIONS,
-        RED_SUGGESTIONS,
-        YELLOW_SUGGESTIONS,
-    )
-
-    # Format suggestion lists for prompt
-    green_list = "\n".join([f"  - {s}" for s in GREEN_SUGGESTIONS])
-    yellow_list = "\n".join([f"  - {s}" for s in YELLOW_SUGGESTIONS])
-    red_list = "\n".join([f"  - {s}" for s in RED_SUGGESTIONS])
-
-    # Use annotated transcript if provided, otherwise fall back to plain transcript
-    dialogue_content = annotated_transcript if annotated_transcript else transcript
-
-    # Use existing detailed prompt (same as CACHE_SYSTEM_INSTRUCTION style)
-    prompt = f"""你是專業諮詢督導，分析即時諮詢對話。你的角色是站在案主與諮詢師之間，提供溫暖、同理且具體可行的專業建議。
-
-【對話內容】
-{dialogue_content}
-
-【相關親子教養知識庫】
-{rag_context if rag_context else "（無相關知識庫內容）"}
-
-【專家建議句庫】請從以下 200 句專家建議中選擇 3-4 句最符合當前對話的：
-
-🟢 綠色｜對話安全（選 3-4 句）：
-{green_list}
-
-🟡 黃色｜需要調整（選 3-4 句）：
-{yellow_list}
-
-🔴 紅色｜立刻修正（選 3-4 句）：
-{red_list}
-
-【分析步驟】：
-1. 判斷對話安全等級（green/yellow/red）
-   - green: 正向互動，家長有同理心，語氣溫和尊重
-   - yellow: 有挫折感但仍可控，語氣開始緊繃或帶防衛
-   - red: 威脅、暴力語言、極端情緒、可能造成傷害
-2. 從對應顏色的建議句中選出最符合的 3-4 句
-3. 建議必須是原句，不要改寫或自創
-
-【Bridge 技巧】請按照以下結構組織回饋：
-- 🟢 綠色：讚美 → 橋樑 → 延伸
-- 🟡 黃色：肯定 → 提醒 → 替代
-- 🔴 紅色：穩住 → 同理 → 修正（最重要！）
-
-【紅色燈號的三階段設計】：
-1. 先穩住：「理解在教養壓力下，情緒失控是很正常的」
-2. 降低防衛：「你一定也很辛苦，想要孩子好但不知道怎麼做」
-3. 再提醒：「這句話可能會讓孩子感到害怕，我們可以試試這樣說...」
-
-【核心原則】同理優先、溫和引導、具體行動：
-
-1. **同理與理解為先**
-   - 永遠先理解與同理案主（家長）的感受和處境
-   - 認可教養壓力、情緒失控是正常的人性反應
-   - 避免批判、指責或讓案主感到被否定
-
-2. **溫和、非批判的語氣**
-   - ❌ 禁止用語：「表達出對孩子使用身體暴力的衝動」「可能造成傷害」「不當管教」
-   - ✅ 建議用語：「理解到在教養壓力下，父母有時會感到情緒失控是很正常的」
-   - ✅ 使用：「可以考慮」「或許」「試試看」等柔和引導詞
-
-3. **具體、實用的建議**
-   - 從 200 句專家建議中選擇最符合的
-   - 避免抽象概念，用具體做法
-   - 如果知識庫有相關內容，融入專業理論
-
-【輸出格式】JSON 格式，必須包含以下欄位：
-
-{{
-  "safety_level": "green|yellow|red",
-  "summary": "案主處境簡述（2-3 句）",
-  "alerts": [
-    "💡 同理案主感受",
-    "⚠️ 需關注的部分",
-    "✅ 正向的部分"
-  ],
-  "suggestions": [
-    "從專家建議中選的句子1",
-    "從專家建議中選的句子2",
-    "從專家建議中選的句子3",
-    "從專家建議中選的句子4"
-  ]
-}}
-
-CRITICAL 規則：
-- 必須選 3-4 個建議（從 200 句專家建議中選）
-- 每句建議必須是原本的專家建議句，逐字照抄，不要自己改寫或創作
-- 根據對話危險程度選擇對應顏色的建議
-- 必須回傳 safety_level: "green" | "yellow" | "red"（此欄位必須存在）
-- safety_level 和 suggestions 的顏色必須一致
-- Practice 模式重點：深度分析、促進學習成長
-
-【語氣要求】溫和、同理、專業，提供深度分析幫助家長學習成長。
-
-YOU MUST select 3-4 suggestions from the 200 expert suggestions above!
-YOU MUST return safety_level field in JSON response!"""
-
-    return prompt
+# REMOVED: _build_emergency_prompt() and _build_practice_prompt()
+# These functions are now handled by keyword_analysis_service.analyze_keywords()
+# which provides unified prompt management with 200 expert suggestions
 
 
 def _calculate_gemini_cost(usage_metadata: dict) -> float:
@@ -700,10 +262,10 @@ async def analyze_transcript(
 ):
     """Analyze realtime counseling transcript with AI supervision.
 
+    Now uses unified keyword_analysis_service for consistency with session analysis.
+
     Returns summary, alerts, and suggestions for the counselor based on
     the conversation in the past 60 seconds.
-
-    Uses Gemini for analysis with context caching for improved performance.
 
     This is a demo feature with no authentication required.
     """
@@ -712,73 +274,60 @@ async def analyze_transcript(
     start_time = time.time()
 
     try:
-        # Convert speakers to dict format for service
-        speakers_dict = [
-            {"speaker": s.speaker, "text": s.text} for s in request.speakers
+        # Import keyword_analysis_service
+        from app.services.keyword_analysis_service import KeywordAnalysisService
+
+        # Initialize service
+        keyword_service = KeywordAnalysisService(db)
+
+        # Convert mode to string value if needed
+        mode_value = (
+            request.mode.value if hasattr(request.mode, "value") else request.mode
+        )
+
+        # Call unified analysis service
+        logger.info(f"Calling keyword_analysis_service with mode={mode_value}")
+        analysis_result = await keyword_service.analyze_keywords(
+            session_id=None,  # realtime doesn't have session concept
+            transcript_segment=request.transcript,
+            full_transcript=request.transcript,  # same as segment for realtime
+            context="",  # no additional context for realtime
+            analysis_type="island_parents",  # realtime is always island_parents
+            mode=mode_value,  # "emergency" or "practice"
+            db=db,
+        )
+
+        # Transform result to realtime API format
+        # keyword_service returns: {safety_level, severity, quick_suggestions, detailed_scripts, ...}
+        # realtime expects: {summary, alerts, suggestions, safety_level}
+
+        # Extract quick_suggestions (from 200 expert sentences)
+        quick_suggestions = analysis_result.get("quick_suggestions", [])
+
+        # Build response_data
+        response_data = {
+            "safety_level": analysis_result.get("safety_level", "green"),
+            "summary": analysis_result.get("display_text", "分析完成"),
+            "alerts": [],  # Build from action_suggestion
+            "suggestions": quick_suggestions,  # Use expert suggestions
+        }
+
+        # Add alerts from action_suggestion
+        action_suggestion = analysis_result.get("action_suggestion", "")
+        if action_suggestion:
+            response_data["alerts"].append(action_suggestion)
+
+        # Extract RAG sources for response
+        rag_documents = analysis_result.get("rag_documents", [])
+        rag_sources = [
+            RAGSource(
+                title=doc.get("title", ""),
+                content=doc.get("content", "")[:300],  # Truncate to 300 chars
+                score=round(float(doc.get("relevance_score", 0)), 2),
+                theory="其他",  # Could detect theory from title if needed
+            )
+            for doc in rag_documents
         ]
-
-        # Assess safety level based on transcript content
-        safety_level = _assess_safety_level(request.transcript, speakers_dict)
-        logger.info(f"Safety level assessed: {safety_level.value}")
-
-        # Detect parenting keywords and trigger RAG if needed
-        rag_sources = []
-        rag_context = ""
-
-        if _detect_parenting_keywords(request.transcript):
-            logger.info("Parenting keywords detected, triggering RAG search")
-            # Phase 2.1 Enhancement: Increased top_k and lowered threshold for richer context
-            rag_sources = await _search_rag_knowledge(
-                transcript=request.transcript,
-                db=db,
-                top_k=7,  # Increased from 3 to 7 for more diverse suggestions
-                similarity_threshold=0.35,  # Lowered from 0.5 to 0.35 (production scores ~0.54-0.59)
-            )
-
-            # Build RAG context for Gemini prompt
-            if rag_sources:
-                rag_context_parts = ["\n\n📚 相關親子教養知識庫內容（供參考）：\n"]
-                for idx, source in enumerate(rag_sources, 1):
-                    # Phase 2.1 Enhancement: Full content without truncation for complete context
-                    rag_context_parts.append(
-                        f"[{idx}] {source.title}: {source.content}"
-                    )
-                rag_context = "\n".join(rag_context_parts)
-
-        # Build annotated transcript for safety assessment
-        annotated_transcript = _build_annotated_transcript(
-            request.transcript, speakers_dict
-        )
-        logger.info(
-            f"Built annotated transcript with {len(speakers_dict)} total speakers, "
-            f"last {min(ANNOTATED_SAFETY_WINDOW_TURNS, len(speakers_dict))} highlighted"
-        )
-
-        # Select prompt based on counseling mode
-        if request.mode == CounselingMode.emergency:
-            logger.info("Using EMERGENCY mode (simplified prompt)")
-            custom_prompt = _build_emergency_prompt(annotated_transcript, rag_context)
-        else:
-            logger.info("Using PRACTICE mode (detailed prompt)")
-            custom_prompt = _build_practice_prompt(
-                request.transcript, rag_context, annotated_transcript
-            )
-
-        # Initialize variables
-        analysis = {}
-        cache_metadata = None
-        provider_metadata = None
-
-        # Use Gemini for analysis
-        logger.info("Using Gemini provider for analysis")
-
-        # Use standard analysis (cache removed - API deprecating 2026-06-24)
-        analysis = await gemini_service.analyze_realtime_transcript(
-            transcript=request.transcript,
-            speakers=speakers_dict,
-            rag_context=rag_context,
-            custom_prompt=custom_prompt,
-        )
 
         # Calculate latency
         latency_ms = int((time.time() - start_time) * 1000)
@@ -786,32 +335,32 @@ async def analyze_transcript(
             provider="gemini", latency_ms=latency_ms, model="gemini-3-flash-preview"
         )
 
-        # Extract safety_level from LLM response, default to "green" if not present
-        safety_level = analysis.get("safety_level", "green")
-
-        # Validate safety_level (must be green, yellow, or red)
-        if safety_level not in ["green", "yellow", "red"]:
-            logger.warning(
-                f"Invalid safety_level '{safety_level}' from LLM, defaulting to 'green'"
-            )
-            safety_level = "green"
-
         # Calculate response time in milliseconds
-        response_time_ms = int((time.time() - start_time) * 1000)
+        response_time_ms = latency_ms
 
         # Prepare data for BigQuery (asynchronous write)
+        metadata = analysis_result.get("_metadata", {})
         gbq_data = {
             "id": str(uuid.uuid4()),
             "tenant_id": "island_parents",  # Fixed for web version
             "session_id": None,  # Web version has no session concept
             "analyzed_at": datetime.now(timezone.utc),
             "analysis_type": "realtime_analysis",  # Fixed: analysis method type
-            "mode": request.mode.value,  # "emergency" or "practice" - separate field
-            "safety_level": safety_level,  # "green", "yellow", or "red"
-            "matched_suggestions": analysis.get("suggestions", []),
+            "mode": mode_value,  # "emergency" or "practice"
+            "safety_level": response_data[
+                "safety_level"
+            ],  # "green", "yellow", or "red"
+            "matched_suggestions": quick_suggestions,
             "transcript_segment": request.transcript[:1000],  # Limit to 1000 chars
             "response_time_ms": response_time_ms,
             "created_at": datetime.now(timezone.utc),
+            # Additional metadata from keyword_service
+            "prompt_tokens": metadata.get("prompt_tokens", 0),
+            "completion_tokens": metadata.get("completion_tokens", 0),
+            "total_tokens": metadata.get("total_tokens", 0),
+            "estimated_cost_usd": metadata.get("estimated_cost_usd", 0.0),
+            "rag_used": metadata.get("rag_used", False),
+            "rag_sources": metadata.get("rag_sources", []),
         }
 
         # Schedule GBQ write as background task (non-blocking)
@@ -819,18 +368,18 @@ async def analyze_transcript(
 
         # Build response
         return RealtimeAnalyzeResponse(
-            safety_level=safety_level,
-            summary=analysis.get("summary", ""),
-            alerts=analysis.get("alerts", []),
-            suggestions=analysis.get("suggestions", []),
+            safety_level=response_data["safety_level"],
+            summary=response_data["summary"],
+            alerts=response_data["alerts"],
+            suggestions=response_data["suggestions"],
             time_range=request.time_range,
             timestamp=datetime.now(timezone.utc).isoformat(),
             rag_sources=rag_sources,
-            cache_metadata=cache_metadata,
+            cache_metadata=None,  # Cache not used anymore
             provider_metadata=provider_metadata,
         )
     except Exception as e:
-        logger.error(f"Realtime analysis failed: {e}")
+        logger.error(f"Realtime analysis failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

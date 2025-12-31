@@ -23,10 +23,8 @@ from app.models.credit_log import CreditLog  # For dual-write pattern
 from app.models.session import Session
 from app.models.session_analysis_log import SessionAnalysisLog
 from app.models.session_usage import SessionUsage
-from app.prompts.island_parents_8_schools_emergency_v1 import (
+from app.prompts.parenting import (
     ISLAND_PARENTS_8_SCHOOLS_EMERGENCY_PROMPT,
-)
-from app.prompts.island_parents_8_schools_practice_v1 import (
     ISLAND_PARENTS_8_SCHOOLS_PRACTICE_PROMPT,
 )
 from app.schemas.realtime import CounselingMode
@@ -35,6 +33,91 @@ from app.services.openai_service import OpenAIService
 from app.services.rag_retriever import RAGRetriever
 
 logger = logging.getLogger(__name__)
+
+
+async def _select_expert_suggestions(
+    transcript: str,
+    safety_level: str,
+    num_suggestions: int = 2,
+    gemini_service: GeminiService = None,
+) -> List[str]:
+    """
+    从 200 句专家建议中使用 AI 挑选最适合的建议
+
+    Args:
+        transcript: 对话逐字稿
+        safety_level: 安全等级 (green/yellow/red)
+        num_suggestions: 要挑选的建议数量（emergency=2, practice=4）
+        gemini_service: Gemini API service
+
+    Returns:
+        List of selected suggestions (1-4 sentences)
+    """
+    # Import suggestions from config
+    from app.config.parenting_suggestions import (
+        GREEN_SUGGESTIONS,
+        RED_SUGGESTIONS,
+        YELLOW_SUGGESTIONS,
+    )
+
+    # Select suggestion pool based on safety level
+    if safety_level == "green":
+        pool = GREEN_SUGGESTIONS
+    elif safety_level == "yellow":
+        pool = YELLOW_SUGGESTIONS
+    else:  # red
+        pool = RED_SUGGESTIONS
+
+    # Build prompt for AI to select suggestions
+    suggestions_list = "\n".join([f"  - {s}" for s in pool])
+
+    prompt = f"""从以下专家建议中选择 {num_suggestions} 句最符合当前对话的建议：
+
+【当前对话】
+{transcript}
+
+【专家建议句库】
+{suggestions_list}
+
+请选择 {num_suggestions} 句最适合的建议。
+规则：
+1. 必须从上述建议中逐字选择，不要改写
+2. 选择最符合当前情境的建议
+3. 输出 JSON 格式：{{"suggestions": ["句子1", "句子2"]}}
+"""
+
+    try:
+        # Call Gemini to select suggestions
+        response = await gemini_service.generate_text(
+            prompt, temperature=0.3, response_format={"type": "json_object"}
+        )
+
+        # Parse JSON response
+        import json
+
+        # Extract text from response object if needed
+        if hasattr(response, "text"):
+            response_text = response.text
+        else:
+            response_text = str(response)
+
+        # Parse JSON
+        json_start = response_text.find("{")
+        json_end = response_text.rfind("}") + 1
+        if json_start >= 0 and json_end > json_start:
+            json_str = response_text[json_start:json_end]
+            result = json.loads(json_str)
+            return result.get("suggestions", [])
+        else:
+            # Fallback: return random suggestions
+            import random
+
+            return random.sample(pool, min(num_suggestions, len(pool)))
+
+    except Exception as e:
+        logger.warning(f"Failed to select expert suggestions: {e}")
+        # Fallback: return first N suggestions from pool
+        return pool[:num_suggestions]
 
 
 class KeywordAnalysisService:
@@ -99,6 +182,236 @@ class KeywordAnalysisService:
         "career": "career",
         "island_parents": "parenting",
     }
+
+    async def analyze_keywords(
+        self,
+        session_id: str = None,
+        transcript_segment: str = "",
+        full_transcript: str = "",
+        context: str = "",
+        analysis_type: str = "island_parents",
+        mode: str = "practice",
+        db: DBSession = None,
+    ) -> Dict:
+        """
+        Unified keyword analysis for realtime and session-based analysis.
+
+        This method is the SINGLE SOURCE OF TRUTH for keyword analysis,
+        replacing hardcoded prompts in realtime.py.
+
+        Args:
+            session_id: Session ID (None for realtime usage)
+            transcript_segment: Recent transcript text (e.g., last 60 seconds)
+            full_transcript: Full conversation history (for context)
+            context: Additional context string
+            analysis_type: Tenant type (career, island_parents)
+            mode: Analysis mode (emergency, practice) - only for island_parents
+            db: Database session (optional, for RAG retrieval)
+
+        Returns:
+            Dict with analysis results:
+            - safety_level: green/yellow/red
+            - severity: 1-3
+            - quick_suggestions: List[str] (from 200 expert sentences)
+            - detailed_scripts: List[dict] (8 schools, only in practice mode)
+            - theoretical_frameworks: List[dict] (8 schools, only in practice mode)
+            - display_text: str
+            - action_suggestion: str
+            - rag_documents: List[dict]
+            - _metadata: Dict (for persistence)
+        """
+        import time
+        import uuid
+
+        start_time = time.time()
+        analysis_start_time = datetime.now(timezone.utc)
+
+        try:
+            # Use provided db or fallback to instance db
+            db_session = db or self.db
+
+            # STEP 1: Retrieve RAG documents FIRST (before Gemini call)
+            rag_documents = []
+            rag_sources = []
+            rag_context = ""
+            try:
+                rag_category = self.TENANT_RAG_CATEGORIES.get(analysis_type)
+                if rag_category:
+                    rag_results = await self.rag_retriever.search(
+                        query=transcript_segment[:200],
+                        top_k=7,  # Increased from 3 for richer context
+                        threshold=0.35,  # Lowered from 0.7 for better retrieval
+                        db=db_session,
+                        category=rag_category,
+                    )
+                    rag_documents = [
+                        {
+                            "doc_id": None,
+                            "title": r["document"],
+                            "content": r["text"],
+                            "relevance_score": r["score"],
+                            "chunk_id": None,
+                        }
+                        for r in rag_results
+                    ]
+                    rag_sources = [r["document"] for r in rag_results]
+
+                    # Build RAG context string to include in prompt
+                    if rag_documents:
+                        rag_context = "\n\n## 參考知識庫\n" + "\n\n".join(
+                            [
+                                f"【{doc['title']}】\n{doc['content']}"
+                                for doc in rag_documents[:7]
+                            ]
+                        )
+            except Exception as e:
+                logger.warning(f"RAG retrieval failed for tenant {analysis_type}: {e}")
+                # Continue without RAG documents
+
+            # STEP 2: Get tenant-specific prompt template (with mode support for island_parents)
+            mode_enum = CounselingMode(mode) if mode else CounselingMode.practice
+
+            if analysis_type == "island_parents":
+                # island_parents tenant: select prompt based on mode
+                prompt_key = f"island_parents_{mode_enum.value}"
+                prompt_template = self.TENANT_PROMPTS.get(
+                    prompt_key, self.TENANT_PROMPTS["island_parents_practice"]
+                )
+            else:
+                # Other tenants: use tenant_id directly (mode not applicable)
+                prompt_template = self.TENANT_PROMPTS.get(
+                    analysis_type, self.TENANT_PROMPTS["career"]
+                )
+
+            # STEP 3: Build prompt WITH RAG context
+            prompt = prompt_template.format(
+                context=context + rag_context,  # Include RAG context here!
+                full_transcript=full_transcript or transcript_segment,
+                transcript_segment=transcript_segment[:500],
+            )
+
+            # STEP 4: Call Gemini AI with complete prompt (including RAG)
+            ai_response = await self.gemini_service.generate_text(
+                prompt, temperature=0.3, response_format={"type": "json_object"}
+            )
+
+            # STEP 5: Parse AI response
+            result_data = self._parse_ai_response(ai_response)
+
+            # STEP 5.5: Generate 200-sentence expert suggestions (ONLY for island_parents)
+            if analysis_type == "island_parents":
+                safety_level = result_data.get("safety_level", "green")
+                num_suggestions = 2 if mode_enum == CounselingMode.emergency else 4
+
+                quick_suggestions = await _select_expert_suggestions(
+                    transcript=transcript_segment,
+                    safety_level=safety_level,
+                    num_suggestions=num_suggestions,
+                    gemini_service=self.gemini_service,
+                )
+
+                # Add quick_suggestions to result
+                result_data["quick_suggestions"] = quick_suggestions
+
+                # If emergency mode, remove detailed scripts (not needed)
+                if mode_enum == CounselingMode.emergency:
+                    result_data["detailed_scripts"] = []
+                    result_data["theoretical_frameworks"] = []
+
+            # Get token usage from Gemini
+            token_usage = getattr(ai_response, "usage_metadata", None)
+            prompt_tokens = 0
+            completion_tokens = 0
+            total_tokens = 0
+            estimated_cost = Decimal("0.0")
+
+            if token_usage:
+                prompt_tokens = getattr(token_usage, "prompt_token_count", 0)
+                completion_tokens = getattr(token_usage, "candidates_token_count", 0)
+                total_tokens = getattr(token_usage, "total_token_count", 0)
+
+                # Estimate cost (Gemini 3 Flash pricing: $0.50/1M input, $3/1M output)
+                input_cost = Decimal(prompt_tokens) * Decimal("0.00000050")
+                output_cost = Decimal(completion_tokens) * Decimal("0.000003")
+                estimated_cost = input_cost + output_cost
+
+            # Calculate timing
+            end_time = datetime.now(timezone.utc)
+            duration_ms = int((time.time() - start_time) * 1000)
+
+            # Extract LLM raw response
+            llm_raw_response = (
+                ai_response.text if hasattr(ai_response, "text") else str(ai_response)
+            )
+
+            # Add RAG documents and complete metadata to result
+            result_data["rag_documents"] = rag_documents
+            result_data["_metadata"] = {
+                # Request metadata
+                "request_id": str(uuid.uuid4()),
+                "mode": mode_enum.value,  # counseling mode: emergency or practice
+                # Input data
+                "time_range": None,  # Not applicable for realtime
+                "speakers": None,  # Not applicable for realtime
+                # Prompts
+                "system_prompt": None,  # Could extract from template if needed
+                "user_prompt": prompt,  # The actual prompt sent to Gemini
+                "prompt_template": f"{analysis_type}_{mode_enum.value}_v1"
+                if analysis_type == "island_parents"
+                else f"{analysis_type}_v1",
+                # RAG information
+                "rag_used": len(rag_documents) > 0,
+                "rag_query": transcript_segment[:200],
+                "rag_documents": rag_documents,
+                "rag_sources": rag_sources,
+                "rag_top_k": 7,
+                "rag_similarity_threshold": 0.35,
+                "rag_search_time_ms": None,  # Not tracked separately yet
+                # Model metadata
+                "provider": "gemini",
+                "model_name": "gemini-3-flash-preview",
+                "model_version": "3.0",
+                # Timing breakdown
+                "start_time": analysis_start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "duration_ms": duration_ms,
+                "api_response_time_ms": duration_ms,  # Same as duration for now
+                "llm_call_time_ms": None,  # Not tracked separately yet
+                # Token usage
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+                "cached_tokens": 0,
+                "estimated_cost_usd": float(estimated_cost),
+                "token_usage": {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": total_tokens,
+                },
+                # LLM response
+                "llm_raw_response": llm_raw_response,
+                "analysis_reasoning": result_data.get(
+                    "counselor_insights"
+                ),  # For career tenant
+                "matched_suggestions": quick_suggestions
+                if analysis_type == "island_parents"
+                else [],
+                # Cache metadata
+                "use_cache": False,  # Not using cache yet
+                "cache_hit": None,
+                "cache_key": None,
+                "gemini_cache_ttl": None,
+                # Technical metrics
+                "transcript_length": len(transcript_segment),
+                "duration_seconds": None,  # Not applicable for realtime
+            }
+
+            return result_data
+
+        except Exception as e:
+            logger.error(f"Keyword analysis failed for tenant {analysis_type}: {e}")
+            # Return fallback result based on tenant
+            return self._get_tenant_fallback_result(analysis_type)
 
     async def analyze_partial(
         self,
@@ -205,6 +518,26 @@ class KeywordAnalysisService:
 
             # STEP 5: Parse AI response
             result_data = self._parse_ai_response(ai_response)
+
+            # STEP 5.5: Generate 200-sentence expert suggestions (ONLY for island_parents)
+            if tenant_id == "island_parents":
+                safety_level = result_data.get("safety_level", "green")
+                num_suggestions = 2 if mode == CounselingMode.emergency else 4
+
+                quick_suggestions = await _select_expert_suggestions(
+                    transcript=transcript_segment,
+                    safety_level=safety_level,
+                    num_suggestions=num_suggestions,
+                    gemini_service=self.gemini_service,
+                )
+
+                # Add quick_suggestions to result
+                result_data["quick_suggestions"] = quick_suggestions
+
+                # If emergency mode, remove detailed scripts (not needed)
+                if mode == CounselingMode.emergency:
+                    result_data["detailed_scripts"] = []
+                    result_data["theoretical_frameworks"] = []
 
             # Get token usage from Gemini
             token_usage = getattr(ai_response, "usage_metadata", None)
@@ -658,6 +991,7 @@ class KeywordAnalysisService:
                 "suggested_interval_seconds": 20,
                 "keywords": ["分析中"],
                 "categories": ["一般"],
+                "quick_suggestions": [],  # Empty for fallback
                 "rag_documents": [],
                 "_metadata": fallback_metadata,
             }
