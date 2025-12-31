@@ -16,15 +16,15 @@
 
 ### 動態協調策略
 
-**根據燈號自動調整頻率，避免衝突**：
+**Quick-feedback 統一 10 秒輪詢，不隨燈號改變**：
 
 | 燈號 | realtime/analyze | quick-feedback | 策略 |
 |------|------------------|----------------|------|
-| 🟢 綠燈 | 60 秒 | 30 秒 | ✅ 中間補一次雞湯 |
-| 🟡 黃燈 | 30 秒 | 15 秒 | ✅ 中間補一次雞湯 |
+| 🟢 綠燈 | 60 秒 | 10 秒 | ✅ 每分鐘 6 次快速鼓勵 |
+| 🟡 黃燈 | 30 秒 | 10 秒 | ✅ 每 30 秒 3 次快速鼓勵 |
 | 🔴 紅燈 | 15 秒 | **停用** | ❌ 不要 quick-feedback（已經夠快）|
 
-**重要**：紅燈時，15 秒已經非常快，不需要額外的 quick-feedback，避免用戶困惑。
+**重要**：Quick-feedback 固定每 10 秒觸發，提供即時鼓勵。紅燈時停用，因為 15 秒分析已經足夠快。
 
 ---
 
@@ -115,14 +115,14 @@ class ParentingPracticeViewController: UIViewController {
         // 根據燈號設定新的間隔
         switch safetyLevel {
         case .green:
-            // 🟢 綠燈：analyze 60秒 + quick-feedback 30秒
+            // 🟢 綠燈：analyze 60秒 + quick-feedback 10秒
             startRealtimeAnalyze(interval: 60.0)
-            startQuickFeedback(interval: 30.0)
+            startQuickFeedback(interval: 10.0)
 
         case .yellow:
-            // 🟡 黃燈：analyze 30秒 + quick-feedback 15秒
+            // 🟡 黃燈：analyze 30秒 + quick-feedback 10秒
             startRealtimeAnalyze(interval: 30.0)
-            startQuickFeedback(interval: 15.0)
+            startQuickFeedback(interval: 10.0)
 
         case .red:
             // 🔴 紅燈：只用 analyze 15秒，停用 quick-feedback
@@ -238,8 +238,8 @@ class ParentingPracticeViewController: UIViewController {
 
     private func getQuickFeedbackInterval() -> TimeInterval? {
         switch currentSafetyLevel {
-        case .green: return 30.0
-        case .yellow: return 15.0
+        case .green: return 10.0
+        case .yellow: return 10.0
         case .red: return nil // 停用
         }
     }
@@ -388,10 +388,10 @@ if newSafetyLevel != currentSafetyLevel {
 - [ ] 訊息長度 ≤ 20 字
 
 ### iOS 測試
-- [ ] 綠燈：analyze 60秒 + quick 30秒
-- [ ] 黃燈：analyze 30秒 + quick 15秒
+- [ ] 綠燈：analyze 60秒 + quick 10秒
+- [ ] 黃燈：analyze 30秒 + quick 10秒
 - [ ] 紅燈：只有 analyze 15秒，quick 停用
-- [ ] 燈號變化時即時調整間隔
+- [ ] Quick-feedback 固定 10 秒間隔（不隨燈號改變）
 - [ ] 離開頁面時停止所有 polling
 
 ### 整合測試
