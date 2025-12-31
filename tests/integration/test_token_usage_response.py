@@ -8,7 +8,6 @@ This test uses REAL Gemini API calls (not mocked) to verify:
 
 Run with: pytest tests/integration/test_token_usage_response.py -v -s
 """
-import os
 from datetime import datetime, timezone
 
 import pytest
@@ -22,10 +21,31 @@ from app.models.client import Client
 from app.models.counselor import Counselor
 from app.models.session import Session as SessionModel
 
-# Skip if no Gemini credentials (CI environment)
+
+# Skip if no valid GCP credentials
+def _check_gcp_credentials():
+    """Check if valid GCP credentials are available"""
+    try:
+        from google.auth import default
+        from google.auth.exceptions import DefaultCredentialsError, RefreshError
+
+        try:
+            credentials, project = default()
+            from google.auth.transport.requests import Request
+
+            credentials.refresh(Request())
+            return True
+        except (DefaultCredentialsError, RefreshError, Exception):
+            return False
+    except ImportError:
+        return False
+
+
+HAS_VALID_GCP_CREDENTIALS = _check_gcp_credentials()
+
 pytestmark = pytest.mark.skipif(
-    not os.getenv("GEMINI_PROJECT_ID"),
-    reason="Skipping real Gemini API test (no credentials)",
+    not HAS_VALID_GCP_CREDENTIALS,
+    reason="Valid Google Cloud credentials not available (run: gcloud auth application-default login)",
 )
 
 

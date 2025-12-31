@@ -780,16 +780,17 @@ class TestSessionUsageAPI:
 
         with TestClient(app) as client:
             # Create and complete usage
+            start_time = datetime.now(timezone.utc)
+            end_time = start_time + timedelta(minutes=10)
+
             response = client.post(
                 f"/api/v1/sessions/{session.id}/usage",
                 headers=headers,
                 json={
                     "usage_type": "voice_call",
                     "status": "completed",
-                    "start_time": datetime.now(timezone.utc).isoformat(),
-                    "end_time": datetime.now(timezone.utc)
-                    .replace(minute=datetime.now(timezone.utc).minute + 10)
-                    .isoformat(),
+                    "start_time": start_time.isoformat(),
+                    "end_time": end_time.isoformat(),
                     "pricing_rule": {"unit": "minute", "rate": 1.0},
                 },
             )

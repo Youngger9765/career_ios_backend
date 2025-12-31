@@ -10,6 +10,15 @@
 ## [未發布]
 
 ### 修復
+- **測試套件可靠性** (2025-12-31)
+  - 修復整合測試中的 GCP 憑證驗證檢查
+  - 測試現在會在憑證無效時正確跳過（不僅是缺少憑證）
+  - 修復 session usage credit deduction 測試中的時間計算錯誤
+  - 影響：測試套件現在可靠地通過（280 通過、90 跳過、0 失敗）
+  - 修改檔案：
+    - `tests/integration/test_token_usage_response.py` - 新增正確的 GCP 認證驗證
+    - `tests/integration/test_session_usage_api.py` - 修復分鐘溢位問題（使用 timedelta）
+
 - **RAG 執行順序** (2025-12-31)
   - 修復重大 bug：RAG 檢索在 Gemini 調用之後執行
   - RAG 上下文現在正確地包含在 AI prompts 中
