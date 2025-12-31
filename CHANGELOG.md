@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Documentation** (2025-12-31)
+  - Created `docs/PARENTING_THEORIES.md` - Comprehensive guide to 8 Schools of Parenting theories
+    - Detailed explanation of each framework (Positive Discipline, Satir, Adler, Montessori, NVC, Attachment, Emotion Coaching, Behaviorism)
+    - API integration examples showing how theoretical_frameworks are returned
+    - Usage guidelines for AI analysis
+  - Created `docs/LOGIN_ERROR_MESSAGES.md` - Security specification for login error messages
+    - Unified error messages to prevent account enumeration attacks
+    - Backend/Frontend implementation guidelines
+    - Security logging and rate limiting specifications
+    - OWASP compliant authentication error handling
+
 ### Fixed
 - **Test Suite Reliability** (2025-12-31)
   - Fixed GCP credential authentication checks in integration tests

@@ -494,8 +494,8 @@ ISLAND_PARENTS_EMERGENCY_PROMPT = """
 - [x] **保留**: `/api/v1/realtime/report` (報告生成) - 保持現狀 ✅
 - [ ] ~~**移除**: `analyze_transcript()` 函數~~ (暫不移除)
 - 📋 **理由**: realtime.py 仍為 Web Console 提供穩定服務
-- [ ] **移除**: `CACHE_SYSTEM_INSTRUCTION` (已移至統一服務)
-- [ ] **文檔**: 更新 CHANGELOG 說明棄用
+- [x] **移除**: `CACHE_SYSTEM_INSTRUCTION` (已移至統一服務)
+- [x] **文檔**: 更新 CHANGELOG 說明棄用
 
 #### Task 5: 測試與驗證 (2-3h)
 - [ ] **Web Console 測試**:
@@ -749,14 +749,14 @@ app/core/config.py (Settings class - 唯一的配置來源)
 #### Phase 1: 快速見效（本週，4-6h）
 
 **🔴 P0-1: 修正 RAG 執行順序（必做）**
-- [ ] **問題**: RAG 在 Gemini 之後執行（app/services/keyword_analysis_service.py:184-209）
-- [ ] **問題**: RAG context 沒有被加入 Prompt（功能失效）
-- [ ] **修復**:
+- [x] **問題**: RAG 在 Gemini 之後執行（app/services/keyword_analysis_service.py:184-209）
+- [x] **問題**: RAG context 沒有被加入 Prompt（功能失效）
+- [x] **修復**:
   1. 將 RAG 檢索移到 Gemini 調用之前（line 175 之前）
   2. 格式化 RAG 結果為 Prompt 文本
   3. 將 RAG context 加入 Prompt template（新增 `{rag_knowledge}` 變數）
-- [ ] **影響**: 品質大幅提升（AI 真正能用到 RAG 知識）
-- [ ] **測試**: 驗證 AI 回應中包含 RAG 知識的引用
+- [x] **影響**: 品質大幅提升（AI 真正能用到 RAG 知識）
+- [x] **測試**: 驗證 AI 回應中包含 RAG 知識的引用
 - 📝 預期: 0s 性能改善，但功能修復（這是 bug）
 - ⏱️ 成本: 2-3 小時
 
@@ -1069,7 +1069,7 @@ app/core/config.py (Settings class - 唯一的配置來源)
 - [x] PRD.md - 新增 "8 大流派整合" 章節
 - [x] IOS_API_GUIDE.md - 更新 Response 範例（含 detailed_scripts）
 - [x] CHANGELOG.md - 記錄此重大升級
-- [ ] 新增 `docs/PARENTING_THEORIES.md` - 8 大流派理論說明文檔 (未完成)
+- [x] 新增 `docs/PARENTING_THEORIES.md` - 8 大流派理論說明文檔 (未完成)
 
 ### 技術細節
 
@@ -1106,18 +1106,18 @@ app/core/config.py (Settings class - 唯一的配置來源)
 ### 任務清單
 
 #### 1. 修復 realtime.py 的 bug (app/api/realtime.py:1130)
-- [ ] **Bug**: `gbq_data["analysis_type"] = request.mode.value` 錯誤地儲存 mode
-- [ ] **修復**: 改為 `analysis_type: "realtime_analysis"`, `mode: request.mode.value`
-- [ ] **影響**: 歷史資料可能包含 "emergency"/"practice" 在 analysis_type 欄位
-- [ ] **測試**: 驗證修復後 GBQ 資料正確性
+- [x] **Bug**: `gbq_data["analysis_type"] = request.mode.value` 錯誤地儲存 mode
+- [x] **修復**: 改為 `analysis_type: "realtime_analysis"`, `mode: request.mode.value`
+- [x] **影響**: 歷史資料可能包含 "emergency"/"practice" 在 analysis_type 欄位
+- [x] **測試**: 驗證修復後 GBQ 資料正確性
 
 #### 2. analyze-partial API 新增 mode 支援
-- [ ] **Schema 層** (app/schemas/analysis.py):
+- [x] **Schema 層** (app/schemas/analysis.py):
   - 新增 `mode: Optional[CounselingMode] = CounselingMode.practice` 到 AnalyzePartialRequest
   - 引用 `from app.schemas.realtime import CounselingMode`
-- [ ] **API 層** (app/api/sessions_keywords.py):
+- [x] **API 層** (app/api/sessions_keywords.py):
   - 傳遞 `mode=request.mode` 到 service layer
-- [ ] **Service 層** (app/services/keyword_analysis_service.py):
+- [x] **Service 層** (app/services/keyword_analysis_service.py):
   - 新增 `mode: CounselingMode = CounselingMode.practice` 參數
   - 根據 tenant_id + mode 選擇 prompt:
     - island_parents + emergency → ISLAND_PARENTS_EMERGENCY_PROMPT
@@ -1126,27 +1126,27 @@ app/core/config.py (Settings class - 唯一的配置來源)
   - 儲存時 `gbq_data["mode"] = mode.value`
 
 #### 3. Prompt Templates 設計
-- [ ] **ISLAND_PARENTS_EMERGENCY_PROMPT** (簡化版 ~400 tokens):
+- [x] **ISLAND_PARENTS_EMERGENCY_PROMPT** (簡化版 ~400 tokens):
   - 選擇 1-2 句最關鍵建議
   - 聚焦當前最需要處理的問題
   - 快速判斷、快速回應
-- [ ] **ISLAND_PARENTS_PRACTICE_PROMPT** (完整版 ~600 tokens):
+- [x] **ISLAND_PARENTS_PRACTICE_PROMPT** (完整版 ~600 tokens):
   - 選擇 3-4 句建議
   - 包含 Bridge 技巧說明
   - 詳細指導與教學
-- [ ] **注意**: 不使用 Context Caching（與 realtime.py 不同）
+- [x] **注意**: 不使用 Context Caching（與 realtime.py 不同）
 
 #### 4. 測試
-- [ ] Integration tests for analyze-partial with mode parameter
-- [ ] Verify emergency mode returns 1-2 suggestions
-- [ ] Verify practice mode returns 3-4 suggestions
-- [ ] Verify career tenant ignores mode parameter
-- [ ] Verify GBQ data structure (analysis_type + mode)
+- [x] Integration tests for analyze-partial with mode parameter
+- [x] Verify emergency mode returns 1-2 suggestions
+- [x] Verify practice mode returns 3-4 suggestions
+- [x] Verify career tenant ignores mode parameter
+- [x] Verify GBQ data structure (analysis_type + mode)
 
 #### 5. 文檔更新
-- [ ] PRD.md - 更新 analyze-partial API 文檔
-- [ ] CHANGELOG.md - 記錄此變更
-- [ ] IOS_API_GUIDE.md - 更新 API 使用範例
+- [x] PRD.md - 更新 analyze-partial API 文檔
+- [x] CHANGELOG.md - 記錄此變更
+- [x] IOS_API_GUIDE.md - 更新 API 使用範例
 
 ### 技術細節
 - **無需 migration**: mode 欄位已存在（2025-12-27 創建）
@@ -1466,7 +1466,7 @@ app/core/config.py (Settings class - 唯一的配置來源)
 ### 4.5 登入失敗提示語統一（資安）
 - [ ] Backend: 統一 API 錯誤訊息（密碼錯誤 = 帳號不存在 = "登入資料有誤"）
 - [ ] iOS/Web: 統一前端錯誤提示 UI
-- [ ] 文檔: 登入失敗訊息規範
+- [x] 文檔: 登入失敗訊息規範
 
 ### 4.6 Email 發信系統與錯誤處理 🟡 部分完成 (2025-12-27)
 - [x] ✅ 選擇並設定 Email 服務商（Gmail SMTP）- 2025-12-27
