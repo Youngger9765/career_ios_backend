@@ -10,6 +10,16 @@
 ## [未發布]
 
 ### 新增
+- **analyze-partial API 諮詢模式支援** (2025-12-31)
+  - ✅ island_parents 租戶新增 `mode` 參數
+    - `emergency`: 快速、簡化分析（1-2 個關鍵建議）
+    - `practice`: 詳細教學模式（3-4 個建議含技巧說明）
+  - ✅ 向後相容：選填參數，預設為 `practice`
+  - ✅ Career 租戶：忽略 mode 參數（不適用）
+  - ✅ realtime.py bug 修復：GBQ 中分離 `analysis_type` 與 `mode` 欄位
+  - ✅ 4 個整合測試：emergency 模式、practice 模式、預設值、career 忽略
+  - 📝 更新：`app/schemas/analysis.py`、`app/api/sessions_keywords.py`、`app/services/keyword_analysis_service.py`、`app/api/realtime.py`
+  - 📝 測試：`tests/integration/test_analyze_partial_api.py`（第 472-730 行）
 - **性能分析與測試基礎設施** (2025-12-31)
   - ✅ 性能分析文檔：
     - `docs/LIGHT_VS_HEAVY_ANALYSIS.md` - 速度對比報告（規則式 vs Gemini 輕量 vs Gemini 重量）

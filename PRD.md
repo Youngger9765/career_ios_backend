@@ -132,9 +132,15 @@
 **Request Body**:
 ```json
 {
-  "transcript_segment": "最近 60 秒的逐字稿"
+  "transcript_segment": "最近 60 秒的逐字稿",
+  "mode": "practice"  // Optional (island_parents only): "emergency" or "practice" (default)
 }
 ```
+
+**Mode Parameter (island_parents only)**:
+- `emergency`: 緊急模式 - 快速、簡化分析（1-2 個關鍵建議，危機情況使用）
+- `practice`: 練習模式 - 詳細教學（3-4 個建議含技巧說明，預設值）
+- Career 租戶忽略此參數（總是關鍵字分析）
 
 **Response（island_parents 租戶）**:
 ```json

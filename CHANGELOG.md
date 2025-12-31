@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Counseling Mode Support for analyze-partial API** (2025-12-31)
+  - ✅ New `mode` parameter for island_parents tenant
+    - `emergency`: Fast, simplified analysis (1-2 critical suggestions)
+    - `practice`: Detailed teaching mode (3-4 suggestions with techniques)
+  - ✅ Backward compatible: Optional parameter, defaults to `practice`
+  - ✅ Career tenant: Ignores mode parameter (not applicable)
+  - ✅ realtime.py bug fix: Separate `analysis_type` and `mode` fields in GBQ
+  - ✅ 4 integration tests: emergency mode, practice mode, default, career ignore
+  - 📝 Updated: `app/schemas/analysis.py`, `app/api/sessions_keywords.py`, `app/services/keyword_analysis_service.py`, `app/api/realtime.py`
+  - 📝 Tests: `tests/integration/test_analyze_partial_api.py` (lines 472-730)
 - **Performance Analysis and Testing Infrastructure** (2025-12-31)
   - ✅ Performance analysis documentation:
     - `docs/LIGHT_VS_HEAVY_ANALYSIS.md` - Speed comparison report (rule-based vs Gemini Light vs Gemini Heavy)

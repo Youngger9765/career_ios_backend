@@ -818,9 +818,14 @@ Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "transcript_segment": "家長：你今天在學校過得怎麼樣？\n孩子：還好啊。"
+  "transcript_segment": "家長：你今天在學校過得怎麼樣？\n孩子：還好啊。",
+  "mode": "practice"  // Optional: "emergency" or "practice" (default)
 }
 ```
+
+**Mode Parameter:**
+- `practice` (default): 詳細教學模式，提供 3-4 個建議含技巧說明
+- `emergency`: 緊急模式，快速提供 1-2 個關鍵建議（危機情況使用）
 
 **回應（island_parents 特有格式）:**
 ```json
@@ -2606,11 +2611,17 @@ Content-Type: application/json
 **Request Body:**
 ```json
 {
-  "transcript_segment": "最近 60 秒的逐字稿內容"
+  "transcript_segment": "最近 60 秒的逐字稿內容",
+  "mode": "emergency"  // Optional (island_parents only): "emergency" or "practice", defaults to "practice"
 }
 ```
 
-**Response（island_parents 租戶）- 親子教養場景:**
+**Mode Parameter (island_parents tenant only):**
+- `emergency`: Fast, simplified analysis (1-2 critical suggestions for immediate crisis situations)
+- `practice`: Detailed teaching mode (3-4 suggestions with parenting techniques, default)
+- Career tenant: This parameter is ignored (not applicable)
+
+**Response（island_parents 租戶 - Practice Mode, Default）:**
 ```json
 {
   "safety_level": "red",
@@ -2626,6 +2637,20 @@ Content-Type: application/json
   ],
   "keywords": ["焦慮", "學校適應", "拒學"],
   "categories": ["情緒", "學校議題"]
+}
+```
+
+**Response（island_parents 租戶 - Emergency Mode）:**
+```json
+{
+  "safety_level": "red",
+  "severity": 3,
+  "display_text": "⚠️ 緊急：孩子表達不想活了",
+  "action_suggestion": "立即停止對話，尋求專業協助（心理諮商師、自殺防治專線）",
+  "suggested_interval_seconds": 5,
+  "rag_documents": [],
+  "keywords": ["自殺意念", "危機"],
+  "categories": ["心理健康危機"]
 }
 ```
 
@@ -2671,8 +2696,14 @@ Content-Type: application/json
 
 **Swift 範例（island_parents 租戶）:**
 ```swift
+enum CounselingMode: String, Codable {
+    case emergency = "emergency"
+    case practice = "practice"
+}
+
 struct PartialAnalysisRequest: Codable {
     let transcript_segment: String
+    let mode: CounselingMode?  // Optional, defaults to practice
 }
 
 struct IslandParentsAnalysisResponse: Codable {
@@ -2748,6 +2779,10 @@ func onTimerTick() {
 - `confidence` < 0.5 時建議參考 `fallback` 欄位，可能使用了備援機制
 - 分析結果包含諮詢師 ID (`counselor_id`)，用於多諮詢師協作場景
 - **Multi-Tenant 自動切換**：根據 JWT token 的 tenant_id 自動選擇 RAG 知識庫與回傳格式
+- **Mode Parameter (island_parents only)**:
+  - `emergency`: Use during crisis situations (e.g., child expressing self-harm thoughts, severe emotional distress)
+  - `practice`: Use for regular practice sessions (default, more detailed feedback with techniques)
+  - Career tenant ignores this parameter (analysis is always keyword-based)
 
 **向後兼容 (Backward Compatibility):**
 
