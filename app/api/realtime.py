@@ -16,6 +16,8 @@ from app.schemas.realtime import (
     ParentsReportRequest,
     ParentsReportResponse,
     ProviderMetadata,
+    QuickFeedbackRequest,
+    QuickFeedbackResponse,
     RAGSource,
     RealtimeAnalyzeRequest,
     RealtimeAnalyzeResponse,
@@ -23,6 +25,7 @@ from app.schemas.realtime import (
 from app.services.gbq_service import gbq_service
 from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
+from app.services.quick_feedback_service import quick_feedback_service
 
 logger = logging.getLogger(__name__)
 
@@ -381,6 +384,48 @@ async def analyze_transcript(
     except Exception as e:
         logger.error(f"Realtime analysis failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/quick-feedback", response_model=QuickFeedbackResponse)
+async def get_quick_feedback(request: QuickFeedbackRequest):
+    """Generate quick AI-powered encouragement for 10-15 second intervals.
+
+    This lightweight endpoint provides instant feedback while waiting for
+    full analysis. Uses AI to read current context and respond appropriately.
+
+    Example usage:
+    - iOS polls every 10-15 seconds with recent transcript
+    - Gets back a short encouragement message (< 20 chars)
+    - Displays to user while waiting for 60-second full analysis
+
+    Returns:
+        QuickFeedbackResponse with AI-generated message and latency info
+    """
+    try:
+        # Call quick feedback service
+        result = await quick_feedback_service.get_quick_feedback(
+            recent_transcript=request.recent_transcript
+        )
+
+        # Return response
+        return QuickFeedbackResponse(
+            message=result["message"],
+            type=result["type"],
+            timestamp=result["timestamp"],
+            latency_ms=result["latency_ms"],
+        )
+
+    except Exception as e:
+        logger.error(f"Quick feedback failed: {e}", exc_info=True)
+        # Return fallback instead of raising error
+        import datetime
+
+        return QuickFeedbackResponse(
+            message="繼續保持，你做得很好",
+            type="fallback_error",
+            timestamp=datetime.datetime.now().isoformat(),
+            latency_ms=0,
+        )
 
 
 @router.post("/elevenlabs-token")

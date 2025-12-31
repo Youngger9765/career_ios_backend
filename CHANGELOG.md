@@ -10,6 +10,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Quick Feedback API for Real-Time Encouragement** (2026-01-01)
+  - New `/api/v1/realtime/quick-feedback` endpoint for lightweight AI-powered encouragement messages
+  - Provides 1-2 second AI-generated feedback to fill gaps between full analysis cycles
+  - Dynamic frequency coordination with realtime/analyze to avoid conflicts:
+    - 🟢 Green: 30-second interval (supplements 60-second full analysis)
+    - 🟡 Yellow: 15-second interval (supplements 30-second full analysis)
+    - 🔴 Red: Disabled (15-second full analysis is already fast enough)
+  - Features:
+    - Context-aware AI responses using Gemini Flash (≤ 20 characters)
+    - Reads recent 10-second transcript to generate appropriate encouragement
+    - Graceful fallback to default messages on error
+    - Latency tracking for performance monitoring
+  - New files:
+    - `app/services/quick_feedback_service.py` - AI-powered quick feedback service
+    - `app/services/encouragement_service.py` - Rule-based fallback service (unused, kept for reference)
+    - `app/schemas/realtime.py` - Added QuickFeedbackRequest/Response models
+  - Updated: `app/api/realtime.py` - Integrated quick_feedback_service
+  - Documentation:
+    - `docs/encouragement_api_integration.md` - Complete iOS integration guide with Swift examples
+    - `docs/encouragement_services_report.md` - Performance comparison (Rule-based vs AI-powered)
+  - Cost impact: +$0.0036/hour (+0.85%) for green-light scenarios
+  - Backward compatible: New endpoint, no changes to existing APIs
+
 - **8 Schools of Parenting - Detailed Scripts and Theoretical Frameworks** (2025-12-31)
   - Integrated 8 major parenting theories into island_parents tenant prompts
   - New response fields for Practice Mode:

@@ -10,6 +10,30 @@
 ## [未發布]
 
 ### 新增
+- **即時鼓勵快速回饋 API** (2026-01-01)
+  - 新增 `/api/v1/realtime/quick-feedback` 端點，提供輕量級 AI 驅動的鼓勵訊息
+  - 提供 1-2 秒 AI 生成回饋，填補完整分析週期之間的空檔
+  - 根據燈號動態協調頻率，避免與 realtime/analyze 衝突：
+    - 🟢 綠燈：30 秒間隔（補充 60 秒完整分析）
+    - 🟡 黃燈：15 秒間隔（補充 30 秒完整分析）
+    - 🔴 紅燈：停用（15 秒完整分析已足夠快速）
+  - 功能特性：
+    - 使用 Gemini Flash 的情境感知 AI 回應（≤ 20 字）
+    - 讀取最近 10 秒逐字稿產生適當鼓勵
+    - 錯誤時優雅降級至預設訊息
+    - 追蹤延遲以進行效能監控
+  - 新增檔案：
+    - `app/services/quick_feedback_service.py` - AI 驅動的快速回饋服務
+    - `app/services/encouragement_service.py` - 規則型備用服務（未使用，保留供參考）
+    - `app/schemas/realtime.py` - 新增 QuickFeedbackRequest/Response 模型
+  - 更新：`app/api/realtime.py` - 整合 quick_feedback_service
+  - 文檔：
+    - `docs/encouragement_api_integration.md` - 完整 iOS 整合指南（含 Swift 範例）
+    - `docs/encouragement_services_report.md` - 效能比較（規則型 vs AI 驅動）
+  - 成本影響：綠燈情境每小時 +$0.0036（+0.85%）
+  - 向後相容：新端點，現有 API 無變更
+  - 測試：`tests/integration/test_quick_feedback_api.py`（9 個測試：3 個通過，6 個需要 GCP 認證）
+
 - **8 大教養流派 - 詳細話術與理論框架** (2025-12-31)
   - 整合 8 大親子教養理論至 island_parents 租戶 prompts
   - Practice Mode 新增回應欄位：

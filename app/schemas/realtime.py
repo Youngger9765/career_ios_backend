@@ -112,9 +112,6 @@ class ProviderMetadata(BaseModel):
 class RealtimeAnalyzeResponse(BaseModel):
     """即時分析回應（AI 督導建議）"""
 
-    safety_level: SafetyLevel = Field(
-        ..., description="Safety level: red (high risk), yellow (warning), green (safe)"
-    )
     safety_level: str = Field(
         ...,
         description="Safety level: 'green' (safe), 'yellow' (needs adjustment), 'red' (urgent correction)",
@@ -202,6 +199,52 @@ class ImprovementSuggestion(BaseModel):
                 {
                     "issue": "使用威脅語氣「你再不寫我就打你」",
                     "suggestion": "可以換成：「我看到你現在不想寫功課，可以跟我說說為什麼嗎？」",
+                }
+            ]
+        }
+    }
+
+
+class QuickFeedbackRequest(BaseModel):
+    """快速回饋請求（10-15 秒輪詢）"""
+
+    recent_transcript: str = Field(..., min_length=1, description="最近 10 秒的逐字稿")
+
+    @field_validator("recent_transcript")
+    @classmethod
+    def validate_transcript(cls, v: str) -> str:
+        """驗證 transcript 不能為空白"""
+        if not v or not v.strip():
+            raise ValueError("recent_transcript cannot be empty")
+        return v
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "recent_transcript": "家長：你再這樣我就生氣了！\n孩子：我不是故意的..."
+                }
+            ]
+        }
+    }
+
+
+class QuickFeedbackResponse(BaseModel):
+    """快速回饋回應（輕量 AI 雞湯文）"""
+
+    message: str = Field(..., description="AI 生成的鼓勵訊息（20 字內）")
+    type: str = Field(..., description="訊息類型：ai_generated 或 fallback")
+    timestamp: str = Field(..., description="生成時間戳（ISO 8601 格式）")
+    latency_ms: int = Field(..., description="延遲時間（毫秒）")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "message": "深呼吸，保持冷靜",
+                    "type": "ai_generated",
+                    "timestamp": "2025-12-31T10:00:00Z",
+                    "latency_ms": 1200,
                 }
             ]
         }
