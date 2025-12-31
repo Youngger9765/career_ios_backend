@@ -152,7 +152,12 @@
   "suggested_interval_seconds": 15,
   "rag_documents": [...],
   "keywords": ["焦慮", "學校"],
-  "categories": ["情緒"]
+  "categories": ["情緒"],
+  "token_usage": {
+    "prompt_tokens": 1234,
+    "completion_tokens": 567,
+    "total_tokens": 1801
+  }
 }
 ```
 
@@ -166,7 +171,12 @@
   "safety_level": "yellow",
   "severity": 2,
   "display_text": "...",
-  "action_suggestion": "..."
+  "action_suggestion": "...",
+  "token_usage": {
+    "prompt_tokens": 1234,
+    "completion_tokens": 567,
+    "total_tokens": 1801
+  }
 }
 ```
 
@@ -176,6 +186,17 @@
   - Prompt template
   - Response 格式
 - 向後兼容：舊的 `POST /sessions/{id}/analyze-keywords` 仍可用，內部調用 analyze-partial，回傳 career 格式
+
+**✅ RAG 整合 (2025-12-31 修復)**:
+- RAG 檢索在 Gemini 調用**之前**執行，確保 RAG 知識包含在 AI prompt 中
+- RAG 上下文自動附加到 prompt 模板的 `context` 參數
+- 提升 AI 回應品質，充分利用知識庫內容
+
+**✅ Token Usage 追蹤 (2025-12-31)**:
+- 所有 API 回應包含 `token_usage` 欄位
+- 包含 `prompt_tokens`, `completion_tokens`, `total_tokens`
+- 即使 AI 調用失敗也會回傳零值（確保 schema 一致性）
+- 用於成本監控與性能分析
 
 #### ✅ 8 Schools of Parenting 整合 (2025-12-31)
 **功能定位**: Island Parents 租戶專屬的進階教養指導系統

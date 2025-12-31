@@ -519,7 +519,7 @@ ISLAND_PARENTS_EMERGENCY_PROMPT = """
 
 #### 4.1 移除不需要的功能
 - [x] **移除**: CacheManager (實測效果 28%，不值得) ✅ 已完成 2025-12-31
-- [ ] **簡化**: Provider 切換邏輯 (只用 Gemini)
+- [ ] **簡化**: Provider 切換邏輯 (只用 Gemini) - 可選優化
 
 #### 4.2 新增改進
 - [ ] **新增**: Streaming 支援 (P1 優化)
@@ -760,11 +760,11 @@ app/core/config.py (Settings class - 唯一的配置來源)
 - 📝 預期: 0s 性能改善，但功能修復（這是 bug）
 - ⏱️ 成本: 2-3 小時
 
-**🟢 P2-1: 並行化 RAG + DB 查詢**
+**🟢 P2-1: 並行化 RAG + DB 查詢 - 可選優化**
 - [ ] 使用 `asyncio.gather()` 並行執行 context building 和 RAG 檢索
 - [ ] 修改 `_build_context()` 為 async 方法
 - [ ] 測試: 驗證並行執行正確性
-- 📝 預期: 節省 0.2s
+- 📝 預期: 節省 ~0.1-0.2s
 - ⏱️ 成本: 2-3 小時
 
 #### Phase 2: 核心優化（下週，3-4h）
@@ -782,13 +782,15 @@ app/core/config.py (Settings class - 唯一的配置來源)
   - 理由 4: 第一次建立緩存反而更慢 (4.14s vs 2.98s)
 - 📝 詳見測試報告: `scripts/test_vertex_ai_caching.py`
 
-**🟢 P2-2: RAG 結果緩存**
-- [ ] 使用 `functools.lru_cache` 或 Redis 緩存 RAG 查詢結果
-- [ ] 緩存 key: MD5(query[:100])
-- [ ] 緩存 TTL: 1 小時
-- [ ] 測試: 驗證緩存命中率（預期 10-20%）
-- 📝 預期: 平均節省 0.2-0.3s
-- ⏱️ 成本: 3-4 小時
+**🟢 P2-2: ~~RAG 結果緩存~~ ⏸️ 不實作（決定不做）**
+- 原因: 即時對話場景，很少重複問題，命中率預期 <10%，收益不足
+- 決策日期: 2025-12-31
+- ~~使用 `functools.lru_cache` 或 Redis 緩存 RAG 查詢結果~~
+- ~~緩存 key: MD5(query[:100])~~
+- ~~緩存 TTL: 1 小時~~
+- ~~測試: 驗證緩存命中率（預期 10-20%）~~
+- ~~預期: 平均節省 0.2-0.3s~~
+- ~~成本: 3-4 小時~~
 
 #### Phase 3: 體驗優化（第 3 週，8-10h）
 

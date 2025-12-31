@@ -9,6 +9,24 @@
 
 ## [未發布]
 
+### 修復
+- **RAG 執行順序** (2025-12-31)
+  - 修復重大 bug：RAG 檢索在 Gemini 調用之後執行
+  - RAG 上下文現在正確地包含在 AI prompts 中
+  - 影響：RAG 知識現在實際被 AI 使用，回應品質更好
+  - 修改檔案：`app/services/keyword_analysis_service.py`
+    - 將 RAG 檢索移到 prompt 建構之前（第 143-177 行）
+    - 將 RAG 上下文加入 prompt 模板（第 194 行）
+    - 新增清晰的步驟註解以提高可讀性
+
+- **Token Usage 回應** (2025-12-31)
+  - 修復 API 回應 fallback 場景中缺少 token_usage 的問題
+  - token_usage 現在永遠包含（AI 調用失敗時為零值）
+  - 影響：API 回應 schema 一致性、更好的錯誤監控
+  - 修改檔案：`app/services/keyword_analysis_service.py`
+    - 更新 `_get_tenant_fallback_result()` 以包含 `_metadata` 與 `token_usage`
+    - 確保 token_usage 在 API 回應中永不為 null
+
 ### 移除
 - **移除 CacheManager** (2025-12-31)
   - 移除 Gemini Context Caching 實作（實測效果 28%，預期 50%）

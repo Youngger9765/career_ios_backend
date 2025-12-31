@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **RAG Execution Order** (2025-12-31)
+  - Fixed critical bug where RAG retrieval occurred AFTER Gemini call
+  - RAG context now properly included in AI prompts
+  - Impact: RAG knowledge is now actually used by the AI for better responses
+  - Modified: `app/services/keyword_analysis_service.py`
+    - Moved RAG retrieval before prompt building (line 143-177)
+    - Added RAG context to prompt template (line 194)
+    - Added clear step-by-step comments for flow clarity
+
+- **Token Usage Response** (2025-12-31)
+  - Fixed missing token_usage in API response fallback scenarios
+  - token_usage now always included (zero values when AI call fails)
+  - Impact: API response schema consistency, better error monitoring
+  - Modified: `app/services/keyword_analysis_service.py`
+    - Updated `_get_tenant_fallback_result()` to include `_metadata` with `token_usage`
+    - Ensures token_usage is never null in API responses
+
 ### Removed
 - **CacheManager removed** (2025-12-31)
   - Removed Gemini Context Caching implementation (实测效果 28%，预期 50%)

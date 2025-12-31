@@ -140,36 +140,10 @@ class KeywordAnalysisService:
             # Get full transcript from session
             full_transcript = session.transcript_text or "（尚無完整逐字稿）"
 
-            # Get tenant-specific prompt template (with mode support for island_parents)
-            if tenant_id == "island_parents":
-                # island_parents tenant: select prompt based on mode
-                prompt_key = f"island_parents_{mode.value}"
-                prompt_template = self.TENANT_PROMPTS.get(
-                    prompt_key, self.TENANT_PROMPTS["island_parents_practice"]
-                )
-            else:
-                # Other tenants: use tenant_id directly (mode not applicable)
-                prompt_template = self.TENANT_PROMPTS.get(
-                    tenant_id, self.TENANT_PROMPTS["career"]
-                )
-
-            prompt = prompt_template.format(
-                context=context_str,
-                full_transcript=full_transcript,
-                transcript_segment=transcript_segment[:500],
-            )
-
-            # Call Gemini AI
-            ai_response = await self.gemini_service.generate_text(
-                prompt, temperature=0.3, response_format={"type": "json_object"}
-            )
-
-            # Parse AI response
-            result_data = self._parse_ai_response(ai_response)
-
-            # Retrieve RAG documents (optional, based on tenant)
+            # STEP 1: Retrieve RAG documents FIRST (before Gemini call)
             rag_documents = []
             rag_sources = []
+            rag_context = ""
             try:
                 rag_category = self.TENANT_RAG_CATEGORIES.get(tenant_id)
                 if rag_category:
@@ -191,9 +165,46 @@ class KeywordAnalysisService:
                         for r in rag_results
                     ]
                     rag_sources = [r["document"] for r in rag_results]
+
+                    # Build RAG context string to include in prompt
+                    if rag_documents:
+                        rag_context = "\n\n## 參考知識庫\n" + "\n\n".join(
+                            [
+                                f"【{doc['title']}】\n{doc['content']}"
+                                for doc in rag_documents[:3]
+                            ]
+                        )
             except Exception as e:
                 logger.warning(f"RAG retrieval failed for tenant {tenant_id}: {e}")
                 # Continue without RAG documents
+
+            # STEP 2: Get tenant-specific prompt template (with mode support for island_parents)
+            if tenant_id == "island_parents":
+                # island_parents tenant: select prompt based on mode
+                prompt_key = f"island_parents_{mode.value}"
+                prompt_template = self.TENANT_PROMPTS.get(
+                    prompt_key, self.TENANT_PROMPTS["island_parents_practice"]
+                )
+            else:
+                # Other tenants: use tenant_id directly (mode not applicable)
+                prompt_template = self.TENANT_PROMPTS.get(
+                    tenant_id, self.TENANT_PROMPTS["career"]
+                )
+
+            # STEP 3: Build prompt WITH RAG context
+            prompt = prompt_template.format(
+                context=context_str + rag_context,  # Include RAG context here!
+                full_transcript=full_transcript,
+                transcript_segment=transcript_segment[:500],
+            )
+
+            # STEP 4: Call Gemini AI with complete prompt (including RAG)
+            ai_response = await self.gemini_service.generate_text(
+                prompt, temperature=0.3, response_format={"type": "json_object"}
+            )
+
+            # STEP 5: Parse AI response
+            result_data = self._parse_ai_response(ai_response)
 
             # Get token usage from Gemini
             token_usage = getattr(ai_response, "usage_metadata", None)
@@ -625,6 +636,19 @@ class KeywordAnalysisService:
 
     def _get_tenant_fallback_result(self, tenant_id: str) -> Dict:
         """Get tenant-specific fallback result when AI analysis fails"""
+        # Common metadata for fallback (no tokens used since AI call failed)
+        fallback_metadata = {
+            "token_usage": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+            },
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "estimated_cost_usd": 0.0,
+        }
+
         if tenant_id == "island_parents":
             return {
                 "safety_level": "green",
@@ -635,6 +659,7 @@ class KeywordAnalysisService:
                 "keywords": ["分析中"],
                 "categories": ["一般"],
                 "rag_documents": [],
+                "_metadata": fallback_metadata,
             }
         else:  # career (default)
             return {
@@ -647,6 +672,7 @@ class KeywordAnalysisService:
                 "display_text": "分析中",
                 "action_suggestion": "持續關注案主需求",
                 "rag_documents": [],
+                "_metadata": fallback_metadata,
             }
 
     async def analyze_transcript_keywords(
