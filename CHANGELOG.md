@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Modular JavaScript Architecture for Web Session Workflow** (2026-01-01)
+  - Created modular JavaScript architecture to unify Web and iOS session workflows
+  - New modules:
+    - `app/static/js/api-client.js` - Centralized API communication layer with authentication
+    - `app/static/js/session-workflow.js` - Unified session management for web clients (iOS-style)
+  - Feature flag integration in `app/templates/realtime_counseling.html`:
+    - `USE_NEW_SESSION_WORKFLOW` flag controls new vs legacy API paths
+    - New workflow: create client+case → create session → append → analyze
+    - Legacy workflow: direct realtime analyze API (preserved for backwards compatibility)
+  - Response transformation layer:
+    - Automatically converts Session API responses to Realtime API format
+    - Ensures zero UI changes required (`displayAnalysisCard` function compatible)
+  - Documentation and examples:
+    - `docs/web-session-workflow-implementation.md` - Complete implementation guide
+    - `app/static/js/README.md` - API client and session workflow documentation
+    - `app/static/integration-example.js` - Standalone integration example
+    - `app/static/test-session-workflow.html` - Interactive test page
+  - Integration tests (`tests/integration/test_web_session_workflow.py`):
+    - test_complete_web_session_workflow - Full workflow test
+    - test_web_workflow_multiple_analyses - Multiple analysis segments test
+    - test_web_workflow_emergency_mode - Emergency mode workflow test
+  - Benefits:
+    - **iOS/Web Consistency**: Both platforms now use identical session workflow
+    - **Backwards Compatible**: Legacy realtime API path preserved with feature flag
+    - **Modular Design**: Clean separation of concerns (API client, session workflow, UI)
+    - **Easy Testing**: Standalone test page for rapid development
+  - Test coverage: 3 new integration tests, 283 total tests passed (no regressions)
+  - Commit: 2ec0033
+
 ### Changed
 - **Reduced Dan Siegel Weight in 8 Schools Prompts** (2026-01-01)
   - Added scientific controversy warning to Dan Siegel's "Whole-Brain Child" theory

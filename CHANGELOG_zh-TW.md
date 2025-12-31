@@ -9,6 +9,36 @@
 
 ## [未發布]
 
+### 新增
+- **Web Session Workflow 模組化 JavaScript 架構** (2026-01-01)
+  - 建立模組化 JavaScript 架構，統一 Web 與 iOS 的 session workflows
+  - 新增模組：
+    - `app/static/js/api-client.js` - 集中式 API 通訊層，含認證功能
+    - `app/static/js/session-workflow.js` - 統一的 session 管理（iOS 風格）
+  - 在 `app/templates/realtime_counseling.html` 整合 Feature Flag：
+    - `USE_NEW_SESSION_WORKFLOW` 旗標控制新舊 API 路徑
+    - 新 workflow：建立 client+case → 建立 session → 附加錄音 → 分析
+    - 舊 workflow：直接呼叫 realtime analyze API（保留向後相容性）
+  - Response 轉換層：
+    - 自動將 Session API 回應轉換為 Realtime API 格式
+    - 確保零 UI 變更需求（`displayAnalysisCard` 函數完全相容）
+  - 文檔與範例：
+    - `docs/web-session-workflow-implementation.md` - 完整實作指南
+    - `app/static/js/README.md` - API client 與 session workflow 文檔
+    - `app/static/integration-example.js` - 獨立整合範例
+    - `app/static/test-session-workflow.html` - 互動式測試頁面
+  - 整合測試 (`tests/integration/test_web_session_workflow.py`)：
+    - test_complete_web_session_workflow - 完整 workflow 測試
+    - test_web_workflow_multiple_analyses - 多段分析測試
+    - test_web_workflow_emergency_mode - Emergency 模式 workflow 測試
+  - 優勢：
+    - **iOS/Web 一致性**：兩個平台現在使用相同的 session workflow
+    - **向後相容**：透過 feature flag 保留舊 realtime API 路徑
+    - **模組化設計**：關注點清晰分離（API client、session workflow、UI）
+    - **易於測試**：獨立測試頁面供快速開發使用
+  - 測試覆蓋：3 個新整合測試，283 個測試全部通過（無迴歸）
+  - Commit: 2ec0033
+
 ### 變更
 - **降低 8 大流派 Prompt 中 Dan Siegel 的權重** (2026-01-01)
   - 為 Dan Siegel 的「全腦教養」理論添加科學爭議警告

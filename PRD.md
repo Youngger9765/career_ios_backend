@@ -22,6 +22,43 @@
 
 ---
 
+## [Unreleased] - 開發中功能
+
+### 🚀 Web Session Workflow 模組化完成 (2026-01-01)
+**功能定位**: Web 即時諮詢統一使用 Session API workflow（與 iOS 一致）
+
+#### 核心架構
+- **模組化 JavaScript**:
+  - `app/static/js/api-client.js` - 統一 API 通訊層
+  - `app/static/js/session-workflow.js` - Session 生命週期管理
+- **Feature Flag 控制**: `USE_NEW_SESSION_WORKFLOW` 開關新舊架構
+- **向後相容**: 保留舊 Realtime API 路徑，確保平滑遷移
+
+#### 技術細節
+- **iOS 同款 Workflow**: create → append → analyze
+- **Response 轉換層**: Session API 回應自動轉換為 Realtime API 格式
+- **UI 完全相容**: 既有 `displayAnalysisCard` 函數無需修改
+- **統一 API 端點**:
+  - `POST /api/v1/ui/client-case` - 創建 client + case
+  - `POST /api/v1/sessions` - 創建 session
+  - `POST /api/v1/sessions/{id}/recordings/append` - 添加錄音
+  - `POST /api/v1/sessions/{id}/analyze-partial` - 分析片段
+
+#### 測試覆蓋
+- ✅ 3 個整合測試通過 (test_web_session_workflow.py)
+  - test_complete_web_session_workflow
+  - test_web_workflow_multiple_analyses
+  - test_web_workflow_emergency_mode
+- ✅ 283 個整合測試通過（無迴歸）
+
+#### 相關文件
+- 📝 實作指南: `docs/web-session-workflow-implementation.md`
+- 📝 API 文檔: `app/static/js/README.md`
+- 📝 整合範例: `app/static/integration-example.js`
+- 📝 測試頁面: `app/static/test-session-workflow.html`
+
+---
+
 ## 當前可用功能 (2025-12-31)
 
 ### ✅ AI Provider 架構 (Updated 2025-12-31)
