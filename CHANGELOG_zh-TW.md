@@ -10,6 +10,33 @@
 ## [未發布]
 
 ### 新增
+- **8 大流派親子教養 Prompt 整合** (2025-12-31)
+  - ✅ 整合 8 大親子教養理論至 island_parents 租戶 prompts
+    1. 阿德勒正向教養（尊重、合作、溫和而堅定）
+    2. 薩提爾模式（冰山理論、探索深層需求）
+    3. 行為分析學派（ABA、ABC 模式、環境設計）
+    4. 人際神經生物學（全腦教養、情緒優先）
+    5. 情緒輔導（情緒標註、同理、設限）
+    6. 協作解決問題（Ross Greene CPS）
+    7. 現代依附與內在觀點（Dr. Becky Kennedy）
+    8. 社會意識教養（性別平權、身體自主權）
+  - ✅ **新增回應欄位**（island_parents Practice Mode）：
+    - `detailed_scripts`: 逐字稿級別話術指導（100-300 字具體對話範例）
+    - `theoretical_frameworks`: 理論來源追溯（標註使用的流派）
+  - ✅ **Schema 擴充**：
+    - 新增 `DetailedScript` 模型，包含欄位：situation, parent_script, child_likely_response, theory_basis, step
+    - 擴充 `IslandParentAnalysisResponse`，新增選填欄位 detailed_scripts 與 theoretical_frameworks
+  - ✅ **Prompt 檔案**：
+    - `app/prompts/island_parents_8_schools_practice_v1.py`（Practice Mode - 詳細教學版）
+    - `app/prompts/island_parents_8_schools_emergency_v1.py`（Emergency Mode - 快速建議版）
+  - ✅ **向後相容**：
+    - 所有新欄位皆為 Optional（不影響現有 API 調用）
+    - Emergency Mode 保持簡潔（不提供 detailed_scripts）
+    - Career 租戶不受影響
+  - ✅ **整合測試**: `tests/integration/test_8_schools_prompt_integration.py`
+    - 測試場景：Practice/Emergency 模式選擇、Schema 驗證、安全等級評估、Token 追蹤
+  - 📝 更新：`app/services/keyword_analysis_service.py`、`app/schemas/analysis.py`、`PRD.md`
+  - 📝 基礎檔案：`scripts/README_8_SCHOOLS_PROMPT.md`、`scripts/PROMPT_COMPARISON.md`、`scripts/test_8_schools_prompt.py`
 - **analyze-partial API 諮詢模式支援** (2025-12-31)
   - ✅ island_parents 租戶新增 `mode` 參數
     - `emergency`: 快速、簡化分析（1-2 個關鍵建議）

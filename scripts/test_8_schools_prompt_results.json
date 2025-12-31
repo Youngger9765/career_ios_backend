@@ -1,0 +1,816 @@
+{
+  "metadata": {
+    "practice_mode": {
+      "version": "v1",
+      "date": "2025-12-31",
+      "purpose": "P2 Phase 2 快速驗證 - 8 大流派整合 + 逐字稿級別話術",
+      "token_estimate": {
+        "prompt": "~1200-1500 tokens",
+        "response": "~600-900 tokens",
+        "total": "~1800-2400 tokens"
+      },
+      "cost_estimate": {
+        "per_request": "~$0.0012-0.0018 USD (Gemini 3 Flash)",
+        "vs_current": "+117% token usage"
+      },
+      "compatibility": {
+        "tenant": "island_parents",
+        "mode": "practice",
+        "emergency_mode": false
+      },
+      "theoretical_frameworks": [
+        "阿德勒正向教養",
+        "薩提爾模式（冰山理論）",
+        "行為分析學派 (ABA)",
+        "人際神經生物學 (Dan Siegel)",
+        "情緒輔導 (John Gottman)",
+        "協作解決問題 (Ross Greene)",
+        "現代依附與內在觀點 (Dr. Becky Kennedy)",
+        "社會意識與價值觀教養"
+      ],
+      "new_fields": {
+        "detailed_scripts": "逐字稿級別話術（150-300 字）",
+        "theoretical_frameworks": "使用的流派標註"
+      }
+    },
+    "emergency_mode": {
+      "version": "v1",
+      "date": "2025-12-31",
+      "purpose": "P2 Phase 2 快速驗證 - Emergency Mode 8 大流派整合 + 簡潔話術",
+      "token_estimate": {
+        "prompt": "~800-1000 tokens",
+        "response": "~400-600 tokens",
+        "total": "~1200-1600 tokens"
+      },
+      "cost_estimate": {
+        "per_request": "~$0.0008-0.0012 USD (Gemini 3 Flash)",
+        "vs_practice_mode": "-33% token usage",
+        "vs_current": "+33% token usage"
+      },
+      "performance_target": {
+        "response_time": "< 8 seconds",
+        "vs_practice_mode": "-35% faster"
+      },
+      "compatibility": {
+        "tenant": "island_parents",
+        "mode": "emergency",
+        "emergency_mode": true
+      },
+      "theoretical_frameworks": [
+        "阿德勒正向教養",
+        "薩提爾模式（冰山理論）",
+        "行為分析學派 (ABA)",
+        "人際神經生物學 (Dan Siegel)",
+        "情緒輔導 (John Gottman)",
+        "協作解決問題 (Ross Greene)",
+        "現代依附與內在觀點 (Dr. Becky Kennedy)",
+        "社會意識與價值觀教養"
+      ],
+      "new_fields": {
+        "detailed_scripts": "簡潔話術（100-200 字，固定 1 個）",
+        "theoretical_frameworks": "使用的流派標註"
+      },
+      "differences_from_practice_mode": {
+        "8_schools_explanation": "精簡為核心關鍵字（每個 1 句）",
+        "thinking_steps": "5 步驟 → 3 步驟",
+        "detailed_scripts_count": "1-2 個 → 固定 1 個",
+        "script_length": "150-300 字 → 100-200 字",
+        "prompt_length": "~1200-1500 tokens → ~800-1000 tokens",
+        "response_length": "~600-900 tokens → ~400-600 tokens"
+      }
+    }
+  },
+  "test_date": "2025-12-31 15:05:53",
+  "scenarios": [
+    {
+      "id": 1,
+      "name": "孩子拒絕寫作業",
+      "context": "案主資訊: 王媽媽, 當前狀況: 7歲兒子不願意寫作業\n案例目標: 改善親子溝通，減少作業衝突\n會談次數: 第 2 次, 會談備註: 上次討論過正向教養技巧",
+      "full_transcript": "（之前對話）\n媽媽：今天下午孩子放學回來，我叫他寫作業，他說不要。\n諮詢師：那時候你怎麼回應的呢？\n媽媽：我就說「不寫不行啊，老師會罵」，他就開始哭。",
+      "transcript_segment": "媽媽：我今天又試著叫他寫作業，他還是說不要。\n孩子：（躺在沙發上）我不想寫！我好累！\n媽媽：你每天都說累，功課還是要寫啊！\n孩子：（開始煩躁）我就是不想寫啦！你每天都逼我！\n媽媽：（語氣開始急躁）我不是逼你，是你自己的功課啊！",
+      "expected_severity": 2,
+      "expected_theories": [
+        "薩提爾模式",
+        "Dr. Becky Kennedy",
+        "阿德勒正向教養"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "手足衝突",
+      "context": "案主資訊: 林媽媽, 當前狀況: 5歲姐姐和3歲弟弟經常搶玩具\n案例目標: 建立手足相處規則，培養同理心\n會談次數: 第 1 次",
+      "full_transcript": "（首次諮詢，尚無先前對話）",
+      "transcript_segment": "媽媽：姐姐和弟弟又在搶玩具了。\n姐姐：（大叫）這是我的！你不可以拿！\n弟弟：（哭）我也要玩！\n姐姐：（推開弟弟）你走開啦！\n媽媽：（大聲）不要推弟弟！你是姐姐要讓弟弟！\n姐姐：（委屈）為什麼每次都要我讓！",
+      "expected_severity": 2,
+      "expected_theories": [
+        "情緒輔導",
+        "協作解決問題",
+        "社會意識與價值觀教養"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "情緒崩潰（哭鬧）",
+      "context": "案主資訊: 陳爸爸, 當前狀況: 4歲女兒容易情緒失控\n案例目標: 學習情緒調節技巧\n會談次數: 第 3 次, 會談備註: 已討論全腦教養概念",
+      "full_transcript": "（之前對話）\n爸爸：上次你說的「下層腦」我有注意到，女兒生氣時真的很難講道理。\n諮詢師：對，這時候要先安撫情緒，等她冷靜了再溝通。",
+      "transcript_segment": "爸爸：今天帶她去賣場，她要買玩具，我說不行。\n女兒：（開始哭鬧）我要買！我要買！\n爸爸：（蹲下）我知道你很想要，但是...\n女兒：（大哭）你每次都說不行！我討厭你！（躺在地上打滾）\n爸爸：（有點慌）好了好了，不要哭了，大家都在看...\n女兒：（哭得更大聲）我就是要買！",
+      "expected_severity": 3,
+      "expected_theories": [
+        "人際神經生物學",
+        "情緒輔導",
+        "Dr. Becky Kennedy"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "挑戰權威（頂嘴）",
+      "context": "案主資訊: 張媽媽, 當前狀況: 9歲兒子開始頂嘴\n案例目標: 建立溫和而堅定的界線\n會談次數: 第 1 次",
+      "full_transcript": "（首次諮詢，尚無先前對話）",
+      "transcript_segment": "媽媽：我叫他去洗澡，他說「等一下」。\n孩子：我再玩5分鐘就去！\n媽媽：現在就去，不然水會冷掉。\n孩子：（不耐煩）你很煩耶！我說等一下就等一下！\n媽媽：（生氣）你跟誰說話呢！你怎麼可以這樣跟媽媽講話！\n孩子：你也很煩啊！每次都這樣！",
+      "expected_severity": 2,
+      "expected_theories": [
+        "阿德勒正向教養",
+        "協作解決問題",
+        "薩提爾模式"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "分離焦慮",
+      "context": "案主資訊: 劉媽媽, 當前狀況: 3歲兒子送托嬰時哭鬧\n案例目標: 緩解分離焦慮，建立安全感\n會談次數: 第 2 次, 會談備註: 上次討論過依附理論",
+      "full_transcript": "（之前對話）\n媽媽：他每次送去托嬰都哭得很慘，我也很捨不得。\n諮詢師：分離焦慮是正常的，我們可以建立一些儀式來幫助他。",
+      "transcript_segment": "媽媽：今天早上送他去托嬰，他又開始哭了。\n孩子：（緊抱媽媽）我不要去！我要跟媽媽！\n媽媽：（溫柔但焦急）寶貝乖，媽媽下午就來接你...\n孩子：（哭）不要！我不要你走！\n老師：（過來接）來，我們去玩玩具...\n孩子：（大哭，掙扎）媽媽不要走！媽媽！\n媽媽：（眼眶泛紅，不知所措）怎麼辦...要不要今天不去了？",
+      "expected_severity": 2,
+      "expected_theories": [
+        "現代依附與內在觀點",
+        "情緒輔導",
+        "人際神經生物學"
+      ]
+    }
+  ],
+  "practice_prompt_results": [
+    {
+      "scenario_id": 1,
+      "scenario_name": "孩子拒絕寫作業",
+      "duration_ms": 12789,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": {
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "response": {
+        "safety_level": "yellow",
+        "severity": 2,
+        "display_text": "目前親子關係陷入『權力鬥爭』，孩子因感到被強迫而啟動防禦機制，家長的焦慮則阻斷了同理心的連結。",
+        "action_suggestion": "建議先停止對『寫作業』這件事的爭論，改為連結孩子『累』的感受。先安撫情緒（下層腦），等孩子恢復安全感後再討論解決方案。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "權力鬥爭",
+          "情緒標註",
+          "同理連結",
+          "下層腦安撫"
+        ],
+        "categories": [
+          "學習動力",
+          "溝通技巧"
+        ],
+        "detailed_scripts": [
+          {
+            "situation": "當孩子躺在沙發上抗議『好累、不想寫』且家長感到焦躁時",
+            "parent_script": "（放下手中的家事，走到沙發旁坐下，保持與孩子視線平行，語氣放慢且溫和）\n\n「我看到你現在整個人躺在沙發上，看起來身體真的重重的，好像一點力氣都沒有了。我猜你今天在學校一定花了很多力氣在學習和社交，現在心裡覺得：『我真的受夠了，我現在只想休息』，對嗎？」\n\n（停頓 5 秒，溫柔地看著孩子，等待他點頭或回應）\n\n「我知道這很難，當你覺得電力耗盡時，聽到我要你寫作業，一定覺得壓力很大，甚至覺得媽媽只在乎功課。其實，我更在乎的是你。我們一起坐在這裡休息三分鐘，什麼都不做。等一下我們再來看看，是你的大腦需要休息，還是肚子需要補充一點點心？我們一起想一個讓你覺得比較不痛苦的方法來處理今天的功課。」",
+            "child_likely_response": "孩子可能會嘆一口氣，身體放鬆下來，或者開始抱怨學校發生的累人事，而非繼續尖銳地對抗。",
+            "theory_basis": "人際神經生物學 (安撫下層腦) + 薩提爾模式 (連結渴望) + Dr. Becky (內在穩定性)",
+            "step": "同理連結 → 降溫情緒 → 邀請協作"
+          }
+        ],
+        "theoretical_frameworks": [
+          "人際神經生物學",
+          "薩提爾模式",
+          "Dr. Becky Kennedy",
+          "協作解決問題"
+        ]
+      }
+    },
+    {
+      "scenario_id": 2,
+      "scenario_name": "手足衝突",
+      "duration_ms": 12924,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": {
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "response": {
+        "safety_level": "yellow",
+        "severity": 2,
+        "display_text": "姐姐感到權益受損且被不公平對待，媽媽的「必須讓」指令觸發了姐姐的防衛機制與委屈感。",
+        "action_suggestion": "停止要求姐姐「讓」，改為先認可姐姐的擁有權與情緒，並在雙方冷靜後引導協商輪流規則。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "手足競爭",
+          "公平性",
+          "角色框架",
+          "擁有權意識"
+        ],
+        "categories": [
+          "手足關係",
+          "情緒引導"
+        ],
+        "detailed_scripts": [
+          {
+            "situation": "當姐姐感到委屈並推開弟弟時，媽媽介入處理衝突",
+            "parent_script": "（蹲下身子，平視姐姐的眼睛，手輕輕搭在姐姐肩膀上）「姐姐，我看到你剛才很生氣地推了弟弟，因為他拿了你正在玩的玩具，對嗎？我也聽到我剛剛說要你讓弟弟時，你覺得非常不公平，心裡很委屈。」\n\n（停頓 5 秒，觀察姐姐的表情，等待她點頭或吐露心聲）\n\n「我知道這玩具是你的，你有權利決定什麼時候玩。我剛剛不應該只叫你讓，我道歉。但是，姐姐，雖然你很生氣，推弟弟會讓他受傷，我們的手是用來幫忙的，不是用來推人的。你現在是想繼續玩這個玩具，還是我們一起跟弟弟約定一個計時器的時間，等一下再換他？」\n\n（轉向弟弟）「弟弟，姐姐還沒玩完，我們現在要先尊重姐姐，等計時器響了再換你，好嗎？」",
+            "child_likely_response": "姐姐可能會停止尖叫，情緒稍微緩和，並說：「我還要玩很久！」或「他每次都亂搶！」",
+            "theory_basis": "薩提爾模式（冰山探索）+ 阿德勒（尊重與權利）+ Dr. Becky（內在好孩子觀點）",
+            "step": "同理連結 → 溫和設限 → 協商邀請"
+          },
+          {
+            "situation": "當雙方情緒較穩定後，建立長期的手足分享規則",
+            "parent_script": "（坐在兩個孩子中間）「我們家遇到一個難題：姐姐和弟弟都想玩同一個玩具，但玩具只有一個。姐姐擔心弟弟會弄壞或玩太久，弟弟則是很想試試看。你們覺得有什麼好辦法，可以讓兩個人都能玩到，而且都不會生氣呢？」\n\n（停頓，等待孩子提出建議，即使建議不成熟也先接納）\n\n「姐姐提議用計時器，這是一個好主意！那弟弟你覺得我們要設定 5 分鐘還是 10 分鐘？我們可以一起看著計時器走。當計時器『叮』的時候，我們就交換，這樣公平嗎？」",
+            "child_likely_response": "孩子會感覺到自己的需求被重視，較願意參與規則的制定而非被動服從。",
+            "theory_basis": "協作解決問題 (CPS) + 情緒輔導 (Emotion Coaching)",
+            "step": "定義問題 → 邀請協商 → 共同找解方"
+          }
+        ],
+        "theoretical_frameworks": [
+          "阿德勒正向教養",
+          "薩提爾模式",
+          "協作解決問題",
+          "現代依附與內在觀點",
+          "情緒輔導"
+        ]
+      }
+    },
+    {
+      "scenario_id": 3,
+      "scenario_name": "情緒崩潰（哭鬧）",
+      "duration_ms": 14950,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": {
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "response": {
+        "safety_level": "red",
+        "severity": 3,
+        "display_text": "孩子目前處於「下層腦」完全接管狀態，您的焦慮來自外界眼光，請先深呼吸穩住自己。",
+        "action_suggestion": "優先將孩子帶離人群密集的「壓力區」至安靜角落，建立安全感；接納她的失望情緒，但堅持不買玩具的界線。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "下層腦風暴",
+          "公共場合崩潰",
+          "溫和堅定",
+          "情緒標註"
+        ],
+        "categories": [
+          "情緒調節",
+          "界線設定"
+        ],
+        "detailed_scripts": [
+          {
+            "situation": "當孩子在賣場躺地大哭並說「我討厭你」時的立即處理",
+            "parent_script": "（深呼吸，先穩住自己的情緒，蹲下並用身體擋住旁人的視線，與孩子平視，語氣平穩且緩慢）\n\n「（溫柔地看著孩子）我看到你現在非常、非常生氣，因為你真的很想買那個玩具，但我說了不行。對你來說，這真的好難過，對嗎？」\n\n（停頓 5 秒，即使她還在哭，也要給予空間）\n\n「你說討厭我，是因為你現在心裡很不舒服。沒關係，我會在這裡陪著你。你可以生氣，但我不能讓你躺在地上，這不安全。你是要自己站起來跟我去旁邊的椅子坐一下，還是要爸爸抱你過去？」（再次停頓，等待回應）\n\n「我知道這很失望，今天我們不買玩具，但我會陪著你直到你覺得好一點。我們一起練習吐氣，像吹大泡泡一樣。」",
+            "child_likely_response": "孩子可能會持續哭泣一陣子，但因為感受到父親的穩定與不評判，尖叫聲會逐漸轉為委屈的啜泣，並可能選擇讓爸爸抱。",
+            "theory_basis": "人際神經生物學 (全腦教養) + Dr. Becky (內在穩定) + 薩提爾 (冰山理論)",
+            "step": "同理連結 → 溫和設限 → 轉移空間"
+          },
+          {
+            "situation": "當孩子稍微冷靜，準備離開賣場時的修復對話",
+            "parent_script": "（坐在孩子身邊，輕輕撫摸她的背）\n\n「剛才在賣場裡，你的心裡是不是像失火了一樣，覺得好燙好難受？我注意到當我說不能買玩具時，你真的很失望。謝謝你後來願意跟爸爸走到這裡來。」\n\n（停頓，觀察孩子表情）\n\n「爸爸很愛你，雖然我不能答應買玩具，但我永遠會陪著生氣的你。你現在覺得好一點了嗎？我們等一下去車上，你想聽你最喜歡的那首歌，還是要抱著你的小毯子？我們一起想想看，下次如果我們又看到很想要的玩具，可以用什麼方式告訴爸爸，而不是讓自己這麼難受？」",
+            "child_likely_response": "孩子可能會點點頭，或小聲說出自己的感受，開始從下層腦切換回上層腦思考。",
+            "theory_basis": "情緒輔導 (Gottman) + 阿德勒 (提供選擇) + 協作解決問題",
+            "step": "情緒標註 → 連結修復 → 邀請協商"
+          }
+        ],
+        "theoretical_frameworks": [
+          "人際神經生物學",
+          "現代依附與內在觀點",
+          "薩提爾模式",
+          "情緒輔導",
+          "阿德勒正向教養"
+        ]
+      }
+    },
+    {
+      "scenario_id": 4,
+      "scenario_name": "挑戰權威（頂嘴）",
+      "duration_ms": 18471,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": {
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "response": {
+        "safety_level": "yellow",
+        "severity": 2,
+        "display_text": "目前正處於權力鬥爭的升溫期，孩子透過頂嘴表達對自主權的需求，而家長的強硬反應觸發了孩子的防衛機制。",
+        "action_suggestion": "先停止針對『頂嘴』行為的爭論，深呼吸穩定自身情緒。將焦點從『管教態度』轉移到『處理轉換困難』，先連結情感再設定界線。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "權力鬥爭",
+          "轉換困難",
+          "連結大腦"
+        ],
+        "categories": [
+          "溝通技巧",
+          "情緒調節"
+        ],
+        "detailed_scripts": [
+          {
+            "situation": "當孩子說「你很煩」且衝突即將升級時，家長嘗試降溫並重新連結。",
+            "parent_script": "（深呼吸，放慢語速，緩緩蹲下與孩子平視，保持約一個手臂的尊重距離）\n\n「（語氣平和）喔，我聽到了。你覺得我很煩，是因為我打斷了你正在做的事情，對嗎？（觀察陳述）我看到你剛才玩得很投入，要突然停下來去洗澡真的很難受。\n\n（停頓 5 秒，給孩子空間消化情緒，不急著反駁）\n\n（同理猜測）我猜你心裡可能在想：『為什麼不能讓我玩完？媽媽總是只會催我。』對嗎？（等待孩子點頭或回應）\n\n（提供選擇）我剛才太急著要你去洗澡，是因為擔心水冷掉，但我沒注意到你的進度。你剛才說再玩 5 分鐘，那我們現在約定好，是 5 分鐘後你自己走去浴室，還是 5 分鐘後我過來牽你的手一起去？我們一起想一個不會讓你覺得『很煩』的轉換方式。」",
+            "child_likely_response": "孩子可能會愣住（因為媽媽沒生氣），然後語氣放軟說：「好啦，5 分鐘就 5 分鐘。」或是解釋他剛才在玩的內容。",
+            "theory_basis": "人際神經生物學 (先安撫下層腦) + 薩提爾 (冰山探索) + 阿德勒 (提供選擇)",
+            "step": "同理連結 → 解決策略"
+          },
+          {
+            "situation": "在孩子洗完澡、情緒平穩後，針對「頂嘴」行為進行溫和而堅定的界線教育。",
+            "parent_script": "（坐在孩子身邊，輕輕拍他的肩膀或握住他的手）\n\n「（觀察陳述）嘿，剛才我們大聲說話的時候，我覺得心裡很不舒服，我想你也是。我知道你當時因為被打斷很不開心，所以說了『你很煩』。\n\n（溫和設限）在我們家，你可以生氣，也可以覺得媽媽很煩，這沒關係。但我們不能用傷人的話來表達。你是個好孩子，只是剛才那個當下你不知道該怎麼處理你的不耐煩。\n\n（協商邀請）下次如果你覺得我催得太急，你可以試著說：『媽媽，我現在正忙，請給我 5 分鐘』，而不是說『你很煩』。你覺得下次我們可以用什麼方法互相提醒？是需要一個計時器，還是我提前 10 分鐘就先跟你說一聲？我們一起練習用不傷人的方式說出你的需要。」",
+            "child_likely_response": "孩子可能會感到被理解而不再防衛，並願意討論下次的預警機制。",
+            "theory_basis": "Dr. Becky (內在觀點) + 情緒輔導 (標註與設限) + 協作解決問題",
+            "step": "意識檢核 → 解決策略"
+          }
+        ],
+        "theoretical_frameworks": [
+          "阿德勒正向教養",
+          "人際神經生物學",
+          "現代依附與內在觀點 (Dr. Becky)",
+          "薩提爾模式",
+          "情緒輔導"
+        ]
+      }
+    },
+    {
+      "scenario_id": 5,
+      "scenario_name": "分離焦慮",
+      "duration_ms": 13527,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": {
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "response": {
+        "safety_level": "yellow",
+        "severity": 2,
+        "display_text": "孩子正處於分離焦慮的「下層腦」風暴中，他需要您的穩定感來確認環境是安全的。",
+        "action_suggestion": "先深呼吸穩住自己的焦慮，透過「情緒標註」認可孩子的恐懼，並建立一個簡短、堅定且具儀式感的告別流程。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "分離焦慮",
+          "下層腦安撫",
+          "告別儀式"
+        ],
+        "categories": [
+          "情緒調節",
+          "依附關係"
+        ],
+        "detailed_scripts": [
+          {
+            "situation": "在托嬰中心門口，孩子緊抱媽媽大哭時",
+            "parent_script": "（深呼吸，緩緩蹲下與孩子平視，雙手溫柔地搭在孩子肩膀上）\n\n「寶貝，我看到你現在哭得很傷心，兩隻手緊緊抓著媽媽不放。我猜你現在心裡覺得有點害怕，因為你要跟媽媽分開了，對嗎？」\n\n（停頓 3-5 秒，溫柔地看著孩子的眼睛，等待他點頭或稍微放鬆）\n\n「我知道這真的很難，想跟媽媽在一起是很自然的事。媽媽要告訴你一個祕密：雖然媽媽的身體會離開去上班，但媽媽對你的愛會一直留在這裡陪你。我們來做我們的『魔法親親』儀式好嗎？你是要親在手心裡放進口袋，還是要親在額頭上帶進教室呢？」\n\n（等孩子選擇後完成動作）\n\n「好，現在媽媽要把你交給老師了。媽媽下午吃完點心後，就會準時出現在門口接你。我們擊個掌，下午見！」",
+            "child_likely_response": "孩子可能會持續哭泣，但掙扎力道減弱，或在引導下完成儀式動作，隨後由老師接手。",
+            "theory_basis": "人際神經生物學 (Dan Siegel) + 現代依附觀點 (Dr. Becky) + 薩提爾模式",
+            "step": "下層腦安撫 → 情緒標註 → 建立連結儀式 → 溫和設限"
+          },
+          {
+            "situation": "當媽媽感到不知所措，猶豫是否要帶孩子回家時（內在對話與對孩子說的話）",
+            "parent_script": "（對自己內心說：我是個好媽媽，孩子現在經歷的是成長的難事，不是壞事。我的猶豫會讓他更不安。）\n\n（對孩子堅定地說）：「寶貝，媽媽看到你很捨不得。雖然現在很難過，但媽媽相信你可以處理這個難過。老師這裡有很多好玩的，還有小朋友。媽媽現在必須去上班了，這是不會改變的。我們抱最後一個大大的抱抱，數到三，媽媽就要交給老師囉。一、二、三！」\n\n（果斷地將孩子交給老師，微笑揮手，轉身離開，不在門口徘徊）",
+            "child_likely_response": "孩子可能會短暫大哭，但因為感受到媽媽的堅定，會較快在老師的安撫下進入教室節奏。",
+            "theory_basis": "阿德勒正向教養 (溫和而堅定) + 現代依附觀點 (成為穩定錨)",
+            "step": "自我覺察 → 堅定邊界 → 信任傳遞"
+          }
+        ],
+        "theoretical_frameworks": [
+          "人際神經生物學",
+          "現代依附與內在觀點",
+          "薩提爾模式",
+          "阿德勒正向教養"
+        ]
+      }
+    }
+  ],
+  "emergency_prompt_results": [
+    {
+      "scenario_id": 1,
+      "scenario_name": "孩子拒絕寫作業",
+      "duration_ms": 9530,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": {
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "response": {
+        "safety_level": "yellow",
+        "severity": 2,
+        "display_text": "雙方陷入「累不累」的爭辯與權力鬥爭，孩子的情緒正從下層腦升溫，需要先連結情感。",
+        "action_suggestion": "停止說教與辯論事實，優先認可孩子的疲累感受。透過「先連結、後規範」的方式，給予孩子短暫的緩衝空間與自主選擇權。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "權力鬥爭",
+          "情緒標註",
+          "連結後教導"
+        ],
+        "categories": [
+          "學業衝突",
+          "情緒調節"
+        ],
+        "detailed_scripts": [
+          {
+            "situation": "當孩子抱怨累並指責家長逼迫時，家長放下防衛進行連結。",
+            "parent_script": "「寶貝，我聽到了，你今天真的覺得好累、好辛苦，對你來說，放學後還要拿起筆真的很不容易。我剛才語氣太急了，對不起。我們先不談作業，你要不要先過來讓我抱一下 5 分鐘，或是我們先喝杯水休息一下？等你的『能量電池』充一點電，我們再一起看看今天哪一項作業最少，我們從最簡單的開始，還是你希望我陪在你旁邊寫？」",
+            "child_likely_response": "（情緒稍微緩和）好啦...那我要先抱抱。",
+            "theory_basis": "Dr. Becky (家長穩定性) + Dan Siegel (全腦教養：先連結再規範) + 阿德勒 (提供選擇)",
+            "step": "同理連結 → 即時話術"
+          }
+        ],
+        "theoretical_frameworks": [
+          "現代依附與內在觀點 (Dr. Becky Kennedy)",
+          "人際神經生物學 (Dan Siegel)",
+          "阿德勒正向教養"
+        ]
+      }
+    },
+    {
+      "scenario_id": 2,
+      "scenario_name": "手足衝突",
+      "duration_ms": 12480,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": {
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "response": {
+        "safety_level": "red",
+        "severity": 3,
+        "display_text": "姐姐因「必須讓弟弟」的標籤感到極度委屈，且出現肢體推擠，家長介入方式加深了手足對立。",
+        "action_suggestion": "立即停止「大聲責備」與「要求讓步」，先同理姐姐的物權與不公平感，並針對推人行為建立安全界線。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "手足競爭",
+          "物權意識",
+          "標籤效應"
+        ],
+        "categories": [
+          "情緒輔導",
+          "正向教養"
+        ],
+        "detailed_scripts": [
+          {
+            "situation": "當姐姐推弟弟並抗議「為什麼每次都要我讓」時",
+            "parent_script": "「姐姐，我看到你很生氣，因為你還想玩這個玩具，被拿走讓你覺得很不舒服。推弟弟是不安全的，我們先停下來。我也聽到你說『為什麼每次都要讓』，這聽起來真的很不公平，對不起，我不該只因為你是姐姐就要求你讓步。這玩具現在是你的時間，你可以決定什麼時候玩完。弟弟，姐姐還沒玩完，我們現在可以先玩小汽車，還是要在旁邊等 5 分鐘？姐姐，等你玩完想交換時再告訴我們。」",
+            "child_likely_response": "姐姐感受到被理解而情緒降溫，弟弟可能仍有不滿但能學習等待。",
+            "theory_basis": "薩提爾 (冰山理論) + Dr. Becky (內在觀點) + 阿德勒 (溫和堅定)",
+            "step": "同理連結 → 即時話術"
+          }
+        ],
+        "theoretical_frameworks": [
+          "薩提爾模式",
+          "現代依附與內在觀點 (Dr. Becky Kennedy)",
+          "阿德勒正向教養"
+        ]
+      }
+    },
+    {
+      "scenario_id": 3,
+      "scenario_name": "情緒崩潰（哭鬧）",
+      "duration_ms": 9265,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": {
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "response": {
+        "safety_level": "red",
+        "severity": 3,
+        "display_text": "孩子正處於下層腦風暴，且家長因旁人眼光感到焦慮，需立即降溫並轉移陣地。",
+        "action_suggestion": "先帶離現場以降低社交壓力，暫停說理。透過深呼吸穩定自己，再用簡短有力的同理心接住孩子的情緒，不對『討厭你』做過度反應。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "下層腦風暴",
+          "公共場合崩潰",
+          "情緒降溫"
+        ],
+        "categories": [
+          "情緒調節",
+          "危機處理"
+        ],
+        "detailed_scripts": [
+          {
+            "situation": "孩子在賣場因買不到玩具而躺地大哭並說出攻擊性語言。",
+            "parent_script": "「寶貝，我知道你現在非常、非常想要那個玩具，沒辦法帶它回家讓你覺得很難過、很生氣。爸爸會陪著你，但我們現在需要先去旁邊安靜的地方。我知道你現在說『討厭我』是因為你心裡很不舒服，沒關係，我還是愛你的。等我們冷靜一點，我們再來看看回家後可以玩什麼，或者把這個玩具放進下次的願望清單裡。現在，你要自己走，還是要爸爸抱你到長椅那邊？」",
+            "child_likely_response": "哭聲逐漸變小，或選擇被抱走，情緒開始從高峰滑落。",
+            "theory_basis": "人際神經生物學 + Dr. Becky + 薩提爾",
+            "step": "同理連結 → 溫和設限 → 提供選擇"
+          }
+        ],
+        "theoretical_frameworks": [
+          "人際神經生物學",
+          "現代依附與內在觀點",
+          "薩提爾模式"
+        ]
+      }
+    },
+    {
+      "scenario_id": 4,
+      "scenario_name": "挑戰權威（頂嘴）",
+      "duration_ms": 9359,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": {
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "response": {
+        "safety_level": "yellow",
+        "severity": 2,
+        "display_text": "目前處於權力鬥爭狀態，孩子因轉場困難而產生防衛性頂嘴。",
+        "action_suggestion": "暫停對「態度」的爭論，先同理孩子不想中斷遊戲的感受，再給予明確的選擇以建立界線。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "權力鬥爭",
+          "轉場困難",
+          "溫和堅定"
+        ],
+        "categories": [
+          "情緒調節",
+          "行為引導"
+        ],
+        "detailed_scripts": [
+          {
+            "situation": "當孩子頂嘴說「你很煩」且雙方情緒升溫時",
+            "parent_script": "「我看到你玩得正開心，突然要停下來真的會讓人覺得很煩，我理解你想繼續玩的心情。但是，我不接受你用『很煩』來對我大聲，這讓我很難過。現在水溫剛好，我們需要洗澡了。你是要現在自己走進浴室，還是要我陪你走過去？或者我們設定最後 2 分鐘鬧鐘，鬧鐘一響就出發？你決定。」",
+            "child_likely_response": "雖然仍有些不甘願，但感受到被理解，較可能選擇鬧鐘方案並配合。",
+            "theory_basis": "阿德勒正向教養 + Dr. Becky + 情緒輔導",
+            "step": "同理連結 → 溫和設限 → 提供選擇"
+          }
+        ],
+        "theoretical_frameworks": [
+          "阿德勒正向教養",
+          "現代依附與內在觀點 (Dr. Becky)",
+          "情緒輔導 (John Gottman)"
+        ]
+      }
+    },
+    {
+      "scenario_id": 5,
+      "scenario_name": "分離焦慮",
+      "duration_ms": 10957,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": {
+        "input": 0.0,
+        "output": 0.0,
+        "total": 0.0
+      },
+      "response": {
+        "safety_level": "yellow",
+        "severity": 2,
+        "display_text": "孩子正處於分離焦慮高峰，需要您溫和而堅定地完成道別儀式。",
+        "action_suggestion": "先穩定自身焦慮，認可孩子的難過，提供具體的重逢時間點，並在簡短儀式後堅定交給老師，避免因猶豫而延長孩子的恐懼。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "分離焦慮",
+          "道別儀式",
+          "情緒連結"
+        ],
+        "categories": [
+          "情緒調節",
+          "依附關係"
+        ],
+        "detailed_scripts": [
+          {
+            "situation": "孩子在托嬰門口緊抱媽媽大哭，媽媽感到不知所措且想放棄送托。",
+            "parent_script": "「寶貝，我知道你現在很難過，你真的很想跟媽媽在一起，對嗎？媽媽也超級愛你。我們現在心裡連著一根隱形的線，媽媽去上班時，這根線也會一直連著。下午吃完點心，媽媽一定會準時來接你。現在，你要給我一個『超強力抱抱』還是『擊掌加油』？好，抱一個！老師接手囉，媽媽愛你，下午見！」（隨即轉身離開，不回頭張望）",
+            "child_likely_response": "雖然仍在哭泣，但感受到媽媽情緒的穩定與明確的預期，能較快在老師安撫下平復。",
+            "theory_basis": "Dr. Becky (內在觀點) + Dan Siegel (全腦教養) + 阿德勒 (溫和堅定)",
+            "step": "同理連結 → 提供選擇 → 執行儀式"
+          }
+        ],
+        "theoretical_frameworks": [
+          "現代依附與內在觀點",
+          "人際神經生物學",
+          "阿德勒正向教養"
+        ]
+      }
+    }
+  ],
+  "old_prompt_results": [
+    {
+      "scenario_id": 1,
+      "scenario_name": "孩子拒絕寫作業",
+      "duration_ms": 8980,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": 0.0,
+      "response": {
+        "safety_level": "yellow",
+        "severity": 2,
+        "display_text": "目前溝通陷入「權力爭奪」的循環，孩子感到被強迫而產生防衛心理，家長則因焦慮而忽略了孩子表達的疲累感受。",
+        "action_suggestion": "建議運用 Bridge 技巧，先透過同理心連結孩子的情緒，例如說「媽媽看到你今天上學真的累壞了」，以此建立心理橋樑。接著邀請孩子共同討論，而非單向要求，例如問「我們休息十分鐘後，你覺得先寫哪一項作業會比較輕鬆？」。這種方式能減少孩子的對抗心理，將「被逼感」轉化為「自主選擇感」，幫助孩子從情緒腦轉向理智腦。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "同理心連結",
+          "權力爭奪",
+          "自主感培養"
+        ],
+        "categories": [
+          "溝通技巧",
+          "情緒引導"
+        ]
+      }
+    },
+    {
+      "scenario_id": 2,
+      "scenario_name": "手足衝突",
+      "duration_ms": 8613,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": 0.0,
+      "response": {
+        "safety_level": "yellow",
+        "severity": 2,
+        "display_text": "目前互動呈現「強迫讓步」的衝突模式。姐姐因「必須禮讓」感到權益受損與委屈，而弟弟則可能習得透過哭鬧來獲得資源，這會加深手足間的對立感。",
+        "action_suggestion": "建議運用「橋接技巧 (Bridge)」，先分別說出兩方的感受與需求（例如：姐姐想保護自己的玩具，弟弟想跟姐姐一起玩），幫助孩子建立情緒連結。請停止使用「你是姐姐要讓弟弟」的說法，改以計時器建立「輪流玩」的客觀規則，並在姐姐願意分享時給予具體鼓勵。透過引導姐姐觀察弟弟的表情來培養同理心，同時保障姐姐的物權，讓她感受到公平，才能降低防衛心並發展出分享的意願。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "手足衝突",
+          "物權意識",
+          "情緒同理",
+          "公平原則"
+        ],
+        "categories": [
+          "親子溝通",
+          "手足關係",
+          "情緒教育"
+        ]
+      }
+    },
+    {
+      "scenario_id": 3,
+      "scenario_name": "情緒崩潰（哭鬧）",
+      "duration_ms": 7889,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": 0.0,
+      "response": {
+        "safety_level": "yellow",
+        "severity": 2,
+        "display_text": "孩子目前正處於「下層腦」主導的崩潰狀態，您的焦慮感（在意他人眼光）正逐漸傳遞給孩子，這會讓情緒更難平復。",
+        "action_suggestion": "建議運用「連結與重新導向」的 Bridge 技巧，先放下邏輯解釋，將孩子帶往賣場角落以降低您的社交壓力。透過蹲下平視與溫柔的肢體接觸，重複描述孩子的感受（如：你真的很想要那個玩具，沒辦法買讓你很難過）來建立情感連結。在孩子冷靜前，避免使用「但是」或說教，待其下層腦安定後，再引導她思考替代方案或下次的約定。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "下層腦暴走",
+          "連結與重新導向",
+          "同理心回應",
+          "公共場合情緒處理"
+        ],
+        "categories": [
+          "情緒調節",
+          "溝通技巧",
+          "全腦教養實務"
+        ]
+      }
+    },
+    {
+      "scenario_id": 4,
+      "scenario_name": "挑戰權威（頂嘴）",
+      "duration_ms": 9722,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": 0.0,
+      "response": {
+        "safety_level": "yellow",
+        "severity": 2,
+        "display_text": "當前對話陷入了典型的「權力爭奪」模式。雙方的情緒都已被挑起，對話焦點從原本的「洗澡」轉移到了「態度指責」，這會讓 9 歲的孩子感到被控制而產生更強的反抗心理。",
+        "action_suggestion": "建議運用 Bridge 技巧，先透過「同理」建立連結再設定界線，例如說：『我知道你正玩得入迷，想多玩一下（橋樑）』，這能降低孩子的防禦心。接著使用『我訊息』取代指責，如：『當你大聲說我煩時，我感到很受傷』，幫助孩子理解行為影響而非單純被訓誡。最後提供「有限的選擇」來滿足此年紀對自主權的需求，例如：『我們約定再 5 分鐘，你是要自己去洗，還是要我陪你走過去？』以溫和堅定的態度終止爭執。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "權力爭奪",
+          "Bridge技巧",
+          "自主權",
+          "同理心"
+        ],
+        "categories": [
+          "溝通技巧",
+          "情緒調節",
+          "界線建立"
+        ]
+      }
+    },
+    {
+      "scenario_id": 5,
+      "scenario_name": "分離焦慮",
+      "duration_ms": 10118,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "cost_usd": 0.0,
+      "response": {
+        "safety_level": "yellow",
+        "severity": 2,
+        "display_text": "孩子目前正經歷強烈的分離焦慮，您的不捨與猶豫可能讓孩子感到環境不安全，需建立穩定的道別節奏。",
+        "action_suggestion": "建議運用「橋樑技巧 (Bridging)」將當下的分離連結到重逢的時刻，例如具體說明：『當老師發完下午點心，媽媽就會準時出現在門口接你』，讓孩子對未來有預期感。道別時請保持溫柔且堅定，避免因心軟而反覆折返或詢問要不要回家，這會增加孩子的不確定感並延長焦慮。認可孩子想留下的情緒，但透過簡短的道別儀式（如擊掌或專屬擁抱）傳遞信任感，幫助他理解分離是暫時的且安全的。",
+        "suggested_interval_seconds": 30,
+        "keywords": [
+          "分離焦慮",
+          "橋樑技巧",
+          "安全依附",
+          "道別儀式"
+        ],
+        "categories": [
+          "情緒支持",
+          "行為引導"
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "practice_avg_tokens": 0.0,
+    "emergency_avg_tokens": 0.0,
+    "old_avg_tokens": 0.0,
+    "practice_avg_time_ms": 14532.2,
+    "emergency_avg_time_ms": 10318.2,
+    "old_avg_time_ms": 9064.4,
+    "practice_avg_cost_usd": 0.0,
+    "emergency_avg_cost_usd": 0.0,
+    "old_avg_cost_usd": 0.0,
+    "emergency_vs_practice": {
+      "token_reduction_pct": 0,
+      "time_reduction_pct": -28.997674130551466,
+      "cost_reduction_pct": 0
+    },
+    "practice_mode_coverage": {
+      "detailed_scripts": 1.0,
+      "theories": 1.0
+    },
+    "emergency_mode_coverage": {
+      "detailed_scripts": 1.0,
+      "theories": 1.0
+    },
+    "script_lengths": {
+      "practice_avg": 264.8888888888889,
+      "emergency_avg": 153.6
+    }
+  }
+}

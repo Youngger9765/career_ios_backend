@@ -177,6 +177,67 @@
   - Response 格式
 - 向後兼容：舊的 `POST /sessions/{id}/analyze-keywords` 仍可用，內部調用 analyze-partial，回傳 career 格式
 
+#### ✅ 8 Schools of Parenting 整合 (2025-12-31)
+**功能定位**: Island Parents 租戶專屬的進階教養指導系統
+
+**核心特色**:
+- ✅ **8 大教養流派整合** - 專業理論基礎
+  1. 阿德勒正向教養 (Positive Discipline)
+  2. 薩提爾模式 (Satir Model - 冰山理論)
+  3. 行為分析學派 (ABA, ABC 模式)
+  4. 人際神經生物學 (Dan Siegel - 全腦教養)
+  5. 情緒輔導 (John Gottman - 情緒教練)
+  6. 協作解決問題 (Ross Greene - CPS)
+  7. 現代依附與內在觀點 (Dr. Becky Kennedy)
+  8. 社會意識與價值觀教養（性別平權、身體自主權）
+
+- ✅ **逐字稿級別話術指導** (Practice Mode)
+  - 提供 100-300 字的具體對話範例
+  - 包含家長話術、孩子可能回應、理論依據
+  - 可立即使用的實戰話術
+
+- ✅ **理論來源追溯**
+  - 每個建議標註使用的流派
+  - 透明化專業決策過程
+  - 提升家長信任度
+
+**Response 擴充（island_parents 租戶 Practice Mode）**:
+```json
+{
+  "safety_level": "yellow",
+  "severity": 2,
+  "display_text": "孩子正在經歷情緒困擾",
+  "action_suggestion": "先同理孩子的感受，再引導解決問題",
+  "detailed_scripts": [
+    {
+      "situation": "當孩子拒絕寫作業時",
+      "parent_script": "（蹲下平視）我看到你現在不想寫作業，好像很累。是不是今天在學校已經很努力了？\n\n我們現在先不談作業。你是要先休息 10 分鐘，還是我陪你一起做？你覺得哪一個比較容易開始？",
+      "child_likely_response": "可能選擇休息或陪伴",
+      "theory_basis": "薩提爾 + Dr. Becky + 阿德勒",
+      "step": "同理連結 → 即時話術"
+    }
+  ],
+  "theoretical_frameworks": ["薩提爾模式", "Dr. Becky Kennedy", "阿德勒正向教養"]
+}
+```
+
+**技術實作**:
+- **Prompt 版本**: v1 (測試版)
+- **檔案位置**:
+  - Practice Mode: `app/prompts/island_parents_8_schools_practice_v1.py`
+  - Emergency Mode: `app/prompts/island_parents_8_schools_emergency_v1.py`
+- **整合位置**: `app/services/keyword_analysis_service.py`
+- **Schema 擴充**: `app/schemas/analysis.py` (DetailedScript, IslandParentAnalysisResponse)
+
+**向後相容**:
+- ✅ 新增欄位為 Optional，不影響現有 API 調用
+- ✅ Emergency Mode 保持簡短（不提供 detailed_scripts）
+- ✅ Career 租戶不受影響
+
+**測試覆蓋**:
+- ✅ Integration tests: `tests/integration/test_8_schools_prompt_integration.py`
+- ✅ 覆蓋場景: Practice/Emergency mode, 向後相容, Schema validation
+
 ### ✅ 報告生成 (`/api/v1/reports/*`)
 - **異步生成**: `POST /reports/generate` (HTTP 202 Accepted)
   - Background Tasks 執行 RAG + GPT-4 生成

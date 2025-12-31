@@ -23,6 +23,12 @@ from app.models.credit_log import CreditLog  # For dual-write pattern
 from app.models.session import Session
 from app.models.session_analysis_log import SessionAnalysisLog
 from app.models.session_usage import SessionUsage
+from app.prompts.island_parents_8_schools_emergency_v1 import (
+    ISLAND_PARENTS_8_SCHOOLS_EMERGENCY_PROMPT,
+)
+from app.prompts.island_parents_8_schools_practice_v1 import (
+    ISLAND_PARENTS_8_SCHOOLS_PRACTICE_PROMPT,
+)
 from app.schemas.realtime import CounselingMode
 from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
@@ -82,93 +88,10 @@ class KeywordAnalysisService:
 - safety_level: green=穩定, yellow=需關注, red=危機
 - severity: 1=輕微, 2=中等, 3=嚴重
 """,
-        "island_parents_emergency": """你是親子教養專家，提供即時危機提醒。這是事中提醒模式，需要快速判斷和簡潔建議。
-
-背景資訊：
-{context}
-
-完整對話逐字稿（供參考，理解背景脈絡）：
-{full_transcript}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【最近對話 - 用於安全評估】
-（請根據此區塊判斷當前安全等級）
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{transcript_segment}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-⚠️ CRITICAL: 安全等級評估請只根據「【最近對話 - 用於安全評估】」區塊判斷，
-完整對話僅作為理解脈絡參考。如果最近對話已緩和，即使之前有危險內容，
-也應評估為較低風險。
-
-請分析並返回 JSON 格式：
-{{
-    "safety_level": "green|yellow|red",
-    "severity": 1-3,
-    "display_text": "簡短狀況描述（1句話）",
-    "action_suggestion": "1-2句最關鍵建議",
-    "suggested_interval_seconds": 15,
-    "keywords": ["關鍵詞1", "關鍵詞2"],
-    "categories": ["類別1"]
-}}
-
-紅黃綠燈判斷標準：
-- 🔴 RED (嚴重): 情緒崩潰、失控、衝突升級、語言暴力
-- 🟡 YELLOW (需調整): 溝通不良、情緒緊張、忽略感受
-- 🟢 GREEN (良好): 溝通順暢、情緒穩定、互相尊重
-
-⚠️ EMERGENCY MODE 要求：
-- 聚焦當前最需要處理的問題
-- 建議必須快速可執行
-- 選擇 1-2 句最關鍵建議即可
-- 避免冗長說明
-""",
-        "island_parents_practice": """你是親子教養專家，提供詳細教學指導。這是事前練習模式，可以提供更完整的分析和建議。
-
-背景資訊：
-{context}
-
-完整對話逐字稿（供參考，理解背景脈絡）：
-{full_transcript}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【最近對話 - 用於安全評估】
-（請根據此區塊判斷當前安全等級）
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{transcript_segment}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-請分析並返回 JSON 格式：
-{{
-    "safety_level": "green|yellow|red",
-    "severity": 1-3,
-    "display_text": "給家長的提示文字",
-    "action_suggestion": "詳細建議（3-4句），包含 Bridge 技巧說明",
-    "suggested_interval_seconds": 30,
-    "keywords": ["關鍵詞1", "關鍵詞2", "關鍵詞3"],
-    "categories": ["類別1", "類別2"]
-}}
-
-紅黃綠燈判斷標準：
-- 🔴 RED (嚴重): 孩子情緒崩潰、家長失控、衝突升級、語言暴力
-- 🟡 YELLOW (需調整): 溝通不良、情緒緊張、單向指責、忽略感受
-- 🟢 GREEN (良好): 溝通順暢、情緒穩定、互相尊重、有效傾聽
-
-⚠️ PRACTICE MODE 要求：
-- 提供 3-4 句詳細建議
-- 說明 Bridge 技巧和溝通策略
-- 幫助家長理解孩子行為背後的需求
-- 建議具體對話方式和調整方法
-
-⚠️ CRITICAL: 安全等級評估請只根據「【最近對話 - 用於安全評估】」區塊判斷，
-完整對話僅作為理解脈絡參考。如果最近對話已緩和，即使之前有危險內容，
-也應評估為較低風險。
-
-注意：
-- display_text: 描述當前親子互動狀況，給家長具體的觀察提示
-- action_suggestion: 具體可行的溝通調整建議，包含教學性內容
-- severity: 1=輕微, 2=中等, 3=嚴重
-""",
+        # 8 Schools of Parenting Integration - Emergency Mode (v1)
+        "island_parents_emergency": ISLAND_PARENTS_8_SCHOOLS_EMERGENCY_PROMPT,
+        # 8 Schools of Parenting Integration - Practice Mode (v1)
+        "island_parents_practice": ISLAND_PARENTS_8_SCHOOLS_PRACTICE_PROMPT,
     }
 
     # RAG category mapping for tenants

@@ -247,6 +247,8 @@ async def analyze_partial(
             keywords=result_data.get("keywords", []),
             categories=result_data.get("categories", []),
             token_usage=token_usage,
+            detailed_scripts=result_data.get("detailed_scripts"),
+            theoretical_frameworks=result_data.get("theoretical_frameworks"),
         )
     else:  # career (default)
         return CareerAnalysisResponse(

@@ -43,10 +43,57 @@ class RAGDocument(BaseModel):
     chunk_id: Optional[str] = None
 
 
+class DetailedScript(BaseModel):
+    """
+    詳細話術範例（逐字稿級別）
+    用於 8 Schools of Parenting 整合 - Practice Mode
+    """
+
+    situation: str = Field(
+        ...,
+        description="當前情境簡述（1 句話）",
+        min_length=1,
+    )
+    parent_script: str = Field(
+        ...,
+        description="家長可以使用的逐字稿話術（100-300 字），包含核心同理陳述、提供選擇或設限、可立即使用的對話",
+        min_length=50,
+    )
+    child_likely_response: str = Field(
+        ...,
+        description="孩子可能的回應（簡短）",
+        min_length=1,
+    )
+    theory_basis: str = Field(
+        ...,
+        description="理論來源標註（例如：薩提爾 + Dr. Becky + 阿德勒）",
+        min_length=1,
+    )
+    step: str = Field(
+        ...,
+        description="對應步驟（例如：同理連結 → 即時話術）",
+        min_length=1,
+    )
+
+    class Config:
+        json_schema_extra = {
+            "examples": [
+                {
+                    "situation": "當孩子拒絕寫作業時",
+                    "parent_script": "（蹲下平視）我看到你現在不想寫作業，好像很累。是不是今天在學校已經很努力了？\n\n我們現在先不談作業。你是要先休息 10 分鐘，還是我陪你一起做？你覺得哪一個比較容易開始？",
+                    "child_likely_response": "可能選擇休息或陪伴",
+                    "theory_basis": "薩提爾 + Dr. Becky + 阿德勒",
+                    "step": "同理連結 → 即時話術",
+                }
+            ]
+        }
+
+
 class IslandParentAnalysisResponse(BaseModel):
     """
     Island Parents 租戶專用 response
     用於親子對話分析，提供紅黃綠燈安全等級
+    支援 8 Schools of Parenting Integration (v1)
     """
 
     safety_level: str = Field(
@@ -88,6 +135,16 @@ class IslandParentAnalysisResponse(BaseModel):
         description="Token usage details (prompt_tokens, completion_tokens, total_tokens)",
     )
 
+    # 8 Schools of Parenting 新增欄位（v1）
+    detailed_scripts: Optional[List[DetailedScript]] = Field(
+        default=None,
+        description="詳細話術範例（逐字稿級別），Practice Mode 提供，Emergency Mode 不提供",
+    )
+    theoretical_frameworks: Optional[List[str]] = Field(
+        default=None,
+        description="使用的教養流派標註（例如：['薩提爾模式', 'Dr. Becky Kennedy', '阿德勒正向教養']）",
+    )
+
     class Config:
         json_schema_extra = {
             "examples": [
@@ -100,6 +157,20 @@ class IslandParentAnalysisResponse(BaseModel):
                     "rag_documents": [],
                     "keywords": ["焦慮", "學校"],
                     "categories": ["情緒"],
+                    "detailed_scripts": [
+                        {
+                            "situation": "當孩子拒絕去學校時",
+                            "parent_script": "（蹲下平視）我看到你說不想去學校，好像有點擔心。是不是學校發生了什麼事讓你不舒服？\n\n我們現在先不談要不要去。你可以先告訴我，你最擔心的是什麼？",
+                            "child_likely_response": "可能說出具體擔憂或保持沉默",
+                            "theory_basis": "薩提爾 + Dr. Becky + 情緒輔導",
+                            "step": "同理連結 → 情緒標註",
+                        }
+                    ],
+                    "theoretical_frameworks": [
+                        "薩提爾模式",
+                        "Dr. Becky Kennedy",
+                        "情緒輔導",
+                    ],
                 }
             ]
         }

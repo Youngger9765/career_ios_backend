@@ -10,6 +10,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **8 Schools of Parenting Prompt Integration** (2025-12-31)
+  - ✅ Integrated 8 major parenting theories into island_parents tenant prompts
+    1. Adlerian Positive Discipline (尊重、合作、溫和而堅定)
+    2. Satir Model (冰山理論、探索深層需求)
+    3. Behavioral Analysis (ABA, ABC 模式、環境設計)
+    4. Interpersonal Neurobiology (全腦教養、情緒優先)
+    5. Emotion Coaching (情緒標註、同理、設限)
+    6. Collaborative Problem Solving (Ross Greene CPS)
+    7. Modern Attachment & Inside-Out Perspective (Dr. Becky Kennedy)
+    8. Social Awareness Parenting (性別平權、身體自主權)
+  - ✅ **New Response Fields** (island_parents Practice Mode):
+    - `detailed_scripts`: 逐字稿級別話術指導 (100-300 字具體對話範例)
+    - `theoretical_frameworks`: 理論來源追溯 (標註使用的流派)
+  - ✅ **Schema Extensions**:
+    - New `DetailedScript` model with fields: situation, parent_script, child_likely_response, theory_basis, step
+    - Extended `IslandParentAnalysisResponse` with optional detailed_scripts and theoretical_frameworks
+  - ✅ **Prompt Files**:
+    - `app/prompts/island_parents_8_schools_practice_v1.py` (Practice Mode - 詳細教學版)
+    - `app/prompts/island_parents_8_schools_emergency_v1.py` (Emergency Mode - 快速建議版)
+  - ✅ **Backward Compatibility**:
+    - All new fields are Optional (doesn't break existing API calls)
+    - Emergency Mode remains concise (no detailed_scripts)
+    - Career tenant unaffected
+  - ✅ **Integration Tests**: `tests/integration/test_8_schools_prompt_integration.py`
+    - Test scenarios: Practice/Emergency mode selection, Schema validation, Safety level evaluation, Token tracking
+  - 📝 Updated: `app/services/keyword_analysis_service.py`, `app/schemas/analysis.py`, `PRD.md`
+  - 📝 Foundation: `scripts/README_8_SCHOOLS_PROMPT.md`, `scripts/PROMPT_COMPARISON.md`, `scripts/test_8_schools_prompt.py`
 - **Counseling Mode Support for analyze-partial API** (2025-12-31)
   - ✅ New `mode` parameter for island_parents tenant
     - `emergency`: Fast, simplified analysis (1-2 critical suggestions)
