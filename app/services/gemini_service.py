@@ -43,7 +43,7 @@ class GeminiService:
         temperature: float = 0.7,
         max_tokens: int = 8192,
         response_format: Optional[Dict[str, str]] = None,
-    ) -> str:
+    ):
         """
         Generate text using Gemini
 
@@ -54,7 +54,7 @@ class GeminiService:
             response_format: Optional response format (e.g., {"type": "json_object"})
 
         Returns:
-            Generated text
+            Full Gemini response object with text and usage_metadata attributes
         """
         generation_config: Dict[str, Any] = {
             "temperature": temperature,
@@ -95,7 +95,7 @@ class GeminiService:
             if hasattr(usage, "candidates_token_count"):
                 logger.info(f"💬 Output tokens: {usage.candidates_token_count}")
 
-        return response.text
+        return response
 
     async def chat_completion(
         self,
@@ -118,22 +118,11 @@ class GeminiService:
         Returns:
             Generated text, or dict with text and metadata if return_metadata=True
         """
+        response = await self.generate_text(
+            prompt, temperature, max_tokens, response_format
+        )
+
         if return_metadata:
-            # Generate with metadata
-            generation_config = {
-                "temperature": temperature,
-                "max_output_tokens": max_tokens,
-            }
-            if response_format:
-                generation_config["response_mime_type"] = response_format.get(
-                    "type", "text/plain"
-                )
-
-            config = GenerationConfig(**generation_config)
-            response = self.chat_model.generate_content(
-                prompt, generation_config=config
-            )
-
             # Extract usage metadata
             usage_metadata = {}
             if hasattr(response, "usage_metadata"):
@@ -152,9 +141,8 @@ class GeminiService:
                 "usage_metadata": usage_metadata,
             }
 
-        return await self.generate_text(
-            prompt, temperature, max_tokens, response_format
-        )
+        # Return just text for backward compatibility
+        return response.text
 
     async def chat_completion_with_messages(
         self,
@@ -194,12 +182,15 @@ class GeminiService:
 
         prompt = "\n\n".join(prompt_parts)
 
-        return await self.generate_text(
+        response = await self.generate_text(
             prompt=prompt,
             temperature=temperature,
             max_tokens=max_tokens,
             response_format=response_format,
         )
+
+        # Return just text for backward compatibility
+        return response.text
 
     async def analyze_realtime_transcript(
         self,

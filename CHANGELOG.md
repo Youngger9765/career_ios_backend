@@ -139,6 +139,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Error handling and retry logic
 
 ### Fixed
+- **Career Mode Token Usage Returns 0** (2025-12-31)
+  - 🐛 Fixed bug where career tenant's analyze-partial API returned token_usage = 0
+  - 🔧 Root cause: `GeminiService.generate_text()` returned text string instead of response object with metadata
+  - ✅ Modified `GeminiService.generate_text()` to return full response object (line 98)
+  - ✅ Updated all callers to extract `.text` from response object:
+    - `gemini_service.py`: chat_completion(), chat_completion_with_messages()
+    - `keyword_analysis_service.py`: _parse_ai_response()
+    - `analyze.py`: JSON parsing logic
+  - ✅ Fixed test model field errors in `test_token_usage_response.py`:
+    - Session model: removed invalid `status`, added `session_date`
+    - Client/Case models: added missing required fields
+  - ✅ Tests: 2/2 PASSED (was 0/2), all related tests pass (16/16)
+  - 📝 Updated: `app/services/gemini_service.py`, `app/services/keyword_analysis_service.py`, `app/api/analyze.py`, `tests/integration/test_token_usage_response.py`
 - **SMTP Configuration for Staging Deployment** (2025-12-27)
   - 🔧 Added SMTP environment variables to CI/CD pipeline
   - 🔧 Required GitHub Secrets: SMTP_USER, SMTP_PASSWORD, FROM_EMAIL, APP_URL

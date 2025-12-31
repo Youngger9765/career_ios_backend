@@ -737,20 +737,27 @@ JSON回應（精簡）：
 
     def _parse_ai_response(self, ai_response) -> Dict:
         """Parse AI response to extract keywords data"""
-        if isinstance(ai_response, str):
-            try:
-                json_start = ai_response.find("{")
-                json_end = ai_response.rfind("}") + 1
-                if json_start >= 0 and json_end > json_start:
-                    json_str = ai_response[json_start:json_end]
-                    return json.loads(json_str)
-                else:
-                    # Quick fallback
-                    return self._get_default_result()
-            except json.JSONDecodeError:
-                return self._get_default_result()
+        # Extract text from response object if needed
+        if hasattr(ai_response, "text"):
+            response_text = ai_response.text
+        elif isinstance(ai_response, str):
+            response_text = ai_response
         else:
+            # Unknown type, try to use it as-is
             return ai_response
+
+        # Parse JSON from text
+        try:
+            json_start = response_text.find("{")
+            json_end = response_text.rfind("}") + 1
+            if json_start >= 0 and json_end > json_start:
+                json_str = response_text[json_start:json_end]
+                return json.loads(json_str)
+            else:
+                # Quick fallback
+                return self._get_default_result()
+        except json.JSONDecodeError:
+            return self._get_default_result()
 
     def _get_default_result(self) -> Dict:
         """Get default keyword analysis result"""

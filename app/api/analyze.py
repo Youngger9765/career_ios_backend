@@ -117,34 +117,35 @@ async def analyze_transcript_keywords(
             prompt, temperature=0.5, response_format={"type": "json_object"}
         )
 
+        # Extract text from response object
+        response_text = (
+            ai_response.text if hasattr(ai_response, "text") else str(ai_response)
+        )
+
         # Parse AI response (assuming it returns JSON)
         # Handle various AI response formats
-        if isinstance(ai_response, str):
-            # Try to extract JSON from response
-            try:
-                # Find JSON block in response
-                json_start = ai_response.find("{")
-                json_end = ai_response.rfind("}") + 1
-                if json_start >= 0 and json_end > json_start:
-                    json_str = ai_response[json_start:json_end]
-                    result = json.loads(json_str)
-                else:
-                    # Fallback: parse as simple text
-                    result = {
-                        "keywords": ["壓力", "焦慮", "工作"],
-                        "categories": ["情緒", "職場"],
-                        "confidence": 0.7,
-                    }
-            except json.JSONDecodeError as e:
-                logger.warning(f"Failed to parse AI response as JSON: {e}")
-                # Fallback to basic extraction
+        try:
+            # Find JSON block in response
+            json_start = response_text.find("{")
+            json_end = response_text.rfind("}") + 1
+            if json_start >= 0 and json_end > json_start:
+                json_str = response_text[json_start:json_end]
+                result = json.loads(json_str)
+            else:
+                # Fallback: parse as simple text
                 result = {
-                    "keywords": ["壓力", "情緒", "困擾"],
-                    "categories": ["心理健康"],
-                    "confidence": 0.5,
+                    "keywords": ["壓力", "焦慮", "工作"],
+                    "categories": ["情緒", "職場"],
+                    "confidence": 0.7,
                 }
-        else:
-            result = ai_response
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse AI response as JSON: {e}")
+            # Fallback to basic extraction
+            result = {
+                "keywords": ["壓力", "情緒", "困擾"],
+                "categories": ["心理健康"],
+                "confidence": 0.5,
+            }
 
         # Generate temporary segment ID
         segment_id = str(uuid.uuid4())

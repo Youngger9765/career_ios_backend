@@ -139,6 +139,19 @@
     - 錯誤處理與重試邏輯
 
 ### 修復
+- **Career 模式 Token 用量回傳 0 的問題** (2025-12-31)
+  - 🐛 修復 career 租戶的 analyze-partial API 回傳 token_usage = 0 的 bug
+  - 🔧 根本原因：`GeminiService.generate_text()` 回傳文字字串而非包含 metadata 的 response 物件
+  - ✅ 修改 `GeminiService.generate_text()` 回傳完整 response 物件（第 98 行）
+  - ✅ 更新所有呼叫者從 response 物件提取 `.text`：
+    - `gemini_service.py`：chat_completion()、chat_completion_with_messages()
+    - `keyword_analysis_service.py`：_parse_ai_response()
+    - `analyze.py`：JSON 解析邏輯
+  - ✅ 修正 `test_token_usage_response.py` 測試模型欄位錯誤：
+    - Session 模型：移除無效的 `status`，新增 `session_date`
+    - Client/Case 模型：新增缺少的必填欄位
+  - ✅ 測試：2/2 通過（原本 0/2），所有相關測試通過（16/16）
+  - 📝 更新：`app/services/gemini_service.py`、`app/services/keyword_analysis_service.py`、`app/api/analyze.py`、`tests/integration/test_token_usage_response.py`
 - **Staging 部署的 SMTP 配置** (2025-12-27)
   - 🔧 在 CI/CD pipeline 中新增 SMTP 環境變數
   - 🔧 必要的 GitHub Secrets：SMTP_USER、SMTP_PASSWORD、FROM_EMAIL、APP_URL
