@@ -77,7 +77,7 @@ def run_migrations_online() -> None:
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
         connect_args={
-            "sslmode": "require",
+            "sslmode": "prefer",  # Use 'prefer' for Supabase pooler compatibility
             "connect_timeout": 10,
         },
     )
