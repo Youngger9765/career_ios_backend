@@ -10,8 +10,12 @@ from app.main import app
 
 
 @pytest.fixture
-def client():
-    """Create test client"""
+def client(db_session):
+    """Create test client with database session
+
+    The db_session parameter ensures database is initialized before client.
+    db_session fixture overrides get_db to use SQLite in-memory.
+    """
     return TestClient(app)
 
 
