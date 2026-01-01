@@ -25,17 +25,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Reference: Architecture analysis confirms unified codebase (2026-01-01)
 
 ### Fixed
-- **Cloud Run Deployment - Alembic Configuration Revert** (2026-01-01)
+- **Cloud Run Deployment - Missing Alembic Migration File** (2026-01-01)
   - Fixed Cloud Run deployment failure: Container failed to start on port 8080
-  - Root cause: Removed connect_args from alembic/env.py broke deployment
-  - Solution: Reverted alembic/env.py to last working configuration (commit 99be0a8)
-  - Investigation findings:
-    - Last successful run (#353, commit 99be0a8) used DATABASE_URL with sslmode=require
-    - Removing connect_args in subsequent commits caused deployment failures
-    - Attempted fixes with sslmode=prefer and DATABASE_URL_DIRECT were incorrect
-    - Correct fix: Restore original working configuration
+  - Root cause: Alembic migration file `58545e695a2d_add_organizations_table.py` was deleted in revert commit but database still had this revision
+  - Real error from Cloud Run logs: `Can't locate revision identified by '58545e695a2d'`
+  - Timeline:
+    - Commit ccbfc95 added organization management with migration 58545e695a2d
+    - Migration was deployed to staging database
+    - Commit 3c87a32 reverted feature and deleted migration file
+    - Database retained alembic_version entry for 58545e695a2d
+    - Subsequent deployments failed when alembic couldn't find the file
+  - Solution: Restored deleted migration file from commit ccbfc95
+  - Previous investigation attempts (SSL config, DATABASE_URL) were red herrings
   - Impact: Enables successful Cloud Run deployment with database migrations
-  - Files modified: alembic/env.py (reverted to commit 99be0a8 configuration)
+  - Files restored: alembic/versions/20260101_2104_58545e695a2d_add_organizations_table.py
 
 - **Integration Test Suite Fixes** (2026-01-01)
   - Fixed test_error_handling.py status code expectations to match actual API behavior:
