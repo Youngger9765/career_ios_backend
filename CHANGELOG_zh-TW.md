@@ -10,6 +10,60 @@
 ## [未發布]
 
 ### 新增
+- **機構管理功能** (2026-01-01)
+  - 實作完整的機構/租戶管理系統，修復「尚無機構」問題
+  - 新增 Organization 模型 (`app/models/organization.py`)：
+    - 欄位：tenant_id（唯一）、name、description、is_active
+    - 快取統計資料：counselor_count、client_count、session_count
+    - 與 Counselor 模型的關聯
+  - 新增 Organization API 端點 (`app/api/organizations.py`)：
+    - `GET /api/organizations` - 列出機構（分頁、搜尋、篩選）
+    - `GET /api/organizations/{org_id}` - 取得機構詳情
+    - `GET /api/organizations/{org_id}/stats` - 取得即時統計資料
+    - `POST /api/organizations` - 建立新機構
+    - `PATCH /api/organizations/{org_id}` - 更新機構
+    - `DELETE /api/organizations/{org_id}` - 軟刪除機構
+  - 註冊/登入時自動建立機構：
+    - 用戶註冊時，自動使用其 tenant_id 建立機構
+    - 用戶登入時，若機構不存在則自動建立（修復現有用戶問題）
+  - 更新認證回應：
+    - `/api/auth/me` 現在在 CounselorInfo 中返回嵌入的機構資訊
+    - 前端可立即顯示機構名稱
+  - 多租戶感知：所有端點依 current_user.tenant_id 篩選
+  - RFC 7807 錯誤格式合規
+  - 資料庫遷移：`20260101_2104_58545e695a2d_add_organizations_table.py`
+  - 整合測試：11 個測試涵蓋 CRUD、多租戶、認證、分頁
+  - 建立的檔案：
+    - `app/models/organization.py`
+    - `app/schemas/organization.py`
+    - `app/api/organizations.py`
+    - `tests/integration/test_organizations_api.py`
+  - 修改的檔案：
+    - `app/api/auth.py` - 自動建立機構
+    - `app/schemas/auth.py` - 新增 OrganizationInfo
+    - `app/models/counselor.py` - 新增 organization 關聯
+    - `app/main.py` - 註冊 organizations router
+
+- **QA 測試文檔** (2026-01-01)
+  - 為八大流派分析功能建立完整的手動測試工作流程
+  - 新增文檔檔案：
+    - `docs/QA-manual-testing-workflow.md` - 6 個詳細測試流程與檢查清單
+    - `docs/QA-test-transcripts.md` - 12+ 個標準化測試逐字稿（紅/黃/綠燈情境）
+    - `docs/QA-test-report-2026-01-01.md` - 測試執行報告（6/6 測試通過）
+  - 涵蓋範圍：
+    - 八大流派分析驗證（紅/黃/綠燈情境）
+    - Practice vs Emergency 模式差異
+    - Quick Feedback 功能測試
+    - Prompt 正確性驗證
+    - 完整 Web Session Workflow
+    - 邊界案例與錯誤處理
+  - 測試情境包含：
+    - 🔴 紅燈：情緒崩潰、衝突升級、性別框架
+    - 🟡 黃燈：溝通不良、焦慮投射、拖延習慣
+    - 🟢 綠燈：良好溝通、同理連結、溫和而堅定
+    - 🧪 特殊：Dan Siegel 警告、多流派整合、沉默處理
+  - 可用於手動與自動化測試
+
 - **Web Session Workflow 模組化 JavaScript 架構** (2026-01-01)
   - 建立模組化 JavaScript 架構，統一 Web 與 iOS 的 session workflows
   - 新增模組：

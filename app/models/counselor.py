@@ -53,6 +53,13 @@ class Counselor(Base, BaseModel):
     )
 
     # Relationships
+    organization = relationship(
+        "Organization",
+        foreign_keys="[Counselor.tenant_id]",
+        primaryjoin="Counselor.tenant_id == Organization.tenant_id",
+        back_populates="counselors",
+        lazy="joined",
+    )
     cases = relationship("Case", back_populates="counselor")
     reports = relationship(
         "Report", foreign_keys="[Report.created_by_id]", back_populates="created_by"

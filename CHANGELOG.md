@@ -9,6 +9,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Organization Management Feature** (2026-01-01)
+  - Implemented complete organization/tenant management system to fix "尚無機構" (No organization) issue
+  - New Organization model (`app/models/organization.py`):
+    - Fields: tenant_id (unique), name, description, is_active
+    - Cached statistics: counselor_count, client_count, session_count
+    - Relationship with Counselor model
+  - New Organization API endpoints (`app/api/organizations.py`):
+    - `GET /api/organizations` - List organizations (pagination, search, filters)
+    - `GET /api/organizations/{org_id}` - Get organization details
+    - `GET /api/organizations/{org_id}/stats` - Get real-time statistics
+    - `POST /api/organizations` - Create new organization
+    - `PATCH /api/organizations/{org_id}` - Update organization
+    - `DELETE /api/organizations/{org_id}` - Soft delete organization
+  - Auto-create organization on register/login:
+    - When user registers, organization is automatically created with their tenant_id
+    - When user logs in, organization is created if missing (fixes existing users)
+  - Updated auth responses:
+    - `/api/auth/me` now returns embedded organization info in CounselorInfo
+    - Frontend can immediately display organization name
+  - Multi-tenant aware: All endpoints filter by current_user.tenant_id
+  - RFC 7807 error format compliance
+  - Database migration: `20260101_2104_58545e695a2d_add_organizations_table.py`
+  - Integration tests: 11 tests covering CRUD, multi-tenancy, auth, pagination
+  - Files created:
+    - `app/models/organization.py`
+    - `app/schemas/organization.py`
+    - `app/api/organizations.py`
+    - `tests/integration/test_organizations_api.py`
+  - Files modified:
+    - `app/api/auth.py` - Auto-create organization
+    - `app/schemas/auth.py` - Added OrganizationInfo
+    - `app/models/counselor.py` - Added organization relationship
+    - `app/main.py` - Registered organizations router
+
+- **QA Testing Documentation** (2026-01-01)
+  - Created comprehensive manual testing workflow for 8 schools analysis feature
+  - New documentation files:
+    - `docs/QA-manual-testing-workflow.md` - 6 detailed testing workflows with checklists
+    - `docs/QA-test-transcripts.md` - 12+ standardized test transcripts (Red/Yellow/Green scenarios)
+    - `docs/QA-test-report-2026-01-01.md` - Test execution report (6/6 tests passed)
+  - Coverage:
+    - Eight schools analysis validation (Red/Yellow/Green light scenarios)
+    - Practice vs Emergency mode differences
+    - Quick Feedback feature testing
+    - Prompt correctness validation
+    - Complete Web Session Workflow
+    - Boundary cases and error handling
+  - Test scenarios include:
+    - 🔴 Red: Emotional meltdown, conflict escalation, gender frameworks
+    - 🟡 Yellow: Poor communication, anxiety projection, procrastination
+    - 🟢 Green: Good communication, empathy connection, firm boundaries
+    - 🧪 Special: Dan Siegel warning, multi-school integration, silence handling
+  - Ready for both manual and automated testing
+
 ### Fixed
 - **Integration Test Suite Fixes** (2026-01-01)
   - Fixed test_error_handling.py status code expectations to match actual API behavior:

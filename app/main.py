@@ -19,6 +19,7 @@ from app.api import (
     comparison,
     evaluation_testsets,
     field_schemas,
+    organizations,
     rag_agents,
     rag_chat,
     rag_evaluation,
@@ -71,6 +72,9 @@ app.add_exception_handler(Exception, generic_exception_handler)
 
 # Include auth routes
 app.include_router(auth.router, prefix="/api")
+
+# Include organizations routes
+app.include_router(organizations.router, prefix="/api")
 
 # Include password reset routes (v1 API)
 app.include_router(password_reset.router, prefix="/api/v1")
