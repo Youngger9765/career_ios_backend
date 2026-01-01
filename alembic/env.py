@@ -76,8 +76,10 @@ def run_migrations_online() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        # Let DATABASE_URL connection string handle SSL parameters
-        # Supabase pooler connection strings include SSL config in the URL
+        connect_args={
+            "sslmode": "require",
+            "connect_timeout": 10,
+        },
     )
 
     with connectable.connect() as connection:
