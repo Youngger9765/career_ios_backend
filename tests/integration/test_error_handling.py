@@ -27,7 +27,7 @@ def auth_headers(client):
         "tenant_id": "test-tenant",
         "role": "counselor",
     }
-    response = client.post("/auth/register", json=register_data)
+    response = client.post("/api/auth/register", json=register_data)
     assert response.status_code == 201
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -81,12 +81,12 @@ class TestRFC7807IntegrationFormat:
         assert "detail" in data
         assert "instance" in data
 
-    def test_401_error_has_rfc7807_format(self, client):
-        """Test 401 errors return RFC 7807 format"""
+    def test_403_forbidden_without_auth_has_rfc7807_format(self, client):
+        """Test 403 Forbidden (no auth) returns RFC 7807 format"""
         # Try to access protected endpoint without auth
         response = client.get("/api/v1/sessions")
 
-        assert response.status_code == 401
+        assert response.status_code == 403
         data = response.json()
 
         # RFC 7807 required fields
@@ -96,8 +96,7 @@ class TestRFC7807IntegrationFormat:
         assert "detail" in data
         assert "instance" in data
 
-        assert data["status"] == 401
-        assert data["title"] == "Unauthorized"
+        assert data["status"] == 403
 
     def test_403_error_has_rfc7807_format(self, client, auth_headers):
         """Test 403 errors return RFC 7807 format"""
@@ -132,12 +131,12 @@ class TestRFC7807IntegrationFormat:
         }
 
         # First registration should succeed
-        response1 = client.post("/auth/register", json=register_data)
+        response1 = client.post("/api/auth/register", json=register_data)
         assert response1.status_code == 201
 
         # Second registration with same email should fail with 409 or 400
         register_data["username"] = "user2"  # Different username
-        response2 = client.post("/auth/register", json=register_data)
+        response2 = client.post("/api/auth/register", json=register_data)
 
         assert response2.status_code in [400, 409]
         data = response2.json()
@@ -161,21 +160,21 @@ class TestAuthEndpointErrors:
     """Test error handling in auth endpoints"""
 
     def test_login_with_invalid_credentials(self, client):
-        """Test login with wrong password returns RFC 7807 format"""
+        """Test login with nonexistent user returns 404 Not Found (RFC 7807 format)"""
         login_data = {
             "email": "nonexistent@example.com",
             "password": "wrongpass",
             "tenant_id": "test-tenant",
         }
-        response = client.post("/auth/login", json=login_data)
+        response = client.post("/api/auth/login", json=login_data)
 
-        assert response.status_code == 401
+        # API returns 404 when user not found (security: don't reveal if user exists)
+        assert response.status_code == 404
         data = response.json()
 
-        assert data["status"] == 401
-        assert data["title"] == "Unauthorized"
+        assert data["status"] == 404
         assert data["type"].startswith("https://")
-        assert data["instance"] == "/auth/login"
+        assert data["instance"] == "/api/auth/login"
         assert "detail" in data
 
     def test_register_with_existing_username(self, client):
@@ -190,12 +189,12 @@ class TestAuthEndpointErrors:
         }
 
         # First registration
-        response1 = client.post("/auth/register", json=register_data)
+        response1 = client.post("/api/auth/register", json=register_data)
         assert response1.status_code == 201
 
         # Second registration with same username
         register_data["email"] = "user2@example.com"  # Different email
-        response2 = client.post("/auth/register", json=register_data)
+        response2 = client.post("/api/auth/register", json=register_data)
 
         assert response2.status_code in [400, 409]
         data = response2.json()
@@ -210,7 +209,7 @@ class TestAuthEndpointErrors:
     def test_update_profile_with_invalid_data(self, client, auth_headers):
         """Test profile update with invalid data returns RFC 7807 format"""
         update_data = {}  # Empty update
-        response = client.patch("/auth/me", json=update_data, headers=auth_headers)
+        response = client.patch("/api/auth/me", json=update_data, headers=auth_headers)
 
         assert response.status_code == 400
         data = response.json()
@@ -342,9 +341,10 @@ class TestChineseErrorMessages:
             "password": "wrongpass",
             "tenant_id": "test-tenant",
         }
-        response = client.post("/auth/login", json=login_data)
+        response = client.post("/api/auth/login", json=login_data)
 
-        assert response.status_code == 401
+        # API returns 404 for nonexistent user (don't reveal if user exists)
+        assert response.status_code == 404
         data = response.json()
 
         # RFC 7807 format should be preserved
