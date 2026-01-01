@@ -3092,8 +3092,9 @@
 
                 // Only trigger if we have transcript content
                 if (transcriptSegments.length > 0) {
-                    // Show auto-analysis notification
-                    showAutoAnalysisNotification();
+                    // Show auto-analysis notification (yellow for quick, purple for deep)
+                    const isQuick = !hasFirstAnalysis;
+                    showAutoAnalysisNotification(isQuick);
 
                     // Trigger analysis automatically
                     analyzeTranscript();
@@ -3993,13 +3994,26 @@
         }
 
         // === Auto-Analysis Notification ===
-        function showAutoAnalysisNotification() {
+        function showAutoAnalysisNotification(isQuickAnalysis = false) {
+            // Different styles for quick vs deep analysis
+            const bgGradient = isQuickAnalysis
+                ? 'from-yellow-400 to-yellow-200'  // Quick: Yellow gradient
+                : 'from-purple-500 to-indigo-600'; // Deep: Purple-blue gradient
+
+            const textColor = isQuickAnalysis
+                ? 'text-yellow-900'  // Darker text for yellow background
+                : 'text-white';      // White text for purple background
+
+            const message = isQuickAnalysis
+                ? '⚡ 快速分析中...'
+                : '⚡ 自動分析中...';
+
             // Create toast notification
             const toast = document.createElement('div');
-            toast.className = 'fixed top-20 right-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 animate-slide-in-right';
+            toast.className = `fixed top-20 right-4 bg-gradient-to-r ${bgGradient} ${textColor} px-6 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 animate-slide-in-right`;
             toast.innerHTML = `
                 <span class="text-lg">⚡</span>
-                <span class="font-medium">自動分析中...</span>
+                <span class="font-medium">${message}</span>
             `;
 
             document.body.appendChild(toast);
