@@ -1419,7 +1419,7 @@
         // Dynamic analysis interval based on safety_level
         let nextAnalysisInterval = 60; // Default 60 seconds
         let lastSafetyLevel = 'green';
-        let hasFirstAnalysis = false; // Track if first 10-second quick analysis has been done
+        let lastQuickFeedbackTime = 0; // Track last quick feedback call (every 10 seconds)
         let isVoiceSimEnabled = false; // Voice simulation toggle state (demo mode only)
         let currentProvider = 'gemini'; // 'gemini' or 'codeer' - Force to 'gemini' if Codeer is hidden
         let currentCodeerModel = 'gemini-flash'; // Codeer model selection (default: Gemini 2.5 Flash - fastest + best quality balance)
@@ -2439,7 +2439,8 @@
             startTime = Date.now();
             transcriptSegments = [];
             analysisHistory = [];
-            hasFirstAnalysis = false; // Reset first analysis flag for new session
+            lastQuickFeedbackTime = 0; // Reset quick feedback timer for new session
+            lastAutoAnalysisTime = 0; // Reset deep analysis timer for new session
 
             // REAL RECORDING MODE: Start ElevenLabs WebSocket + Microphone
             if (!isDemoMode) {
@@ -3080,31 +3081,39 @@
             if (recordingTimerDesktop) recordingTimerDesktop.textContent = timeString; // Desktop recording timer display
             if (recordingTimerMobile) recordingTimerMobile.textContent = timeString; // Mobile compact waveform timer
 
-            // Auto-analysis logic
-            // First analysis: Quick feedback at 10 seconds (regardless of safety level)
-            // Subsequent analyses: Based on safety_level (green=60s, yellow=30s, red=15s)
-            const shouldAnalyze = !hasFirstAnalysis
-                ? (elapsed === 10) // First analysis at 10 seconds
-                : (elapsed > 0 && elapsed % nextAnalysisInterval === 0 && elapsed !== lastAutoAnalysisTime); // Subsequent analyses
+            // === Dual-API Auto-Analysis System ===
+            // 1. Quick Feedback (雞湯文): Every 10 seconds (except during red light)
+            // 2. Deep Analysis: Adaptive intervals (green=60s, yellow=30s, red=15s)
 
-            if (shouldAnalyze) {
+            // Quick Feedback Timer (every 10 seconds, except red light)
+            const shouldQuickFeedback = (elapsed > 0 && elapsed % 10 === 0 && elapsed !== lastQuickFeedbackTime)
+                && lastSafetyLevel !== 'red' // Disable during red light (already fast enough)
+                && transcriptSegments.length > 0;
+
+            if (shouldQuickFeedback) {
+                lastQuickFeedbackTime = elapsed;
+                console.log(`💡 [Quick Feedback] Triggered at ${elapsed}s (safety: ${lastSafetyLevel})`);
+
+                // Show yellow toast for quick analysis
+                showAutoAnalysisNotification(true); // true = quick analysis
+
+                // Call quick feedback API
+                getQuickFeedback();
+            }
+
+            // Deep Analysis Timer (adaptive intervals based on safety level)
+            const shouldDeepAnalyze = (elapsed > 0 && elapsed % nextAnalysisInterval === 0 && elapsed !== lastAutoAnalysisTime)
+                && transcriptSegments.length > 0;
+
+            if (shouldDeepAnalyze) {
                 lastAutoAnalysisTime = elapsed;
+                console.log(`🔍 [Deep Analysis] Triggered at ${elapsed}s (interval: ${nextAnalysisInterval}s, safety: ${lastSafetyLevel})`);
 
-                // Only trigger if we have transcript content
-                if (transcriptSegments.length > 0) {
-                    // Show auto-analysis notification (yellow for quick, purple for deep)
-                    const isQuick = !hasFirstAnalysis;
-                    showAutoAnalysisNotification(isQuick);
+                // Show purple toast for deep analysis
+                showAutoAnalysisNotification(false); // false = deep analysis
 
-                    // Trigger analysis automatically
-                    analyzeTranscript();
-
-                    // Mark first analysis as done
-                    if (!hasFirstAnalysis) {
-                        hasFirstAnalysis = true;
-                        console.log('✅ First quick analysis completed at 10 seconds');
-                    }
-                }
+                // Call full analysis API
+                analyzeTranscript();
             }
         }
 
@@ -3495,6 +3504,58 @@
                 isAnalyzing = false;
                 setAnalyzeButtonsLoading(false);
             }
+        }
+
+        // === Quick Feedback (雞湯文) - Every 10 seconds during green/yellow ===
+        async function getQuickFeedback() {
+            try {
+                // Get last 10 seconds of transcript
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const recentSegments = transcriptSegments.slice(-5); // Last 5 segments (~10 seconds)
+
+                if (recentSegments.length === 0) {
+                    console.log('⏭️ Skipping quick feedback: no recent transcript');
+                    return;
+                }
+
+                const recentTranscript = recentSegments.map(s =>
+                    `${s.speaker === 'counselor' ? '家長' : '孩子'}：${s.text}`
+                ).join('\n');
+
+                console.log(`💡 Requesting quick feedback for recent transcript (${recentTranscript.length} chars)`);
+
+                // Call quick-feedback API
+                const response = await fetch('/api/v1/realtime/quick-feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ recent_transcript: recentTranscript })
+                });
+
+                if (!response.ok) {
+                    console.error(`Quick feedback API error: ${response.status}`);
+                    return;
+                }
+
+                const data = await response.json();
+                console.log(`✅ Quick feedback received (${data.latency_ms}ms): ${data.message}`);
+
+                // Display quick feedback (you can customize display location)
+                showQuickFeedbackMessage(data.message);
+
+            } catch (error) {
+                console.error('❌ Quick feedback failed:', error);
+            }
+        }
+
+        // Display quick feedback message (minimal UI update)
+        function showQuickFeedbackMessage(message) {
+            // Option 1: Update mobile suggestion circle (for quick encouragement)
+            updateMobileSuggestionCircle('green', message);
+
+            // Option 2: Could also show as a subtle toast/badge
+            // (Not implemented yet - current version uses circle)
+
+            console.log(`💬 Quick feedback displayed: ${message}`);
         }
 
         // Helper function to set loading state for analyze buttons

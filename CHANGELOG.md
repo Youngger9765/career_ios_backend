@@ -50,18 +50,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - app/static/js/session-workflow.js (transform detailed_scripts)
 
 ### Added
-- **10-Second Red Level Countdown and Analysis Label** (2026-01-02)
-  - Changed red (critical) safety level analysis interval from 15s → 10s
-  - Faster analysis for high-risk parent-child conflicts
-  - Analysis intervals by safety level:
-    - 🟢 Green (safe): 60 seconds
-    - 🟡 Yellow (warning): 30 seconds
-    - 🔴 Red (critical): 10 seconds (was 15s)
-  - Added "即時建議" (Quick Suggestions) header to suggestions section
-  - Added "分析完成" (Analysis Complete) badge next to header
-  - Clear visual indicator that analysis has finished and suggestions are ready
-  - Impact: Faster response to critical situations, clearer analysis status feedback
-  - Files changed: app/templates/realtime_counseling.html
+- **Dual-API Analysis System - Quick Feedback (雞湯文) + Deep Analysis** (2026-01-02)
+  - Implemented simultaneous quick feedback and deep analysis timers
+  - **Quick Feedback API** (雞湯文 - Inspirational quotes):
+    - Endpoint: POST `/api/v1/realtime/quick-feedback`
+    - Triggers: Every 10 seconds during 🟢 Green and 🟡 Yellow safety levels
+    - Disabled during 🔴 Red (already fast enough with 15s deep analysis)
+    - Toast: Yellow gradient ("⚡ 快速分析中...")
+    - Purpose: Fill gaps between deep analyses with lightweight encouragement
+    - Response time: ~1-2 seconds (Gemini Flash lightweight prompt)
+  - **Deep Analysis API** (Full analysis with safety level updates):
+    - Endpoint: POST `/api/v1/realtime/analyze` (existing)
+    - Triggers: Adaptive intervals based on safety level
+      - 🟢 Green: Every 60 seconds
+      - 🟡 Yellow: Every 30 seconds
+      - 🔴 Red: Every 15 seconds (unchanged)
+    - Toast: Purple-blue gradient ("⚡ 自動分析中...")
+    - Purpose: Change safety levels and adjust analysis intervals
+  - **Dual-Timer Independence**: Both timers run simultaneously without interference
+  - **UI Enhancements**:
+    - Added "即時建議" (Quick Suggestions) header to suggestions section
+    - Added "分析完成" (Analysis Complete) badge next to header
+    - Different toast colors distinguish quick vs deep analysis
+  - Architecture:
+    - Backend: `/app/services/quick_feedback_service.py` (AI-powered encouragement)
+    - Frontend: Dual-timer logic in `app/templates/realtime_counseling.html`
+    - Cost: +$0.0036/hour (+0.85%) for green-light scenarios
+  - Impact: Continuous feedback flow prevents "blank gaps" during long analysis intervals
+  - Files changed:
+    - app/templates/realtime_counseling.html (dual-timer implementation)
+    - Backend: quick_feedback_service.py, realtime.py (API already existed)
+  - Reference: Based on `/api/v1/realtime/quick-feedback` endpoint (added 2026-01-01)
 
 ### Changed
 - **Web/iOS API Architecture Verification** (2026-01-01)
