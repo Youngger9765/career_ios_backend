@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Web Realtime Counseling - Island Parents Flow** (2026-01-02)
+  - Fixed default tenant: Changed from 'career' to 'island_parents' for parent-facing web interface
+  - Fixed session initialization: Now uses client selected during onboarding instead of hardcoded defaults
+  - Implementation:
+    - Updated `app/templates/realtime_counseling.html` default tenant_id to 'island_parents'
+    - Modified session workflow to check localStorage for selectedClientId/selectedClientName
+    - If client selected: Creates case and session for existing client (proper data linking)
+    - If no client: Falls back to creating new client+case+session (backwards compatible)
+  - Flow improvements:
+    - Login → Client selection/creation → Practice mode → Analysis (all properly linked)
+    - Client data persists across practice sessions via localStorage
+    - Case and session correctly associated with selected child
+  - Impact: Parents can now properly set up child information and track consultation history
+  - Files changed: app/templates/realtime_counseling.html (+88 lines, -22 lines)
+
+- **BigQuery Permissions for Analysis Logging** (2026-01-02)
+  - Added missing BigQuery permissions for Cloud Run service account
+  - Service account: career-app-sa@groovy-iris-473015-h3.iam.gserviceaccount.com
+  - Granted roles:
+    - roles/bigquery.dataEditor (write analysis logs to tables)
+    - roles/bigquery.user (execute queries)
+  - Fixed error: "Permission bigquery.tables.updateData denied on table realtime_analysis_logs"
+  - Impact: Session analysis logs can now be written to BigQuery for analytics
+  - Reference: Analysis logging in app/services/gbq_service.py
+
 ### Changed
 - **Web/iOS API Architecture Verification** (2026-01-01)
   - Confirmed Web version already uses 8 Schools Prompt via `keyword_analysis_service`

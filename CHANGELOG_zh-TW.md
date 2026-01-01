@@ -9,6 +9,32 @@
 
 ## [未發布]
 
+### 修復
+- **Web 即時諮詢 - Island Parents 流程** (2026-01-02)
+  - 修正預設租戶：從 'career' 改為 'island_parents'（家長使用的網頁介面）
+  - 修正 session 初始化：現在使用 onboarding 階段選擇的客戶，而非硬編碼預設值
+  - 實作細節：
+    - 更新 `app/templates/realtime_counseling.html` 預設 tenant_id 為 'island_parents'
+    - 修改 session workflow，從 localStorage 讀取 selectedClientId/selectedClientName
+    - 若有選擇客戶：為現有客戶創建 case 和 session（資料正確關聯）
+    - 若無客戶：fallback 創建新 client+case+session（向後相容）
+  - 流程改進：
+    - 登入 → 客戶選擇/建立 → 練習模式 → 分析（全部正確關聯）
+    - 客戶資料透過 localStorage 在練習階段持久化
+    - Case 和 session 正確關聯到選擇的孩子
+  - 影響：家長現在可以正確設定孩子資訊並追蹤諮詢歷史
+  - 檔案變更：app/templates/realtime_counseling.html (+88 行, -22 行)
+
+- **BigQuery 分析日誌權限** (2026-01-02)
+  - 為 Cloud Run service account 新增缺失的 BigQuery 權限
+  - Service account: career-app-sa@groovy-iris-473015-h3.iam.gserviceaccount.com
+  - 授予角色：
+    - roles/bigquery.dataEditor（寫入分析日誌到表格）
+    - roles/bigquery.user（執行查詢）
+  - 修正錯誤："Permission bigquery.tables.updateData denied on table realtime_analysis_logs"
+  - 影響：Session 分析日誌現在可以寫入 BigQuery 供分析使用
+  - 參考：分析日誌功能在 app/services/gbq_service.py
+
 ### 變更
 - **Web/iOS API 架構驗證** (2026-01-01)
   - 確認 Web 版本已透過 `keyword_analysis_service` 使用 8 大流派 Prompt

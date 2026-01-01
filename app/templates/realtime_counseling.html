@@ -393,7 +393,7 @@
                 </div>
 
                 <!-- Tenant Selector (Hidden by default) -->
-                <input type="hidden" id="loginTenantId" value="career">
+                <input type="hidden" id="loginTenantId" value="island_parents">
 
                 <!-- Submit Button - Large Black Button at Bottom -->
                 <div class="mt-auto pt-8">
@@ -434,9 +434,9 @@
                         class="w-full px-3 py-2 border border-gray-300 rounded text-sm"
                         onchange="document.getElementById('loginTenantId').value = this.value"
                     >
+                        <option value="island_parents" selected>Island Parents</option>
                         <option value="career">Career</option>
                         <option value="island">Island</option>
-                        <option value="island_parents">Island Parents</option>
                     </select>
                 </div>
             </div>
@@ -3311,26 +3311,92 @@
                     if (!sessionWorkflow.isSessionActive()) {
                         console.log('[Web] Initializing session...');
 
-                        // Create client data from form (if available) or use defaults
-                        const clientData = {
-                            name: '網頁即時諮詢用戶',
-                            email: 'web-realtime@example.com',
-                            gender: '不透露',
-                            birth_date: '2010-01-01',
-                            phone: '0900000000',
-                            identity_option: '家長',
-                            current_status: '即時諮詢中',
-                            case_summary: `即時親子諮詢 - ${new Date().toLocaleString('zh-TW')}`,
-                            case_goals: '改善親子關係',
-                            problem_description: '網頁即時諮詢'
-                        };
+                        // Use selected client from onboarding (island_parents flow)
+                        const selectedClientId = localStorage.getItem('selectedClientId');
+                        const selectedClientName = localStorage.getItem('selectedClientName') || '孩子';
+                        const authToken = localStorage.getItem('authToken');
 
-                        try {
-                            const sessionId = await sessionWorkflow.initializeSession(clientData);
-                            console.log('[Web] Session initialized:', sessionId);
-                        } catch (error) {
-                            console.error('[Web] Session initialization failed:', error);
-                            throw new Error(`Session 初始化失敗: ${error.message}`);
+                        // If client was selected in onboarding, create case and session for that client
+                        if (selectedClientId && authToken) {
+                            console.log('[Web] Using selected client:', selectedClientName, selectedClientId);
+
+                            try {
+                                // Create case for existing client
+                                const caseResponse = await fetch('/api/v1/cases', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${authToken}`
+                                    },
+                                    body: JSON.stringify({
+                                        client_id: selectedClientId,
+                                        summary: `即時諮詢 - ${selectedClientName} - ${new Date().toLocaleString('zh-TW')}`,
+                                        goals: '親子溝通練習',
+                                        problem_description: counselingMode === 'practice' ? '練習模式' : '緊急模式'
+                                    })
+                                });
+
+                                if (!caseResponse.ok) {
+                                    throw new Error('Failed to create case');
+                                }
+
+                                const caseData = await caseResponse.json();
+                                const caseId = caseData.id;
+
+                                // Create session for the case
+                                const sessionResponse = await fetch('/api/v1/sessions', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${authToken}`
+                                    },
+                                    body: JSON.stringify({
+                                        case_id: caseId,
+                                        session_date: new Date().toISOString().split('T')[0],
+                                        name: `Web 即時諮詢 ${new Date().toLocaleString('zh-TW')}`
+                                    })
+                                });
+
+                                if (!sessionResponse.ok) {
+                                    throw new Error('Failed to create session');
+                                }
+
+                                const sessionData = await sessionResponse.json();
+                                sessionWorkflow.currentSessionId = sessionData.id;
+                                sessionWorkflow.currentCaseId = caseId;
+                                sessionWorkflow.currentClientId = selectedClientId;
+
+                                console.log('[Web] Session initialized for existing client:', sessionData.id);
+
+                            } catch (error) {
+                                console.error('[Web] Failed to create case/session for client:', error);
+                                throw new Error(`Session 初始化失敗: ${error.message}`);
+                            }
+
+                        } else {
+                            // Fallback: Create new client+case+session (for non-island_parents tenants)
+                            console.log('[Web] No client selected, creating new client+case');
+
+                            const clientData = {
+                                name: '網頁即時諮詢用戶',
+                                email: `web-${Date.now()}@example.com`,
+                                gender: '不透露',
+                                birth_date: '2010-01-01',
+                                phone: '0900000000',
+                                identity_option: '家長',
+                                current_status: '即時諮詢中',
+                                case_summary: `即時親子諮詢 - ${new Date().toLocaleString('zh-TW')}`,
+                                case_goals: '改善親子關係',
+                                problem_description: '網頁即時諮詢'
+                            };
+
+                            try {
+                                const sessionId = await sessionWorkflow.initializeSession(clientData);
+                                console.log('[Web] Session initialized with new client:', sessionId);
+                            } catch (error) {
+                                console.error('[Web] Session initialization failed:', error);
+                                throw new Error(`Session 初始化失敗: ${error.message}`);
+                            }
                         }
                     }
 
