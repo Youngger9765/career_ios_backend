@@ -164,7 +164,7 @@ class TestAuthEndpointErrors:
     """Test error handling in auth endpoints"""
 
     def test_login_with_invalid_credentials(self, client):
-        """Test login with nonexistent user returns 404 Not Found (RFC 7807 format)"""
+        """Test login with nonexistent user returns 401 Unauthorized (RFC 7807 format)"""
         login_data = {
             "email": "nonexistent@example.com",
             "password": "wrongpass",
@@ -172,11 +172,11 @@ class TestAuthEndpointErrors:
         }
         response = client.post("/api/auth/login", json=login_data)
 
-        # API returns 404 when user not found (security: don't reveal if user exists)
-        assert response.status_code == 404
+        # API returns 401 for invalid credentials (Unauthorized)
+        assert response.status_code == 401
         data = response.json()
 
-        assert data["status"] == 404
+        assert data["status"] == 401
         assert data["type"].startswith("https://")
         assert data["instance"] == "/api/auth/login"
         assert "detail" in data
@@ -347,8 +347,8 @@ class TestChineseErrorMessages:
         }
         response = client.post("/api/auth/login", json=login_data)
 
-        # API returns 404 for nonexistent user (don't reveal if user exists)
-        assert response.status_code == 404
+        # API returns 401 for invalid credentials (Unauthorized)
+        assert response.status_code == 401
         data = response.json()
 
         # RFC 7807 format should be preserved
