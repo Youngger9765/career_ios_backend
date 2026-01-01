@@ -10,18 +10,6 @@ from pydantic import BaseModel, EmailStr, Field
 from app.models.counselor import CounselorRole
 
 
-class OrganizationInfo(BaseModel):
-    """Organization info embedded in counselor response"""
-
-    id: UUID
-    tenant_id: str
-    name: str
-    is_active: bool
-
-    class Config:
-        from_attributes = True
-
-
 class LoginRequest(BaseModel):
     """Login credentials"""
 
@@ -62,7 +50,6 @@ class CounselorInfo(BaseModel):
     last_login: Optional[datetime]
     created_at: datetime
     updated_at: Optional[datetime]
-    organization: Optional[OrganizationInfo] = None  # Include organization data
 
     class Config:
         from_attributes = True

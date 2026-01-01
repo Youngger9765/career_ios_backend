@@ -19,7 +19,6 @@ from app.core.exceptions import (
 )
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.counselor import Counselor
-from app.models.organization import Organization
 from app.schemas.auth import (
     CounselorInfo,
     CounselorUpdate,
@@ -77,28 +76,6 @@ def register(
         )
 
     try:
-        # Check if organization exists, create if not
-        org_result = db.execute(
-            select(Organization).where(
-                Organization.tenant_id == register_data.tenant_id
-            )
-        )
-        organization = org_result.scalar_one_or_none()
-
-        if not organization:
-            # Auto-create organization with tenant_id
-            organization = Organization(
-                tenant_id=register_data.tenant_id,
-                name=f"Organization {register_data.tenant_id}",  # Default name
-                description="Auto-created during user registration",
-                is_active=True,
-                counselor_count=0,
-                client_count=0,
-                session_count=0,
-            )
-            db.add(organization)
-            db.flush()  # Flush to get the organization ID
-
         # Create new counselor
         counselor = Counselor(
             email=register_data.email,
@@ -183,25 +160,6 @@ def login(
         )
 
     try:
-        # Ensure organization exists (for existing users without organization)
-        org_result = db.execute(
-            select(Organization).where(Organization.tenant_id == counselor.tenant_id)
-        )
-        organization = org_result.scalar_one_or_none()
-
-        if not organization:
-            # Auto-create organization if missing
-            organization = Organization(
-                tenant_id=counselor.tenant_id,
-                name=f"Organization {counselor.tenant_id}",
-                description="Auto-created during login",
-                is_active=True,
-                counselor_count=0,
-                client_count=0,
-                session_count=0,
-            )
-            db.add(organization)
-
         # Update last_login
         counselor.last_login = datetime.now(timezone.utc)
         db.commit()
