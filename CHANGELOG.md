@@ -35,6 +35,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Impact: Session analysis logs can now be written to BigQuery for analytics
   - Reference: Analysis logging in app/services/gbq_service.py
 
+- **Authentication and Quick Feedback for New Session Workflow** (2026-01-02)
+  - Fixed 403 Forbidden error when calling `/api/v1/sessions/{id}/recordings/append`
+  - Root cause: APIClient cached auth token in constructor before user logged in
+  - Solution: Read auth token fresh from localStorage on every request
+  - Fixed missing quick feedback suggestions for island_parents tenant
+  - Root cause: Backend returns `detailed_scripts`, frontend expected `quick_suggestions`
+  - Solution: Transform `detailed_scripts` to suggestions format in session-workflow.js
+  - Format: `💡 {situation}\n{parent_script}`
+  - Fallback to `quick_suggestions` for career tenant (backwards compatible)
+  - Impact: Analysis now works with proper authentication, quick feedback displays correctly
+  - Files changed:
+    - app/static/js/api-client.js (read token on every request)
+    - app/static/js/session-workflow.js (transform detailed_scripts)
+
+### Added
+- **10-Second Red Level Countdown and Analysis Label** (2026-01-02)
+  - Changed red (critical) safety level analysis interval from 15s → 10s
+  - Faster analysis for high-risk parent-child conflicts
+  - Analysis intervals by safety level:
+    - 🟢 Green (safe): 60 seconds
+    - 🟡 Yellow (warning): 30 seconds
+    - 🔴 Red (critical): 10 seconds (was 15s)
+  - Added "即時建議" (Quick Suggestions) header to suggestions section
+  - Added "分析完成" (Analysis Complete) badge next to header
+  - Clear visual indicator that analysis has finished and suggestions are ready
+  - Impact: Faster response to critical situations, clearer analysis status feedback
+  - Files changed: app/templates/realtime_counseling.html
+
 ### Changed
 - **Web/iOS API Architecture Verification** (2026-01-01)
   - Confirmed Web version already uses 8 Schools Prompt via `keyword_analysis_service`

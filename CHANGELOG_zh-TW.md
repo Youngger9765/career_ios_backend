@@ -35,6 +35,34 @@
   - 影響：Session 分析日誌現在可以寫入 BigQuery 供分析使用
   - 參考：分析日誌功能在 app/services/gbq_service.py
 
+- **新 Session Workflow 的驗證與快速回饋修復** (2026-01-02)
+  - 修正呼叫 `/api/v1/sessions/{id}/recordings/append` 時的 403 Forbidden 錯誤
+  - 根本原因：APIClient 在 constructor 快取 auth token，但當時用戶尚未登入
+  - 解決方案：每次請求時從 localStorage 重新讀取最新的 auth token
+  - 修正 island_parents 租戶缺少快速回饋建議的問題
+  - 根本原因：後端回傳 `detailed_scripts`，前端期待 `quick_suggestions`
+  - 解決方案：在 session-workflow.js 將 `detailed_scripts` 轉換為建議格式
+  - 格式：`💡 {situation}\n{parent_script}`
+  - 對 career 租戶 fallback 使用 `quick_suggestions`（向後相容）
+  - 影響：分析現在可以正確驗證，快速回饋正確顯示
+  - 檔案變更：
+    - app/static/js/api-client.js（每次請求讀取 token）
+    - app/static/js/session-workflow.js（轉換 detailed_scripts）
+
+### 新增
+- **10 秒紅燈倒數與分析標籤** (2026-01-02)
+  - 將紅燈（危險）安全等級的分析間隔從 15 秒改為 10 秒
+  - 對高風險親子衝突提供更快速的分析
+  - 各安全等級的分析間隔：
+    - 🟢 綠燈（安全）：60 秒
+    - 🟡 黃燈（警示）：30 秒
+    - 🔴 紅燈（危險）：10 秒（原為 15 秒）
+  - 在建議區塊新增「即時建議」標題
+  - 在標題旁新增「分析完成」標籤
+  - 清楚的視覺提示，讓用戶知道分析已完成且建議已就緒
+  - 影響：對危險情況的反應更快速，分析狀態回饋更清楚
+  - 檔案變更：app/templates/realtime_counseling.html
+
 ### 變更
 - **Web/iOS API 架構驗證** (2026-01-01)
   - 確認 Web 版本已透過 `keyword_analysis_service` 使用 8 大流派 Prompt
