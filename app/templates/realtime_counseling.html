@@ -3108,7 +3108,7 @@
             const intervalMap = {
                 green: 60,   // Safe: check every 60 seconds
                 yellow: 30,  // Warning: check every 30 seconds
-                red: 15      // Critical: check every 15 seconds
+                red: 10      // Critical: check every 10 seconds
             };
 
             const newInterval = intervalMap[safetyLevel] || 60;
@@ -3827,6 +3827,13 @@
                 <!-- Suggestions Section -->
                 ${analysis.suggestions.length > 0 ? `
                     <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
+                                💡
+                            </div>
+                            <h3 class="font-bold text-sm md:text-base text-gray-800">即時建議</h3>
+                            <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">分析完成</span>
+                        </div>
                         <div class="space-y-2">
                             ${analysis.suggestions.map(sug => {
                                 // Unified single-line format for all suggestions (200 expert suggestions)
