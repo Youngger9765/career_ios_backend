@@ -447,8 +447,15 @@
     <div id="onboardingContainer" class="fixed inset-0 z-50 bg-white" style="display: none;">
         <!-- Screen 1: Client Selection or Creation -->
         <div id="onboardingScreen1" class="h-full flex flex-col p-6 safe-area-inset-top safe-area-inset-bottom">
-            <!-- Skip Button (Top Right) -->
-            <div class="flex justify-end mb-6">
+            <!-- Top Right Buttons -->
+            <div class="flex justify-end items-center gap-4 mb-6">
+                <button
+                    type="button"
+                    onclick="logout()"
+                    class="text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
+                >
+                    登出
+                </button>
                 <button
                     type="button"
                     id="skipOnboardingBtn"
@@ -558,35 +565,79 @@
             </div>
         </div>
 
-        <!-- Screen 2: Success Confirmation -->
-        <div id="onboardingScreen2" class="h-full flex flex-col items-center justify-center p-6 safe-area-inset-top safe-area-inset-bottom" style="display: none;">
-            <!-- Success Header -->
-            <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold text-gray-800 mb-2">建立完成🎉</h2>
-            </div>
-
-            <!-- Avatar Circle -->
-            <div class="mb-8">
-                <div class="w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
-                    <span class="text-white text-4xl font-bold">u</span>
-                </div>
-            </div>
-
-            <!-- Child Name Display -->
-            <div class="mb-16">
-                <p id="childNameDisplay" class="text-2xl font-semibold text-gray-800"></p>
-            </div>
-
-            <!-- Next Button - Large Black Button -->
-            <div class="w-full max-w-md">
+        <!-- Screen 2: Mode Selection & Confirmation -->
+        <div id="onboardingScreen2" class="h-full flex flex-col p-6 safe-area-inset-top safe-area-inset-bottom" style="display: none;">
+            <!-- Back Button (Top Left) -->
+            <div class="flex justify-start mb-6">
                 <button
                     type="button"
-                    id="completeOnboardingBtn"
-                    class="w-full py-4 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all duration-300 text-lg"
-                    onclick="completeOnboarding()"
+                    onclick="backToClientSelection()"
+                    class="text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors flex items-center gap-2"
                 >
-                    下一步
+                    ← 重新選擇孩子
                 </button>
+            </div>
+
+            <!-- Content Container (Centered) -->
+            <div class="flex-1 flex flex-col items-center justify-center">
+                <!-- Success Header -->
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">建立完成🎉</h2>
+                </div>
+
+                <!-- Avatar Circle -->
+                <div class="mb-6">
+                    <div class="w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                        <span class="text-white text-4xl font-bold">👶</span>
+                    </div>
+                </div>
+
+                <!-- Child Name Display with context -->
+                <div class="mb-8 text-center">
+                    <p class="text-lg text-gray-600 mb-2">現在要跟</p>
+                    <p id="childNameDisplay" class="text-3xl font-bold text-gray-800 mb-2"></p>
+                    <p class="text-lg text-gray-600">對話</p>
+                </div>
+
+                <!-- Mode Selection -->
+                <div class="w-full max-w-md mb-8">
+                    <label class="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3 justify-center">
+                        <span class="text-xl">🎯</span>
+                        <span>選擇模式</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button
+                            id="onboardingEmergencyBtn"
+                            class="px-6 py-4 rounded-lg bg-red-500 text-white font-semibold text-base transition-all hover:bg-red-600 shadow-md"
+                            onclick="setOnboardingMode('emergency')"
+                        >
+                            🚨 實戰模式
+                        </button>
+                        <button
+                            id="onboardingPracticeBtn"
+                            class="px-6 py-4 rounded-lg bg-gray-200 text-gray-700 font-semibold text-base transition-all hover:bg-gray-300 shadow-md"
+                            onclick="setOnboardingMode('practice')"
+                        >
+                            🎓 練習模式
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-3 text-center">
+                        實戰：即時介入，快速建議<br>
+                        練習：事前準備，詳細指導
+                    </p>
+                </div>
+
+                <!-- Next Button - Large Black Button -->
+                <div class="w-full max-w-md">
+                    <button
+                        type="button"
+                        id="completeOnboardingBtn"
+                        class="w-full py-4 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all duration-300 text-lg shadow-lg"
+                        onclick="completeOnboarding()"
+                    >
+                        開始對話
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -856,10 +907,15 @@
                 <!-- 中央同心圓漸層和建議文字 -->
                 <div class="flex-1 flex items-center justify-center w-full max-w-md">
                     <div id="suggestionCircle" class="relative w-80 h-80 rounded-full flex items-center justify-center shadow-2xl" style="background: radial-gradient(circle, #67e8f9 0%, #99f6e4 40%, #ccfbf1 70%, #f0fdfa 100%);">
-                        <!-- 建議文字 -->
-                        <div class="text-center px-8">
+                        <!-- 建議文字 - 分為 Deep 和 Quick 兩行 -->
+                        <div class="text-center px-8 space-y-3">
+                            <!-- Deep Analysis (主要建議) -->
                             <p id="liveSuggestion" class="text-2xl font-bold text-teal-900 leading-tight">
                                 讓孩子知道<br>你站在他這邊
+                            </p>
+                            <!-- Quick Feedback (即時鼓勵) -->
+                            <p id="quickFeedbackText" class="text-sm font-medium text-teal-700 leading-tight opacity-80">
+
                             </p>
                         </div>
                     </div>
@@ -874,10 +930,15 @@
                 <!-- Top Section: Compact Suggestion Circle (shown when carousel is active) -->
                 <div id="carouselSuggestionCircle" class="flex-shrink-0 mb-3 flex items-center justify-center">
                     <div id="carouselCircle" class="relative w-32 h-32 rounded-full flex items-center justify-center shadow-lg transition-all duration-300" style="background: radial-gradient(circle, #67e8f9 0%, #99f6e4 40%, #ccfbf1 70%, #f0fdfa 100%);">
-                        <!-- Compact suggestion text -->
-                        <div class="text-center px-4">
+                        <!-- Compact suggestion text - 分為 Deep 和 Quick 兩行 -->
+                        <div class="text-center px-4 space-y-1">
+                            <!-- Deep Analysis -->
                             <p id="carouselLiveSuggestion" class="text-sm font-bold text-teal-900 leading-tight">
                                 讓孩子知道<br>你站在他這邊
+                            </p>
+                            <!-- Quick Feedback -->
+                            <p id="carouselQuickFeedbackText" class="text-xs font-medium text-teal-700 leading-tight opacity-80">
+
                             </p>
                         </div>
                     </div>
@@ -3082,11 +3143,11 @@
             if (recordingTimerMobile) recordingTimerMobile.textContent = timeString; // Mobile compact waveform timer
 
             // === Dual-API Auto-Analysis System ===
-            // 1. Quick Feedback (雞湯文): Every 10 seconds (except during red light)
+            // 1. Quick Feedback (雞湯文): Every 20 seconds (except during red light)
             // 2. Deep Analysis: Adaptive intervals (green=60s, yellow=30s, red=15s)
 
-            // Quick Feedback Timer (every 10 seconds, except red light)
-            const shouldQuickFeedback = (elapsed > 0 && elapsed % 10 === 0 && elapsed !== lastQuickFeedbackTime)
+            // Quick Feedback Timer (every 20 seconds, except red light)
+            const shouldQuickFeedback = (elapsed > 0 && elapsed % 20 === 0 && elapsed !== lastQuickFeedbackTime)
                 && lastSafetyLevel !== 'red' // Disable during red light (already fast enough)
                 && transcriptSegments.length > 0;
 
@@ -3506,12 +3567,12 @@
             }
         }
 
-        // === Quick Feedback (雞湯文) - Every 10 seconds during green/yellow ===
+        // === Quick Feedback (雞湯文) - Every 20 seconds during green/yellow ===
         async function getQuickFeedback() {
             try {
-                // Get last 10 seconds of transcript
+                // Get last 20 seconds of transcript
                 const elapsed = Math.floor((Date.now() - startTime) / 1000);
-                const recentSegments = transcriptSegments.slice(-5); // Last 5 segments (~10 seconds)
+                const recentSegments = transcriptSegments.slice(-8); // Last 8 segments (~20 seconds)
 
                 if (recentSegments.length === 0) {
                     console.log('⏭️ Skipping quick feedback: no recent transcript');
@@ -3548,14 +3609,23 @@
         }
 
         // Display quick feedback message (minimal UI update)
+        // Shows below the deep analysis text, doesn't overwrite it
         function showQuickFeedbackMessage(message) {
-            // Option 1: Update mobile suggestion circle (for quick encouragement)
-            updateMobileSuggestionCircle('green', message);
+            const quickFeedbackText = document.getElementById('quickFeedbackText');
+            const carouselQuickFeedbackText = document.getElementById('carouselQuickFeedbackText');
 
-            // Option 2: Could also show as a subtle toast/badge
-            // (Not implemented yet - current version uses circle)
-
-            console.log(`💬 Quick feedback displayed: ${message}`);
+            if (window.innerWidth < 768) {
+                // Mobile: Update quick feedback text (below deep analysis) in both circles
+                if (quickFeedbackText) {
+                    quickFeedbackText.textContent = `💡 ${message}`;
+                }
+                if (carouselQuickFeedbackText) {
+                    carouselQuickFeedbackText.textContent = `💡 ${message}`;
+                }
+                console.log(`💬 Quick feedback displayed: ${message}`);
+            } else {
+                console.log(`⚠️ Quick feedback not shown (desktop mode)`);
+            }
         }
 
         // Helper function to set loading state for analyze buttons
@@ -5319,10 +5389,60 @@
             document.getElementById('mainContent').style.display = 'block';
         }
 
+        // Onboarding: Back to client selection from mode selection screen
+        function backToClientSelection() {
+            console.log('[ONBOARDING] Going back to client selection');
+
+            // Hide screen 2 (mode selection)
+            document.getElementById('onboardingScreen2').style.display = 'none';
+
+            // Show screen 1 with client list
+            document.getElementById('onboardingScreen1').style.display = 'flex';
+            document.getElementById('clientListMode').style.display = 'flex';
+            document.getElementById('clientFormMode').style.display = 'none';
+
+            // Clear selected client info from localStorage
+            localStorage.removeItem('selectedClientId');
+            localStorage.removeItem('selectedClientName');
+
+            console.log('[ONBOARDING] Back to client selection complete');
+        }
+
+        // Onboarding: Set counseling mode (emergency or practice)
+        function setOnboardingMode(mode) {
+            console.log(`[ONBOARDING] Setting mode to: ${mode}`);
+            counselingMode = mode;
+
+            // Update button styles
+            const emergencyBtn = document.getElementById('onboardingEmergencyBtn');
+            const practiceBtn = document.getElementById('onboardingPracticeBtn');
+
+            if (mode === 'emergency') {
+                emergencyBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                emergencyBtn.classList.add('bg-red-500', 'text-white');
+                practiceBtn.classList.remove('bg-green-500', 'text-white');
+                practiceBtn.classList.add('bg-gray-200', 'text-gray-700');
+            } else {
+                practiceBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                practiceBtn.classList.add('bg-green-500', 'text-white');
+                emergencyBtn.classList.remove('bg-red-500', 'text-white');
+                emergencyBtn.classList.add('bg-gray-200', 'text-gray-700');
+            }
+
+            console.log(`[ONBOARDING] Mode set to: ${counselingMode}`);
+        }
+
         // Onboarding: Complete onboarding and go to main content
         function completeOnboarding() {
+            console.log(`[ONBOARDING] Completing with mode: ${counselingMode}`);
+
+            // Apply the selected mode to the main session
+            setCounselingMode(counselingMode);
+
             document.getElementById('onboardingContainer').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
+
+            console.log('[ONBOARDING] Complete, mode applied to session');
         }
 
         // Onboarding: Handle client setup form submission

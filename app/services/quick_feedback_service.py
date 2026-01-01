@@ -28,8 +28,9 @@ QUICK_FEEDBACK_PROMPT = """你是親子教養即時督導。
 - 如果看到危險語言（威脅、暴力）→ 提醒冷靜
 - 如果看到好的互動 → 肯定鼓勵
 - 如果看到提問 → 鼓勵引導
+- 只能一行，不能有換行符號或斷句
 
-只輸出一句話，不要額外說明。"""
+CRITICAL: 只輸出一句話，不要換行，不要額外說明。"""
 
 
 class QuickFeedbackService:
@@ -66,8 +67,10 @@ class QuickFeedbackService:
                 max_tokens=100,  # 限制輸出長度，加快速度
             )
 
-            # 清理回應（去除多餘空白、引號）
+            # 清理回應（去除多餘空白、引號、換行符號）
             message = response.text.strip().strip("\"'")
+            # Remove any line breaks to ensure single line
+            message = message.replace("\n", "").replace("\r", "")
 
             latency_ms = int((time.time() - start_time) * 1000)
 
