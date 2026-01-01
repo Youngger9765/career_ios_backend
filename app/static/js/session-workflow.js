@@ -114,8 +114,20 @@ export class SessionWorkflow {
      * @returns {Object} Realtime API format response
      */
     transformToRealtimeFormat(sessionResponse) {
-        // Map quick_suggestions to array format
-        const suggestions = sessionResponse.quick_suggestions || [];
+        // Map detailed_scripts to suggestions (for island_parents tenant)
+        // Fallback to quick_suggestions for career tenant
+        let suggestions = [];
+
+        if (sessionResponse.detailed_scripts && Array.isArray(sessionResponse.detailed_scripts)) {
+            // Transform detailed scripts to simple suggestion format
+            suggestions = sessionResponse.detailed_scripts.map(script =>
+                `💡 ${script.situation}\n${script.parent_script}`
+            );
+        } else if (sessionResponse.quick_suggestions) {
+            suggestions = Array.isArray(sessionResponse.quick_suggestions)
+                ? sessionResponse.quick_suggestions
+                : [];
+        }
 
         return {
             // Core fields (Realtime API format)
@@ -124,7 +136,7 @@ export class SessionWorkflow {
             alerts: sessionResponse.action_suggestion
                 ? [sessionResponse.action_suggestion]
                 : [],
-            suggestions: Array.isArray(suggestions) ? suggestions : [],
+            suggestions: suggestions,
             time_range: '',
             timestamp: new Date().toISOString(),
             rag_sources: sessionResponse.rag_documents || [],

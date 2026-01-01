@@ -32,14 +32,19 @@ export class APIClient {
             ...options.headers
         };
 
+        // Read auth token fresh from localStorage on every request
+        // (Fixes issue where token is saved after APIClient constructor runs)
+        const authToken = localStorage.getItem('authToken');
+        const tenantId = localStorage.getItem('tenantId');
+
         // Add authentication header if token exists
-        if (this.authToken) {
-            headers['Authorization'] = `Bearer ${this.authToken}`;
+        if (authToken) {
+            headers['Authorization'] = `Bearer ${authToken}`;
         }
 
         // Add tenant ID header if exists and not already set
-        if (this.tenantId && !headers['X-Tenant-ID']) {
-            headers['X-Tenant-ID'] = this.tenantId;
+        if (tenantId && !headers['X-Tenant-ID']) {
+            headers['X-Tenant-ID'] = tenantId;
         }
 
         const response = await fetch(this.baseURL + endpoint, {
