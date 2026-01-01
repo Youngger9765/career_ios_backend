@@ -1419,6 +1419,7 @@
         // Dynamic analysis interval based on safety_level
         let nextAnalysisInterval = 60; // Default 60 seconds
         let lastSafetyLevel = 'green';
+        let hasFirstAnalysis = false; // Track if first 10-second quick analysis has been done
         let isVoiceSimEnabled = false; // Voice simulation toggle state (demo mode only)
         let currentProvider = 'gemini'; // 'gemini' or 'codeer' - Force to 'gemini' if Codeer is hidden
         let currentCodeerModel = 'gemini-flash'; // Codeer model selection (default: Gemini 2.5 Flash - fastest + best quality balance)
@@ -2438,6 +2439,7 @@
             startTime = Date.now();
             transcriptSegments = [];
             analysisHistory = [];
+            hasFirstAnalysis = false; // Reset first analysis flag for new session
 
             // REAL RECORDING MODE: Start ElevenLabs WebSocket + Microphone
             if (!isDemoMode) {
@@ -3078,8 +3080,14 @@
             if (recordingTimerDesktop) recordingTimerDesktop.textContent = timeString; // Desktop recording timer display
             if (recordingTimerMobile) recordingTimerMobile.textContent = timeString; // Mobile compact waveform timer
 
-            // Auto-analysis at dynamic intervals (based on safety_level)
-            if (elapsed > 0 && elapsed % nextAnalysisInterval === 0 && elapsed !== lastAutoAnalysisTime) {
+            // Auto-analysis logic
+            // First analysis: Quick feedback at 10 seconds (regardless of safety level)
+            // Subsequent analyses: Based on safety_level (green=60s, yellow=30s, red=15s)
+            const shouldAnalyze = !hasFirstAnalysis
+                ? (elapsed === 10) // First analysis at 10 seconds
+                : (elapsed > 0 && elapsed % nextAnalysisInterval === 0 && elapsed !== lastAutoAnalysisTime); // Subsequent analyses
+
+            if (shouldAnalyze) {
                 lastAutoAnalysisTime = elapsed;
 
                 // Only trigger if we have transcript content
@@ -3089,6 +3097,12 @@
 
                     // Trigger analysis automatically
                     analyzeTranscript();
+
+                    // Mark first analysis as done
+                    if (!hasFirstAnalysis) {
+                        hasFirstAnalysis = true;
+                        console.log('✅ First quick analysis completed at 10 seconds');
+                    }
                 }
             }
         }
