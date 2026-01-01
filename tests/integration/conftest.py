@@ -56,14 +56,20 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
 
 @pytest.fixture
 async def async_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """Create an async test database session"""
-    from app.core.config import settings
+    """Create an async test database session using SQLite in-memory.
 
-    # Convert postgresql:// to postgresql+asyncpg:// for async support
-    db_url = str(settings.DATABASE_URL).replace(
-        "postgresql://", "postgresql+asyncpg://"
+    This eliminates the need for PostgreSQL service in CI/CD.
+    """
+    # Use SQLite in-memory database for testing
+    sqlalchemy_database_url = "sqlite+aiosqlite:///:memory:"
+
+    # Create async engine for SQLite
+    engine = create_async_engine(
+        sqlalchemy_database_url,
+        connect_args={"check_same_thread": False},
+        echo=False,
+        poolclass=StaticPool,  # Keep connection alive in memory
     )
-    engine = create_async_engine(db_url, echo=False)
 
     # Create tables
     async with engine.begin() as conn:
