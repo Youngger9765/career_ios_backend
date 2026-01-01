@@ -9,6 +9,21 @@
 
 ## [未發布]
 
+### 變更
+- **Web/iOS API 架構驗證** (2026-01-01)
+  - 確認 Web 版本已透過 `keyword_analysis_service` 使用 8 大流派 Prompt
+  - Web 與 iOS 共用統一的分析邏輯（無重複代碼）：
+    - 兩個平台使用相同的 prompts（來自 `app/prompts/parenting.py`）
+    - 兩個平台使用相同的 200 句專家建議（RAG 知識庫）
+    - 兩個平台使用相同的 keyword analysis service
+  - API 回應格式依平台不同：
+    - Web: `RealtimeAnalyzeResponse` (realtime.py)
+    - iOS: `IslandParentAnalysisResponse` (sessions_keywords.py)
+  - 核心分析邏輯在兩個平台完全相同
+  - ✅ 重構已成功從 realtime.py 移除重複代碼
+  - 影響：Web 無需額外整合 - 已經在使用 8 大流派框架
+  - 參考：架構分析確認統一程式碼基礎 (2026-01-01)
+
 ### 新增
 - **Web Session Workflow 模組化 JavaScript 架構** (2026-01-01)
   - 建立模組化 JavaScript 架構，統一 Web 與 iOS 的 session workflows

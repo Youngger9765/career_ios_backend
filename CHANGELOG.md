@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Web/iOS API Architecture Verification** (2026-01-01)
+  - Confirmed Web version already uses 8 Schools Prompt via `keyword_analysis_service`
+  - Web and iOS share unified analysis logic (no duplication):
+    - Both platforms use same prompts from `app/prompts/parenting.py`
+    - Both use 200 expert suggestions from RAG knowledge base
+    - Both leverage identical keyword analysis service
+  - API response formats differ by platform:
+    - Web: `RealtimeAnalyzeResponse` (realtime.py)
+    - iOS: `IslandParentAnalysisResponse` (sessions_keywords.py)
+  - Core analysis logic is identical across platforms
+  - ✅ Refactoring successfully removed duplicate code from realtime.py
+  - Impact: No additional integration needed for Web - already using 8 Schools framework
+  - Reference: Architecture analysis confirms unified codebase (2026-01-01)
+
 ### Fixed
 - **Integration Test Suite Fixes** (2026-01-01)
   - Fixed test_error_handling.py status code expectations to match actual API behavior:

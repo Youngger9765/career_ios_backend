@@ -62,13 +62,22 @@
 - 希望 AI 能提供更具體的「話術」(Scripts)，類似 Dr. Becky Kennedy 風格
 - 包含：阿德勒、薩提爾、ABA、Siegel、Gottman、Ross Greene、Dr. Becky、社會正義教養
 
+**架構說明** (2026-01-01 架構驗證):
+- ✅ **Web 版本已整合 8 大流派 Prompt**
+  - Web 透過 `keyword_analysis_service` 自動使用 8 大流派分析
+  - 與 iOS 共用相同分析邏輯（無重複代碼）
+  - 回應格式不同（Web: RealtimeAnalyzeResponse, iOS: IslandParentAnalysisResponse）
+  - 核心邏輯完全相同（prompts, expert suggestions, RAG knowledge base）
+- ✅ **無需額外整合**：Web 和 iOS 使用相同 Prompt 源（`parenting.py`）
+
 **三階段實施策略**:
 - **Step 1**: 直接採用新 prompt，讓逗點測試 ✅ **已完成**
   - [x] 整合 8 大流派 prompt 到 `app/prompts/parenting.py`
   - [x] 修改 analyze 使用新 prompt（通過 keyword_analysis_service）
   - [x] Dan Siegel "全腦教養"降低權重並添加科學爭議警告
+  - [x] 架構驗證：Web/iOS 已共用相同 8 大流派 Prompt
   - [ ] 建立測試集（5-10 個真實逐字稿範例）← 待逗點提供
-  - [ ] 請逗點實測並收集回饋 ← 下一步
+  - [ ] 請逗點實測並收集回饋（Web 和 iOS 使用相同 Prompt）← 下一步
   - [ ] 記錄測試結果：是否產生期待的「具體話術」
 
 - **Step 2**: 若不滿意，用 GPTs 校準（實測反推）
