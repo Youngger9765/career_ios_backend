@@ -204,16 +204,16 @@
     - 符合 OWASP 標準的認證錯誤處理
 
 ### 修復
-- **Cloud Run 部署 - Alembic Migration SSL 修復** (2026-01-01)
+- **Cloud Run 部署 - Alembic Migration 連線修復** (2026-01-01)
   - 修復 Cloud Run 部署失敗：容器無法在 port 8080 啟動
-  - 根本原因：alembic/env.py 使用 `sslmode: require` 與 Supabase pooler 不相容
-  - 解決方案：改為 `sslmode: prefer` 以支援 Supabase Transaction Pooler
+  - 根本原因：alembic/env.py 的 `connect_args` 覆蓋了 DATABASE_URL 連接字串的 SSL 參數
+  - 解決方案：移除 alembic/env.py 的 `connect_args`，讓連接字串自行處理設定
   - 研究發現：
     - Supabase 建議在 GitHub Actions migrations 使用 Transaction Pooler (port 6543)
-    - Pooler 連線不需要強制 SSL
-    - 官方文檔未提及 pooler 的 SSL 設定需求
+    - SSL 參數應該在連接字串中，而非 connect_args
+    - Supabase pooler 連接字串已包含 SSL 設定
   - 影響：成功啟用 Cloud Run 部署與資料庫 migration
-  - 參考：Supabase GitHub Actions 整合文檔
+  - 參考：Supabase 連線文檔
 
 - **測試套件可靠性** (2025-12-31)
   - 修復整合測試中的 GCP 憑證驗證檢查

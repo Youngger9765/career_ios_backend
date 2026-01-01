@@ -25,16 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Reference: Architecture analysis confirms unified codebase (2026-01-01)
 
 ### Fixed
-- **Cloud Run Deployment - Alembic Migration SSL Fix** (2026-01-01)
+- **Cloud Run Deployment - Alembic Migration Connection Fix** (2026-01-01)
   - Fixed Cloud Run deployment failure: Container failed to start on port 8080
-  - Root cause: alembic/env.py used `sslmode: require` incompatible with Supabase pooler
-  - Solution: Changed to `sslmode: prefer` for Supabase Transaction Pooler compatibility
+  - Root cause: alembic/env.py `connect_args` overriding DATABASE_URL connection string SSL parameters
+  - Solution: Removed `connect_args` from alembic/env.py to let connection string handle configuration
   - Research findings:
-    - Supabase recommends Transaction Pooler (port 6543) for GitHub Actions migrations
-    - Pooler connections do not require SSL enforcement
-    - Official documentation does not mention SSL configuration for pooler
+    - Supabase Transaction Pooler (port 6543) is recommended for GitHub Actions migrations
+    - SSL parameters should be in connection string, not in connect_args
+    - Supabase pooler connection strings include SSL config in the URL itself
   - Impact: Enables successful Cloud Run deployment with database migrations
-  - Reference: Supabase documentation on GitHub Actions integration
+  - Reference: Supabase connection documentation
 
 - **Integration Test Suite Fixes** (2026-01-01)
   - Fixed test_error_handling.py status code expectations to match actual API behavior:
