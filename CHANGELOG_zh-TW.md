@@ -204,9 +204,9 @@
     - 符合 OWASP 標準的認證錯誤處理
 
 ### 修復
-- **Cloud Run 部署 - 缺少 Alembic Migration 檔案** (2026-01-01)
+- **Cloud Run 部署 - 孤立的 Alembic Revision** (2026-01-01)
   - 修復 Cloud Run 部署失敗：容器無法在 port 8080 啟動
-  - 根本原因：Alembic migration 檔案 `58545e695a2d_add_organizations_table.py` 在 revert commit 中被刪除，但資料庫仍保留此 revision
+  - 根本原因：資料庫有孤立的 revision `58545e695a2d` (已刪除的 organization management migration)
   - Cloud Run logs 真正錯誤：`Can't locate revision identified by '58545e695a2d'`
   - 時間軸：
     - Commit ccbfc95 新增 organization management 功能與 migration 58545e695a2d
@@ -214,10 +214,14 @@
     - Commit 3c87a32 revert 功能並刪除 migration 檔案
     - 資料庫保留 alembic_version 中的 58545e695a2d 紀錄
     - 後續部署失敗，因為 alembic 找不到該檔案
-  - 解決方案：從 commit ccbfc95 恢復已刪除的 migration 檔案
-  - 先前的調查嘗試 (SSL 配置、DATABASE_URL) 都是誤導
+  - 解決方案：建立修復 script 更新資料庫 revision 至正確值 (6b32af0c9441)
+  - 實作細節：
+    - 新增 scripts/fix_alembic_version.py 更新 alembic_version 表
+    - 修改 scripts/start.sh 在 migrations 前執行修復
+    - 刪除錯誤恢復的 migration 檔案
+  - 先前的調查嘗試 (SSL 配置、DATABASE_URL、恢復 migration 檔案) 都不正確
   - 影響：成功啟用 Cloud Run 部署與資料庫 migration
-  - 恢復檔案：alembic/versions/20260101_2104_58545e695a2d_add_organizations_table.py
+  - 修改檔案：scripts/fix_alembic_version.py (新增)、scripts/start.sh、刪除 58545e695a2d migration
 
 - **測試套件可靠性** (2025-12-31)
   - 修復整合測試中的 GCP 憑證驗證檢查
