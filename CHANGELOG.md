@@ -10,6 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Quick Feedback Contextual Analysis Fix** (2026-01-02)
+  - Issue: Hardcoded scenario rules caused false positives in feedback
+    - Example: "我數到三，一、二、三！" (threatening countdown) misclassified as "testing microphone"
+    - Root cause: Prompt had "如果...則..." rules that matched keywords without context
+  - Fix: Replaced hardcoded rules with contextual understanding
+    - Removed all "如果家長在數數/測試麥克風 → 回應..." type rules
+    - Added instructions to analyze full conversation context:
+      - 對話的脈絡和情境 (conversation context and situation)
+      - 家長當下的互動方式 (parent's current interaction style)
+      - 對話的走向 (trajectory of the conversation)
+    - Added anti-template instruction: "不要套用固定模板"
+  - Impact: AI now provides contextually appropriate feedback based on actual conversation flow
+  - Test result: 9/9 quick feedback tests pass, can now distinguish nuanced situations
+  - File: app/services/quick_feedback_service.py:19-39
+  - Commit: Pending
+
 - **Quick Feedback Token Limit Fix** (2026-01-02)
   - Issue 1: Quick Feedback always returned fallback message "繼續保持，你做得很好"
     - Root cause: Google Cloud authentication expired
