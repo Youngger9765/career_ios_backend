@@ -50,6 +50,15 @@
     - app/templates/realtime_counseling.html（兩行顯示）
 
 ### 修復
+- **手機版按鈕點擊無反應** (2026-01-02)
+  - 修正 ReferenceError: 函數未定義導致 onclick 處理器無法執行
+  - 根本原因：函數定義在 HTML 渲染之後，onclick 屬性無法找到函數
+  - 解決方案：將所有按鈕處理函數移到早期 script 標籤（HTML 之前）
+  - 移動的函數：logout(), goToHome(), showClientForm(), backToClientSelection(), setOnboardingMode(), completeOnboarding()
+  - 影響：所有手機導航和引導流程按鈕現在正常運作
+  - 檔案變更：app/templates/realtime_counseling.html
+  - 測試：Chrome 手機版驗證所有 6 個關鍵按鈕
+
 - **手機導航 Z-Index 問題** (2026-01-02)
   - 修正手機導航被 onboarding 容器遮蓋的問題
   - 將 z-index 從 z-50 改為 z-[9999]

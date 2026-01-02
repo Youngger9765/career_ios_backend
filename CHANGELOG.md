@@ -50,6 +50,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - app/templates/realtime_counseling.html (two-line display)
 
 ### Fixed
+- **Mobile Button Click Handlers Not Working** (2026-01-02)
+  - Fixed ReferenceError: functions not defined when onclick handlers executed
+  - Root cause: Functions defined after HTML rendered, onclick attributes couldn't find them
+  - Solution: Moved all button handler functions to early script tag (before HTML)
+  - Functions moved: logout(), goToHome(), showClientForm(), backToClientSelection(), setOnboardingMode(), completeOnboarding()
+  - Impact: All mobile navigation and onboarding buttons now work correctly
+  - Files changed: app/templates/realtime_counseling.html
+  - Testing: All 6 critical buttons verified in Chrome mobile view
+
 - **Mobile Navigation Z-Index Issue** (2026-01-02)
   - Fixed mobile navigation being hidden behind onboarding container
   - Changed z-index from z-50 to z-[9999]
