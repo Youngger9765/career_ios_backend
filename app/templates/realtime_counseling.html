@@ -5050,9 +5050,19 @@
             const email = localStorage.getItem('userEmail');
 
             if (token && email) {
-                // User is logged in, show main content
+                // User is logged in
                 document.getElementById('loginContainer').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
+
+                // Mobile: Show onboarding (client selection) first
+                // Desktop: Show main content directly
+                const isMobile = window.innerWidth < 768;
+                if (isMobile) {
+                    document.getElementById('onboardingContainer').style.display = 'block';
+                    document.getElementById('mainContent').style.display = 'none';
+                } else {
+                    document.getElementById('mainContent').style.display = 'block';
+                    document.getElementById('onboardingContainer').style.display = 'none';
+                }
 
                 // Display user email in header
                 const emailDisplay = document.getElementById('userEmailDisplay');
@@ -5063,6 +5073,7 @@
                 // User is not logged in, show login form
                 document.getElementById('loginContainer').style.display = 'flex';
                 document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('onboardingContainer').style.display = 'none';
             }
         }
 
