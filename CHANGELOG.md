@@ -10,6 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Quick Feedback Token Limit Fix** (2026-01-02)
+  - Issue 1: Quick Feedback always returned fallback message "繼續保持，你做得很好"
+    - Root cause: Google Cloud authentication expired
+    - Error: `google.auth.exceptions.RefreshError: Reauthentication is needed`
+    - Fix: Re-authenticated with `gcloud auth application-default login` and restarted server
+  - Issue 2: After auth fix, Quick Feedback only returned single characters (e.g., "你", "深")
+    - Root cause: `max_tokens=100` was too restrictive, Gemini hit MAX_TOKENS limit
+    - Server log: "Response may be incomplete. Finish reason: 2" (2=MAX_TOKENS)
+    - Symptom: Chinese characters need multiple tokens, even short responses couldn't fit
+  - Fix: Implemented two-layer length control strategy
+    - Increased `max_tokens` from 100 → 1000 (safety ceiling for output)
+    - Kept prompt instruction "請用 1 句話（20 字內）" for content-level control
+    - Rationale: `max_output_tokens` (Vertex AI) only counts OUTPUT tokens, not input
+    - This prevents truncation while giving budget for formatting/complete sentences
+  - Impact: Quick Feedback now generates complete, contextual responses
+  - Test result: "先同理孩子不想寫的心情，再好奇他的困難。" (complete sentence, no truncation)
+  - File: app/services/quick_feedback_service.py:71
+  - Commit: Pending
+
 - **Database Migration: Added Missing `last_billed_minutes` Column** (2026-01-02)
   - Issue: Analysis stuck due to missing `session_usages.last_billed_minutes` column
   - Root cause: Migration 02c909267dd6 was marked as applied but column wasn't created

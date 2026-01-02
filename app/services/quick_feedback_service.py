@@ -61,10 +61,14 @@ class QuickFeedbackService:
             prompt = QUICK_FEEDBACK_PROMPT.format(transcript=recent_transcript)
 
             # 呼叫 Gemini Flash（最快模型）
+            # Strategy: Set high max_tokens as safety ceiling
+            # - max_output_tokens (Vertex AI) only counts OUTPUT, not input
+            # - Actual length controlled by prompt: "請用 1 句話（20 字內）"
+            # - 1000 tokens prevents truncation while giving budget for formatting
             response = await self.gemini_service.generate_text(
                 prompt=prompt,
                 temperature=0.7,
-                max_tokens=100,  # 限制輸出長度，加快速度
+                max_tokens=1000,  # 足夠的輸出空間，由 prompt 指示控制實際長度
             )
 
             # 清理回應（去除多餘空白、引號、換行符號）

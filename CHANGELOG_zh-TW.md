@@ -10,6 +10,25 @@
 ## [未發布]
 
 ### 修復
+- **快速回饋 Token 限制修復** (2026-01-02)
+  - 問題 1：快速回饋永遠回傳預設訊息「繼續保持，你做得很好」
+    - 根本原因：Google Cloud 認證過期
+    - 錯誤訊息：`google.auth.exceptions.RefreshError: Reauthentication is needed`
+    - 修復：重新執行 `gcloud auth application-default login` 並重啟伺服器
+  - 問題 2：認證修復後，快速回饋只回傳單一字元（如「你」、「深」）
+    - 根本原因：`max_tokens=100` 太嚴格，Gemini 觸及 MAX_TOKENS 上限
+    - 伺服器日誌：「Response may be incomplete. Finish reason: 2」（2=MAX_TOKENS）
+    - 症狀：中文字元需要多個 token，即使短回應也無法完整輸出
+  - 修復：實作雙層長度控制策略
+    - 將 `max_tokens` 從 100 提高到 1000（輸出安全上限）
+    - 保留 prompt 指示「請用 1 句話（20 字內）」作為內容層級控制
+    - 理由：`max_output_tokens`（Vertex AI）只計算輸出 token，不含輸入
+    - 這樣可防止截斷，同時給予足夠的 token 預算來生成完整句子和格式
+  - 影響：快速回饋現在可生成完整、符合情境的回應
+  - 測試結果：「先同理孩子不想寫的心情，再好奇他的困難。」（完整句子，無截斷）
+  - 檔案：app/services/quick_feedback_service.py:71
+  - Commit：待提交
+
 - **資料庫遷移：補上遺失的 `last_billed_minutes` 欄位** (2026-01-02)
   - 問題：即時分析卡住，因為 `session_usages.last_billed_minutes` 欄位不存在
   - 根本原因：遷移腳本 02c909267dd6 標記為已執行，但欄位實際未建立
