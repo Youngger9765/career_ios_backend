@@ -235,6 +235,13 @@
             padding-top: max(1rem, env(safe-area-inset-top));
         }
 
+        /* Mobile: Additional padding for fixed mobile nav header */
+        @media (max-width: 767px) {
+            .mobile-nav-padding {
+                padding-top: calc(60px + max(1rem, env(safe-area-inset-top)));
+            }
+        }
+
         /* iOS Button Active State */
         .ios-button-active {
             transform: scale(0.96);
@@ -357,6 +364,35 @@
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- MOBILE-ONLY: Global Navigation Header (Fixed at top, shows on ALL screens) -->
+    <div id="mobileGlobalNav" class="md:hidden fixed top-0 left-0 right-0 z-50 bg-white/95 ios-frosted border-b border-gray-200/50 ios-card-shadow" style="display: none;">
+        <div class="flex items-center justify-between px-4 py-3 safe-area-inset-top">
+            <!-- Left: Home Button -->
+            <button
+                type="button"
+                onclick="goToHome()"
+                class="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-all active:scale-95"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                <span>回到首頁</span>
+            </button>
+
+            <!-- Right: Logout Button -->
+            <button
+                type="button"
+                onclick="logout()"
+                class="flex items-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium rounded-lg transition-all active:scale-95"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                <span>登出</span>
+            </button>
+        </div>
+    </div>
+
     <!-- Login Form (shown when not logged in) - Mobile-Friendly Design -->
     <div id="loginContainer" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white">
         <div class="w-full max-w-md px-6 py-8 fade-in">
@@ -446,16 +482,18 @@
     <!-- Onboarding Container (shown after login for island_parents) -->
     <div id="onboardingContainer" class="fixed inset-0 z-50 bg-white" style="display: none;">
         <!-- Screen 1: Client Selection or Creation -->
-        <div id="onboardingScreen1" class="h-full flex flex-col p-6 safe-area-inset-top safe-area-inset-bottom">
+        <div id="onboardingScreen1" class="h-full flex flex-col p-6 mobile-nav-padding safe-area-inset-bottom">
             <!-- Top Right Buttons -->
             <div class="flex justify-end items-center gap-4 mb-6">
+                <!-- Logout button: Only show on desktop (mobile uses global nav) -->
                 <button
                     type="button"
                     onclick="logout()"
-                    class="text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
+                    class="hidden md:inline-block text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
                 >
                     登出
                 </button>
+                <!-- Skip button: Always visible -->
                 <button
                     type="button"
                     id="skipOnboardingBtn"
@@ -566,7 +604,7 @@
         </div>
 
         <!-- Screen 2: Mode Selection & Confirmation -->
-        <div id="onboardingScreen2" class="h-full flex flex-col p-6 safe-area-inset-top safe-area-inset-bottom" style="display: none;">
+        <div id="onboardingScreen2" class="h-full flex flex-col p-6 mobile-nav-padding safe-area-inset-bottom" style="display: none;">
             <!-- Back Button (Top Left) -->
             <div class="flex justify-start mb-6">
                 <button
@@ -670,7 +708,7 @@
     <!-- MOBILE-ONLY: Non-scrollable Block Layout (100vh, no position: fixed) -->
     <div class="md:hidden h-screen flex flex-col overflow-hidden">
         <!-- TOP BLOCK: Timer and Waveform only (buttons moved to bottom) -->
-        <div class="bg-white/95 ios-frosted border-b border-gray-200/50 ios-card-shadow safe-area-inset-top">
+        <div class="bg-white/95 ios-frosted border-b border-gray-200/50 ios-card-shadow mobile-nav-padding">
             <div class="px-4 py-3">
 
                 <!-- Recording Waveform & Timer (shown when recording) -->
@@ -5053,6 +5091,9 @@
                 // User is logged in
                 document.getElementById('loginContainer').style.display = 'none';
 
+                // Show mobile global navigation (only on mobile)
+                document.getElementById('mobileGlobalNav').style.display = 'block';
+
                 // Mobile: Show onboarding (client selection) first
                 // Desktop: Show main content directly
                 const isMobile = window.innerWidth < 768;
@@ -5080,6 +5121,7 @@
                 document.getElementById('loginContainer').style.display = 'flex';
                 document.getElementById('mainContent').style.display = 'none';
                 document.getElementById('onboardingContainer').style.display = 'none';
+                document.getElementById('mobileGlobalNav').style.display = 'none';
             }
         }
 
@@ -5160,6 +5202,9 @@
                 // Hide login form
                 document.getElementById('loginContainer').style.display = 'none';
 
+                // Show mobile global navigation
+                document.getElementById('mobileGlobalNav').style.display = 'block';
+
                 // In debug mode, always show onboarding for island_parents (for testing)
                 if (tenantId === 'island_parents') {
                     document.getElementById('onboardingContainer').style.display = 'block';
@@ -5209,6 +5254,9 @@
 
                     // Hide login form
                     document.getElementById('loginContainer').style.display = 'none';
+
+                    // Show mobile global navigation
+                    document.getElementById('mobileGlobalNav').style.display = 'block';
 
                     // island_parents: Always show client selection/creation screen
                     console.log('[LOGIN] Tenant ID:', tenantId);
@@ -5537,6 +5585,31 @@
             }
         });
 
+        // Go to Home function (navigate back to onboarding screen 1 - client selection)
+        function goToHome() {
+            // Hide all screens
+            document.getElementById('mainContent').style.display = 'none';
+
+            // Hide all onboarding screens
+            const onboardingScreens = document.querySelectorAll('[id^="onboardingScreen"]');
+            onboardingScreens.forEach(screen => {
+                screen.style.display = 'none';
+            });
+
+            // Show onboarding container and screen 1
+            document.getElementById('onboardingContainer').style.display = 'block';
+            document.getElementById('onboardingScreen1').style.display = 'flex';
+
+            // Reset any active recording or analysis
+            if (typeof stopRecording === 'function') {
+                try {
+                    stopRecording();
+                } catch (e) {
+                    console.log('No active recording to stop');
+                }
+            }
+        }
+
         // Logout function (called by logout button)
         function logout() {
             localStorage.removeItem('authToken');
@@ -5548,6 +5621,9 @@
             document.getElementById('mainContent').style.display = 'none';
             document.getElementById('onboardingContainer').style.display = 'none';
             document.getElementById('loginContainer').style.display = 'flex';
+
+            // Hide mobile global nav
+            document.getElementById('mobileGlobalNav').style.display = 'none';
 
             // Reset debug mode state
             isDebugMode = false;
