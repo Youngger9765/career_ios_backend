@@ -393,6 +393,108 @@
         </div>
     </div>
 
+    <!-- Early function definitions for mobile nav buttons -->
+    <script>
+        // Go to Home function (navigate back to onboarding screen 1 - client selection)
+        function goToHome() {
+            // Hide all screens
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('onboardingContainer').style.display = 'block';
+
+            // Reset to first onboarding screen (client selection)
+            const onboardingScreens = document.querySelectorAll('[id^="onboardingScreen"]');
+            onboardingScreens.forEach(screen => {
+                screen.style.display = 'none';
+            });
+            document.getElementById('onboardingScreen1').style.display = 'flex';
+            document.getElementById('clientListMode').style.display = 'flex';
+            document.getElementById('clientFormMode').style.display = 'none';
+
+            // Reset any active recording or analysis
+            if (typeof stopRecording === 'function') {
+                try {
+                    stopRecording();
+                } catch (e) {
+                    console.log('No active recording to stop');
+                }
+            }
+        }
+
+        // Logout function (called by logout button)
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('tenantId');
+            localStorage.removeItem('debugMode'); // Clear debug mode on logout
+
+            // Hide main content and onboarding, show login form
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('onboardingContainer').style.display = 'none';
+            document.getElementById('loginContainer').style.display = 'flex';
+
+            // Hide mobile global nav
+            document.getElementById('mobileGlobalNav').style.display = 'none';
+        }
+
+        // Onboarding: Show client form
+        function showClientForm() {
+            console.log('[CLIENT_FORM] Showing client creation form');
+            document.getElementById('onboardingContainer').style.display = 'block';
+            document.getElementById('onboardingScreen1').style.display = 'flex';
+            document.getElementById('clientListMode').style.display = 'none';
+            document.getElementById('clientFormMode').style.display = 'flex';
+            document.getElementById('onboardingScreen2').style.display = 'none';
+        }
+
+        // Onboarding: Back to client selection from mode selection screen
+        function backToClientSelection() {
+            console.log('[ONBOARDING] Going back to client selection');
+            document.getElementById('onboardingScreen2').style.display = 'none';
+            document.getElementById('onboardingScreen1').style.display = 'flex';
+            document.getElementById('clientListMode').style.display = 'flex';
+            document.getElementById('clientFormMode').style.display = 'none';
+            localStorage.removeItem('selectedClientId');
+            localStorage.removeItem('selectedClientName');
+        }
+
+        // Counseling mode variable (will be set by setOnboardingMode)
+        var counselingMode = 'practice'; // default
+
+        // Onboarding: Set counseling mode (emergency or practice)
+        function setOnboardingMode(mode) {
+            console.log(`[ONBOARDING] Setting mode to: ${mode}`);
+            counselingMode = mode;
+
+            const emergencyBtn = document.getElementById('onboardingEmergencyBtn');
+            const practiceBtn = document.getElementById('onboardingPracticeBtn');
+
+            if (mode === 'emergency') {
+                emergencyBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                emergencyBtn.classList.add('bg-red-500', 'text-white');
+                practiceBtn.classList.remove('bg-green-500', 'text-white');
+                practiceBtn.classList.add('bg-gray-200', 'text-gray-700');
+            } else {
+                practiceBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                practiceBtn.classList.add('bg-green-500', 'text-white');
+                emergencyBtn.classList.remove('bg-red-500', 'text-white');
+                emergencyBtn.classList.add('bg-gray-200', 'text-gray-700');
+            }
+        }
+
+        // Onboarding: Complete onboarding and go to main content
+        function completeOnboarding() {
+            console.log(`[ONBOARDING] Completing with mode: ${counselingMode}`);
+
+            // Apply the selected mode if setCounselingMode exists
+            if (typeof setCounselingMode === 'function') {
+                setCounselingMode(counselingMode);
+            }
+
+            document.getElementById('onboardingContainer').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+        }
+    </script>
+
     <!-- Login Form (shown when not logged in) - Mobile-Friendly Design -->
     <div id="loginContainer" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white">
         <div class="w-full max-w-md px-6 py-8 fade-in">
