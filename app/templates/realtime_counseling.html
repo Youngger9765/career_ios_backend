@@ -475,6 +475,15 @@
 
             // Hide mobile global nav
             document.getElementById('mobileGlobalNav').style.display = 'none';
+
+            // Reset debug mode state
+            if (typeof isDebugMode !== 'undefined') {
+                isDebugMode = false;
+                const debugIndicator = document.getElementById('debugIndicator');
+                if (debugIndicator) {
+                    debugIndicator.classList.add('hidden');
+                }
+            }
         }
 
         // Onboarding: Show client form
@@ -5540,15 +5549,8 @@
             document.getElementById('mainContent').style.display = 'block';
         }
 
-        // Show client form
-        function showClientForm() {
-            console.log('[CLIENT_FORM] Showing client creation form');
-            document.getElementById('onboardingContainer').style.display = 'block';
-            document.getElementById('onboardingScreen1').style.display = 'flex';
-            document.getElementById('clientListMode').style.display = 'none';
-            document.getElementById('clientFormMode').style.display = 'flex';
-            document.getElementById('onboardingScreen2').style.display = 'none';
-        }
+        // NOTE: showClientForm() is defined early in the page (line ~490)
+        // Do not redefine it here
 
         // Check if user has client with island_parents data
         async function checkClientExists(authToken) {
@@ -5597,24 +5599,8 @@
             document.getElementById('mainContent').style.display = 'block';
         }
 
-        // Onboarding: Back to client selection from mode selection screen
-        function backToClientSelection() {
-            console.log('[ONBOARDING] Going back to client selection');
-
-            // Hide screen 2 (mode selection)
-            document.getElementById('onboardingScreen2').style.display = 'none';
-
-            // Show screen 1 with client list
-            document.getElementById('onboardingScreen1').style.display = 'flex';
-            document.getElementById('clientListMode').style.display = 'flex';
-            document.getElementById('clientFormMode').style.display = 'none';
-
-            // Clear selected client info from localStorage
-            localStorage.removeItem('selectedClientId');
-            localStorage.removeItem('selectedClientName');
-
-            console.log('[ONBOARDING] Back to client selection complete');
-        }
+        // NOTE: backToClientSelection() is defined early in the page (line ~500)
+        // Do not redefine it here
 
         // Onboarding: Set counseling mode (emergency or practice)
         function setOnboardingMode(mode) {
@@ -5728,50 +5714,8 @@
             }
         });
 
-        // Go to Home function (navigate back to onboarding screen 1 - client selection)
-        function goToHome() {
-            // Hide all screens
-            document.getElementById('mainContent').style.display = 'none';
-
-            // Hide all onboarding screens
-            const onboardingScreens = document.querySelectorAll('[id^="onboardingScreen"]');
-            onboardingScreens.forEach(screen => {
-                screen.style.display = 'none';
-            });
-
-            // Show onboarding container and screen 1
-            document.getElementById('onboardingContainer').style.display = 'block';
-            document.getElementById('onboardingScreen1').style.display = 'flex';
-
-            // Reset any active recording or analysis
-            if (typeof stopRecording === 'function') {
-                try {
-                    stopRecording();
-                } catch (e) {
-                    console.log('No active recording to stop');
-                }
-            }
-        }
-
-        // Logout function (called by logout button)
-        function logout() {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('userEmail');
-            localStorage.removeItem('tenantId');
-            localStorage.removeItem('debugMode'); // Clear debug mode on logout
-
-            // Hide main content and onboarding, show login form
-            document.getElementById('mainContent').style.display = 'none';
-            document.getElementById('onboardingContainer').style.display = 'none';
-            document.getElementById('loginContainer').style.display = 'flex';
-
-            // Hide mobile global nav
-            document.getElementById('mobileGlobalNav').style.display = 'none';
-
-            // Reset debug mode state
-            isDebugMode = false;
-            document.getElementById('debugIndicator').classList.add('hidden');
-        }
+        // NOTE: goToHome() and logout() are defined early in the page (line ~399, ~465)
+        // to support mobile nav buttons. Do not redefine them here.
 
         // Check auth on page load
         checkAuth();

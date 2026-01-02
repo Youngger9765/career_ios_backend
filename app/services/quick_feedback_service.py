@@ -36,7 +36,8 @@ QUICK_FEEDBACK_PROMPT = """你是親子教養即時督導。
 - 只能一行，不能有換行符號
 - 回應必須符合對話的實際情境，不要套用固定模板
 
-CRITICAL: 只輸出一句話，不要換行，不要額外說明。"""
+CRITICAL: 只輸出一句話，不要換行，不要額外說明。
+CRITICAL: 所有回應必須使用繁體中文（zh-TW），不可使用簡體中文。"""
 
 
 class QuickFeedbackService:

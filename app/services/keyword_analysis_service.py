@@ -42,16 +42,16 @@ async def _select_expert_suggestions(
     gemini_service: GeminiService = None,
 ) -> List[str]:
     """
-    从 200 句专家建议中使用 AI 挑选最适合的建议
+    從 200 句專家建議中使用 AI 挑選最適合的建議
 
     Args:
-        transcript: 对话逐字稿
-        safety_level: 安全等级 (green/yellow/red)
-        num_suggestions: 要挑选的建议数量（emergency=2, practice=4）
+        transcript: 對話逐字稿
+        safety_level: 安全等級 (green/yellow/red)
+        num_suggestions: 要挑選的建議數量（emergency=2, practice=4）
         gemini_service: Gemini API service
 
     Returns:
-        List of selected suggestions (1-4 sentences)
+        List of selected suggestions (1-4 sentences, max 200 chars each)
     """
     # Import suggestions from config
     from app.config.parenting_suggestions import (
@@ -71,19 +71,22 @@ async def _select_expert_suggestions(
     # Build prompt for AI to select suggestions
     suggestions_list = "\n".join([f"  - {s}" for s in pool])
 
-    prompt = f"""从以下专家建议中选择 {num_suggestions} 句最符合当前对话的建议：
+    prompt = f"""從以下專家建議中選擇 {num_suggestions} 句最符合當前對話的建議：
 
-【当前对话】
+【當前對話】
 {transcript}
 
-【专家建议句库】
+【專家建議句庫】
 {suggestions_list}
 
-请选择 {num_suggestions} 句最适合的建议。
-规则：
-1. 必须从上述建议中逐字选择，不要改写
-2. 选择最符合当前情境的建议
-3. 输出 JSON 格式：{{"suggestions": ["句子1", "句子2"]}}
+請選擇 {num_suggestions} 句最適合的建議。
+規則：
+1. 必須從上述建議中逐字選擇，不要改寫
+2. 選擇最符合當前情境的建議
+3. **每句建議必須在 200 字以內**（優先選擇簡短的建議）
+4. 輸出 JSON 格式：{{"suggestions": ["句子1", "句子2"]}}
+
+CRITICAL: 所有回應必須使用繁體中文（zh-TW），不可使用簡體中文。
 """
 
     try:
@@ -107,7 +110,24 @@ async def _select_expert_suggestions(
         if json_start >= 0 and json_end > json_start:
             json_str = response_text[json_start:json_end]
             result = json.loads(json_str)
-            return result.get("suggestions", [])
+            suggestions = result.get("suggestions", [])
+
+            # CRITICAL: Enforce 200-character limit to prevent UI overflow
+            max_chars = 200
+            truncated_suggestions = []
+            for sug in suggestions:
+                if len(sug) > max_chars:
+                    # Truncate and add ellipsis
+                    truncated = sug[: max_chars - 3] + "..."
+                    logger.warning(
+                        f"Suggestion truncated from {len(sug)} to {max_chars} chars: "
+                        f"'{sug[:50]}...'"
+                    )
+                    truncated_suggestions.append(truncated)
+                else:
+                    truncated_suggestions.append(sug)
+
+            return truncated_suggestions
         else:
             # Fallback: return random suggestions
             import random
