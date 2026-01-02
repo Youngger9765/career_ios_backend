@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Traditional Chinese (zh-TW) Enforcement** (2026-01-02)
+  - Issue: Simplified Chinese characters found in AI prompts and code comments
+    - Files affected: app/services/keyword_analysis_service.py (lines 45-50, 74-87)
+    - Characters: 从→從, 专家→專家, 建议→建議, 挑选→挑選, 适合→適合, 对话→對話, 等级→等級, 数量→數量, 当前→當前, 库→庫, 请→請, 选择→選擇, 规则→規則, 必须→必須, 改写→改寫, 输出→輸出
+  - Fix: Converted all simplified Chinese to Traditional Chinese
+    - Updated docstrings and AI prompts in keyword_analysis_service.py
+    - Added explicit zh-TW enforcement to both Quick Feedback and Deep Analysis prompts
+    - Added instruction: "CRITICAL: 所有回應必須使用繁體中文（zh-TW），不可使用簡體中文。"
+  - Impact: All AI responses (Quick Feedback & Deep Analysis) now guaranteed to use Traditional Chinese
+  - Files: app/services/keyword_analysis_service.py, app/services/quick_feedback_service.py
+  - Commit: 7c0f9dd
+
 - **Quick Feedback Contextual Analysis Fix** (2026-01-02)
   - Issue: Hardcoded scenario rules caused false positives in feedback
     - Example: "我數到三，一、二、三！" (threatening countdown) misclassified as "testing microphone"

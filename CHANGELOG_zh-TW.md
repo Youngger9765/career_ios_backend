@@ -10,6 +10,18 @@
 ## [未發布]
 
 ### 修復
+- **繁體中文（zh-TW）強制執行** (2026-01-02)
+  - 問題：AI prompt 和程式碼註解中發現簡體中文字元
+    - 受影響檔案：app/services/keyword_analysis_service.py（第 45-50, 74-87 行）
+    - 字元：从→從、专家→專家、建议→建議、挑选→挑選、适合→適合、对话→對話、等级→等級、数量→數量、当前→當前、库→庫、请→請、选择→選擇、规则→規則、必须→必須、改写→改寫、输出→輸出
+  - 修復：將所有簡體中文轉換為繁體中文
+    - 更新 keyword_analysis_service.py 的 docstring 和 AI prompts
+    - 在快速回饋和深度分析 prompt 中加入明確的 zh-TW 強制指令
+    - 新增指示：「CRITICAL: 所有回應必須使用繁體中文（zh-TW），不可使用簡體中文。」
+  - 影響：所有 AI 回應（快速回饋與深度分析）現在保證使用繁體中文
+  - 檔案：app/services/keyword_analysis_service.py、app/services/quick_feedback_service.py
+  - Commit：7c0f9dd
+
 - **快速回饋情境分析修復** (2026-01-02)
   - 問題：硬編碼情境規則導致回饋誤判
     - 範例：「我數到三，一、二、三！」（威脅倒數）被誤判為「測試麥克風」
