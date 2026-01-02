@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Database Migration: Added Missing `last_billed_minutes` Column** (2026-01-02)
+  - Issue: Analysis stuck due to missing `session_usages.last_billed_minutes` column
+  - Root cause: Migration 02c909267dd6 was marked as applied but column wasn't created
+  - Fix: Manually added column via `ALTER TABLE session_usages ADD COLUMN last_billed_minutes INTEGER NOT NULL DEFAULT 0`
+  - Impact: Real-time analysis now works correctly, incremental billing operational
+  - Error: `psycopg2.errors.UndefinedColumn: column session_usages.last_billed_minutes does not exist`
+
+- **Mobile Client List Not Reloading on "回到首頁" Click** (2026-01-02)
+  - Issue: When clicking "回到首頁" button, client list showed stale data from initial login
+  - Root cause: `goToHome()` function didn't reload clients from API
+  - Original behavior: Showed cached HTML from initial login, no API call
+  - Fix: Inlined client loading logic directly in `goToHome()` function
+  - Implementation:
+    - Made `goToHome()` async function
+    - Added `fetch('/api/v1/clients')` call with proper error handling
+    - Re-renders client list with fresh data from API
+    - Handles edge cases (no clients → show form, renderClientList not defined → log error)
+  - Impact: Client list always fresh when returning home, newly added clients appear immediately
+  - Lines changed: app/templates/realtime_counseling.html:399-462
+  - Console logs: `[ONBOARDING] Going back to home`, `[CLIENT_LIST] Fetching clients...`
+
 ### Added
 - **Mobile Global Navigation for Island Parents** (2026-01-02)
   - Added persistent navigation header on all mobile pages

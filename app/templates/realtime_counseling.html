@@ -396,19 +396,11 @@
     <!-- Early function definitions for mobile nav buttons -->
     <script>
         // Go to Home function (navigate back to onboarding screen 1 - client selection)
-        function goToHome() {
-            // Hide all screens
-            document.getElementById('mainContent').style.display = 'none';
-            document.getElementById('onboardingContainer').style.display = 'block';
+        async function goToHome() {
+            console.log('[ONBOARDING] Going back to home (client selection)');
 
-            // Reset to first onboarding screen (client selection)
-            const onboardingScreens = document.querySelectorAll('[id^="onboardingScreen"]');
-            onboardingScreens.forEach(screen => {
-                screen.style.display = 'none';
-            });
-            document.getElementById('onboardingScreen1').style.display = 'flex';
-            document.getElementById('clientListMode').style.display = 'flex';
-            document.getElementById('clientFormMode').style.display = 'none';
+            // Hide main content
+            document.getElementById('mainContent').style.display = 'none';
 
             // Reset any active recording or analysis
             if (typeof stopRecording === 'function') {
@@ -417,6 +409,55 @@
                 } catch (e) {
                     console.log('No active recording to stop');
                 }
+            }
+
+            // Reload client list from API
+            try {
+                const authToken = localStorage.getItem('authToken');
+                console.log('[CLIENT_LIST] Fetching clients...');
+
+                const response = await fetch('/api/v1/clients', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const clients = data.items || data || [];
+                    console.log('[CLIENT_LIST] Loaded clients:', clients.length);
+
+                    // Show onboarding container
+                    document.getElementById('onboardingContainer').style.display = 'block';
+
+                    // If no clients, show client form
+                    if (clients.length === 0) {
+                        console.log('[CLIENT_LIST] No clients, showing form');
+                        if (typeof showClientForm === 'function') {
+                            showClientForm();
+                        }
+                        return;
+                    }
+
+                    // Show client list mode
+                    console.log('[CLIENT_LIST] Showing client list');
+                    document.getElementById('onboardingScreen1').style.display = 'flex';
+                    document.getElementById('clientListMode').style.display = 'flex';
+                    document.getElementById('clientFormMode').style.display = 'none';
+                    document.getElementById('onboardingScreen2').style.display = 'none';
+
+                    // Render client list (will be defined later in the page)
+                    if (typeof window.renderClientList === 'function') {
+                        window.renderClientList(clients);
+                    } else {
+                        console.error('[CLIENT_LIST] renderClientList function not found');
+                    }
+                } else {
+                    console.error('[CLIENT_LIST] Failed to fetch clients');
+                }
+            } catch (error) {
+                console.error('[CLIENT_LIST] Error loading clients:', error);
             }
         }
 

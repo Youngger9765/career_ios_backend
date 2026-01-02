@@ -9,6 +9,28 @@
 
 ## [未發布]
 
+### 修復
+- **資料庫遷移：補上遺失的 `last_billed_minutes` 欄位** (2026-01-02)
+  - 問題：即時分析卡住，因為 `session_usages.last_billed_minutes` 欄位不存在
+  - 根本原因：遷移腳本 02c909267dd6 標記為已執行，但欄位實際未建立
+  - 修復：手動新增欄位 `ALTER TABLE session_usages ADD COLUMN last_billed_minutes INTEGER NOT NULL DEFAULT 0`
+  - 影響：即時分析現在正常運作，增量計費功能可用
+  - 錯誤訊息：`psycopg2.errors.UndefinedColumn: column session_usages.last_billed_minutes does not exist`
+
+- **手機版點擊「回到首頁」時客戶清單未重新載入** (2026-01-02)
+  - 問題：點擊「回到首頁」按鈕時，客戶清單顯示初次登入時的舊資料
+  - 根本原因：`goToHome()` 函數未從 API 重新載入客戶清單
+  - 原始行為：顯示初次登入時快取的 HTML，沒有呼叫 API
+  - 修復：直接在 `goToHome()` 函數中內嵌客戶載入邏輯
+  - 實作細節：
+    - 將 `goToHome()` 改為非同步函數
+    - 新增 `fetch('/api/v1/clients')` API 呼叫，包含錯誤處理
+    - 使用 API 最新資料重新渲染客戶清單
+    - 處理邊界情況（無客戶 → 顯示表單，renderClientList 未定義 → 記錄錯誤）
+  - 影響：返回首頁時客戶清單永遠是最新的，新增的客戶立即顯示
+  - 檔案變更：app/templates/realtime_counseling.html:399-462
+  - Console 日誌：`[ONBOARDING] Going back to home`, `[CLIENT_LIST] Fetching clients...`
+
 ### 新增
 - **Island Parents 手機版全域導航** (2026-01-02)
   - 在所有手機頁面新增持久化導航列
