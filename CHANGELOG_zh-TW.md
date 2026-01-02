@@ -9,7 +9,59 @@
 
 ## [未發布]
 
+### 新增
+- **Island Parents 手機版全域導航** (2026-01-02)
+  - 在所有手機頁面新增持久化導航列
+  - 功能：
+    - 左上角：「回到首頁」按鈕 - 返回客戶選擇頁面
+    - 右上角：「登出」按鈕（紅色）- 登出使用者
+  - 實作細節：
+    - 固定於頂部的 header，z-index 9999（永遠在最上層）
+    - 僅在手機顯示（md:hidden）
+    - 登入時自動顯示，登出時隱藏
+  - 影響：所有手機頁面導航一致，方便登出
+  - 檔案變更：app/templates/realtime_counseling.html
+
+- **Island Parents 手機版引導流程強化** (2026-01-02)
+  - 重新設計兩階段引導流程：
+    - 第一頁：選擇或建立孩子
+    - 第二頁：選擇模式（實戰/練習）+ 確認孩子名稱
+  - 新增功能：
+    - 顯示「現在要跟 [孩子名稱] 對話」- 明確告知將與哪個孩子對話
+    - 模式選擇頁新增「返回」按鈕，可重新選擇孩子
+    - 按鈕文字改為「開始對話」（原為「下一步」）
+  - 手機優先：登入後首頁導向客戶選擇，而非主內容
+  - 影響：家長引導體驗更佳，清楚知道當前選擇的孩子
+  - 檔案變更：app/templates/realtime_counseling.html
+
+### 變更
+- **Island Parents 快速回饋改進** (2026-01-02)
+  - 間隔時間從 10 秒增加到 20 秒（降低干擾）
+  - 修正 AI 回應的斷行問題：
+    - 在 prompt 新增「CRITICAL: 只輸出一句話，不要換行」
+    - 在回應處理中移除 `\n` 和 `\r` 字元
+  - 改為兩行顯示：
+    - 上方：深度分析（較大、粗體）
+    - 下方：快速回饋（較小、較淡）
+    - 不再覆蓋深度分析結果
+  - 影響：回饋節奏更自然，UI 呈現更清晰
+  - 檔案變更：
+    - app/services/quick_feedback_service.py（prompt + 處理邏輯）
+    - app/templates/realtime_counseling.html（兩行顯示）
+
 ### 修復
+- **手機導航 Z-Index 問題** (2026-01-02)
+  - 修正手機導航被 onboarding 容器遮蓋的問題
+  - 將 z-index 從 z-50 改為 z-[9999]
+  - 影響：所有手機頁面的導航按鈕現在正確顯示
+  - 檔案變更：app/templates/realtime_counseling.html
+
+- **手機版客戶選擇畫面顯示** (2026-01-02)
+  - 修正手機登入後空白畫面的問題
+  - 在 checkAuth 函數中明確初始化 clientListMode 顯示狀態
+  - 影響：手機登入後正確顯示客戶選擇畫面
+  - 檔案變更：app/templates/realtime_counseling.html（checkAuth 函數）
+
 - **Web 即時諮詢 - Island Parents 流程** (2026-01-02)
   - 修正預設租戶：從 'career' 改為 'island_parents'（家長使用的網頁介面）
   - 修正 session 初始化：現在使用 onboarding 階段選擇的客戶，而非硬編碼預設值

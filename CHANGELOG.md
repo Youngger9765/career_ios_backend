@@ -9,7 +9,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Mobile Global Navigation for Island Parents** (2026-01-02)
+  - Added persistent navigation header on all mobile pages
+  - Features:
+    - Left: "回到首頁" (Home) button - returns to client selection
+    - Right: "登出" (Logout) button in red - logs out user
+  - Implementation:
+    - Fixed header with z-index 9999 (always on top)
+    - Only visible on mobile (md:hidden)
+    - Auto-shows when user logged in, hides when logged out
+  - Impact: Consistent navigation across all mobile screens, easy access to logout
+  - Files changed: app/templates/realtime_counseling.html
+
+- **Enhanced Mobile Onboarding for Island Parents** (2026-01-02)
+  - Redesigned two-screen onboarding flow:
+    - Screen 1: Select or create child
+    - Screen 2: Choose mode (Emergency/Practice) + confirm child name
+  - Features added:
+    - "現在要跟 [孩子名稱] 對話" - Shows which child will be talked to
+    - Back button on mode selection to re-select child
+    - "開始對話" button (changed from "下一步")
+  - Mobile-first: Homepage routes to client selection instead of main content
+  - Impact: Better UX for parent onboarding, clear context about selected child
+  - Files changed: app/templates/realtime_counseling.html
+
+### Changed
+- **Quick Feedback Improvements for Island Parents** (2026-01-02)
+  - Increased interval from 10 seconds to 20 seconds (less intrusive)
+  - Fixed line-breaking issues in AI responses:
+    - Added "CRITICAL: 只輸出一句話，不要換行" to prompt
+    - Strip `\n` and `\r` characters in response processing
+  - Changed display layout to two-line format:
+    - Top line: Deep analysis (larger, bold)
+    - Bottom line: Quick feedback (smaller, lighter opacity)
+    - No longer overwrites Deep analysis
+  - Impact: More natural feedback rhythm, cleaner UI presentation
+  - Files changed:
+    - app/services/quick_feedback_service.py (prompt + processing)
+    - app/templates/realtime_counseling.html (two-line display)
+
 ### Fixed
+- **Mobile Navigation Z-Index Issue** (2026-01-02)
+  - Fixed mobile navigation being hidden behind onboarding container
+  - Changed z-index from z-50 to z-[9999]
+  - Impact: Navigation buttons now properly visible on all mobile pages
+  - Files changed: app/templates/realtime_counseling.html
+
+- **Mobile Client Selection Display** (2026-01-02)
+  - Fixed blank screen issue after mobile login
+  - Added explicit initialization of clientListMode display state
+  - Impact: Client selection properly shows after login on mobile
+  - Files changed: app/templates/realtime_counseling.html (checkAuth function)
+
 - **Web Realtime Counseling - Island Parents Flow** (2026-01-02)
   - Fixed default tenant: Changed from 'career' to 'island_parents' for parent-facing web interface
   - Fixed session initialization: Now uses client selected during onboarding instead of hardcoded defaults
