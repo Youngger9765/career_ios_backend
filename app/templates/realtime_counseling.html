@@ -5059,6 +5059,12 @@
                 if (isMobile) {
                     document.getElementById('onboardingContainer').style.display = 'block';
                     document.getElementById('mainContent').style.display = 'none';
+
+                    // Show onboarding screen 1 (client selection)
+                    document.getElementById('onboardingScreen1').style.display = 'flex';
+                    document.getElementById('onboardingScreen2').style.display = 'none';
+                    document.getElementById('clientListMode').style.display = 'flex';
+                    document.getElementById('clientFormMode').style.display = 'none';
                 } else {
                     document.getElementById('mainContent').style.display = 'block';
                     document.getElementById('onboardingContainer').style.display = 'none';
