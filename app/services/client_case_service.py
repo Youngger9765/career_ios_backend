@@ -55,19 +55,19 @@ class ClientCaseService:
         # Generate client code
         client_code = generate_client_code(self.db, tenant_id)
 
-        # Check email uniqueness
-        existing_client = self.db.execute(
-            select(Client).where(
-                Client.email == client_data["email"],
-                Client.tenant_id == tenant_id,
-                Client.deleted_at.is_(None),
-            )
-        ).scalar_one_or_none()
+        # Check email uniqueness (only if email is provided)
+        client_email = client_data.get("email")
+        if client_email:
+            existing_client = self.db.execute(
+                select(Client).where(
+                    Client.email == client_email,
+                    Client.tenant_id == tenant_id,
+                    Client.deleted_at.is_(None),
+                )
+            ).scalar_one_or_none()
 
-        if existing_client:
-            raise ValueError(
-                f"Email {client_data['email']} already exists for this tenant"
-            )
+            if existing_client:
+                raise ValueError(f"Email {client_email} already exists for this tenant")
 
         # Create client
         new_client = Client(

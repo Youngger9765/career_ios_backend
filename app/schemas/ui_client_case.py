@@ -14,7 +14,7 @@ class CreateClientCaseRequest(BaseModel):
 
     # Client 必填欄位
     name: str = Field(..., min_length=1, max_length=100, description="客戶姓名")
-    email: EmailStr = Field(..., description="Email")
+    email: Optional[EmailStr] = Field(None, description="Email (選填，親子版可留空)")
     gender: str = Field(..., description="性別：男/女/其他/不便透露")
     birth_date: date = Field(..., description="生日（西元年）")
     phone: str = Field(..., description="手機號碼")
@@ -47,7 +47,7 @@ class CreateClientCaseResponse(BaseModel):
     client_id: UUID
     client_code: str
     client_name: str
-    client_email: str
+    client_email: Optional[str] = None  # 選填，親子版可留空
 
     # Case 資訊
     case_id: UUID
@@ -69,7 +69,7 @@ class ClientCaseDetailResponse(BaseModel):
     client_id: UUID
     client_name: str
     client_code: str
-    client_email: str
+    client_email: Optional[str] = None  # 選填，親子版可留空
     gender: str
     birth_date: date
     phone: str
@@ -142,7 +142,7 @@ class ClientCaseListItem(BaseModel):
     # Client 基本資訊
     client_name: str = Field(..., description="客戶姓名")
     client_code: str = Field(..., description="客戶代碼")
-    client_email: str = Field(..., description="客戶 Email")
+    client_email: Optional[str] = Field(None, description="客戶 Email (選填)")
 
     # Client 狀態資訊
     identity_option: str = Field(

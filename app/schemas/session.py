@@ -59,8 +59,8 @@ class SessionCreateRequest(BaseModel):
     """創建會談記錄請求"""
 
     case_id: UUID
-    session_date: str
-    name: Optional[str] = None
+    session_date: Optional[str] = None  # 選填，預設今天
+    name: Optional[str] = None  # 選填，自動生成 "諮詢 - 日期時間"
     start_time: Optional[str] = None
     end_time: Optional[str] = None
     transcript: Optional[str] = None
@@ -96,6 +96,9 @@ class SessionUpdateRequest(BaseModel):
     duration_minutes: Optional[int] = None
     reflection: Optional[dict] = None
     recordings: Optional[List[RecordingSegment]] = None
+    # Island Parents - 練習情境
+    scenario: Optional[str] = None
+    scenario_description: Optional[str] = None
 
 
 class SessionResponse(BaseModel):
@@ -117,6 +120,9 @@ class SessionResponse(BaseModel):
     notes: Optional[str]
     reflection: Optional[dict] = None
     recordings: Optional[List[RecordingSegment]] = None
+    # Island Parents - 練習情境
+    scenario: Optional[str] = None
+    scenario_description: Optional[str] = None
     has_report: bool
     created_at: datetime
     updated_at: Optional[datetime]

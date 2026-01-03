@@ -361,6 +361,156 @@
         }
 
         /* Header is now controlled via Tailwind classes (hidden md:block) */
+
+        /* Custom Alert Modal Styles */
+        .custom-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.2s ease-out;
+        }
+
+        .custom-modal-overlay.show {
+            opacity: 1;
+        }
+
+        .custom-modal-container {
+            width: 100%;
+            max-width: 380px;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: scale(0.95) translateY(10px);
+            transition: transform 0.2s ease-out;
+            overflow: hidden;
+        }
+
+        .custom-modal-overlay.show .custom-modal-container {
+            transform: scale(1) translateY(0);
+        }
+
+        .custom-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .custom-modal-header.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border-bottom: none;
+        }
+
+        .custom-modal-header.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border-bottom: none;
+        }
+
+        .custom-modal-header.warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            border-bottom: none;
+        }
+
+        .custom-modal-header.info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border-bottom: none;
+        }
+
+        .custom-modal-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .custom-modal-close {
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            color: inherit;
+        }
+
+        .custom-modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .custom-modal-body {
+            padding: 1.25rem;
+            font-size: 0.9375rem;
+            line-height: 1.6;
+            color: #374151;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 50vh;
+            overflow-y: auto;
+        }
+
+        .custom-modal-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .custom-modal-btn {
+            padding: 0.625rem 1.5rem;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            min-width: 80px;
+        }
+
+        .custom-modal-btn.primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .custom-modal-btn.primary:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        }
+
+        .custom-modal-btn.primary:active {
+            transform: scale(0.97);
+        }
+
+        /* Mobile optimization for modal */
+        @media (max-width: 430px) {
+            .custom-modal-container {
+                max-width: calc(100% - 2rem);
+            }
+
+            .custom-modal-body {
+                font-size: 0.875rem;
+            }
+
+            .custom-modal-btn {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
@@ -395,6 +545,79 @@
 
     <!-- Early function definitions for mobile nav buttons -->
     <script>
+        /**
+         * Custom Modal Function - Replaces native alert()
+         * @param {string} title - Modal title
+         * @param {string} message - Modal message (supports \n for line breaks)
+         * @param {string} type - 'success' | 'error' | 'warning' | 'info'
+         * @returns {Promise<void>} - Resolves when modal is closed
+         */
+        function showModal(title, message, type = 'info') {
+            return new Promise((resolve) => {
+                // Get icon based on type
+                const icons = {
+                    success: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
+                    error: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>',
+                    warning: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
+                    info: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
+                };
+
+                // Create modal overlay
+                const overlay = document.createElement('div');
+                overlay.className = 'custom-modal-overlay';
+                overlay.innerHTML = `
+                    <div class="custom-modal-container">
+                        <div class="custom-modal-header ${type}">
+                            <div class="custom-modal-title">
+                                ${icons[type] || icons.info}
+                                <span>${title}</span>
+                            </div>
+                            <button class="custom-modal-close" aria-label="Close">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="custom-modal-body">${message}</div>
+                        <div class="custom-modal-footer">
+                            <button class="custom-modal-btn primary">OK</button>
+                        </div>
+                    </div>
+                `;
+
+                // Close modal function
+                const closeModal = () => {
+                    overlay.classList.remove('show');
+                    setTimeout(() => {
+                        overlay.remove();
+                        resolve();
+                    }, 200);
+                };
+
+                // Event listeners
+                overlay.querySelector('.custom-modal-close').addEventListener('click', closeModal);
+                overlay.querySelector('.custom-modal-btn').addEventListener('click', closeModal);
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) closeModal();
+                });
+
+                // Keyboard support (Escape to close)
+                const handleKeydown = (e) => {
+                    if (e.key === 'Escape') {
+                        closeModal();
+                        document.removeEventListener('keydown', handleKeydown);
+                    }
+                };
+                document.addEventListener('keydown', handleKeydown);
+
+                // Add to DOM and show
+                document.body.appendChild(overlay);
+                requestAnimationFrame(() => {
+                    overlay.classList.add('show');
+                });
+            });
+        }
+
         // Go to Home function (navigate back to onboarding screen 1 - client selection)
         async function goToHome() {
             console.log('[ONBOARDING] Going back to home (client selection)');
@@ -1981,7 +2204,7 @@
                         loadingOverlay.style.display = 'none';  // Force hide
                     }
 
-                    alert('報告生成失敗，請稍後再試');
+                    showModal('報告生成失敗', '請稍後再試', 'error');
                 } finally {
                     // Reset button text back to "查看報告"
                     viewReportBtn.innerHTML = '查看報告';
@@ -2411,7 +2634,7 @@
 
                     case 'error':
                         console.error('❌ ElevenLabs error:', message);
-                        alert(`語音辨識錯誤: ${message.message || message.error || '未知錯誤'}`);
+                        showModal('語音辨識錯誤', message.message || message.error || '未知錯誤', 'error');
                         break;
 
                     default:
@@ -2700,7 +2923,7 @@
                     console.log('🎤 Real recording started with ElevenLabs STT');
                 } catch (error) {
                     console.error('❌ Failed to start real recording:', error);
-                    alert(`無法啟動麥克風或連接語音辨識服務：${error.message}\n\n將切換到 Demo 模式`);
+                    showModal('麥克風啟動失敗', `無法啟動麥克風或連接語音辨識服務：${error.message}\n\n將切換到 Demo 模式`, 'warning');
                     isDemoMode = true; // Fallback to demo mode
                 }
             }
@@ -3035,7 +3258,7 @@
         function toggleRecordingMode() {
             // Prevent mode change during recording
             if (isRecording) {
-                alert('請先停止錄音再切換模式');
+                showModal('無法切換模式', '請先停止錄音再切換模式', 'warning');
                 return;
             }
 
@@ -3540,7 +3763,7 @@
                 // Restore button state and show error
                 isAnalyzing = false;
                 setAnalyzeButtonsLoading(false);
-                alert('目前沒有逐字稿內容，請先開始錄音');
+                showModal('無法分析', '目前沒有逐字稿內容，請先開始錄音', 'warning');
                 return;
             }
 
@@ -3742,7 +3965,7 @@
                 console.error('Analysis error:', error);
 
                 // Show error message to user (don't silently fall back to mock data)
-                alert(`分析失敗: ${error.message}\n\n請檢查:\n1. Codeer API 連線是否正常\n2. 選擇的模型是否已設定\n3. 查看 Console 了解詳細錯誤`);
+                showModal('分析失敗', `${error.message}\n\n請檢查:\n1. Codeer API 連線是否正常\n2. 選擇的模型是否已設定\n3. 查看 Console 了解詳細錯誤`, 'error');
 
                 // Log detailed error for debugging
                 console.warn('分析失敗，錯誤詳情:', {
@@ -4351,7 +4574,7 @@
         // === Manual Analysis Triggers ===
         function manuallyTriggerAnalysis() {
             if (transcriptSegments.length === 0) {
-                alert('請先按 T 鍵新增對話內容');
+                showModal('無法分析', '請先按 T 鍵新增對話內容', 'info');
                 return;
             }
             analyzeTranscript();
@@ -5023,7 +5246,7 @@
 
         function toggleAudioPlayback() {
             if (!isRecording) {
-                alert('請先點擊「開始會談」');
+                showModal('尚未開始會談', '請先點擊「開始會談」', 'info');
                 return;
             }
 
@@ -5670,17 +5893,16 @@
                     body: JSON.stringify({
                         tenant_id: tenantId,
                         name: childNickname,
-                        code: `CHILD_${Date.now()}`, // Auto-generate code
-                        email: `${childNickname.toLowerCase()}@island-parents.local`,
+                        // email 選填，親子版不需要
                         gender: '不透露',
-                        birth_date: '2015-01-01', // Default birth date
-                        phone: '0900000000',
-                        identity_option: '其他',
-                        current_status: '進行中',
-                        island_parents: {
-                            child_grade: childGrade,
-                            parent_relation: parentRelation
-                        }
+                        birth_date: '2015-01-01',
+                        phone: '0000000000',
+                        identity_option: '孩子',
+                        current_status: `年級: ${childGrade}`,
+                        notes: `關係: ${parentRelation}`,
+                        case_summary: `親子溝通練習 - ${new Date().toLocaleString('zh-TW')}`,
+                        case_goals: '改善親子關係',
+                        problem_description: '網頁即時諮詢'
                     })
                 });
 
@@ -5697,15 +5919,15 @@
                     await loadAndShowClientList();
 
                     // Show success message
-                    alert(`${childNickname} 已成功新增！`);
+                    showModal('新增成功', `${childNickname} 已成功新增！`, 'success');
                 } else {
                     // Client creation failed
-                    alert(data.detail || '建立失敗，請稍後再試');
+                    showModal('建立失敗', data.detail || '建立失敗，請稍後再試', 'error');
                     console.error('Client creation failed:', data);
                 }
             } catch (error) {
                 console.error('Client setup error:', error);
-                alert('網路錯誤，請稍後再試');
+                showModal('網路錯誤', '網路錯誤，請稍後再試', 'error');
             } finally {
                 // Reset button state
                 submitBtn.disabled = false;

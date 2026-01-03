@@ -18,8 +18,10 @@ class ClientBase(BaseModel):
     name: str = Field(..., description="Client real name")
     nickname: Optional[str] = Field(None, description="Nickname")
 
-    # Common required fields (all tenants)
-    email: str = Field(..., description="Email address for consultation or records")
+    # Common fields (email is optional for Island Parents)
+    email: Optional[str] = Field(
+        None, description="Email address for consultation or records"
+    )
     gender: str = Field(..., description="Gender: 男／女／其他／不透露")
     birth_date: date = Field(
         ..., description="Birth date (Western calendar, 1900-2025)"

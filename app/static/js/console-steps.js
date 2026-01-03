@@ -125,14 +125,14 @@
                 renderForm: () => `
                     <div class="form-group">
                         <label>Tenant ID</label>
-                        <select id="tenant_id" onchange="document.getElementById('email').value = this.value === 'career' ? 'admin@career.com' : 'admin@island.com'">
+                        <select id="tenant_id" onchange="document.getElementById('email').value = this.value === 'career' ? 'admin@career.com' : 'counselor@island-parents.com'">
+                            <option value="island_parents">island_parents</option>
                             <option value="career">career</option>
-                            <option value="island">island</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Email</label>
-                        <input type="email" id="email" value="admin@career.com" />
+                        <input type="email" id="email" value="counselor@island-parents.com" />
                     </div>
                     <div class="form-group">
                         <label>Password</label>
@@ -5051,6 +5051,9 @@
                 }
             }
         };
+
+        // Expose steps to window for island-parents-steps.js
+        window.steps = steps;
 
         // Event handlers
         document.querySelectorAll('.flow-step').forEach(step => {

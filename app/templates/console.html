@@ -1481,6 +1481,92 @@
             </div>
             </div>
 
+            <!-- 3. 親子版測試流程 (Island Parents) -->
+            <div class="flow-group-title" data-group="island-parents">3. 親子版測試流程</div>
+            <div class="flow-group-content" data-group-content="island-parents">
+
+            <div class="flow-step" data-step="island-login">
+                <div>
+                    <span class="step-number">1</span>
+                    <span class="step-title">🔑 登入 Island Parents</span>
+                </div>
+                <div class="step-subtitle">POST /api/auth/login</div>
+            </div>
+
+            <div class="flow-step" data-step="island-select-client" style="border-left: 3px solid #f59e0b;">
+                <div>
+                    <span class="step-number" style="background: #f59e0b;">2a</span>
+                    <span class="step-title">👶 選擇既有孩子</span>
+                </div>
+                <div class="step-subtitle">GET /api/v1/clients → GET /api/v1/cases</div>
+            </div>
+
+            <div class="flow-step" data-step="island-create-client-case">
+                <div>
+                    <span class="step-number">2b</span>
+                    <span class="step-title">📝 建立親子客戶+案件</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/ui/client-case</div>
+            </div>
+
+            <div class="flow-step" data-step="island-create-session">
+                <div>
+                    <span class="step-number">3</span>
+                    <span class="step-title">📋 建立會談</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/sessions</div>
+            </div>
+
+            <div class="flow-step" data-step="island-set-scenario">
+                <div>
+                    <span class="step-number">4</span>
+                    <span class="step-title">🎯 設定練習情境</span>
+                </div>
+                <div class="step-subtitle">PATCH /api/v1/sessions/{id}</div>
+            </div>
+
+            <div class="flow-step" data-step="island-append-recording">
+                <div>
+                    <span class="step-number">5</span>
+                    <span class="step-title">🎙️ Append 錄音片段</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/sessions/{id}/recordings/append</div>
+            </div>
+
+            <div class="flow-step" data-step="island-quick-feedback">
+                <div>
+                    <span class="step-number">6</span>
+                    <span class="step-title">💡 Quick Feedback</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/realtime/quick-feedback</div>
+            </div>
+
+            <div class="flow-step" data-step="island-deep-analysis">
+                <div>
+                    <span class="step-number">7</span>
+                    <span class="step-title">🔬 Deep Analysis</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/realtime/analyze</div>
+            </div>
+
+            <div class="flow-step" data-step="island-verify-suggestions">
+                <div>
+                    <span class="step-number">8</span>
+                    <span class="step-title">✅ 驗證專家建議</span>
+                </div>
+                <div class="step-subtitle">檢查 quick_suggestions (4句) + detailed_scripts (8學派)</div>
+            </div>
+
+            <div class="flow-step" data-step="island-generate-report">
+                <div>
+                    <span class="step-number">9</span>
+                    <span class="step-title">📄 生成親子對話報告</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/realtime/parents-report</div>
+            </div>
+
+            </div>
+
         </div>
 
         <!-- Center Panel: Preview -->
@@ -1521,6 +1607,7 @@
     </div>
 
     <script src="/static/js/console-steps.js"></script>
+    <script src="/static/js/island-parents-steps.js"></script>
 
     <script>
         // Global state

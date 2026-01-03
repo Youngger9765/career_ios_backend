@@ -29,10 +29,10 @@ class Client(Base, BaseModel):
     name = Column(String, nullable=False)  # Real name
     nickname = Column(String)  # Optional nickname
 
-    # Common required fields (all tenants)
+    # Common fields (email optional for island_parents tenant)
     email = Column(
-        String, nullable=False, index=True
-    )  # Email address for consultation or records
+        String, nullable=True, index=True
+    )  # Email address (optional for 親子版)
     gender = Column(String, nullable=False)  # Gender: 男／女／其他／不透露
     birth_date = Column(
         Date, nullable=False

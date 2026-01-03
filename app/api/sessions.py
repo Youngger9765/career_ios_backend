@@ -61,6 +61,9 @@ def _build_session_response(
         notes=session.notes,
         reflection=session.reflection,
         recordings=session.recordings,
+        # Island Parents - 練習情境
+        scenario=session.scenario,
+        scenario_description=session.scenario_description,
         has_report=has_report,
         created_at=session.created_at,
         updated_at=session.updated_at,

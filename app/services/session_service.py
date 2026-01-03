@@ -2,7 +2,7 @@
 Session Service - Business logic for session management
 Refactored from app/api/sessions.py to follow Service Layer pattern
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 from uuid import UUID
 
@@ -45,9 +45,15 @@ class SessionService:
         case = self.session_repo.get_case_by_id(request.case_id, tenant_id)
         if not case:
             raise ValueError("Case not found or access denied")
-        start_time = parse_datetime(request.start_time) if request.start_time else None
+        # Auto-fill session_date if not provided (use today)
+        now = datetime.now(timezone.utc)
+        if request.session_date:
+            session_date = parse_date(request.session_date)
+        else:
+            session_date = now
+        # Auto-fill start_time if not provided (use now)
+        start_time = parse_datetime(request.start_time) if request.start_time else now
         end_time = parse_datetime(request.end_time) if request.end_time else None
-        session_date = parse_date(request.session_date)
         session_number, needs_renumbering = self._calculate_session_number_for_new(
             case.id, start_time if start_time else session_date
         )
@@ -62,12 +68,18 @@ class SessionService:
                 start_time = calc_start
             if calc_end:
                 end_time = calc_end
+        # Auto-generate session name if not provided
+        session_name = request.name
+        if not session_name:
+            date_str = session_date.strftime("%Y-%m-%d")
+            time_str = session_date.strftime("%H:%M")
+            session_name = f"諮詢 - {date_str} {time_str}"
         session = self.session_repo.create(
             case_id=case.id,
             tenant_id=tenant_id,
             session_number=session_number,
             session_date=session_date,
-            name=request.name,
+            name=session_name,
             start_time=start_time,
             end_time=end_time,
             transcript_text=full_transcript,
@@ -243,6 +255,13 @@ class SessionService:
 
         if request.reflection is not None:
             session.reflection = request.reflection
+
+        # Island Parents - 練習情境
+        if request.scenario is not None:
+            session.scenario = request.scenario
+
+        if request.scenario_description is not None:
+            session.scenario_description = request.scenario_description
 
         # Recalculate session_number if time changed
         if time_changed:

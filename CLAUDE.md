@@ -46,6 +46,13 @@
    - Weekly report (if new week)
    - **NO EXCEPTIONS** - even small changes
 
+7. **🌐 Browser Testing = Claude 自動執行**
+   - **NEVER** 請用戶手動測試瀏覽器功能
+   - 使用 `mcp__claude-in-chrome__*` 工具自動化測試
+   - console.html 8 步驟流程：Claude 自己點擊執行
+   - realtime-counseling 手機模擬：Claude 自己操作驗證
+   - 用戶只需要看最終結果報告
+
 ---
 
 ## 🔧 Tool Chain

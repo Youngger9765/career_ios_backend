@@ -37,6 +37,12 @@ class Session(Base, BaseModel):
         JSON, default=dict
     )  # 諮詢師反思（人類撰寫，格式彈性以支援不同租戶需求）
 
+    # Island Parents - 練習情境
+    scenario = Column(
+        String(200), nullable=True
+    )  # 情境標題（如：成績出來了 我不知道怎麼開口）
+    scenario_description = Column(Text, nullable=True)  # 情境描述（詳細說明）
+
     # Recordings - 會談逐字稿片段（JSON list）
     # 支援會談中斷後繼續的場景，每個 recording 包含：
     # - segment_number: 第幾段（1, 2, 3...）
