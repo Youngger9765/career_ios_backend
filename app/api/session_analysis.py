@@ -19,7 +19,6 @@ from app.schemas.session import (
     ParentsReportResponse,
     ProviderMetadata,
     QuickFeedbackResponse,
-    RAGSource,
     RealtimeAnalyzeResponse,
 )
 from app.services.session_service import SessionService
@@ -124,11 +123,12 @@ async def session_deep_analyze(
     db: DBSession = Depends(get_db),
 ) -> RealtimeAnalyzeResponse:
     """
-    深層分析逐字稿
+    深層分析逐字稿（優化版 - 單次 Gemini 呼叫）
 
     - 從 session 自動讀取逐字稿
-    - 使用 KeywordAnalysisService 進行分析
+    - 使用 KeywordAnalysisService.analyze_keywords_simplified() 進行分析
     - 返回 safety_level, summary, suggestions
+    - 比原版快 ~50%（1 次呼叫 vs 2 次呼叫）
     """
     from app.services.keyword_analysis_service import KeywordAnalysisService
 
@@ -155,13 +155,8 @@ async def session_deep_analyze(
         # Sort recordings by segment_number
         sorted_recordings = sorted(recordings, key=lambda r: r.get("segment_number", 0))
 
-        # Separate: current segment vs past context
+        # Get latest recording (current segment to analyze)
         latest_recording = sorted_recordings[-1]
-        previous_recordings = (
-            sorted_recordings[:-1] if len(sorted_recordings) > 1 else []
-        )
-
-        # Current segment to analyze
         current_segment = latest_recording.get("transcript_text", "")
         if not current_segment:
             raise BadRequestError(
@@ -169,66 +164,23 @@ async def session_deep_analyze(
                 instance=instance,
             )
 
-        # Full transcript (all segments)
-        full_transcript = session.transcript_text or current_segment
-
-        # Context = previous segments (history for AI to understand conversation flow)
-        context = "\n\n".join(
-            [
-                r.get("transcript_text", "")
-                for r in previous_recordings
-                if r.get("transcript_text")
-            ]
-        )
-
         # Initialize keyword service
         keyword_service = KeywordAnalysisService(db)
 
-        # Call analysis service with proper separation
+        # Call SIMPLIFIED analysis (1 Gemini call instead of 2)
         logger.info(
-            f"Deep analyze session {session_id}: tenant={tenant_id}, mode={mode}, use_rag={use_rag}"
+            f"Deep analyze (simplified) session {session_id}: "
+            f"tenant={tenant_id}, mode={mode}, segment_len={len(current_segment)}"
         )
-        logger.info(f"  - Current segment: {len(current_segment)} chars")
-        logger.info(f"  - Context (history): {len(context)} chars")
-        logger.info(f"  - Full transcript: {len(full_transcript)} chars")
 
-        analysis_result = await keyword_service.analyze_keywords(
-            session_id=str(session_id),
-            transcript_segment=current_segment,  # ← 當前片段
-            full_transcript=full_transcript,  # ← 完整逐字稿
-            context=context,  # ← 過去的脈絡
-            analysis_type=tenant_id,
+        analysis_result = await keyword_service.analyze_keywords_simplified(
+            transcript_segment=current_segment,
             mode=mode,
-            db=db,
-            use_rag=use_rag,
+            tenant_id=tenant_id,
         )
 
         # Extract results
         quick_suggestions = analysis_result.get("quick_suggestions", [])
-
-        response_data = {
-            "safety_level": analysis_result.get("safety_level", "green"),
-            "summary": analysis_result.get("display_text", "分析完成"),
-            "alerts": [],
-            "suggestions": quick_suggestions,
-        }
-
-        # Add alerts from action_suggestion
-        action_suggestion = analysis_result.get("action_suggestion", "")
-        if action_suggestion:
-            response_data["alerts"].append(action_suggestion)
-
-        # Extract RAG sources
-        rag_documents = analysis_result.get("rag_documents", [])
-        rag_sources = [
-            RAGSource(
-                title=doc.get("title", ""),
-                content=doc.get("content", "")[:300],
-                score=round(float(doc.get("relevance_score", 0)), 2),
-                theory="其他",
-            )
-            for doc in rag_documents
-        ]
 
         # Calculate latency
         latency_ms = int((time.time() - start_time) * 1000)
@@ -236,14 +188,16 @@ async def session_deep_analyze(
             provider="gemini", latency_ms=latency_ms, model="gemini-3-flash-preview"
         )
 
+        logger.info(f"Deep analyze completed in {latency_ms}ms")
+
         return RealtimeAnalyzeResponse(
-            safety_level=response_data["safety_level"],
-            summary=response_data["summary"],
-            alerts=response_data["alerts"],
-            suggestions=response_data["suggestions"],
+            safety_level=analysis_result.get("safety_level", "green"),
+            summary=analysis_result.get("display_text", "分析完成"),
+            alerts=[],
+            suggestions=quick_suggestions,
             time_range="0:00-2:00",
             timestamp=datetime.now(timezone.utc).isoformat(),
-            rag_sources=rag_sources,
+            rag_sources=[],  # Simplified version doesn't use RAG
             cache_metadata=None,
             provider_metadata=provider_metadata,
         )

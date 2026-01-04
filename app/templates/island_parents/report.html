@@ -132,7 +132,7 @@
         reportContent.classList.add('hidden');
 
         try {
-            const token = localStorage.getItem('island_parents_auth_token');
+            const token = localStorage.getItem('island_parents_token');
             if (!token) {
                 window.location.href = '/island-parents/login';
                 return;

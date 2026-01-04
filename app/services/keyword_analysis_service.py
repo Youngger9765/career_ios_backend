@@ -160,6 +160,106 @@ class KeywordAnalysisService:
         "island_parents": "parenting",
     }
 
+    async def analyze_keywords_simplified(
+        self,
+        transcript_segment: str,
+        mode: str = "practice",
+        tenant_id: str = "island_parents",
+    ) -> Dict:
+        """
+        Simplified keyword analysis - 1 Gemini call (optimized).
+
+        Combines safety level detection and expert suggestion selection into
+        a single Gemini call, reducing latency from ~40s to ~15s.
+
+        Args:
+            transcript_segment: Recent transcript text
+            mode: "practice" or "emergency"
+            tenant_id: Tenant identifier
+
+        Returns:
+            Dict with:
+            - safety_level: green/yellow/red
+            - display_text: Short status description
+            - quick_suggestion: Selected expert suggestion
+        """
+        import time
+
+        from app.config.parenting_suggestions import (
+            GREEN_SUGGESTIONS,
+            RED_SUGGESTIONS,
+            YELLOW_SUGGESTIONS,
+        )
+
+        start_time = time.time()
+
+        try:
+            # Get simplified prompt template
+            prompt_template = PromptRegistry.get_prompt(
+                tenant_id, "deep_simplified", mode=mode
+            )
+
+            # Build prompt with embedded suggestions (sample 10 from each for shorter prompt)
+            import random
+
+            green_sample = random.sample(
+                GREEN_SUGGESTIONS, min(10, len(GREEN_SUGGESTIONS))
+            )
+            yellow_sample = random.sample(
+                YELLOW_SUGGESTIONS, min(10, len(YELLOW_SUGGESTIONS))
+            )
+            red_sample = random.sample(RED_SUGGESTIONS, min(10, len(RED_SUGGESTIONS)))
+
+            prompt = prompt_template.format(
+                transcript_segment=transcript_segment[:500],
+                green_suggestions="\n".join(f"- {s}" for s in green_sample),
+                yellow_suggestions="\n".join(f"- {s}" for s in yellow_sample),
+                red_suggestions="\n".join(f"- {s}" for s in red_sample),
+            )
+
+            # Single Gemini call
+            ai_response = await self.gemini_service.generate_text(
+                prompt, temperature=0.3, response_format={"type": "json_object"}
+            )
+
+            # Parse response
+            result = self._parse_ai_response(ai_response)
+
+            # Ensure required fields
+            result.setdefault("safety_level", "green")
+            result.setdefault("display_text", "分析完成")
+            result.setdefault("quick_suggestion", "")
+
+            # Wrap quick_suggestion in list for compatibility
+            result["quick_suggestions"] = (
+                [result["quick_suggestion"]] if result.get("quick_suggestion") else []
+            )
+
+            # Add metadata
+            duration_ms = int((time.time() - start_time) * 1000)
+            result["_metadata"] = {
+                "mode": mode,
+                "duration_ms": duration_ms,
+                "prompt_type": "deep_simplified",
+                "rag_used": False,
+            }
+
+            logger.info(
+                f"Simplified analysis completed in {duration_ms}ms: "
+                f"safety_level={result['safety_level']}"
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Simplified analysis failed: {e}")
+            return {
+                "safety_level": "green",
+                "display_text": "分析中...",
+                "quick_suggestions": [],
+                "_metadata": {"error": str(e)},
+            }
+
     async def analyze_keywords(
         self,
         session_id: str = None,

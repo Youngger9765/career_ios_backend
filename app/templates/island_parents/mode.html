@@ -25,7 +25,7 @@
         <!-- Header -->
         <div class="text-center mb-8">
             <h1 class="text-xl font-bold text-gray-900 mb-2">選擇您目前的情境</h1>
-            <p class="text-gray-500" id="remaining-time-display">預計還可以使用 120 分鐘</p>
+            <p class="text-gray-500" id="remaining-time-display">預計還可以使用 -- 分鐘</p>
         </div>
 
         <!-- Mode Buttons -->
@@ -60,7 +60,7 @@
     // Fetch and display available credits
     async function loadAvailableCredits() {
         try {
-            const token = localStorage.getItem('island_parents_auth_token');
+            const token = localStorage.getItem('island_parents_token');
             const response = await fetch('/api/auth/me', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -73,6 +73,10 @@
                 const credits = Math.floor(data.available_credits || 0);
                 document.getElementById('remaining-time-display').textContent =
                     `預計還可以使用 ${credits} 分鐘`;
+            } else if (response.status === 401) {
+                // Token expired or invalid, redirect to login
+                console.warn('Token expired, redirecting to login');
+                window.location.href = '/island-parents/login';
             }
         } catch (error) {
             console.error('Failed to load credits:', error);

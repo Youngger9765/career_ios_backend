@@ -43,6 +43,8 @@ from app.prompts.career import (
 
 # Import parenting prompts
 from app.prompts.parenting import (
+    DEEP_SIMPLIFIED_EMERGENCY_PROMPT,
+    DEEP_SIMPLIFIED_PRACTICE_PROMPT,
     EMERGENCY_MODE_PROMPT,
     ISLAND_PARENTS_8_SCHOOLS_EMERGENCY_PROMPT,
     ISLAND_PARENTS_8_SCHOOLS_PRACTICE_PROMPT,
@@ -99,6 +101,12 @@ class PromptRegistry:
                 "practice": PRACTICE_MODE_PROMPT,
                 "emergency": EMERGENCY_MODE_PROMPT,
                 "default": PRACTICE_MODE_PROMPT,  # Default to practice
+            },
+            # Optimized deep analysis (1 Gemini call instead of 2)
+            "deep_simplified": {
+                "practice": DEEP_SIMPLIFIED_PRACTICE_PROMPT,
+                "emergency": DEEP_SIMPLIFIED_EMERGENCY_PROMPT,
+                "default": DEEP_SIMPLIFIED_PRACTICE_PROMPT,
             },
             "report": {"default": PARENTING_REPORT_PROMPT},
         },

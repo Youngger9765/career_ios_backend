@@ -1179,7 +1179,7 @@
         }
 
         try {
-            const token = localStorage.getItem('island_parents_auth_token');
+            const token = localStorage.getItem('island_parents_token');
             const response = await fetch(`/api/v1/sessions/${currentSession.id}/usage`, {
                 method: 'POST',
                 headers: {
