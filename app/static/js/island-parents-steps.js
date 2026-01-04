@@ -39,6 +39,30 @@
             title: '🔑 登入 Island Parents',
             subtitle: 'POST /api/auth/login',
             renderForm: () => `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>POST /api/auth/login</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto;">Content-Type: application/json</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "tenant_id": "island_parents",  // 固定值
+  "email": "string",
+  "password": "string"
+}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "access_token": "eyJhbG...",  // JWT token
+  "token_type": "bearer",
+  "expires_in": 7776000         // 90 天
+}</pre>
+                        <p style="margin: 8px 0; color: #ef4444;"><strong>⚠️ 重要：</strong> 後續 API 都需要帶 Authorization header</p>
+                        <pre style="background: #fef2f2; padding: 8px; border-radius: 4px; font-size: 12px;">Authorization: Bearer {access_token}</pre>
+                    </div>
+                </details>
                 <div class="form-group">
                     <label>Tenant ID</label>
                     <input type="text" id="island-tenant" value="island_parents" readonly />
@@ -94,6 +118,52 @@
                 // Auto-load clients when form renders
                 setTimeout(() => window.loadIslandClients(), 100);
                 return `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>GET /api/v1/clients</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 取得所有孩子列表</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Authorization: Bearer {access_token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "items": [
+    {
+      "id": "uuid",           // ⭐ client_id
+      "name": "小明",         // 孩子姓名
+      "client_code": "C0001"  // 客戶編號
+    }
+  ],
+  "total": 10
+}</pre>
+                        <hr style="margin: 12px 0; border: none; border-top: 1px solid #e2e8f0;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>GET /api/v1/cases?client_id={client_id}</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 取得該孩子的所有案件</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Authorization: Bearer {access_token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "items": [
+    {
+      "id": "uuid",              // ⭐ case_id - 建立 Session 用
+      "case_number": "CASE0001",
+      "status": "active"
+    }
+  ],
+  "total": 1
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 流程：</strong></p>
+                        <ol style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li>先調用 GET /api/v1/clients 取得孩子列表</li>
+                            <li>用戶選擇孩子後，調用 GET /api/v1/cases?client_id=xxx</li>
+                            <li>用戶選擇案件，儲存 case_id 供建立 Session 使用</li>
+                        </ol>
+                    </div>
+                </details>
                 <div class="info-card" style="background: #fef3c7; border-left: 4px solid #f59e0b;">
                     <p style="margin: 0; font-size: 13px; color: #78350f;">
                         💡 選擇已建立的孩子，不需要每次都新增
@@ -170,6 +240,36 @@
             title: '📝 建立親子客戶+案件',
             subtitle: 'POST /api/v1/ui/client-case',
             renderForm: () => `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>POST /api/v1/ui/client-case</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Content-Type: application/json
+Authorization: Bearer {access_token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "name": "小明",           // 必填：孩子姓名
+  "birth_date": "2015-06-15",  // 必填：生日 (YYYY-MM-DD)
+  "grade": "小學3年級",     // 選填：年級
+  "relationship": "爸爸",   // 必填：家長關係
+  "case_summary": "",       // 選填：案件摘要
+  "case_goals": ""          // 選填：目標
+}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (201 Created):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "client_id": "uuid",      // ⭐ 儲存這個！
+  "client_code": "C0001",
+  "client_name": "小明",
+  "case_id": "uuid",        // ⭐ 儲存這個！
+  "case_number": "CASE0001",
+  "message": "客戶與個案建立成功"
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong> 儲存 client_id 和 case_id，建立 Session 時需要 case_id</p>
+                    </div>
+                </details>
                 <div class="form-group">
                     <label>孩子姓名</label>
                     <input type="text" id="island-child-name" value="小明" />
@@ -296,6 +396,34 @@
             title: '📋 建立會談',
             subtitle: 'POST /api/v1/sessions',
             renderForm: () => `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>POST /api/v1/sessions</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Content-Type: application/json
+Authorization: Bearer {access_token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "case_id": "uuid",        // 必填：從 Step 2b 取得
+  "name": "諮詢 - 2024-01-01"  // 選填：會談名稱
+  // session_date, start_time 自動產生
+}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (201 Created):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "id": "uuid",             // ⭐ session_id 儲存這個！
+  "client_id": "uuid",
+  "case_id": "uuid",
+  "session_number": 1,
+  "name": "諮詢 - 2024-01-01 15:09",
+  "session_date": "2024-01-01T15:09:04Z",
+  "start_time": "2024-01-01T15:09:04Z"
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong> 儲存 session_id (id 欄位)，後續 API 都需要！</p>
+                    </div>
+                </details>
                 <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
                     <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
                         <strong>Case ID:</strong> ${islandTestData.caseId || '請先建立客戶+案件'}
@@ -367,6 +495,39 @@
             title: '🎯 設定練習情境',
             subtitle: 'PATCH /api/v1/sessions/{id}',
             renderForm: () => `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>PATCH /api/v1/sessions/{session_id}</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 更新 Session 資訊（設定練習情境）</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Content-Type: application/json
+Authorization: Bearer {access_token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>URL 參數:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; font-size: 12px;">session_id: Step 3 回傳的 id</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "scenario": "親子溝通",              // 選填: 練習情境
+  "scenario_description": "寫作業衝突"  // 選填: 情境描述
+}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "id": "uuid",
+  "name": "諮詢 - 2024/01/01",
+  "scenario": "親子溝通",
+  "scenario_description": "寫作業衝突",
+  "updated_at": "2024-01-01T15:00:00Z"
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong></p>
+                        <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li>開始錄音前設定練習情境</li>
+                            <li>scenario 和 scenario_description 都是選填</li>
+                            <li>可以多次 PATCH 更新</li>
+                        </ul>
+                    </div>
+                </details>
                 <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
                     <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
                         <strong>Session ID:</strong> ${islandTestData.sessionId || '請先建立會談'}
@@ -431,29 +592,85 @@
             title: '🎙️ Append 錄音片段',
             subtitle: 'POST /api/v1/sessions/{id}/recordings/append',
             renderForm: () => {
-                const currentSegment = islandTestData.transcriptSegments[islandTestData.currentSegmentIndex] || {};
+                // Use window.islandTestData to avoid closure issues
+                const data = window.islandTestData;
+                const currentSegment = data.transcriptSegments[data.currentSegmentIndex] || {};
+                const maxIndex = data.transcriptSegments.length - 1;
                 return `
+                    <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                        <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                        <div style="margin-top: 12px; font-size: 13px;">
+                            <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                                <code>POST /api/v1/sessions/{session_id}/recordings/append</code>
+                            </div>
+                            <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                            <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Content-Type: application/json
+Authorization: Bearer {access_token}</pre>
+                            <p style="margin: 8px 0; color: #64748b;"><strong>URL 參數:</strong></p>
+                            <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; font-size: 12px;">session_id: Step 3 回傳的 id</pre>
+                            <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong></p>
+                            <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "transcript_text": "家長：寫作業時間囉。\\n孩子：我不想寫。",  // 必填
+  "start_time": "2024-01-01T15:10:00Z",   // 必填: ISO 8601
+  "end_time": "2024-01-01T15:10:10Z"      // 必填: ISO 8601
+  // duration_seconds 選填，後端會自動計算
+}</pre>
+                            <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                            <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "session_id": "uuid",
+  "recording_added": {
+    "segment_number": 1,
+    "start_time": "2024-01-01T15:10:00Z",
+    "end_time": "2024-01-01T15:10:10Z",
+    "duration_seconds": 10,              // 後端計算
+    "transcript_text": "..."
+  },
+  "total_recordings": 1,
+  "transcript_text": "完整逐字稿..."     // 累積
+}</pre>
+                            <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong></p>
+                            <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                                <li>每 10 秒 append 一次</li>
+                                <li>不用傳 duration_seconds，後端會算</li>
+                                <li>累積的 transcript_text 用於分析</li>
+                            </ul>
+                        </div>
+                    </details>
                     <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
                         <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
-                            <strong>Session ID:</strong> ${islandTestData.sessionId || '請先建立會談'}
+                            <strong>Session ID:</strong> ${data.sessionId || '請先建立會談'}
                         </p>
                     </div>
                     <div class="form-group" style="margin-top: 16px;">
-                        <label>片段編號 (${islandTestData.currentSegmentIndex + 1}/${islandTestData.transcriptSegments.length})</label>
+                        <label>片段編號 (${data.currentSegmentIndex + 1}/${data.transcriptSegments.length})</label>
                         <div style="display: flex; gap: 8px;">
-                            <button class="btn" onclick="window.islandTestData.currentSegmentIndex = Math.max(0, window.islandTestData.currentSegmentIndex - 1); window.executeStep('island-append-recording')" ${islandTestData.currentSegmentIndex === 0 ? 'disabled' : ''}>◀ 上一段</button>
-                            <button class="btn" onclick="window.islandTestData.currentSegmentIndex = Math.min(${islandTestData.transcriptSegments.length - 1}, window.islandTestData.currentSegmentIndex + 1); window.executeStep('island-append-recording')" ${islandTestData.currentSegmentIndex === islandTestData.transcriptSegments.length - 1 ? 'disabled' : ''}>下一段 ▶</button>
+                            <button class="btn" onclick="window.islandTestData.currentSegmentIndex = Math.max(0, window.islandTestData.currentSegmentIndex - 1); window.selectStep('island-append-recording')" ${data.currentSegmentIndex === 0 ? 'disabled' : ''}>◀ 上一段</button>
+                            <button class="btn" onclick="window.islandTestData.currentSegmentIndex = Math.min(${maxIndex}, window.islandTestData.currentSegmentIndex + 1); window.selectStep('island-append-recording')" ${data.currentSegmentIndex === maxIndex ? 'disabled' : ''}>下一段 ▶</button>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>時間範圍</label>
-                        <input type="text" id="island-time-range" value="${currentSegment.time || ''}" readonly />
+                    <div style="display: flex; gap: 12px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Start Time (ISO 8601)</label>
+                            <input type="text" id="island-start-time" value="${(() => {
+                                const base = new Date();
+                                const start = new Date(base.getTime() + data.currentSegmentIndex * 10 * 1000);
+                                return start.toISOString();
+                            })()}" />
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>End Time (ISO 8601)</label>
+                            <input type="text" id="island-end-time" value="${(() => {
+                                const base = new Date();
+                                const end = new Date(base.getTime() + (data.currentSegmentIndex + 1) * 10 * 1000);
+                                return end.toISOString();
+                            })()}" />
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>逐字稿內容</label>
                         <textarea id="island-transcript" rows="5">${currentSegment.text || ''}</textarea>
                     </div>
-                    <button class="btn btn-primary" onclick="window.executeIslandAppendRecording()" ${!islandTestData.sessionId ? 'disabled' : ''}>Append 錄音片段</button>
+                    <button class="btn btn-primary" onclick="window.executeIslandAppendRecording()" ${!data.sessionId ? 'disabled' : ''}>Append 錄音片段</button>
                 `;
             },
             execute: async () => {
@@ -462,7 +679,8 @@
                 }
 
                 const transcript = document.getElementById('island-transcript').value;
-                const timeRange = document.getElementById('island-time-range').value;
+                const startTime = document.getElementById('island-start-time').value;
+                const endTime = document.getElementById('island-end-time').value;
 
                 const response = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}/recordings/append`, {
                     method: 'POST',
@@ -472,9 +690,9 @@
                     },
                     body: JSON.stringify({
                         transcript_text: transcript,
-                        start_time: timeRange.split('-')[0] || '0秒',
-                        end_time: timeRange.split('-')[1] || '10秒',
-                        speaker_labels: []
+                        start_time: startTime,
+                        end_time: endTime
+                        // duration_seconds 由後端自動計算
                     })
                 });
 
@@ -505,14 +723,35 @@
 
         'island-quick-feedback': {
             title: '💡 Quick Feedback',
-            subtitle: 'POST /api/v1/realtime/quick-feedback',
+            subtitle: 'POST /api/v1/sessions/{id}/quick-feedback',
             renderForm: () => `
-                <div class="info-card" style="background: #fef3c7; border-left: 4px solid #f59e0b;">
-                    <p style="margin: 0; font-size: 13px; color: #78350f;">
-                        <strong>💡 Quick Feedback</strong>: 輕量級快速反饋（~8秒），使用最近的逐字稿
-                    </p>
-                </div>
-                <div class="info-card" style="margin-top: 12px; background: #f0f9ff; border-left: 4px solid #0ea5e9;">
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>POST /api/v1/sessions/{session_id}/quick-feedback</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 10秒內快速反饋（Toast 提示用）</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Authorization: Bearer {token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong> 無（從 session 自動讀取逐字稿）</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "message": "語氣穩定，建議先同理...",  // ⭐ 顯示這個！
+  "type": "ai_generated",
+  "timestamp": "2024-01-01T15:10:00Z",
+  "latency_ms": 7727                    // ~8秒
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong></p>
+                        <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li>每 10 秒調用一次</li>
+                            <li>message 約 20-50 字，顯示為 Toast</li>
+                            <li>session_id 在 URL 路徑中，不需要 body</li>
+                            <li>需要 Authorization header</li>
+                        </ul>
+                    </div>
+                </details>
+                <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
                     <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
                         <strong>Session ID:</strong> ${islandTestData.sessionId || '請先建立會談並添加錄音'}
                     </p>
@@ -524,19 +763,12 @@
                     throw new Error('請先建立會談並添加錄音');
                 }
 
-                // Get recent transcript from session
-                const sessionResponse = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}`, {
-                    headers: { 'Authorization': `Bearer ${state.token}` }
-                });
-                const sessionData = await sessionResponse.json();
-                const recentTranscript = sessionData.transcript_text || '';
-
-                const response = await fetch(`${BASE_URL}/api/v1/realtime/quick-feedback`, {
+                // New session-based API - no need to fetch transcript separately
+                const response = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}/quick-feedback`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        recent_transcript: recentTranscript
-                    })
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`
+                    }
                 });
 
                 const data = await response.json();
@@ -584,14 +816,47 @@
 
         'island-deep-analysis': {
             title: '🔬 Deep Analysis',
-            subtitle: 'POST /api/v1/realtime/analyze',
+            subtitle: 'POST /api/v1/sessions/{id}/deep-analyze',
             renderForm: () => `
-                <div class="info-card" style="background: #f0fdf4; border-left: 4px solid #10b981;">
-                    <p style="margin: 0; font-size: 13px; color: #065f46;">
-                        <strong>🔬 Deep Analysis</strong>: 完整深層分析（~26秒），使用全文+RAG知識庫
-                    </p>
-                </div>
-                <div class="info-card" style="margin-top: 12px; background: #f0f9ff; border-left: 4px solid #0ea5e9;">
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>POST /api/v1/sessions/{session_id}/deep-analyze?mode=practice</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 深層分析（約15-20秒），返回安全等級 + 專家建議</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Authorization: Bearer {token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Query Parameters:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">mode=practice    // 選填: practice|emergency，預設 practice
+use_rag=false    // 選填: 預設 false</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong> 無（從 session 自動讀取逐字稿）</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "safety_level": "green",           // ⭐ 安全等級: green|yellow|red
+  "summary": "對話分析摘要...",       // ⭐ 分析摘要
+  "suggestions": ["建議1"],          // ⭐ 專家建議 (1條)
+  "alerts": [],                      // 警告訊息
+  "time_range": "0:00-2:00",
+  "timestamp": "2024-01-01T15:10:00Z",
+  "rag_sources": [],                 // RAG 知識來源
+  "provider_metadata": {
+    "provider": "gemini",
+    "latency_ms": 17000,             // ~17秒
+    "model": "gemini-3-flash-preview"
+  }
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong></p>
+                        <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li>用戶點擊「立即分析」時調用</li>
+                            <li>根據 safety_level 顯示對應顏色</li>
+                            <li>suggestions 只有 1 條，直接顯示</li>
+                            <li>session_id 在 URL 路徑中，mode 在 query string</li>
+                            <li>需要 Authorization header</li>
+                        </ul>
+                    </div>
+                </details>
+                <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
                     <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
                         <strong>Session ID:</strong> ${islandTestData.sessionId || '請先建立會談並添加錄音'}
                     </p>
@@ -599,8 +864,8 @@
                 <div class="form-group" style="margin-top: 16px;">
                     <label>分析模式</label>
                     <select id="island-deep-mode">
-                        <option value="practice">practice (練習模式 - 4條建議)</option>
-                        <option value="emergency">emergency (緊急模式 - 2條建議)</option>
+                        <option value="practice">practice (練習模式)</option>
+                        <option value="emergency">emergency (緊急模式)</option>
                     </select>
                 </div>
                 <button class="btn btn-primary" onclick="window.executeIslandDeepAnalysis()" ${!islandTestData.sessionId ? 'disabled' : ''}>執行 Deep Analysis</button>
@@ -612,31 +877,12 @@
 
                 const mode = document.getElementById('island-deep-mode').value;
 
-                // Get full transcript and prepare speakers
-                const sessionResponse = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}`, {
-                    headers: { 'Authorization': `Bearer ${state.token}` }
-                });
-                const sessionData = await sessionResponse.json();
-                const fullTranscript = sessionData.transcript_text || '';
-
-                // Parse transcript into speaker segments (alternate parent/child)
-                const lines = fullTranscript.split('\n').filter(l => l.trim() && !l.includes('秒]'));
-                const speakers = lines.map((line, i) => ({
-                    speaker: i % 2 === 0 ? 'counselor' : 'client',
-                    text: line
-                }));
-
-                const response = await fetch(`${BASE_URL}/api/v1/realtime/analyze`, {
+                // New session-based API - no need to fetch transcript separately
+                const response = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}/deep-analyze?mode=${mode}&use_rag=false`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        mode: mode,
-                        transcript: fullTranscript,
-                        speakers: speakers,
-                        time_range: '0:00-2:00',
-                        session_id: islandTestData.sessionId,
-                        use_cache: true
-                    })
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`
+                    }
                 });
 
                 const data = await response.json();
@@ -704,48 +950,27 @@
 
         'island-verify-suggestions': {
             title: '✅ 驗證專家建議',
-            subtitle: '檢查 quick_suggestions (4句) + detailed_scripts (8學派)',
+            subtitle: '檢查 suggestions (1句)',
             renderForm: () => {
                 const analysis = islandTestData.lastAnalysis || {};
-                const quickSuggestions = analysis.quick_suggestions || [];
-                const detailedScripts = analysis.detailed_scripts || [];
+                const suggestions = analysis.suggestions || analysis.quick_suggestions || [];
 
                 return `
-                    <div class="info-card" style="background: ${quickSuggestions.length === 4 ? '#f0fdf4' : '#fef2f2'}; border-left: 4px solid ${quickSuggestions.length === 4 ? '#10b981' : '#ef4444'};">
+                    <div class="info-card" style="background: ${suggestions.length >= 1 ? '#f0fdf4' : '#fef2f2'}; border-left: 4px solid ${suggestions.length >= 1 ? '#10b981' : '#ef4444'};">
                         <h4 style="font-size: 14px; margin: 0 0 8px 0;">
-                            ${quickSuggestions.length === 4 ? '✅' : '❌'} Quick Suggestions: ${quickSuggestions.length}/4
+                            ${suggestions.length >= 1 ? '✅' : '❌'} Suggestions: ${suggestions.length}/1
                         </h4>
                         <p style="font-size: 12px; color: #6b7280; margin: 0;">
-                            ${quickSuggestions.length === 4 ? '符合預期！' : `預期 4 條建議，實際 ${quickSuggestions.length} 條`}
+                            ${suggestions.length >= 1 ? '符合預期！' : `預期 1 條建議，實際 ${suggestions.length} 條`}
                         </p>
                     </div>
 
-                    <div class="info-card" style="margin-top: 12px; background: ${detailedScripts.length === 8 ? '#f0fdf4' : '#fef2f2'}; border-left: 4px solid ${detailedScripts.length === 8 ? '#10b981' : '#ef4444'};">
-                        <h4 style="font-size: 14px; margin: 0 0 8px 0;">
-                            ${detailedScripts.length === 8 ? '✅' : '❌'} Detailed Scripts: ${detailedScripts.length}/8
-                        </h4>
-                        <p style="font-size: 12px; color: #6b7280; margin: 0;">
-                            ${detailedScripts.length === 8 ? '符合預期！' : `預期 8 個學派腳本，實際 ${detailedScripts.length} 個`}
-                        </p>
-                    </div>
-
-                    ${quickSuggestions.length > 0 ? `
+                    ${suggestions.length > 0 ? `
                         <div style="margin-top: 16px; padding: 12px; background: #f9fafb; border-radius: 8px;">
-                            <h4 style="font-size: 13px; margin: 0 0 8px 0; color: #374151;">Quick Suggestions 詳細內容：</h4>
-                            ${quickSuggestions.map((s, i) => `
-                                <div style="background: white; padding: 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px; border-left: 2px solid #6366f1;">
-                                    <strong>${i + 1}.</strong> ${s}
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-
-                    ${detailedScripts.length > 0 ? `
-                        <div style="margin-top: 16px; padding: 12px; background: #f9fafb; border-radius: 8px;">
-                            <h4 style="font-size: 13px; margin: 0 0 8px 0; color: #374151;">Detailed Scripts 學派：</h4>
-                            ${detailedScripts.map((s, i) => `
-                                <div style="background: white; padding: 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px;">
-                                    <strong>${i + 1}. ${s.school}</strong>: ${s.situation}
+                            <h4 style="font-size: 13px; margin: 0 0 8px 0; color: #374151;">💡 專家建議：</h4>
+                            ${suggestions.map((s, i) => `
+                                <div style="background: white; padding: 8px; margin-bottom: 6px; border-radius: 4px; font-size: 12px; border-left: 3px solid #10b981;">
+                                    ${s}
                                 </div>
                             `).join('')}
                         </div>
@@ -757,16 +982,13 @@
                 `;
             },
             execute: async () => {
-                // This step just displays the verification results
-                // No API call needed
                 const analysis = islandTestData.lastAnalysis || {};
+                const suggestions = analysis.suggestions || analysis.quick_suggestions || [];
                 return {
                     response: { ok: true, status: 200 },
                     data: {
-                        quick_suggestions_count: analysis.quick_suggestions?.length || 0,
-                        detailed_scripts_count: analysis.detailed_scripts?.length || 0,
-                        passed: (analysis.quick_suggestions?.length === 4 || analysis.quick_suggestions?.length === 2) &&
-                                analysis.detailed_scripts?.length === 8
+                        suggestions_count: suggestions.length,
+                        passed: suggestions.length >= 1
                     }
                 };
             },
@@ -774,12 +996,8 @@
                 <div class="info-card">
                     <h3>${data.passed ? '✅ 驗證通過' : '⚠️ 驗證失敗'}</h3>
                     <div class="info-row">
-                        <span class="info-label">Quick Suggestions</span>
-                        <span class="info-value">${data.quick_suggestions_count} 條 ${data.quick_suggestions_count === 4 || data.quick_suggestions_count === 2 ? '✅' : '❌'}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Detailed Scripts</span>
-                        <span class="info-value">${data.detailed_scripts_count} 個學派 ${data.detailed_scripts_count === 8 ? '✅' : '❌'}</span>
+                        <span class="info-label">Suggestions</span>
+                        <span class="info-value">${data.suggestions_count} 條 ${data.suggestions_count >= 1 ? '✅' : '❌'}</span>
                     </div>
                 </div>
             `
@@ -787,52 +1005,64 @@
 
         'island-generate-report': {
             title: '📄 生成親子對話報告',
-            subtitle: 'POST /api/v1/realtime/parents-report',
+            subtitle: 'POST /api/v1/sessions/{id}/report',
             renderForm: () => `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>POST /api/v1/sessions/{session_id}/report</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 會談結束後生成親子對話報告</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Authorization: Bearer {token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong> 無（從 session 自動讀取逐字稿）</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "summary": "對話主題摘要...",           // ⭐ 1-2句話描述對話主題
+  "highlights": [                        // ⭐ 溝通亮點 (3-5個)
+    "家長願意傾聯孩子的心聲",
+    "使用了同理心的表達方式",
+    "給予孩子正向鼓勵"
+  ],
+  "improvements": [                      // ⭐ 改進建議 (2-4個)
+    {
+      "issue": "語速較快，可能讓孩子感到壓力",
+      "suggestion": "建議放慢語速，給孩子思考時間"
+    }
+  ],
+  "rag_references": [],                  // RAG 知識參考
+  "timestamp": "2024-01-01T15:30:00Z"
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong></p>
+                        <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li>會談結束後調用，生成完整報告</li>
+                            <li>summary: 顯示在報告頂部</li>
+                            <li>highlights: 用綠色列表顯示</li>
+                            <li>improvements: 用黃色卡片顯示每個 issue + suggestion</li>
+                            <li>session_id 在 URL 路徑中，不需要 body</li>
+                            <li>需要 Authorization header</li>
+                        </ul>
+                    </div>
+                </details>
                 <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
                     <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
                         <strong>Session ID:</strong> ${islandTestData.sessionId || '請先完成會談分析'}
                     </p>
                 </div>
-                <div class="form-group" style="margin-top: 16px;">
-                    <label>報告類型</label>
-                    <select id="island-report-type">
-                        <option value="full">完整報告</option>
-                        <option value="summary">摘要報告</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>包含 RAG 知識</label>
-                    <select id="island-report-rag">
-                        <option value="true">是</option>
-                        <option value="false">否</option>
-                    </select>
-                </div>
-                <button class="btn btn-primary" onclick="window.executeIslandGenerateReport()" ${!islandTestData.sessionId ? 'disabled' : ''}>生成報告</button>
+                <button class="btn btn-primary" onclick="window.executeIslandGenerateReport()" ${!islandTestData.sessionId ? 'disabled' : ''} style="margin-top: 16px;">生成報告</button>
             `,
             execute: async () => {
                 if (!islandTestData.sessionId) {
                     throw new Error('請先完成會談並分析');
                 }
 
-                // Get full transcript from session
-                const sessionResponse = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}`, {
-                    headers: { 'Authorization': `Bearer ${state.token}` }
-                });
-                const sessionData = await sessionResponse.json();
-                const fullTranscript = sessionData.transcript_text || '';
-
-                const response = await fetch(`${BASE_URL}/api/v1/realtime/parents-report`, {
+                // New session-based API - no need to fetch transcript separately
+                const response = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}/report`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'Authorization': `Bearer ${state.token}`
-                    },
-                    body: JSON.stringify({
-                        transcript: fullTranscript,
-                        time_range: '0:00-1:00',
-                        include_rag: document.getElementById('island-report-rag').value === 'true'
-                    })
+                    }
                 });
 
                 const data = await response.json();

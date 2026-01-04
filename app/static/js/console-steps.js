@@ -1772,10 +1772,9 @@
                     <div class="form-group">
                         <label>狀態</label>
                         <select id="create-case-status">
-                            <option value="active">Active</option>
-                            <option value="completed">Completed</option>
-                            <option value="suspended">Suspended</option>
-                            <option value="referred">Referred</option>
+                            <option value="0">未開始 (Not Started)</option>
+                            <option value="1">進行中 (In Progress)</option>
+                            <option value="2">已完成 (Completed)</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -1965,10 +1964,9 @@
                         <label>狀態</label>
                         <select id="update-case-status">
                             <option value="">請選擇</option>
-                            <option value="active">Active</option>
-                            <option value="completed">Completed</option>
-                            <option value="suspended">Suspended</option>
-                            <option value="referred">Referred</option>
+                            <option value="0">未開始 (Not Started)</option>
+                            <option value="1">進行中 (In Progress)</option>
+                            <option value="2">已完成 (Completed)</option>
                         </select>
                     </div>
                     <div class="form-group">

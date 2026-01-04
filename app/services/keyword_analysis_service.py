@@ -23,11 +23,8 @@ from app.models.credit_log import CreditLog  # For dual-write pattern
 from app.models.session import Session
 from app.models.session_analysis_log import SessionAnalysisLog
 from app.models.session_usage import SessionUsage
-from app.prompts.parenting import (
-    ISLAND_PARENTS_8_SCHOOLS_EMERGENCY_PROMPT,
-    ISLAND_PARENTS_8_SCHOOLS_PRACTICE_PROMPT,
-)
-from app.schemas.realtime import CounselingMode
+from app.prompts import PromptRegistry
+from app.schemas.session import CounselingMode
 from app.services.gemini_service import GeminiService
 from app.services.openai_service import OpenAIService
 from app.services.rag_retriever import RAGRetriever
@@ -47,11 +44,11 @@ async def _select_expert_suggestions(
     Args:
         transcript: 對話逐字稿
         safety_level: 安全等級 (green/yellow/red)
-        num_suggestions: 要挑選的建議數量（emergency=2, practice=4）
+        num_suggestions: 要挑選的建議數量（固定為 1 條）
         gemini_service: Gemini API service
 
     Returns:
-        List of selected suggestions (1-4 sentences, max 200 chars each)
+        List of selected suggestions (1 sentence, max 200 chars)
     """
     # Import suggestions from config
     from app.config.parenting_suggestions import (
@@ -153,53 +150,13 @@ class KeywordAnalysisService:
         self.openai_service = OpenAIService()
         self.rag_retriever = RAGRetriever(self.openai_service)
 
-    # Tenant-specific prompt templates
-    TENANT_PROMPTS = {
-        "career": """你是職涯諮詢專家，分析個案的職涯困惑和諮詢對話。
-
-背景資訊：
-{context}
-
-完整對話逐字稿（供參考，理解背景脈絡）：
-{full_transcript}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-【最近對話 - 主要分析對象】
-（請根據此區塊進行關鍵字分析）
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{transcript_segment}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-⚠️ CRITICAL: 分析焦點請以「【最近對話 - 主要分析對象】」區塊為主，
-完整對話僅作為理解背景脈絡參考。
-
-請分析並返回 JSON 格式：
-{{
-    "keywords": ["關鍵詞1", "關鍵詞2", ...],
-    "categories": ["類別1", "類別2", ...],
-    "confidence": 0.85,
-    "counselor_insights": "給諮詢師的洞見（50字內）",
-    "safety_level": "green|yellow|red",
-    "severity": 1-3,
-    "display_text": "個案當前狀況描述",
-    "action_suggestion": "建議諮詢師採取的行動"
-}}
-
-注意：
-- keywords: 職涯相關關鍵詞（焦慮、迷惘、轉職等）
-- categories: 職涯類別（職涯探索、工作壓力、人際關係等）
-- safety_level: green=穩定, yellow=需關注, red=危機
-- severity: 1=輕微, 2=中等, 3=嚴重
-""",
-        # 8 Schools of Parenting Integration - Emergency Mode (v1)
-        "island_parents_emergency": ISLAND_PARENTS_8_SCHOOLS_EMERGENCY_PROMPT,
-        # 8 Schools of Parenting Integration - Practice Mode (v1)
-        "island_parents_practice": ISLAND_PARENTS_8_SCHOOLS_PRACTICE_PROMPT,
-    }
+    # Use PromptRegistry for tenant alias (now centralized)
+    # PromptRegistry.TENANT_ALIAS handles: island -> island_parents, etc.
 
     # RAG category mapping for tenants
     TENANT_RAG_CATEGORIES = {
         "career": "career",
+        "island": "parenting",  # island uses parenting RAG
         "island_parents": "parenting",
     }
 
@@ -212,6 +169,7 @@ class KeywordAnalysisService:
         analysis_type: str = "island_parents",
         mode: str = "practice",
         db: DBSession = None,
+        use_rag: bool = False,
     ) -> Dict:
         """
         Unified keyword analysis for realtime and session-based analysis.
@@ -227,6 +185,7 @@ class KeywordAnalysisService:
             analysis_type: Tenant type (career, island_parents)
             mode: Analysis mode (emergency, practice) - only for island_parents
             db: Database session (optional, for RAG retrieval)
+            use_rag: Whether to use RAG knowledge retrieval (default: False)
 
         Returns:
             Dict with analysis results:
@@ -246,62 +205,63 @@ class KeywordAnalysisService:
         start_time = time.time()
         analysis_start_time = datetime.now(timezone.utc)
 
+        # Resolve tenant alias using PromptRegistry
+        resolved_tenant = PromptRegistry.TENANT_ALIAS.get(analysis_type, analysis_type)
+
         try:
             # Use provided db or fallback to instance db
             db_session = db or self.db
 
-            # STEP 1: Retrieve RAG documents FIRST (before Gemini call)
+            # STEP 1: Retrieve RAG documents (only if use_rag=True)
             rag_documents = []
             rag_sources = []
             rag_context = ""
-            try:
-                rag_category = self.TENANT_RAG_CATEGORIES.get(analysis_type)
-                if rag_category:
-                    rag_results = await self.rag_retriever.search(
-                        query=transcript_segment[:200],
-                        top_k=7,  # Increased from 3 for richer context
-                        threshold=0.35,  # Lowered from 0.7 for better retrieval
-                        db=db_session,
-                        category=rag_category,
-                    )
-                    rag_documents = [
-                        {
-                            "doc_id": None,
-                            "title": r["document"],
-                            "content": r["text"],
-                            "relevance_score": r["score"],
-                            "chunk_id": None,
-                        }
-                        for r in rag_results
-                    ]
-                    rag_sources = [r["document"] for r in rag_results]
-
-                    # Build RAG context string to include in prompt
-                    if rag_documents:
-                        rag_context = "\n\n## 參考知識庫\n" + "\n\n".join(
-                            [
-                                f"【{doc['title']}】\n{doc['content']}"
-                                for doc in rag_documents[:7]
-                            ]
+            if use_rag:
+                try:
+                    rag_category = self.TENANT_RAG_CATEGORIES.get(resolved_tenant)
+                    if rag_category:
+                        rag_results = await self.rag_retriever.search(
+                            query=transcript_segment[:200],
+                            top_k=7,  # Increased from 3 for richer context
+                            threshold=0.35,  # Lowered from 0.7 for better retrieval
+                            db=db_session,
+                            category=rag_category,
                         )
-            except Exception as e:
-                logger.warning(f"RAG retrieval failed for tenant {analysis_type}: {e}")
-                # Continue without RAG documents
+                        rag_documents = [
+                            {
+                                "doc_id": None,
+                                "title": r["document"],
+                                "content": r["text"],
+                                "relevance_score": r["score"],
+                                "chunk_id": None,
+                            }
+                            for r in rag_results
+                        ]
+                        rag_sources = [r["document"] for r in rag_results]
 
-            # STEP 2: Get tenant-specific prompt template (with mode support for island_parents)
+                        # Build RAG context string to include in prompt
+                        if rag_documents:
+                            rag_context = "\n\n## 參考知識庫\n" + "\n\n".join(
+                                [
+                                    f"【{doc['title']}】\n{doc['content']}"
+                                    for doc in rag_documents[:7]
+                                ]
+                            )
+                except Exception as e:
+                    logger.warning(
+                        f"RAG retrieval failed for tenant {analysis_type}: {e}"
+                    )
+                    # Continue without RAG documents
+
+            # STEP 2: Get tenant-specific prompt using PromptRegistry
             mode_enum = CounselingMode(mode) if mode else CounselingMode.practice
 
-            if analysis_type == "island_parents":
-                # island_parents tenant: select prompt based on mode
-                prompt_key = f"island_parents_{mode_enum.value}"
-                prompt_template = self.TENANT_PROMPTS.get(
-                    prompt_key, self.TENANT_PROMPTS["island_parents_practice"]
-                )
-            else:
-                # Other tenants: use tenant_id directly (mode not applicable)
-                prompt_template = self.TENANT_PROMPTS.get(
-                    analysis_type, self.TENANT_PROMPTS["career"]
-                )
+            # PromptRegistry handles mode and fallback automatically
+            prompt_template = PromptRegistry.get_prompt(
+                resolved_tenant,
+                "deep",  # Deep analysis prompt type
+                mode=mode_enum.value,
+            )
 
             # STEP 3: Build prompt WITH RAG context
             prompt = prompt_template.format(
@@ -319,9 +279,9 @@ class KeywordAnalysisService:
             result_data = self._parse_ai_response(ai_response)
 
             # STEP 5.5: Generate 200-sentence expert suggestions (ONLY for island_parents)
-            if analysis_type == "island_parents":
+            if resolved_tenant == "island_parents":
                 safety_level = result_data.get("safety_level", "green")
-                num_suggestions = 2 if mode_enum == CounselingMode.emergency else 4
+                num_suggestions = 1  # Always 1 suggestion (both emergency and practice)
 
                 quick_suggestions = await _select_expert_suggestions(
                     transcript=transcript_segment,
@@ -377,7 +337,7 @@ class KeywordAnalysisService:
                 "system_prompt": None,  # Could extract from template if needed
                 "user_prompt": prompt,  # The actual prompt sent to Gemini
                 "prompt_template": f"{analysis_type}_{mode_enum.value}_v1"
-                if analysis_type == "island_parents"
+                if resolved_tenant == "island_parents"
                 else f"{analysis_type}_v1",
                 # RAG information
                 "rag_used": len(rag_documents) > 0,
@@ -414,7 +374,7 @@ class KeywordAnalysisService:
                     "counselor_insights"
                 ),  # For career tenant
                 "matched_suggestions": quick_suggestions
-                if analysis_type == "island_parents"
+                if resolved_tenant == "island_parents"
                 else [],
                 # Cache metadata
                 "use_cache": False,  # Not using cache yet
@@ -466,6 +426,9 @@ class KeywordAnalysisService:
         start_time = time.time()
         analysis_start_time = datetime.now(timezone.utc)
 
+        # Resolve tenant alias using PromptRegistry
+        resolved_tenant = PromptRegistry.TENANT_ALIAS.get(tenant_id, tenant_id)
+
         try:
             # Build context
             context_str = self._build_context(session, client, case)
@@ -478,7 +441,7 @@ class KeywordAnalysisService:
             rag_sources = []
             rag_context = ""
             try:
-                rag_category = self.TENANT_RAG_CATEGORIES.get(tenant_id)
+                rag_category = self.TENANT_RAG_CATEGORIES.get(resolved_tenant)
                 if rag_category:
                     rag_results = await self.rag_retriever.search(
                         query=transcript_segment[:200],
@@ -511,18 +474,13 @@ class KeywordAnalysisService:
                 logger.warning(f"RAG retrieval failed for tenant {tenant_id}: {e}")
                 # Continue without RAG documents
 
-            # STEP 2: Get tenant-specific prompt template (with mode support for island_parents)
-            if tenant_id == "island_parents":
-                # island_parents tenant: select prompt based on mode
-                prompt_key = f"island_parents_{mode.value}"
-                prompt_template = self.TENANT_PROMPTS.get(
-                    prompt_key, self.TENANT_PROMPTS["island_parents_practice"]
-                )
-            else:
-                # Other tenants: use tenant_id directly (mode not applicable)
-                prompt_template = self.TENANT_PROMPTS.get(
-                    tenant_id, self.TENANT_PROMPTS["career"]
-                )
+            # STEP 2: Get tenant-specific prompt using PromptRegistry
+            # PromptRegistry handles mode and fallback automatically
+            prompt_template = PromptRegistry.get_prompt(
+                resolved_tenant,
+                "deep",  # Deep analysis prompt type
+                mode=mode.value,
+            )
 
             # STEP 3: Build prompt WITH RAG context
             prompt = prompt_template.format(
@@ -540,9 +498,9 @@ class KeywordAnalysisService:
             result_data = self._parse_ai_response(ai_response)
 
             # STEP 5.5: Generate 200-sentence expert suggestions (ONLY for island_parents)
-            if tenant_id == "island_parents":
+            if resolved_tenant == "island_parents":
                 safety_level = result_data.get("safety_level", "green")
-                num_suggestions = 2 if mode == CounselingMode.emergency else 4
+                num_suggestions = 1  # Always 1 suggestion (both emergency and practice)
 
                 quick_suggestions = await _select_expert_suggestions(
                     transcript=transcript_segment,
@@ -598,7 +556,7 @@ class KeywordAnalysisService:
                 "system_prompt": None,  # Could extract from template if needed
                 "user_prompt": prompt,  # The actual prompt sent to Gemini
                 "prompt_template": f"{tenant_id}_{mode.value}_v1"
-                if tenant_id == "island_parents"
+                if resolved_tenant == "island_parents"
                 else f"{tenant_id}_partial_v1",
                 # RAG information
                 "rag_used": len(rag_documents) > 0,
@@ -989,6 +947,9 @@ class KeywordAnalysisService:
 
     def _get_tenant_fallback_result(self, tenant_id: str) -> Dict:
         """Get tenant-specific fallback result when AI analysis fails"""
+        # Resolve tenant alias using PromptRegistry
+        resolved_tenant = PromptRegistry.TENANT_ALIAS.get(tenant_id, tenant_id)
+
         # Common metadata for fallback (no tokens used since AI call failed)
         fallback_metadata = {
             "token_usage": {
@@ -1002,7 +963,7 @@ class KeywordAnalysisService:
             "estimated_cost_usd": 0.0,
         }
 
-        if tenant_id == "island_parents":
+        if resolved_tenant == "island_parents":
             return {
                 "safety_level": "green",
                 "severity": 1,

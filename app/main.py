@@ -30,9 +30,11 @@ from app.api import (
     rag_stats,
     realtime,
     reports,
+    session_analysis,
     sessions,
     sessions_analysis,
     sessions_keywords,
+    transcript,
     ui_client_case_list,
 )
 from app.api.v1 import admin_counselors, admin_credits, password_reset, session_usage
@@ -100,12 +102,16 @@ app.include_router(reports.router)
 app.include_router(sessions.router)
 app.include_router(sessions_keywords.router)
 app.include_router(sessions_analysis.router)
+app.include_router(session_analysis.router)
 
 # Include analyze routes
 app.include_router(analyze.router)
 
 # Include realtime STT counseling routes (Demo Feature)
 app.include_router(realtime.router)
+
+# Transcript Analysis (unified endpoint for deep-analyze, quick-feedback, report)
+app.include_router(transcript.router)
 
 # Include UI API routes
 app.include_router(ui_client_case_list.router)

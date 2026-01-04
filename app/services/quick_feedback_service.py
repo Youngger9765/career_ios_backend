@@ -8,36 +8,12 @@ Quick Feedback Service - 輕量 AI 回饋服務
 import datetime
 import logging
 import time
-from typing import Dict
+from typing import Dict, Optional
 
+from app.prompts import PromptRegistry
 from app.services.gemini_service import GeminiService
 
 logger = logging.getLogger(__name__)
-
-
-# 輕量 Prompt（< 100 tokens 輸出）
-QUICK_FEEDBACK_PROMPT = """你是親子教養即時督導。
-
-【當前對話】
-{transcript}
-
-請仔細閱讀整段對話，理解：
-1. 對話的脈絡和情境
-2. 家長當下的互動方式（是溫和同理？還是焦慮指責？）
-3. 對話的走向（是在改善？還是在惡化？）
-
-根據你的理解，用 1 句話（20 字內）給家長即時回饋：
-- 如果家長做得好 → 肯定並鼓勵
-- 如果家長需要調整 → 溫和提醒
-- 根據對話脈絡給出最合適的建議
-
-規則：
-- 簡短、具體、正向
-- 只能一行，不能有換行符號
-- 回應必須符合對話的實際情境，不要套用固定模板
-
-CRITICAL: 只輸出一句話，不要換行，不要額外說明。
-CRITICAL: 所有回應必須使用繁體中文（zh-TW），不可使用簡體中文。"""
 
 
 class QuickFeedbackService:
@@ -46,12 +22,17 @@ class QuickFeedbackService:
     def __init__(self):
         self.gemini_service = GeminiService()
 
-    async def get_quick_feedback(self, recent_transcript: str) -> Dict[str, str]:
+    async def get_quick_feedback(
+        self,
+        recent_transcript: str,
+        tenant_id: Optional[str] = None,
+    ) -> Dict[str, str]:
         """
         使用輕量 AI 生成快速回饋
 
         Args:
             recent_transcript: 最近 10 秒的逐字稿
+            tenant_id: 租戶 ID（用於選擇對應的 prompt）
 
         Returns:
             {
@@ -64,8 +45,12 @@ class QuickFeedbackService:
         start_time = time.time()
 
         try:
-            # 建立 prompt
-            prompt = QUICK_FEEDBACK_PROMPT.format(transcript=recent_transcript)
+            # 從 PromptRegistry 取得對應的 prompt
+            prompt_template = PromptRegistry.get_prompt(
+                tenant_id or "island_parents",
+                "quick",
+            )
+            prompt = prompt_template.format(transcript_segment=recent_transcript)
 
             # 呼叫 Gemini Flash（最快模型）
             # Strategy: Set high max_tokens as safety ceiling

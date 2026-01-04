@@ -11,7 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.schemas.realtime import (
+from app.schemas.session import (
     ImprovementSuggestion,
     ParentsReportRequest,
     ParentsReportResponse,
@@ -289,7 +289,9 @@ async def analyze_transcript(
         )
 
         # Call unified analysis service
-        logger.info(f"Calling keyword_analysis_service with mode={mode_value}")
+        logger.info(
+            f"Calling keyword_analysis_service with mode={mode_value}, use_rag={request.use_rag}"
+        )
         analysis_result = await keyword_service.analyze_keywords(
             session_id=None,  # realtime doesn't have session concept
             transcript_segment=request.transcript,
@@ -298,6 +300,7 @@ async def analyze_transcript(
             analysis_type="island_parents",  # realtime is always island_parents
             mode=mode_value,  # "emergency" or "practice"
             db=db,
+            use_rag=request.use_rag,  # Default: False (RAG disabled by default)
         )
 
         # Transform result to realtime API format

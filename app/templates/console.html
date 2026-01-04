@@ -1538,7 +1538,7 @@
                     <span class="step-number">6</span>
                     <span class="step-title">💡 Quick Feedback</span>
                 </div>
-                <div class="step-subtitle">POST /api/v1/realtime/quick-feedback</div>
+                <div class="step-subtitle">POST /api/v1/sessions/{id}/quick-feedback</div>
             </div>
 
             <div class="flow-step" data-step="island-deep-analysis">
@@ -1546,23 +1546,15 @@
                     <span class="step-number">7</span>
                     <span class="step-title">🔬 Deep Analysis</span>
                 </div>
-                <div class="step-subtitle">POST /api/v1/realtime/analyze</div>
-            </div>
-
-            <div class="flow-step" data-step="island-verify-suggestions">
-                <div>
-                    <span class="step-number">8</span>
-                    <span class="step-title">✅ 驗證專家建議</span>
-                </div>
-                <div class="step-subtitle">檢查 quick_suggestions (4句) + detailed_scripts (8學派)</div>
+                <div class="step-subtitle">POST /api/v1/sessions/{id}/deep-analyze</div>
             </div>
 
             <div class="flow-step" data-step="island-generate-report">
                 <div>
-                    <span class="step-number">9</span>
+                    <span class="step-number">8</span>
                     <span class="step-title">📄 生成親子對話報告</span>
                 </div>
-                <div class="step-subtitle">POST /api/v1/realtime/parents-report</div>
+                <div class="step-subtitle">POST /api/v1/sessions/{id}/report</div>
             </div>
 
             </div>

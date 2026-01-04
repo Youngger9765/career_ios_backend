@@ -59,12 +59,28 @@ class RecordingService:
         else:
             new_segment_number = 1
 
+        # Calculate duration_seconds if not provided
+        duration_seconds = request.duration_seconds
+        if duration_seconds is None:
+            try:
+                from datetime import datetime
+
+                # Try ISO 8601 format first
+                start_dt = datetime.fromisoformat(
+                    request.start_time.replace("Z", "+00:00")
+                )
+                end_dt = datetime.fromisoformat(request.end_time.replace("Z", "+00:00"))
+                duration_seconds = int((end_dt - start_dt).total_seconds())
+            except (ValueError, TypeError):
+                # Fallback to 0 if parsing fails
+                duration_seconds = 0
+
         # Create new recording segment
         new_recording = {
             "segment_number": new_segment_number,
             "start_time": request.start_time,
             "end_time": request.end_time,
-            "duration_seconds": request.duration_seconds,
+            "duration_seconds": duration_seconds,
             "transcript_text": request.transcript_text,
             "transcript_sanitized": request.transcript_sanitized
             or request.transcript_text,

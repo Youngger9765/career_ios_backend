@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.schemas.realtime import CounselingMode
+from app.schemas.session import CounselingMode
 
 
 class AnalyzePartialRequest(BaseModel):

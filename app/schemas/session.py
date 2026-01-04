@@ -1,10 +1,312 @@
+"""
+Session Schemas - 會談相關的所有 Schema 定義
+包含：
+- Session CRUD schemas
+- Recording schemas
+- Realtime counseling schemas (merged from realtime.py)
+- Timeline schemas
+- Reflection schemas
+"""
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.base import BaseSchema
+
+# =============================================================================
+# Realtime Counseling Enums & Models (merged from realtime.py)
+# =============================================================================
+
+
+class CounselingMode(str, Enum):
+    """Counseling mode: emergency (simplified) or practice (detailed)"""
+
+    emergency = "emergency"
+    practice = "practice"
+
+
+class SafetyLevel(str, Enum):
+    """Safety level indicator for parent-child interaction"""
+
+    red = "red"  # High risk: violent language, extreme emotions, crisis
+    yellow = "yellow"  # Medium risk: escalating conflict, frustration
+    green = "green"  # Safe: calm, positive interaction
+
+
+class SpeakerSegment(BaseModel):
+    """Speaker 片段（諮詢師或案主的對話）"""
+
+    speaker: str = Field(..., description="說話者角色: counselor 或 client")
+    text: str = Field(..., description="說話內容")
+
+    @field_validator("speaker")
+    @classmethod
+    def validate_speaker(cls, v: str) -> str:
+        """驗證 speaker 只能是 counselor 或 client"""
+        if v not in ["counselor", "client"]:
+            raise ValueError("speaker must be 'counselor' or 'client'")
+        return v
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{"speaker": "counselor", "text": "你最近工作上有什麼困擾嗎？"}]
+        }
+    }
+
+
+class RAGSource(BaseModel):
+    """RAG 知識庫來源"""
+
+    title: str = Field(..., description="文件標題")
+    content: str = Field(..., description="相關內容片段")
+    score: float = Field(..., ge=0.0, le=1.0, description="相似度分數（0-1）")
+    theory: str = Field(default="其他", description="所屬理論（正向教養、情緒教養等）")
+
+
+class CacheMetadata(BaseModel):
+    """Cache 元數據"""
+
+    cache_name: str = Field(..., description="Cache 名稱")
+    cache_created: bool = Field(..., description="是否為新建的 cache")
+    cached_tokens: int = Field(default=0, description="從 cache 讀取的 token 數")
+    prompt_tokens: int = Field(default=0, description="新增的 prompt token 數")
+    error: str = Field(default="", description="錯誤訊息（如有）")
+    message: str = Field(default="", description="狀態訊息（如有）")
+
+
+class ProviderMetadata(BaseModel):
+    """Provider performance metadata"""
+
+    provider: str = Field(..., description="LLM provider used")
+    latency_ms: int = Field(..., description="Response latency in milliseconds")
+    model: str = Field(default="", description="Model name")
+
+
+class ImprovementSuggestion(BaseModel):
+    """改進建議"""
+
+    issue: str = Field(..., description="待解決的議題")
+    analyze: str = Field(..., description="溝通內容分析")
+    suggestion: str = Field(..., description="建議下次可以這樣說")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "issue": "使用威脅語氣「你再不寫我就打你」",
+                    "analyze": "這種語氣容易讓孩子產生恐懼，而非理解家長的期望。",
+                    "suggestion": "可以換成：「我看到你現在不想寫功課，可以跟我說說為什麼嗎？」",
+                }
+            ]
+        }
+    }
+
+
+# =============================================================================
+# Realtime Analyze Request/Response
+# =============================================================================
+
+
+class RealtimeAnalyzeRequest(BaseModel):
+    """即時分析請求（每 60 秒觸發一次）"""
+
+    mode: CounselingMode = Field(
+        default=CounselingMode.practice,
+        description="Counseling mode: 'emergency' (simplified) or 'practice' (detailed, default)",
+    )
+    transcript: str = Field(..., min_length=1, description="完整逐字稿（過去 1 分鐘）")
+    speakers: List[SpeakerSegment] = Field(..., description="Speaker 片段列表")
+    time_range: str = Field(..., description="時間範圍（例如：0:00-1:00）")
+    use_cache: bool = Field(default=True, description="是否使用 Gemini context caching")
+    use_rag: bool = Field(default=False, description="是否使用 RAG 知識庫（預設關閉）")
+    session_id: str = Field(default="", description="會談 session ID（用於 cache key）")
+
+    @field_validator("transcript")
+    @classmethod
+    def validate_transcript(cls, v: str) -> str:
+        """驗證 transcript 不能為空白"""
+        if not v or not v.strip():
+            raise ValueError("transcript cannot be empty")
+        return v
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "transcript": "諮詢師：你最近工作上有什麼困擾嗎？\n案主：我覺得活著沒什麼意義...",
+                    "speakers": [
+                        {"speaker": "counselor", "text": "你最近工作上有什麼困擾嗎？"},
+                        {"speaker": "client", "text": "我覺得活著沒什麼意義..."},
+                    ],
+                    "time_range": "0:00-1:00",
+                }
+            ]
+        }
+    }
+
+
+class RealtimeAnalyzeResponse(BaseModel):
+    """即時分析回應（AI 督導建議）"""
+
+    safety_level: str = Field(
+        ...,
+        description="Safety level: 'green' (safe), 'yellow' (needs adjustment), 'red' (urgent correction)",
+    )
+    summary: str = Field(..., description="對話歸納（1-2 句）")
+    alerts: List[str] = Field(..., description="提醒事項（3-5 點）")
+    suggestions: List[str] = Field(..., description="建議回應（2-3 點）")
+    time_range: str = Field(..., description="時間範圍")
+    timestamp: str = Field(..., description="分析時間戳（ISO 8601 格式）")
+    rag_sources: List[RAGSource] = Field(
+        default=[], description="RAG 知識庫來源（可選）"
+    )
+    cache_metadata: CacheMetadata | None = Field(
+        default=None, description="Cache 元數據（如有使用 cache）"
+    )
+    provider_metadata: ProviderMetadata | None = Field(
+        default=None, description="Provider performance metadata"
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "safety_level": "yellow",
+                    "summary": "案主表達對工作的焦慮，提到「活著沒意義」，諮詢師開始評估風險",
+                    "alerts": [
+                        "⚠️ 案主提到「活著沒意義」，需立即評估自殺風險",
+                        "⚠️ 注意案主情緒狀態，是否有憂鬱症狀",
+                        "✅ 諮詢師使用反映情感技巧適當",
+                    ],
+                    "suggestions": [
+                        "💡 建議直接評估：「當你說活著沒意義，是否曾想過結束生命？」",
+                        "💡 探索工作壓力來源：「主管盯著你的感覺，能具體說說是什麼樣的情況嗎？」",
+                    ],
+                    "time_range": "0:00-1:00",
+                    "timestamp": "2025-12-06T10:01:00Z",
+                    "rag_sources": [
+                        {
+                            "title": "職涯諮詢概論",
+                            "content": "探索工作價值觀的方法...",
+                            "score": 0.85,
+                        }
+                    ],
+                }
+            ]
+        }
+    }
+
+
+# =============================================================================
+# Quick Feedback Request/Response
+# =============================================================================
+
+
+class QuickFeedbackRequest(BaseModel):
+    """快速回饋請求（10-15 秒輪詢）"""
+
+    recent_transcript: str = Field(..., min_length=1, description="最近 10 秒的逐字稿")
+
+    @field_validator("recent_transcript")
+    @classmethod
+    def validate_transcript(cls, v: str) -> str:
+        """驗證 transcript 不能為空白"""
+        if not v or not v.strip():
+            raise ValueError("recent_transcript cannot be empty")
+        return v
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "recent_transcript": "家長：你再這樣我就生氣了！\n孩子：我不是故意的..."
+                }
+            ]
+        }
+    }
+
+
+class QuickFeedbackResponse(BaseModel):
+    """快速回饋回應（輕量 AI 雞湯文）"""
+
+    message: str = Field(..., description="AI 生成的鼓勵訊息（20 字內）")
+    type: str = Field(..., description="訊息類型：ai_generated 或 fallback")
+    timestamp: str = Field(..., description="生成時間戳（ISO 8601 格式）")
+    latency_ms: int = Field(..., description="延遲時間（毫秒）")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "message": "深呼吸，保持冷靜",
+                    "type": "ai_generated",
+                    "timestamp": "2025-12-31T10:00:00Z",
+                    "latency_ms": 1200,
+                }
+            ]
+        }
+    }
+
+
+# =============================================================================
+# Parents Report Request/Response
+# =============================================================================
+
+
+class ParentsReportRequest(BaseModel):
+    """家長對話報告請求"""
+
+    transcript: str = Field(..., min_length=1, description="完整對話逐字稿")
+    session_id: str = Field(default="", description="會談 session ID（可選）")
+
+    @field_validator("transcript")
+    @classmethod
+    def validate_transcript(cls, v: str) -> str:
+        """驗證 transcript 不能為空白"""
+        if not v or not v.strip():
+            raise ValueError("transcript cannot be empty")
+        return v
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "transcript": "家長：我今天真的氣死了，孩子又不寫功課...\n孩子：我就是不想寫！",
+                    "session_id": "session-123",
+                }
+            ]
+        }
+    }
+
+
+class ParentsReportResponse(BaseModel):
+    """家長對話報告回應"""
+
+    encouragement: str = Field(
+        ...,
+        description="鼓勵標題（如：這次你已經做了一件重要的事：願意好好跟孩子談。）",
+    )
+    issue: str = Field(..., description="待解決的議題")
+    analyze: str = Field(..., description="溝通內容分析")
+    suggestion: str = Field(..., description="建議下次可以這樣說")
+    timestamp: str = Field(..., description="生成時間戳（ISO 8601 格式）")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "encouragement": "這次你已經做了一件重要的事：願意好好跟孩子談。",
+                    "issue": "對話陷入無效重複，缺乏雙向互動。",
+                    "analyze": "重複相同的指令容易讓孩子產生「聽而不聞」的習慣，且未針對孩子的需求做出回應。",
+                    "suggestion": "「我知道你還想玩，要停下來很難。你是想現在開始，還是再玩 3 分鐘？」",
+                    "timestamp": "2025-12-26T10:00:00Z",
+                }
+            ]
+        }
+    }
 
 
 # Recording-related schemas
@@ -39,7 +341,9 @@ class AppendRecordingRequest(BaseModel):
 
     start_time: str
     end_time: str
-    duration_seconds: int
+    duration_seconds: Optional[
+        int
+    ] = None  # 選填，後端會自動從 start_time/end_time 計算
     transcript_text: str
     transcript_sanitized: Optional[str] = None
 

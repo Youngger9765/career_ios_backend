@@ -2164,12 +2164,13 @@
                         `${seg.speaker === 'counselor' ? '家長' : '孩子'}：${seg.text}`
                     ).join('\n');
 
-                    const response = await fetch('/api/v1/realtime/parents-report', {
+                    const response = await fetch('/api/v1/transcript/report', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             transcript: fullTranscript,
-                            session_id: currentSessionId  // Use unified session ID
+                            session_id: currentSessionId,
+                            tenant_id: 'island_parents'
                         })
                     });
 
@@ -3927,10 +3928,13 @@
                         requestBody.codeer_model = currentCodeerModel;
                     }
 
-                    const response = await fetch('/api/v1/realtime/analyze', {
+                    const response = await fetch('/api/v1/transcript/deep-analyze', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(requestBody)
+                        body: JSON.stringify({
+                            ...requestBody,
+                            tenant_id: 'island_parents'
+                        })
                     });
 
                     if (!response.ok) {
@@ -3999,10 +4003,13 @@
                 console.log(`💡 Requesting quick feedback for recent transcript (${recentTranscript.length} chars)`);
 
                 // Call quick-feedback API
-                const response = await fetch('/api/v1/realtime/quick-feedback', {
+                const response = await fetch('/api/v1/transcript/quick-feedback', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ recent_transcript: recentTranscript })
+                    body: JSON.stringify({
+                        transcript: recentTranscript,
+                        tenant_id: 'island_parents'
+                    })
                 });
 
                 if (!response.ok) {

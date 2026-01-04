@@ -9,6 +9,31 @@
 
 ## [未發布]
 
+### 新增
+- **PromptRegistry - 統一 Prompt 架構** (2026-01-04)
+  - 新增集中式 prompt 管理系統於 `app/prompts/`
+  - 檔案結構：
+    - `base.py` - 預設 prompts（任何租戶的 fallback）
+    - `career.py` - 職涯諮詢 prompts（deep、report）
+    - `parenting.py` - 浮島家長版 prompts（quick、deep、report）
+    - `__init__.py` - PromptRegistry 類別與 `get_prompt()` 方法
+  - 功能特點：
+    - 多租戶支援，自動 fallback 到預設值
+    - 租戶別名：`island` → `island_parents`（保留日後拆分彈性）
+    - island_parents 深度分析模式支援：`practice` / `emergency`
+    - 類型支援：`quick`、`deep`、`report`
+  - 使用方式：`PromptRegistry.get_prompt("island_parents", "deep", mode="emergency")`
+  - 更新的服務：
+    - `quick_feedback_service.py` - 現接受 `tenant_id` 參數
+    - `keyword_analysis_service.py` - 使用 PromptRegistry 取代硬編碼 prompts
+  - Prompt 覆蓋範圍：
+    | 類型 | Career | Island Parents | Default |
+    |------|--------|----------------|---------|
+    | quick | ❌ fallback | ✅ 親子專用 | ✅ 通用 |
+    | deep | ✅ 職涯分析 | ✅ practice/emergency | ✅ 通用 |
+    | report | ✅ 職涯報告 | ✅ 8學派報告 | ✅ 通用 |
+  - PRD 已更新完整架構文件
+
 ### 修復
 - **繁體中文（zh-TW）強制執行** (2026-01-02)
   - 問題：AI prompt 和程式碼註解中發現簡體中文字元

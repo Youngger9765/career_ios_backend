@@ -7,7 +7,7 @@ This allows rapid safety level relaxation when the conversation improves.
 """
 
 from app.api.realtime import _assess_safety_level
-from app.schemas.realtime import SafetyLevel
+from app.schemas.session import SafetyLevel
 
 
 class TestSlidingWindowSafetyAssessment:

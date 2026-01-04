@@ -42,10 +42,7 @@ export class APIClient {
             headers['Authorization'] = `Bearer ${authToken}`;
         }
 
-        // Add tenant ID header if exists and not already set
-        if (tenantId && !headers['X-Tenant-ID']) {
-            headers['X-Tenant-ID'] = tenantId;
-        }
+        // Note: X-Tenant-ID header removed - tenant_id is extracted from JWT token on backend
 
         const response = await fetch(this.baseURL + endpoint, {
             ...options,
@@ -127,7 +124,7 @@ export class APIClient {
     }
 
     /**
-     * Analyze partial transcript
+     * Analyze partial transcript (legacy - uses analyze-partial endpoint)
      *
      * @param {string} sessionId - Session UUID
      * @param {string} segment - Transcript segment to analyze
@@ -141,6 +138,47 @@ export class APIClient {
                 transcript_segment: segment,
                 mode: mode
             })
+        });
+    }
+
+    /**
+     * Quick feedback (session-based)
+     * Reads transcript from session automatically
+     *
+     * @param {string} sessionId - Session UUID
+     * @returns {Promise<Object>} - { message, type, timestamp, latency_ms }
+     */
+    async quickFeedback(sessionId) {
+        return await this.request(`/api/v1/sessions/${sessionId}/quick-feedback`, {
+            method: 'POST'
+        });
+    }
+
+    /**
+     * Deep analyze (session-based)
+     * Reads transcript from session automatically
+     *
+     * @param {string} sessionId - Session UUID
+     * @param {string} [mode='practice'] - Analysis mode ('practice' or 'emergency')
+     * @param {boolean} [useRag=false] - Whether to use RAG
+     * @returns {Promise<Object>} - { safety_level, summary, suggestions, ... }
+     */
+    async deepAnalyze(sessionId, mode = 'practice', useRag = false) {
+        return await this.request(`/api/v1/sessions/${sessionId}/deep-analyze?mode=${mode}&use_rag=${useRag}`, {
+            method: 'POST'
+        });
+    }
+
+    /**
+     * Generate report (session-based)
+     * Reads transcript from session automatically
+     *
+     * @param {string} sessionId - Session UUID
+     * @returns {Promise<Object>} - { summary, highlights, improvements, ... }
+     */
+    async generateReport(sessionId) {
+        return await this.request(`/api/v1/sessions/${sessionId}/report`, {
+            method: 'POST'
         });
     }
 

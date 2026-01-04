@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **PromptRegistry - Unified Prompt Architecture** (2026-01-04)
+  - New centralized prompt management system in `app/prompts/`
+  - File structure:
+    - `base.py` - Default prompts (fallback for any tenant)
+    - `career.py` - Career counseling prompts (deep, report)
+    - `parenting.py` - Island Parents prompts (quick, deep, report)
+    - `__init__.py` - PromptRegistry class with `get_prompt()` method
+  - Features:
+    - Multi-tenant support with automatic fallback to default
+    - Tenant alias: `island` → `island_parents` (flexible for future separation)
+    - Mode support for island_parents deep analysis: `practice` / `emergency`
+    - Type support: `quick`, `deep`, `report`
+  - Usage: `PromptRegistry.get_prompt("island_parents", "deep", mode="emergency")`
+  - Updated services:
+    - `quick_feedback_service.py` - Now accepts `tenant_id` parameter
+    - `keyword_analysis_service.py` - Uses PromptRegistry instead of hardcoded prompts
+  - Prompt coverage:
+    | Type | Career | Island Parents | Default |
+    |------|--------|----------------|---------|
+    | quick | ❌ fallback | ✅ 親子專用 | ✅ 通用 |
+    | deep | ✅ 職涯分析 | ✅ practice/emergency | ✅ 通用 |
+    | report | ✅ 職涯報告 | ✅ 8學派報告 | ✅ 通用 |
+  - PRD updated with full architecture documentation
+
 ### Fixed
 - **Traditional Chinese (zh-TW) Enforcement** (2026-01-02)
   - Issue: Simplified Chinese characters found in AI prompts and code comments
