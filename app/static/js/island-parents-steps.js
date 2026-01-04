@@ -111,6 +111,86 @@
             `
         },
 
+        'island-get-credits': {
+            title: '💰 取得額度資訊',
+            subtitle: 'GET /api/auth/me → available_credits',
+            renderForm: () => `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>GET /api/auth/me</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 取得當前用戶資訊與可用額度</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Authorization: Bearer {access_token}
+X-Tenant-Id: island_parents</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "id": "uuid",
+  "email": "user@example.com",
+  "username": "username",
+  "full_name": "用戶名稱",
+  "role": "counselor",
+  "tenant_id": "island_parents",
+  "is_active": true,
+  "available_credits": 1000.0,  // ⭐ 可用額度（分鐘）
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-01T00:00:00Z"
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 流程：</strong></p>
+                        <ol style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li>登入成功後調用此 API 取得額度</li>
+                            <li>在模式選擇頁顯示「預計還可使用 N 分鐘」</li>
+                            <li>每次結束對話後可重新調用更新額度</li>
+                        </ol>
+                    </div>
+                </details>
+                <div class="info-card" style="background: #ecfdf5; border-left: 4px solid #10b981;">
+                    <p style="margin: 0; font-size: 13px; color: #065f46;">
+                        💰 此 API 回傳用戶可用額度，用於顯示剩餘分鐘數
+                    </p>
+                </div>
+                <button class="btn btn-primary" onclick="window.executeIslandGetCredits()" style="margin-top: 16px;">取得額度</button>
+            `,
+            execute: async () => {
+                const token = state.token || localStorage.getItem('token');
+                const tenant_id = localStorage.getItem('tenant_id') || 'island_parents';
+
+                const response = await fetch(`${BASE_URL}/api/auth/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'X-Tenant-Id': tenant_id
+                    }
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    // Store credits for display
+                    window.islandTestData.availableCredits = data.available_credits;
+                }
+                return { response, data };
+            },
+            renderPreview: (data) => `
+                <div class="info-card">
+                    <h3>💰 用戶額度資訊</h3>
+                    <div class="info-row">
+                        <span class="info-label">用戶名稱</span>
+                        <span class="info-value">${data.full_name}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Email</span>
+                        <span class="info-value">${data.email}</span>
+                    </div>
+                    <div class="info-row" style="background: #ecfdf5;">
+                        <span class="info-label">可用額度</span>
+                        <span class="info-value" style="color: #059669; font-weight: bold; font-size: 18px;">${Math.floor(data.available_credits)} 分鐘</span>
+                    </div>
+                </div>
+            `
+        },
+
         'island-select-client': {
             title: '👶 選擇既有孩子',
             subtitle: 'GET /api/v1/clients → GET /api/v1/cases',
@@ -1242,6 +1322,7 @@ ${data.report_content}
 
     // Register global execute functions
     window.executeIslandLogin = () => window.executeStep('island-login');
+    window.executeIslandGetCredits = () => window.executeStep('island-get-credits');
     window.executeIslandSelectClient = () => window.executeStep('island-select-client');
     window.executeIslandCreateClientCase = () => window.executeStep('island-create-client-case');
     window.executeIslandCreateSession = () => window.executeStep('island-create-session');

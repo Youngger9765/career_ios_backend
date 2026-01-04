@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}浮島親子{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            min-height: 100vh;
+        }
+
+        /* Safe area for mobile notches */
+        .safe-area-top {
+            padding-top: max(1rem, env(safe-area-inset-top));
+        }
+
+        .safe-area-bottom {
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        }
+
+        /* Input styling */
+        .input-field {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            background: white;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #000;
+            box-shadow: 0 0 0 1px #000;
+        }
+
+        .input-field::placeholder {
+            color: #9ca3af;
+        }
+
+        /* Primary button */
+        .btn-primary {
+            width: 100%;
+            padding: 1rem;
+            background: #000;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn-primary:hover {
+            background: #333;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Step indicator */
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e0e0e0;
+        }
+
+        .step-dot.active {
+            background: #000;
+        }
+
+        /* Error message */
+        .error-message {
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* Page container */
+        .page-container {
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Card styling */
+        .card {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Link styling */
+        .link {
+            color: #666;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+
+        .link:hover {
+            color: #000;
+            text-decoration: underline;
+        }
+
+        /* RWD - Mobile First */
+        @media (max-width: 480px) {
+            .page-container {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+                border-radius: 0.75rem;
+            }
+
+            h1 {
+                font-size: 1.5rem !important;
+            }
+
+            .input-field {
+                padding: 0.875rem;
+                font-size: 16px;
+            }
+
+            .btn-primary {
+                padding: 0.875rem;
+            }
+
+            .step-indicator {
+                margin-bottom: 1.5rem;
+            }
+        }
+
+        /* Tablet */
+        @media (min-width: 481px) and (max-width: 768px) {
+            .page-container {
+                padding: 1.5rem;
+            }
+
+            .card {
+                padding: 1.75rem;
+            }
+        }
+
+        /* Desktop */
+        @media (min-width: 769px) {
+            body {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .page-container {
+                max-width: 420px;
+                margin: 0 auto;
+            }
+        }
+
+        /* Full height fix for mobile */
+        @supports (-webkit-touch-callout: none) {
+            .page-container {
+                min-height: -webkit-fill-available;
+            }
+        }
+
+        {% block extra_styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    {% block content %}{% endblock %}
+
+    {% include 'island_parents/_components/message_modal.html' %}
+
+    <script>
+        // Shared state management
+        const state = {
+            token: localStorage.getItem('island_parents_token'),
+            user: null,
+            clients: [],
+            selectedClient: null,
+            selectedCase: null,
+            selectedMode: null,
+            selectedScenario: null,
+            currentSession: null,
+            isRecording: false,
+            currentSpeaker: 'parent',
+            transcripts: []
+        };
+
+        // API base URL
+        const API_BASE = '';
+
+        // Show error message
+        function showError(elementId, message) {
+            const errorEl = document.getElementById(elementId);
+            if (errorEl) {
+                errorEl.textContent = message;
+                errorEl.classList.add('show');
+            }
+        }
+
+        // Hide error message
+        function hideError(elementId) {
+            const errorEl = document.getElementById(elementId);
+            if (errorEl) {
+                errorEl.classList.remove('show');
+            }
+        }
+
+        // Show message modal (replacement for alert)
+        function showMessageModal(message, type = 'info') {
+            const icons = {
+                'info': 'i',
+                'success': '✓',
+                'warning': '⚠',
+                'error': '✕'
+            };
+            const titles = {
+                'info': '提示',
+                'success': '成功',
+                'warning': '警告',
+                'error': '錯誤'
+            };
+
+            document.getElementById('message-modal-icon').textContent = icons[type] || icons.info;
+            document.getElementById('message-modal-title').textContent = titles[type] || titles.info;
+            document.getElementById('message-modal-text').textContent = message;
+            document.getElementById('message-modal').classList.remove('hidden');
+        }
+
+        // Hide message modal
+        function hideMessageModal() {
+            document.getElementById('message-modal').classList.add('hidden');
+        }
+
+        // Set button loading state
+        function setButtonLoading(btnId, isLoading) {
+            const btn = document.getElementById(btnId);
+            const textEl = document.getElementById(`${btnId}-text`);
+            const loadingEl = document.getElementById(`${btnId}-loading`);
+
+            if (btn) btn.disabled = isLoading;
+            if (textEl) textEl.classList.toggle('hidden', isLoading);
+            if (loadingEl) loadingEl.classList.toggle('hidden', !isLoading);
+        }
+
+        // Handle logout
+        function handleLogout() {
+            localStorage.removeItem('island_parents_token');
+            window.location.href = '/island-parents/login';
+        }
+
+        // Check authentication
+        async function checkAuth() {
+            const token = localStorage.getItem('island_parents_token');
+            if (!token) {
+                window.location.href = '/island-parents/login';
+                return false;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    localStorage.removeItem('island_parents_token');
+                    window.location.href = '/island-parents/login';
+                    return false;
+                }
+
+                state.token = token;
+                return true;
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                return false;
+            }
+        }
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

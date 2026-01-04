@@ -39,6 +39,7 @@ def _handle_generic_error(e: Exception, operation: str, instance: str):
 async def session_quick_feedback(
     session_id: UUID,
     request: Request,
+    mode: str = "practice",
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
@@ -48,7 +49,10 @@ async def session_quick_feedback(
 
     - 從 session 自動讀取逐字稿
     - 使用 QuickFeedbackService 生成簡短鼓勵訊息
-    - 返回 1 句話（20字內）
+    - 返回 1 句話（50字內）
+
+    Args:
+        mode: "practice" (練習模式，無孩子在場) 或 "emergency" (實戰模式，有孩子在場)
     """
     from app.services.quick_feedback_service import quick_feedback_service
 
@@ -83,9 +87,11 @@ async def session_quick_feedback(
                 instance=instance,
             )
 
-        # Call quick feedback service with the latest segment only
+        # Call quick feedback service with mode (practice vs emergency)
         feedback_result = await quick_feedback_service.get_quick_feedback(
-            recent_transcript=recent_transcript
+            recent_transcript=recent_transcript,
+            tenant_id=tenant_id,
+            mode=mode,
         )
 
         return QuickFeedbackResponse(

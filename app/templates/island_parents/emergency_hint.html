@@ -1,0 +1,114 @@
+{% extends "island_parents/base.html" %}
+
+{% block title %}事中提醒 - 浮島親子{% endblock %}
+
+{% block content %}
+<div class="page-container safe-area-top safe-area-bottom">
+    <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+        <!-- Back Button -->
+        <div class="flex items-center mb-4">
+            <button onclick="window.location.href='/island-parents/mode'" class="p-2 -ml-2 text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-xl font-bold text-gray-900 mb-2">請先跟孩子說明以下</h1>
+            <p class="text-lg font-semibold text-gray-900">會對於你們的信任關係更有幫助</p>
+        </div>
+
+        <!-- Hint Card -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+            <div class="flex items-center justify-center gap-2 mb-4">
+                <span class="text-xl">💡</span>
+                <span class="font-semibold text-gray-900">Hint</span>
+            </div>
+            <div class="text-center text-gray-700 leading-relaxed">
+                <p class="mb-4">我現在有點不知道怎麼跟你說，所以我想用一個可以幫助我說話的工具。</p>
+                <p>它不會記錄你是壞小孩，只是幫我學習怎麼跟你講得更好，你願不願意陪我一起試試看？</p>
+            </div>
+        </div>
+
+        <!-- Start Button -->
+        <div class="mt-auto px-4 pb-4">
+            <button onclick="startEmergencySession()" class="w-full py-4 px-6 bg-gray-900 text-white rounded-full text-base font-medium hover:bg-gray-800 transition-colors">
+                我已經跟孩子說了，直接開始對話
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Start emergency session
+    async function startEmergencySession() {
+        const selectedClient = JSON.parse(localStorage.getItem('island_parents_selected_client') || 'null');
+        const selectedCase = JSON.parse(localStorage.getItem('island_parents_selected_case') || 'null');
+
+        if (!selectedClient) {
+            showMessageModal('請先選擇孩子', 'error');
+            window.location.href = '/island-parents/clients';
+            return;
+        }
+
+        if (!selectedCase || !selectedCase.id) {
+            showMessageModal('請先建立孩子資料', 'error');
+            window.location.href = '/island-parents/clients/create';
+            return;
+        }
+
+        try {
+
+            // Step 1: Create session (POST)
+            const createResponse = await fetch(`${API_BASE}/api/v1/sessions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${state.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    case_id: selectedCase.id,
+                    name: '和孩子談談',
+                    notes: '實戰對話模式'
+                })
+            });
+
+            if (!createResponse.ok) {
+                const errorData = await createResponse.json();
+                throw new Error(errorData.detail || '建立會談失敗');
+            }
+
+            const session = await createResponse.json();
+
+            // Step 2: Update scenario (PATCH)
+            await fetch(`${API_BASE}/api/v1/sessions/${session.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${state.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    scenario: 'emergency',
+                    scenario_description: '實戰對話模式'
+                })
+            });
+            localStorage.setItem('island_parents_current_session', JSON.stringify(session));
+
+            // Navigate to recording
+            window.location.href = '/island-parents/recording';
+
+        } catch (error) {
+            showMessageModal(error.message || '建立會談失敗', 'error');
+        }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!await checkAuth()) return;
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,322 @@
+{% extends "island_parents/base.html" %}
+
+{% block title %}設定情境 - 浮島親子{% endblock %}
+
+{% block extra_styles %}
+/* Scenario Cards */
+.scenario-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.875rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.scenario-card:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.scenario-card:active {
+    transform: scale(0.98);
+}
+
+.scenario-card.selected {
+    border-color: #1f2937;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.scenario-card-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.scenario-card-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.scenario-card-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+}
+
+.scenario-card-desc {
+    font-size: 0.8125rem;
+    color: #6b7280;
+    line-height: 1.4;
+}
+{% endblock %}
+
+{% block content %}
+<div class="page-container safe-area-top safe-area-bottom">
+    <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+        <!-- Back Button -->
+        <div class="flex items-center mb-4">
+            <button onclick="window.location.href='/island-parents/mode'" class="p-2 -ml-2 text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step-dot"></div>
+            <div class="step-dot"></div>
+            <div class="step-dot active"></div>
+            <div class="step-dot"></div>
+        </div>
+
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-xl font-bold text-gray-900 mb-1">設定練習情境</h1>
+        </div>
+
+        <!-- Preset Scenarios View -->
+        <div id="preset-scenarios-view">
+            <!-- Scenario Cards -->
+            <div class="space-y-3 mb-6">
+                <button type="button" class="scenario-card" onclick="selectPresetScenario(event, 'grades', '成績出來了 我不知道怎麼開口', '我其實很擔心，但又怕一開口就變成責怪')">
+                    <div class="scenario-card-icon" style="background: linear-gradient(135deg, #a8d8ea 0%, #6eb5c0 100%);">
+                        <span>😊</span>
+                    </div>
+                    <div class="scenario-card-content">
+                        <p class="scenario-card-title">成績出來了 我不知道怎麼開口</p>
+                        <p class="scenario-card-desc">我其實很擔心，但又怕一開口就變成責怪</p>
+                    </div>
+                </button>
+
+                <button type="button" class="scenario-card" onclick="selectPresetScenario(event, 'phone', '手機不放，怎麼講都沒用', '已經說過很多次，但只要一提到手機，氣氛就變得很差。')">
+                    <div class="scenario-card-icon" style="background: linear-gradient(135deg, #ffb6b6 0%, #e88a8a 100%);">
+                        <span>😐</span>
+                    </div>
+                    <div class="scenario-card-content">
+                        <p class="scenario-card-title">手機不放，怎麼講都沒用</p>
+                        <p class="scenario-card-desc">已經說過很多次，但只要一提到手機，氣氛就變得很差。</p>
+                    </div>
+                </button>
+
+                <button type="button" class="scenario-card" onclick="selectPresetScenario(event, 'procrastinate', '孩子一直拖拖拉拉', '每天叫不動、催不聽，明明很小的事，卻快把我逼瘋了。')">
+                    <div class="scenario-card-icon" style="background: linear-gradient(135deg, #c8e6c9 0%, #81c784 100%);">
+                        <span>😔</span>
+                    </div>
+                    <div class="scenario-card-content">
+                        <p class="scenario-card-title">孩子一直拖拖拉拉</p>
+                        <p class="scenario-card-desc">每天叫不動、催不聽，明明很小的事，卻快把我逼瘋了。</p>
+                    </div>
+                </button>
+
+                <button type="button" class="scenario-card" onclick="selectPresetScenario(event, 'school', '孩子說不想去上學', '不是請假一天的問題，而是我不知道該怎麼聽、怎麼回。')">
+                    <div class="scenario-card-icon" style="background: linear-gradient(135deg, #f8bbd9 0%, #f06292 100%);">
+                        <span>😊</span>
+                    </div>
+                    <div class="scenario-card-content">
+                        <p class="scenario-card-title">孩子說不想去上學</p>
+                        <p class="scenario-card-desc">不是請假一天的問題，而是我不知道該怎麼聽、怎麼回。</p>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Create AI Dialogue Button -->
+            <button type="button" id="create-dialogue-btn" class="w-full py-3 px-6 bg-gray-900 text-white rounded-full text-base font-medium hover:bg-gray-800 transition-colors" onclick="handleCreateDialogue()">
+                ✨ 創建 AI 對話
+            </button>
+        </div>
+
+        <!-- Custom Dialogue View (Hidden by default) -->
+        <div id="custom-dialogue-view" class="hidden">
+            <div class="text-center mb-6">
+                <h1 class="text-xl font-bold text-gray-900 mb-4">創建AI對話</h1>
+                <h2 class="text-lg font-semibold text-gray-900 mb-2">詳細描述情境</h2>
+                <p class="text-gray-500">以及您想要進行的親子對話</p>
+            </div>
+
+            <form id="custom-session-form" onsubmit="return handleCreateCustomSession(event)">
+                <textarea
+                    id="custom-scenario-input"
+                    class="input-field resize-none mb-4"
+                    rows="6"
+                    placeholder="輸入您想要設定情境與對話主題"
+                ></textarea>
+
+                <div id="custom-session-error" class="error-message mb-4"></div>
+
+                <button type="submit" id="start-custom-session-btn" class="btn-primary">
+                    <span id="start-custom-session-btn-text">開始親子對話練習</span>
+                    <span id="start-custom-session-btn-loading" class="hidden flex items-center justify-center">
+                        <div class="spinner"></div>
+                    </span>
+                </button>
+            </form>
+
+            <button type="button" class="w-full py-3 text-gray-500 text-sm mt-4" onclick="showPresetScenariosView()">
+                ← 返回預設情境
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Selected scenario state
+    let selectedScenario = null;
+
+    // Show/hide views
+    function showCustomDialogueView() {
+        document.getElementById('preset-scenarios-view').classList.add('hidden');
+        document.getElementById('custom-dialogue-view').classList.remove('hidden');
+    }
+
+    function showPresetScenariosView() {
+        document.getElementById('custom-dialogue-view').classList.add('hidden');
+        document.getElementById('preset-scenarios-view').classList.remove('hidden');
+    }
+
+    // Create session helper
+    async function createSession(name, description, scenarioKey) {
+        const selectedClient = JSON.parse(localStorage.getItem('island_parents_selected_client') || 'null');
+        const selectedCase = JSON.parse(localStorage.getItem('island_parents_selected_case') || 'null');
+
+        if (!selectedClient) {
+            showMessageModal('請先選擇孩子', 'error');
+            window.location.href = '/island-parents/clients';
+            return null;
+        }
+
+        if (!selectedCase || !selectedCase.id) {
+            showMessageModal('請先建立孩子資料', 'error');
+            window.location.href = '/island-parents/clients/create';
+            return null;
+        }
+
+        // Step 1: Create session (POST)
+        const createResponse = await fetch(`${API_BASE}/api/v1/sessions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${state.token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                case_id: selectedCase.id,
+                name: name,
+                notes: description
+            })
+        });
+
+        if (!createResponse.ok) {
+            const errorData = await createResponse.json();
+            throw new Error(errorData.detail || '建立會談失敗');
+        }
+
+        const session = await createResponse.json();
+
+        // Step 2: Update scenario (PATCH)
+        const updateResponse = await fetch(`${API_BASE}/api/v1/sessions/${session.id}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${state.token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                scenario: scenarioKey,
+                scenario_description: description
+            })
+        });
+
+        if (!updateResponse.ok) {
+            console.warn('Failed to update scenario, but session created');
+        }
+
+        return session;
+    }
+
+    // Select preset scenario - highlight only (no navigation)
+    function selectPresetScenario(e, scenarioKey, title, description) {
+        // Store selection in memory
+        selectedScenario = {
+            key: scenarioKey,
+            title: title,
+            description: description
+        };
+
+        // Update UI - remove selected from all cards, add to clicked one
+        document.querySelectorAll('.scenario-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        e.currentTarget.classList.add('selected');
+    }
+
+    // Handle "創建 AI 對話" button click
+    function handleCreateDialogue() {
+        if (!selectedScenario) {
+            // No preset selected - go to custom dialogue view
+            showCustomDialogueView();
+            return;
+        }
+
+        // Store pending scenario info for detail page
+        localStorage.setItem('island_parents_pending_scenario_key', selectedScenario.key);
+        localStorage.setItem('island_parents_pending_scenario_title', selectedScenario.title);
+        localStorage.setItem('island_parents_pending_scenario_desc', selectedScenario.description);
+
+        // Navigate to scenario detail page
+        window.location.href = '/island-parents/scenario-detail';
+    }
+
+    // Handle custom session creation
+    async function handleCreateCustomSession(event) {
+        event.preventDefault();
+
+        const customInput = document.getElementById('custom-scenario-input').value.trim();
+
+        if (!customInput) {
+            showError('custom-session-error', '請輸入情境描述');
+            return false;
+        }
+
+        hideError('custom-session-error');
+        setButtonLoading('start-custom-session-btn', true);
+
+        try {
+            const session = await createSession('自訂情境', customInput, 'custom');
+            if (session) {
+                localStorage.setItem('island_parents_current_session', JSON.stringify(session));
+                localStorage.setItem('island_parents_scenario_title', '自訂情境');
+                window.location.href = '/island-parents/recording';
+            }
+        } catch (error) {
+            showError('custom-session-error', error.message || '建立會談失敗');
+        } finally {
+            setButtonLoading('start-custom-session-btn', false);
+        }
+
+        return false;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!await checkAuth()) return;
+
+        const selectedClient = localStorage.getItem('island_parents_selected_client');
+        if (!selectedClient) {
+            window.location.href = '/island-parents/clients';
+        }
+    });
+</script>
+{% endblock %}

@@ -47,9 +47,8 @@ from app.prompts.parenting import (
     ISLAND_PARENTS_8_SCHOOLS_EMERGENCY_PROMPT,
     ISLAND_PARENTS_8_SCHOOLS_PRACTICE_PROMPT,
     PRACTICE_MODE_PROMPT,
-)
-from app.prompts.parenting import (
-    QUICK_FEEDBACK_PROMPT as PARENTING_QUICK_PROMPT,
+    QUICK_FEEDBACK_EMERGENCY_PROMPT,
+    QUICK_FEEDBACK_PRACTICE_PROMPT,
 )
 from app.prompts.parenting import (
     REPORT_PROMPT as PARENTING_REPORT_PROMPT,
@@ -91,7 +90,11 @@ class PromptRegistry:
         },
         # Island Parents tenant
         "island_parents": {
-            "quick": {"default": PARENTING_QUICK_PROMPT},
+            "quick": {
+                "practice": QUICK_FEEDBACK_PRACTICE_PROMPT,
+                "emergency": QUICK_FEEDBACK_EMERGENCY_PROMPT,
+                "default": QUICK_FEEDBACK_PRACTICE_PROMPT,  # Default to practice
+            },
             "deep": {
                 "practice": PRACTICE_MODE_PROMPT,
                 "emergency": EMERGENCY_MODE_PROMPT,

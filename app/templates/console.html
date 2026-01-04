@@ -1105,9 +1105,9 @@
         <div class="sidebar" id="sidebar">
             <h2>📱 iOS API 測試流程</h2>
 
-            <!-- Realtime Counseling Link -->
-            <a href="/realtime-counseling" style="display: block; margin-bottom: 20px; padding: 14px 16px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(79, 70, 229, 0.25)); border-radius: 12px; border-left: 4px solid #6366f1; text-decoration: none; color: #1e293b; font-weight: 700; font-size: 14px; transition: all 0.3s ease; box-shadow: 0 2px 12px rgba(99, 102, 241, 0.2);">
-                🎤 即時諮詢輔助系統
+            <!-- Island Parents Link -->
+            <a href="/island-parents" style="display: block; margin-bottom: 20px; padding: 14px 16px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(79, 70, 229, 0.25)); border-radius: 12px; border-left: 4px solid #6366f1; text-decoration: none; color: #1e293b; font-weight: 700; font-size: 14px; transition: all 0.3s ease; box-shadow: 0 2px 12px rgba(99, 102, 241, 0.2);">
+                🏝️ 浮島親子
             </a>
 
             <!-- 諮詢師管理 -->
@@ -1491,6 +1491,14 @@
                     <span class="step-title">🔑 登入 Island Parents</span>
                 </div>
                 <div class="step-subtitle">POST /api/auth/login</div>
+            </div>
+
+            <div class="flow-step" data-step="island-get-credits">
+                <div>
+                    <span class="step-number">1b</span>
+                    <span class="step-title">💰 取得額度資訊</span>
+                </div>
+                <div class="step-subtitle">GET /api/auth/me → available_credits</div>
             </div>
 
             <div class="flow-step" data-step="island-select-client" style="border-left: 3px solid #f59e0b;">

@@ -1,0 +1,222 @@
+{% extends "island_parents/base.html" %}
+
+{% block title %}對話報告 - 浮島親子{% endblock %}
+
+{% block content %}
+<div class="page-container safe-area-top safe-area-bottom" style="background: #f5f5f5;">
+    <!-- Header -->
+    <div class="flex items-center px-4 py-3 bg-white border-b">
+        <button onclick="goBack()" class="p-2 -ml-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+        </button>
+        <h1 class="flex-1 text-center text-lg font-semibold">對話報告</h1>
+        <div class="w-10"></div>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto px-4 py-6">
+        <!-- Loading State -->
+        <div id="loading-state" class="flex flex-col items-center justify-center py-12">
+            <div class="loading-spinner mb-4"></div>
+            <p class="text-gray-600">正在生成報告...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="hidden flex flex-col items-center justify-center py-12">
+            <svg class="w-16 h-16 text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <p class="text-red-600 mb-4" id="error-message">生成報告時發生錯誤</p>
+            <button onclick="loadReport()" class="px-6 py-2 bg-gray-900 text-white rounded-full text-sm">
+                重試
+            </button>
+        </div>
+
+        <!-- Report Content -->
+        <div id="report-content" class="hidden space-y-6">
+            <!-- Encouragement Card -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm">
+                <div class="flex items-center mb-4">
+                    <span class="text-2xl mr-2">🌟</span>
+                    <h2 class="text-lg font-semibold text-gray-900">鼓勵</h2>
+                </div>
+                <p id="report-encouragement" class="text-gray-700 leading-relaxed"></p>
+            </div>
+
+            <!-- Issue Card -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm">
+                <div class="flex items-center mb-4">
+                    <span class="text-2xl mr-2">💡</span>
+                    <h2 class="text-lg font-semibold text-gray-900">待解決的議題</h2>
+                </div>
+                <p id="report-issue" class="text-gray-700 leading-relaxed"></p>
+            </div>
+
+            <!-- Analysis Card -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm">
+                <div class="flex items-center mb-4">
+                    <span class="text-2xl mr-2">📊</span>
+                    <h2 class="text-lg font-semibold text-gray-900">溝通內容分析</h2>
+                </div>
+                <p id="report-analyze" class="text-gray-700 leading-relaxed whitespace-pre-line"></p>
+            </div>
+
+            <!-- Suggestion Card -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm">
+                <div class="flex items-center mb-4">
+                    <span class="text-2xl mr-2">💬</span>
+                    <h2 class="text-lg font-semibold text-gray-900">建議下次可以這樣說</h2>
+                </div>
+                <p id="report-suggestion" class="text-gray-700 leading-relaxed whitespace-pre-line"></p>
+            </div>
+
+            <!-- Timestamp -->
+            <div class="text-center text-gray-400 text-sm py-4">
+                報告生成時間：<span id="report-timestamp"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="px-4 py-4 bg-white border-t safe-area-bottom">
+        <div class="flex gap-3">
+            <button onclick="startNewConversation()" class="flex-1 py-3 border border-gray-300 rounded-full text-gray-700 font-medium">
+                開始新對話
+            </button>
+            <button onclick="goHome()" class="flex-1 py-3 bg-gray-900 text-white rounded-full font-medium">
+                返回首頁
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #333;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let sessionId = null;
+
+    // Get session ID from URL
+    function getSessionId() {
+        const path = window.location.pathname;
+        const parts = path.split('/');
+        return parts[parts.length - 1];
+    }
+
+    // Load report from API
+    async function loadReport() {
+        const loadingState = document.getElementById('loading-state');
+        const errorState = document.getElementById('error-state');
+        const reportContent = document.getElementById('report-content');
+
+        // Show loading
+        loadingState.classList.remove('hidden');
+        errorState.classList.add('hidden');
+        reportContent.classList.add('hidden');
+
+        try {
+            const token = localStorage.getItem('island_parents_auth_token');
+            if (!token) {
+                window.location.href = '/island-parents/login';
+                return;
+            }
+
+            const response = await fetch(`/api/v1/sessions/${sessionId}/report`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'X-Tenant-Id': 'island_parents'
+                }
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/island-parents/login';
+                    return;
+                }
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Populate report
+            document.getElementById('report-encouragement').textContent = data.encouragement || '';
+            document.getElementById('report-issue').textContent = data.issue || '';
+            document.getElementById('report-analyze').textContent = data.analyze || '';
+            document.getElementById('report-suggestion').textContent = data.suggestion || '';
+
+            // Format timestamp
+            if (data.timestamp) {
+                const date = new Date(data.timestamp);
+                document.getElementById('report-timestamp').textContent = date.toLocaleString('zh-TW');
+            }
+
+            // Show report
+            loadingState.classList.add('hidden');
+            reportContent.classList.remove('hidden');
+
+        } catch (error) {
+            console.error('Failed to load report:', error);
+            loadingState.classList.add('hidden');
+            errorState.classList.remove('hidden');
+            document.getElementById('error-message').textContent = `生成報告時發生錯誤：${error.message}`;
+        }
+    }
+
+    // Navigation functions
+    function goBack() {
+        window.history.back();
+    }
+
+    function goHome() {
+        // Clear session data
+        localStorage.removeItem('island_parents_current_session');
+        localStorage.removeItem('island_parents_scenario_title');
+        localStorage.removeItem('island_parents_session_duration');
+        localStorage.removeItem('island_parents_minutes_used');
+
+        window.location.href = '/island-parents/clients';
+    }
+
+    function startNewConversation() {
+        // Clear session data
+        localStorage.removeItem('island_parents_current_session');
+        localStorage.removeItem('island_parents_scenario_title');
+        localStorage.removeItem('island_parents_session_duration');
+        localStorage.removeItem('island_parents_minutes_used');
+
+        window.location.href = '/island-parents/mode';
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!await checkAuth()) return;
+
+        sessionId = getSessionId();
+        if (!sessionId) {
+            window.location.href = '/island-parents/clients';
+            return;
+        }
+
+        loadReport();
+    });
+</script>
+{% endblock %}

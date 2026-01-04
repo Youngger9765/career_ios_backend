@@ -1,0 +1,301 @@
+{% extends "island_parents/base.html" %}
+
+{% block title %}選擇孩子 - 浮島親子{% endblock %}
+
+{% block extra_styles %}
+/* Child avatar styling */
+.child-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 3px solid transparent;
+    position: relative;
+}
+
+.child-avatar:hover {
+    transform: scale(1.05);
+}
+
+.child-avatar.selected {
+    border-color: #000;
+}
+
+.child-avatar-inner {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+}
+
+.child-avatar-face {
+    position: relative;
+    width: 60px;
+    height: 60px;
+}
+
+.child-avatar-face .eyes {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+}
+
+.child-avatar-face .eye {
+    width: 6px;
+    height: 6px;
+    background: #333;
+    border-radius: 50%;
+}
+
+.child-avatar-face .mouth {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 10px;
+    border: 2px solid #333;
+    border-top: none;
+    border-radius: 0 0 20px 20px;
+}
+
+.child-name {
+    text-align: center;
+    margin-top: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+/* Avatar colors */
+.avatar-mint { background: linear-gradient(135deg, #a8e6cf 0%, #88d8b0 100%); }
+.avatar-yellow { background: linear-gradient(135deg, #fff59d 0%, #fff176 100%); }
+.avatar-pink { background: linear-gradient(135deg, #f8bbd9 0%, #f48fb1 100%); }
+.avatar-blue { background: linear-gradient(135deg, #90caf9 0%, #64b5f6 100%); }
+.avatar-purple { background: linear-gradient(135deg, #ce93d8 0%, #ba68c8 100%); }
+.avatar-orange { background: linear-gradient(135deg, #ffcc80 0%, #ffa726 100%); }
+
+.child-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+@media (max-width: 480px) {
+    .child-avatar {
+        width: 80px;
+        height: 80px;
+    }
+
+    .child-avatar-inner {
+        width: 72px;
+        height: 72px;
+    }
+
+    .child-avatar-face {
+        width: 48px;
+        height: 48px;
+    }
+
+    .child-avatar-face .eyes {
+        top: 16px;
+        gap: 10px;
+    }
+
+    .child-avatar-face .eye {
+        width: 5px;
+        height: 5px;
+    }
+
+    .child-avatar-face .mouth {
+        bottom: 12px;
+        width: 16px;
+        height: 8px;
+    }
+
+    .child-name {
+        font-size: 0.875rem;
+    }
+
+    #children-grid {
+        gap: 1rem;
+    }
+}
+{% endblock %}
+
+{% block content %}
+<div class="page-container safe-area-top safe-area-bottom">
+    <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+        <!-- Header with Logout -->
+        <div class="flex justify-end mb-2">
+            <button onclick="handleLogout()" class="text-gray-500 text-sm py-2 px-3 hover:text-gray-700">
+                登出
+            </button>
+        </div>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step-dot"></div>
+            <div class="step-dot active"></div>
+            <div class="step-dot"></div>
+            <div class="step-dot"></div>
+        </div>
+
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">您好</h1>
+            <p class="text-gray-500">已為您建立與孩子的溝通策略</p>
+        </div>
+
+        <!-- Children Grid -->
+        <div id="children-grid" class="flex flex-wrap justify-center gap-6 mb-8">
+            <!-- Children will be dynamically inserted here -->
+        </div>
+
+        <!-- Action Button -->
+        <div class="mt-auto">
+            <button id="select-child-btn" class="btn-primary mb-4" onclick="handleSelectChild()" disabled>
+                我要和孩子好好談談
+            </button>
+            <button class="w-full py-3 text-gray-600 text-sm" onclick="window.location.href='/island-parents/clients/create'">
+                + 新增孩子
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const AVATAR_COLORS = ['mint', 'yellow', 'pink', 'blue', 'purple', 'orange'];
+
+    // Load clients from API
+    async function loadClients() {
+        const response = await fetch(`${API_BASE}/api/v1/clients`, {
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('無法載入孩子列表');
+        }
+
+        const data = await response.json();
+        state.clients = data.items || data.clients || (Array.isArray(data) ? data : []);
+        return state.clients;
+    }
+
+    // Render children grid
+    function renderChildrenGrid() {
+        const grid = document.getElementById('children-grid');
+        grid.innerHTML = '';
+
+        state.clients.forEach((client, index) => {
+            const colorClass = AVATAR_COLORS[index % AVATAR_COLORS.length];
+            const childItem = document.createElement('div');
+            childItem.className = 'child-item';
+            childItem.innerHTML = `
+                <div class="child-avatar ${state.selectedClient?.id === client.id ? 'selected' : ''}"
+                     onclick="selectChild('${client.id}')"
+                     data-client-id="${client.id}">
+                    <div class="child-avatar-inner avatar-${colorClass}">
+                        <div class="child-avatar-face">
+                            <div class="eyes">
+                                <div class="eye"></div>
+                                <div class="eye"></div>
+                            </div>
+                            <div class="mouth"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="child-name">${client.name}</div>
+            `;
+            grid.appendChild(childItem);
+        });
+    }
+
+    // Select a child
+    function selectChild(clientId) {
+        state.selectedClient = state.clients.find(c => c.id === clientId);
+
+        // Update UI
+        document.querySelectorAll('.child-avatar').forEach(avatar => {
+            avatar.classList.remove('selected');
+        });
+        document.querySelector(`[data-client-id="${clientId}"]`).classList.add('selected');
+
+        // Enable button
+        document.getElementById('select-child-btn').disabled = false;
+
+        // Save to localStorage for next page
+        localStorage.setItem('island_parents_selected_client', JSON.stringify(state.selectedClient));
+    }
+
+    // Handle select child button
+    async function handleSelectChild() {
+        if (!state.selectedClient) return;
+
+        try {
+            // Get the first case for this client
+            const response = await fetch(`${API_BASE}/api/v1/cases?client_id=${state.selectedClient.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${state.token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const cases = data.items || data.cases || [];
+
+                if (cases.length > 0) {
+                    // Case exists - save and continue
+                    localStorage.setItem('island_parents_selected_case', JSON.stringify(cases[0]));
+                    window.location.href = '/island-parents/mode';
+                } else {
+                    // No case exists for this client - show error
+                    showMessageModal('此孩子沒有建立案例，請重新建立孩子資料', 'warning');
+                    // Clear selection and redirect to create new
+                    localStorage.removeItem('island_parents_selected_client');
+                    localStorage.removeItem('island_parents_selected_case');
+                    window.location.href = '/island-parents/clients/create';
+                }
+            } else {
+                throw new Error('無法取得案例資料');
+            }
+        } catch (error) {
+            console.error('Failed to get cases:', error);
+            showMessageModal('載入案例失敗', 'error');
+        }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!await checkAuth()) return;
+
+        try {
+            await loadClients();
+
+            if (state.clients.length === 0) {
+                // No clients, redirect to create
+                window.location.href = '/island-parents/clients/create';
+                return;
+            }
+
+            renderChildrenGrid();
+        } catch (error) {
+            console.error('Failed to load clients:', error);
+            showMessageModal('載入孩子列表失敗', 'error');
+        }
+    });
+</script>
+{% endblock %}

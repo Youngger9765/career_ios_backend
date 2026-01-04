@@ -13,12 +13,14 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, get_tenant_id
 from app.models.counselor import Counselor
 from app.schemas.ui_client_case import (
+    FIELD_LABELS,
     ClientCaseDetailResponse,
     ClientCaseListItem,
     ClientCaseListResponse,
     CreateClientCaseRequest,
     CreateClientCaseResponse,
     UpdateClientCaseRequest,
+    validate_client_case_by_tenant,
 )
 from app.services.client_case_service import ClientCaseService
 
@@ -34,7 +36,7 @@ router = APIRouter(prefix="/api/v1/ui", tags=["UI APIs"])
     "/client-case",
     response_model=CreateClientCaseResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="創建客戶與個案（iOS 使用）",
+    summary="創建客戶與個案（多租戶動態欄位）",
 )
 def create_client_and_case(
     request: CreateClientCaseRequest,
@@ -42,19 +44,60 @@ def create_client_and_case(
     tenant_id: str = Depends(get_tenant_id),
     db: Session = Depends(get_db),
 ) -> CreateClientCaseResponse:
-    """Create client and case atomically"""
+    """
+    Create client and case atomically
+
+    必填欄位根據租戶不同：
+    - career: name, email, gender, birth_date, phone, identity_option, current_status
+    - island: name, email, phone, gender, birth_date, identity_option, current_status
+    - island_parents: name, grade, relationship (其他都選填)
+    """
     try:
+        # 根據租戶驗證必填欄位
+        request_data = request.model_dump()
+        missing_fields = validate_client_case_by_tenant(request_data, tenant_id)
+
+        if missing_fields:
+            # 轉換成中文欄位名稱
+            missing_labels = [FIELD_LABELS.get(f, f) for f in missing_fields]
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"缺少必填欄位：{', '.join(missing_labels)}",
+            )
+
         service = ClientCaseService(db)
+
+        # Island Parents 特有欄位存到 other_info JSON
+        other_info = {}
+        if request.grade:
+            other_info["grade"] = request.grade
+        if request.relationship:
+            other_info["relationship"] = request.relationship
+
+        # 為 island_parents 租戶設定默認值（避免 NOT NULL 約束失敗）
+        gender = request.gender
+        birth_date = request.birth_date
+        phone = request.phone
+        identity_option = request.identity_option
+        current_status = request.current_status
+
+        if tenant_id == "island_parents":
+            # 設定默認值給資料庫必填但親子版選填的欄位
+            gender = gender or "不願透露"
+            birth_date = birth_date or __import__("datetime").date(2015, 1, 1)
+            phone = phone or "0000000000"
+            identity_option = identity_option or "其他"
+            current_status = current_status or "親子對話"
 
         # Prepare client data
         client_data = {
             "name": request.name,
             "email": request.email,
-            "gender": request.gender,
-            "birth_date": request.birth_date,
-            "phone": request.phone,
-            "identity_option": request.identity_option,
-            "current_status": request.current_status,
+            "gender": gender,
+            "birth_date": birth_date,
+            "phone": phone,
+            "identity_option": identity_option,
+            "current_status": current_status,
             "education": request.education,
             "current_job": request.current_job,
             "career_status": request.career_status,
@@ -62,6 +105,7 @@ def create_client_and_case(
             "has_mental_health_history": request.has_mental_health_history,
             "location": request.location,
             "notes": request.notes,
+            "other_info": other_info if other_info else None,
         }
 
         # Prepare case data

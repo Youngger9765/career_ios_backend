@@ -1,0 +1,1232 @@
+{% extends "island_parents/base.html" %}
+
+{% block title %}對話中 - 浮島親子{% endblock %}
+
+{% block extra_styles %}
+/* Color Orb Styles */
+.color-orb-container {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.color-orb {
+    position: absolute;
+    border-radius: 50%;
+    transition: all 0.5s ease-out;
+}
+
+.color-orb.outer {
+    width: 280px;
+    height: 280px;
+    opacity: 0.15;
+}
+
+.color-orb.middle {
+    width: 200px;
+    height: 200px;
+    opacity: 0.3;
+}
+
+.color-orb.inner {
+    width: 140px;
+    height: 140px;
+    opacity: 0.5;
+}
+
+/* Green state (positive) */
+.orb-green .color-orb {
+    background: #4ade80;
+}
+.orb-green .color-orb.inner {
+    background: #22c55e;
+}
+
+/* Pink state (warning) */
+.orb-pink .color-orb {
+    background: #f472b6;
+}
+.orb-pink .color-orb.inner {
+    background: #ec4899;
+}
+
+/* Yellow state (reminder) */
+.orb-yellow .color-orb {
+    background: #facc15;
+}
+.orb-yellow .color-orb.inner {
+    background: #eab308;
+}
+
+/* Orb pulse animation */
+@keyframes orbPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+.color-orb-container.pulsing .color-orb {
+    animation: orbPulse 2s ease-in-out infinite;
+}
+
+.color-orb-container.pulsing .color-orb.middle {
+    animation-delay: 0.1s;
+}
+
+.color-orb-container.pulsing .color-orb.inner {
+    animation-delay: 0.2s;
+}
+
+/* Feedback text overlay */
+.orb-feedback-text {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 0 1.5rem;
+    max-width: 240px;
+}
+
+.deep-feedback {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+    transition: opacity 0.3s;
+}
+
+.quick-feedback {
+    font-size: 0.875rem;
+    color: #6b7280;
+    line-height: 1.3;
+}
+
+/* Recording action buttons */
+.recording-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    border-radius: 2rem;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    min-width: 140px;
+}
+
+.recording-action-btn.pause {
+    background: #1f2937;
+    color: white;
+}
+
+.recording-action-btn.pause:hover {
+    background: #374151;
+}
+
+.recording-action-btn.end {
+    background: transparent;
+    border: 2px solid #1f2937;
+    color: #1f2937;
+}
+
+.recording-action-btn.end:hover {
+    background: #f3f4f6;
+}
+
+/* Recording indicator */
+@keyframes recordingPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.recording-active {
+    animation: recordingPulse 1.5s ease-in-out infinite;
+}
+
+/* Toast notification */
+.toast-notification {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.toast-notification.show {
+    opacity: 1;
+}
+
+.toast-quick {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+
+.toast-deep {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+}
+
+.toast-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+{% endblock %}
+
+{% block content %}
+
+<!-- Toast Notifications (separate for quick and deep, positioned to not overlap) -->
+<div id="quick-toast" class="toast-notification toast-quick" style="top: 80px;">
+    <div id="quick-toast-spinner" class="toast-spinner"></div>
+    <span id="quick-toast-text">⚡ 快速分析中...</span>
+</div>
+<div id="deep-toast" class="toast-notification toast-deep" style="top: 130px;">
+    <div id="deep-toast-spinner" class="toast-spinner"></div>
+    <span id="deep-toast-text">🔍 深度分析中...</span>
+</div>
+<div class="page-container safe-area-top safe-area-bottom" style="background: #f5f5f5;">
+    <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+        <!-- Header -->
+        <div class="text-center pt-4 pb-6">
+            <h1 class="text-lg font-semibold text-gray-900 mb-1" id="recording-header">練習與 小寶 對話中...</h1>
+            <div class="flex items-center justify-center gap-2">
+                <div id="recording-indicator" class="w-2 h-2 rounded-full bg-red-500 recording-active"></div>
+                <span id="recording-timer" class="font-mono text-gray-500">00:00</span>
+            </div>
+        </div>
+
+        <!-- Color Orb with Feedback -->
+        <div class="flex-1 flex flex-col items-center justify-center py-8">
+            <div id="color-orb-wrapper" class="color-orb-container pulsing orb-green">
+                <!-- Concentric circles -->
+                <div class="color-orb outer"></div>
+                <div class="color-orb middle"></div>
+                <div class="color-orb inner"></div>
+
+                <!-- Feedback text overlay -->
+                <div class="orb-feedback-text">
+                    <p id="deep-feedback-text" class="deep-feedback">讓孩子知道你站在他這邊</p>
+                    <p id="quick-feedback-text" class="quick-feedback">很好，繼續保持同理心</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-center gap-4 pb-8 px-4">
+            <button id="pause-btn" class="recording-action-btn pause" onclick="togglePauseRecording()">
+                <svg id="pause-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/>
+                </svg>
+                <span id="pause-btn-text">暫停</span>
+            </button>
+            <button class="recording-action-btn end" onclick="confirmEndSession()">
+                <span>結束對話</span>
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- End Session Confirmation Modal -->
+<div id="end-session-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-6 mx-4 max-w-sm w-full">
+        <h3 class="text-lg font-bold text-gray-900 mb-2">結束對話？</h3>
+        <p class="text-gray-500 mb-6">結束後將產生本次對話的分析報告</p>
+        <div class="flex gap-3">
+            <button onclick="hideEndSessionModal()" class="flex-1 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium">
+                繼續對話
+            </button>
+            <button onclick="endSession()" class="flex-1 py-3 rounded-lg bg-red-500 text-white font-medium">
+                結束對話
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Inactivity Timeout Modal (1 min no speech → 15s countdown) -->
+<div id="inactivity-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-6 mx-4 max-w-sm w-full text-center">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-100 flex items-center justify-center">
+            <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+        <h3 class="text-lg font-bold text-gray-900 mb-2">還在嗎？</h3>
+        <p class="text-gray-500 mb-2">已經超過 1 分鐘沒有偵測到對話</p>
+        <p class="text-2xl font-bold text-yellow-600 mb-4" id="inactivity-countdown">15</p>
+        <p class="text-sm text-gray-400 mb-6">秒後將自動結束對話</p>
+        <div class="flex gap-3">
+            <button onclick="continueRecordingFromInactivity()" class="flex-1 py-3 rounded-lg bg-green-500 text-white font-medium">
+                繼續對話
+            </button>
+            <button onclick="endSessionFromInactivity()" class="flex-1 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium">
+                結束對話
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // =====================
+    // Recording State
+    // =====================
+    let recordingTimer = null;
+    let recordingSeconds = 0;
+    let isPaused = false;
+    let isRecording = false;
+
+    // Inactivity detection (1 min no speech → show modal, 15s countdown → auto-end)
+    const INACTIVITY_TIMEOUT_MS = 60000;  // 1 minute
+    const COUNTDOWN_SECONDS = 15;
+    let inactivityTimer = null;
+    let countdownTimer = null;
+    let countdownSeconds = COUNTDOWN_SECONDS;
+    let lastSpeechTime = null;
+
+    // ElevenLabs WebSocket STT
+    let elevenlabsWs = null;
+    let audioContext = null;
+    let audioStream = null;
+    let audioProcessor = null;
+    let transcriptBuffer = '';       // All transcript (for append API)
+    let quickTranscriptBuffer = '';  // For quick feedback - clears after API call
+    let deepTranscriptBuffer = '';   // For deep analyze - clears after API call
+
+    // Polling intervals
+    let appendInterval = null;      // 10s - append recording
+    let quickFeedbackInterval = null;  // 10s - quick feedback (after append)
+    let deepFeedbackInterval = null;   // 60s - deep analyze
+
+    // Segment tracking
+    let segmentStartTime = null;
+    let segmentNumber = 0;
+
+    // Current session
+    let currentSession = null;
+
+    // Feedback state
+    const feedbackState = {
+        currentColor: 'green',
+        lastQuickFeedback: '',
+        lastDeepFeedback: ''
+    };
+
+    // Fallback templates (used when API fails)
+    const FALLBACK_QUICK = {
+        green: ['很好，繼續保持同理心', '孩子感受到你的支持'],
+        pink: ['試著放慢語速', '注意你的語氣'],
+        yellow: ['試著用開放式問題', '讓孩子多說一些']
+    };
+
+    const FALLBACK_DEEP = {
+        green: '讓孩子知道你站在他這邊',
+        pink: '當心不當的字彙，可能讓孩子受傷喔',
+        yellow: '孩子可能覺得你不懂'
+    };
+
+    // =====================
+    // Utility Functions
+    // =====================
+
+    // Format time for API (ISO string)
+    function formatTimeForAPI(date) {
+        return date.toISOString().slice(0, 19).replace('T', ' ');
+    }
+
+    // Set orb color based on safety_level
+    function setOrbColor(color) {
+        const orbWrapper = document.getElementById('color-orb-wrapper');
+        orbWrapper.classList.remove('orb-green', 'orb-pink', 'orb-yellow');
+        orbWrapper.classList.add(`orb-${color}`);
+        feedbackState.currentColor = color;
+    }
+
+    // Map safety_level to orb color
+    function safetyLevelToColor(safetyLevel) {
+        const mapping = {
+            'green': 'green',
+            'yellow': 'yellow',
+            'red': 'pink',      // Map red to pink for UI
+            'pink': 'pink'
+        };
+        return mapping[safetyLevel] || 'green';
+    }
+
+    // Update recording header
+    function updateRecordingHeader() {
+        const selectedClient = JSON.parse(localStorage.getItem('island_parents_selected_client') || 'null');
+        const childName = selectedClient?.name || '小寶';
+        document.getElementById('recording-header').textContent = `練習與 ${childName} 對話中...`;
+    }
+
+    // Format duration display
+    function formatDuration(seconds) {
+        const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
+        const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
+        return `${hrs}:${mins}:${secs}`;
+    }
+
+    // =====================
+    // Toast Notification Functions (Quick and Deep are independent)
+    // =====================
+
+    let quickToastTimeout = null;
+    let deepToastTimeout = null;
+
+    // Show Quick toast (⚡ yellow)
+    function showQuickToast(text, showSpinner = true, duration = 0) {
+        const toast = document.getElementById('quick-toast');
+        const toastText = document.getElementById('quick-toast-text');
+        const spinner = document.getElementById('quick-toast-spinner');
+
+        toastText.textContent = text;
+        spinner.style.display = showSpinner ? 'inline-block' : 'none';
+        toast.classList.add('show');
+
+        // Clear previous timeout
+        if (quickToastTimeout) {
+            clearTimeout(quickToastTimeout);
+            quickToastTimeout = null;
+        }
+
+        // Auto-hide after duration (0 = no auto-hide, wait for explicit hide)
+        if (duration > 0) {
+            quickToastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+    }
+
+    // Hide Quick toast
+    function hideQuickToast() {
+        const toast = document.getElementById('quick-toast');
+        toast.classList.remove('show');
+        if (quickToastTimeout) {
+            clearTimeout(quickToastTimeout);
+            quickToastTimeout = null;
+        }
+    }
+
+    // Show Deep toast (🔍 blue)
+    function showDeepToast(text, showSpinner = true, duration = 0) {
+        const toast = document.getElementById('deep-toast');
+        const toastText = document.getElementById('deep-toast-text');
+        const spinner = document.getElementById('deep-toast-spinner');
+
+        toastText.textContent = text;
+        spinner.style.display = showSpinner ? 'inline-block' : 'none';
+        toast.classList.add('show');
+
+        // Clear previous timeout
+        if (deepToastTimeout) {
+            clearTimeout(deepToastTimeout);
+            deepToastTimeout = null;
+        }
+
+        // Auto-hide after duration (0 = no auto-hide, wait for explicit hide)
+        if (duration > 0) {
+            deepToastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+    }
+
+    // Hide Deep toast
+    function hideDeepToast() {
+        const toast = document.getElementById('deep-toast');
+        toast.classList.remove('show');
+        if (deepToastTimeout) {
+            clearTimeout(deepToastTimeout);
+            deepToastTimeout = null;
+        }
+    }
+
+    // =====================
+    // Inactivity Detection Functions
+    // =====================
+
+    // Start inactivity timer (1 minute timeout)
+    function startInactivityTimer() {
+        lastSpeechTime = Date.now();
+        resetInactivityTimer();
+        console.log('⏱️ Inactivity timer started');
+    }
+
+    // Reset inactivity timer (called when speech is detected)
+    function resetInactivityTimer() {
+        // Clear existing timer
+        if (inactivityTimer) {
+            clearTimeout(inactivityTimer);
+        }
+
+        // Only set timer if recording and not paused
+        if (isRecording && !isPaused) {
+            inactivityTimer = setTimeout(() => {
+                console.log('⚠️ 1 minute inactivity detected, showing modal');
+                showInactivityModal();
+            }, INACTIVITY_TIMEOUT_MS);
+        }
+    }
+
+    // Called when speech is detected from ElevenLabs
+    function onSpeechDetected() {
+        lastSpeechTime = Date.now();
+        resetInactivityTimer();
+        console.log('🎤 Speech detected, resetting inactivity timer');
+    }
+
+    // Show inactivity modal with 15s countdown
+    function showInactivityModal() {
+        // Pause recording while modal is shown
+        if (!isPaused) {
+            pauseRecording();
+        }
+
+        // Reset countdown
+        countdownSeconds = COUNTDOWN_SECONDS;
+        document.getElementById('inactivity-countdown').textContent = countdownSeconds;
+        document.getElementById('inactivity-modal').classList.remove('hidden');
+
+        // Start countdown timer
+        countdownTimer = setInterval(() => {
+            countdownSeconds--;
+            document.getElementById('inactivity-countdown').textContent = countdownSeconds;
+
+            if (countdownSeconds <= 0) {
+                // Auto-end session
+                console.log('⏰ Countdown finished, auto-ending session');
+                endSessionFromInactivity();
+            }
+        }, 1000);
+    }
+
+    // Hide inactivity modal and clear countdown
+    function hideInactivityModal() {
+        document.getElementById('inactivity-modal').classList.add('hidden');
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+        }
+    }
+
+    // User clicks "繼續對話" on inactivity modal
+    function continueRecordingFromInactivity() {
+        hideInactivityModal();
+        resumeRecording();
+        startInactivityTimer();
+        console.log('✅ User chose to continue recording');
+    }
+
+    // User clicks "結束對話" or countdown reaches 0
+    function endSessionFromInactivity() {
+        hideInactivityModal();
+        endSession();
+        console.log('🛑 Session ended due to inactivity');
+    }
+
+    // Stop inactivity timer (called when recording stops/pauses)
+    function stopInactivityTimer() {
+        if (inactivityTimer) {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = null;
+        }
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+        }
+    }
+
+    // =====================
+    // ElevenLabs WebSocket STT Functions
+    // =====================
+
+    // Convert ArrayBuffer to Base64
+    function arrayBufferToBase64(buffer) {
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+    }
+
+    // Initialize ElevenLabs WebSocket connection
+    async function initElevenLabsSTT() {
+        try {
+            console.log('🔌 Connecting to ElevenLabs STT...');
+
+            // Step 1: Get token from backend
+            const tokenResponse = await fetch(`${API_BASE}/api/v1/transcript/elevenlabs-token`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${state.token}`
+                }
+            });
+
+            if (!tokenResponse.ok) {
+                throw new Error(`Token 生成失敗: ${tokenResponse.status}`);
+            }
+
+            const { token } = await tokenResponse.json();
+            console.log('✅ ElevenLabs token obtained');
+
+            // Step 2: Connect to ElevenLabs WebSocket
+            const wsUrl = `wss://api.elevenlabs.io/v1/speech-to-text/realtime?` +
+                `token=${token}` +
+                `&audio_format=pcm_16000` +
+                `&language=zh` +
+                `&commit_strategy=vad`;
+
+            elevenlabsWs = new WebSocket(wsUrl);
+
+            elevenlabsWs.onopen = () => {
+                console.log('✅ ElevenLabs WebSocket connected');
+            };
+
+            elevenlabsWs.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+
+                // Debug: log all messages from ElevenLabs
+                console.log('🎤 ElevenLabs message:', message.message_type || message.status, message);
+
+                // Handle transcript messages (committed_transcript = final, partial_transcript = interim)
+                if (message.message_type === 'committed_transcript' && message.text) {
+                    // Append to all transcript buffers
+                    const speakerLabel = message.speaker_id === 0 ? '家長' : '孩子';
+                    const line = `${speakerLabel}：${message.text}\n`;
+                    transcriptBuffer += line;       // For debug display
+                    quickTranscriptBuffer += line;  // For quick feedback API
+                    deepTranscriptBuffer += line;   // For deep analyze API
+                    console.log(`📝 Transcript: ${speakerLabel}: ${message.text}`);
+
+                    // Reset inactivity timer - speech detected!
+                    onSpeechDetected();
+                }
+
+                // Handle session start
+                if (message.status === 'started') {
+                    console.log('✅ ElevenLabs session started');
+                }
+            };
+
+            elevenlabsWs.onerror = (error) => {
+                console.error('❌ ElevenLabs WebSocket error:', error);
+            };
+
+            elevenlabsWs.onclose = (event) => {
+                console.log(`🔌 ElevenLabs WebSocket closed (code: ${event.code})`);
+            };
+
+            return true;
+
+        } catch (error) {
+            console.error('Failed to init ElevenLabs STT:', error);
+            // Continue without STT - will use fallback
+            return false;
+        }
+    }
+
+    // Start audio capture and send to ElevenLabs
+    async function startAudioCapture() {
+        try {
+            // Request microphone permission
+            audioStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    channelCount: 1,
+                    sampleRate: 16000,
+                    echoCancellation: true,
+                    noiseSuppression: true
+                }
+            });
+            console.log('✅ Microphone access granted');
+
+            // Create AudioContext
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            const source = audioContext.createMediaStreamSource(audioStream);
+
+            // Create audio processor
+            audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+
+            let audioChunkCount = 0;
+            audioProcessor.onaudioprocess = (e) => {
+                if (elevenlabsWs && elevenlabsWs.readyState === WebSocket.OPEN && !isPaused) {
+                    const inputData = e.inputBuffer.getChannelData(0);
+
+                    // Convert to Int16 PCM
+                    const pcmData = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        const s = Math.max(-1, Math.min(1, inputData[i]));
+                        pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+
+                    // Convert to Base64 and send
+                    const base64Audio = arrayBufferToBase64(pcmData.buffer);
+                    const message = {
+                        message_type: 'input_audio_chunk',
+                        audio_base_64: base64Audio,
+                        commit: false,
+                        sample_rate: 16000
+                    };
+                    elevenlabsWs.send(JSON.stringify(message));
+
+                    // Debug: log every 50th chunk (about once per second)
+                    audioChunkCount++;
+                    if (audioChunkCount % 50 === 0) {
+                        console.log(`🎵 Audio chunks sent: ${audioChunkCount}`);
+                    }
+                }
+            };
+
+            source.connect(audioProcessor);
+            audioProcessor.connect(audioContext.destination);
+
+            console.log('✅ Audio capture started');
+            return true;
+
+        } catch (error) {
+            console.error('Failed to start audio capture:', error);
+            return false;
+        }
+    }
+
+    // =====================
+    // Recording Functions
+    // =====================
+
+    async function startRecordingSession() {
+        try {
+            // Load current session
+            currentSession = JSON.parse(localStorage.getItem('island_parents_current_session') || 'null');
+            if (!currentSession) {
+                showMessageModal('找不到會談資料', 'error');
+                window.location.href = '/island-parents/session';
+                return;
+            }
+
+            // Initialize ElevenLabs STT
+            const sttInitialized = await initElevenLabsSTT();
+            if (!sttInitialized) {
+                console.warn('⚠️ STT not available, using fallback mode');
+            }
+
+            // Wait for WebSocket to be ready
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Start audio capture
+            const audioStarted = await startAudioCapture();
+            if (!audioStarted) {
+                showMessageModal('無法啟動麥克風，請確認已授予權限', 'error');
+                return;
+            }
+
+            isRecording = true;
+            isPaused = false;
+
+            // Initialize segment tracking
+            segmentStartTime = new Date();
+            segmentNumber = 0;
+            transcriptBuffer = '';
+
+            // Start all timers
+            startTimer();
+            startAllPolling();
+            startInactivityTimer();  // 1 min no speech → show modal
+
+            console.log('Recording started for session:', currentSession.id);
+
+        } catch (error) {
+            console.error('Failed to start recording:', error);
+            showMessageModal('無法啟動錄音，請重試', 'error');
+        }
+    }
+
+    // Toggle pause/resume
+    function togglePauseRecording() {
+        if (isPaused) {
+            resumeRecording();
+        } else {
+            pauseRecording();
+        }
+    }
+
+    // Pause recording
+    async function pauseRecording() {
+        isPaused = true;
+
+        // Stop timer
+        if (recordingTimer) {
+            clearInterval(recordingTimer);
+            recordingTimer = null;
+        }
+
+        // Stop inactivity timer
+        stopInactivityTimer();
+
+        // Suspend audio context (stops sending audio to ElevenLabs)
+        if (audioContext && audioContext.state === 'running') {
+            await audioContext.suspend();
+        }
+
+        // Stop all polling
+        clearAllPolling();
+
+        // Append current segment before pausing
+        await appendRecording();
+
+        // Update UI
+        document.getElementById('pause-btn-text').textContent = '繼續';
+        document.getElementById('pause-icon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>';
+        document.getElementById('recording-indicator').classList.remove('recording-active');
+        document.getElementById('color-orb-wrapper').classList.remove('pulsing');
+
+        console.log('Recording paused');
+    }
+
+    // Resume recording
+    async function resumeRecording() {
+        isPaused = false;
+
+        // Resume audio context
+        if (audioContext && audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+
+        // Reset segment start time for new segment
+        segmentStartTime = new Date();
+
+        // Resume all timers
+        startTimer();
+        startAllPolling();
+        startInactivityTimer();  // Restart inactivity detection
+
+        // Update UI
+        document.getElementById('pause-btn-text').textContent = '暫停';
+        document.getElementById('pause-icon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/>';
+        document.getElementById('recording-indicator').classList.add('recording-active');
+        document.getElementById('color-orb-wrapper').classList.add('pulsing');
+
+        console.log('Recording resumed');
+    }
+
+    // Start timer
+    function startTimer() {
+        recordingTimer = setInterval(() => {
+            recordingSeconds++;
+            const mins = Math.floor(recordingSeconds / 60).toString().padStart(2, '0');
+            const secs = (recordingSeconds % 60).toString().padStart(2, '0');
+            document.getElementById('recording-timer').textContent = `${mins}:${secs}`;
+        }, 1000);
+    }
+
+    // =====================
+    // Polling Management
+    // =====================
+
+    function startAllPolling() {
+        // Append + Quick feedback every 15 seconds
+        appendInterval = setInterval(async () => {
+            if (!isPaused && isRecording) {
+                await appendRecording();
+                await fetchQuickFeedback();
+            }
+        }, 15000);
+
+        // Deep analyze every 60 seconds
+        deepFeedbackInterval = setInterval(async () => {
+            if (!isPaused && isRecording) {
+                await fetchDeepFeedback();
+            }
+        }, 60000);
+
+        // Initial quick feedback after 8 seconds
+        setTimeout(async () => {
+            if (isRecording && !isPaused) {
+                await appendRecording();
+                await fetchQuickFeedback();
+            }
+        }, 8000);
+
+        console.log('Polling started: append+quick=15s, deep=60s');
+    }
+
+    function clearAllPolling() {
+        if (appendInterval) {
+            clearInterval(appendInterval);
+            appendInterval = null;
+        }
+        if (quickFeedbackInterval) {
+            clearInterval(quickFeedbackInterval);
+            quickFeedbackInterval = null;
+        }
+        if (deepFeedbackInterval) {
+            clearInterval(deepFeedbackInterval);
+            deepFeedbackInterval = null;
+        }
+        console.log('Polling stopped');
+    }
+
+    // =====================
+    // API: Append Recording
+    // =====================
+
+    async function appendRecording() {
+        if (!currentSession || !currentSession.id) return;
+
+        const endTime = new Date();
+        const durationSeconds = Math.floor((endTime - segmentStartTime) / 1000);
+
+        // Skip if segment is too short
+        if (durationSeconds < 2) {
+            console.log('Segment too short, skipping append');
+            return;
+        }
+
+        // Get transcript from ElevenLabs STT buffer (REAL speech only)
+        const transcriptText = transcriptBuffer.trim();
+
+        // Skip if no real speech detected - DO NOT use fake transcripts
+        if (!transcriptText) {
+            console.log('⏭️ No speech detected, skipping append (waiting for real transcript)');
+            return;
+        }
+
+        segmentNumber++;
+
+        const requestBody = {
+            start_time: formatTimeForAPI(segmentStartTime),
+            end_time: formatTimeForAPI(endTime),
+            duration_seconds: durationSeconds,
+            transcript_text: transcriptText
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/api/v1/sessions/${currentSession.id}/recordings/append`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${state.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`Segment ${segmentNumber} appended:`, data.total_recordings, 'total recordings');
+                console.log('📝 Transcript sent:', transcriptText.substring(0, 100) + '...');
+
+                // Clear buffer and reset for next segment
+                transcriptBuffer = '';
+                segmentStartTime = new Date();
+            } else {
+                console.error('Append failed:', response.status);
+            }
+        } catch (error) {
+            console.error('Append error:', error);
+        }
+    }
+
+
+    // =====================
+    // API: Quick Feedback (15s)
+    // =====================
+
+    async function fetchQuickFeedback() {
+        if (!currentSession || !currentSession.id) return;
+
+        // Skip if no new transcript since last call
+        if (!quickTranscriptBuffer.trim()) {
+            console.log('⏭️ No new transcript for quick feedback, skipping');
+            return;
+        }
+
+        // Show toast: sending quick analysis (stays until response)
+        showQuickToast('⚡ 快速分析中...', true, 0);
+
+        try {
+            const response = await fetch(`${API_BASE}/api/v1/sessions/${currentSession.id}/quick-feedback`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${state.token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Quick feedback:', data.message, `(${data.latency_ms}ms)`);
+
+                // Clear quick buffer after successful API call
+                quickTranscriptBuffer = '';
+
+                // Update toast: show result, then fade out after 2s
+                showQuickToast(`⚡ ${data.message}`, false, 3000);
+
+                // Update quick feedback text
+                document.getElementById('quick-feedback-text').textContent = data.message;
+                feedbackState.lastQuickFeedback = data.message;
+
+            } else if (response.status === 400) {
+                // No recordings yet - hide toast
+                console.log('No recordings yet for quick feedback');
+                hideQuickToast();
+            } else {
+                console.error('Quick feedback failed:', response.status);
+                hideQuickToast();
+            }
+        } catch (error) {
+            console.error('Quick feedback error:', error);
+            hideQuickToast();
+        }
+    }
+
+    function useFallbackQuickFeedback() {
+        const templates = FALLBACK_QUICK[feedbackState.currentColor];
+        const text = templates[Math.floor(Math.random() * templates.length)];
+        document.getElementById('quick-feedback-text').textContent = text;
+    }
+
+    // =====================
+    // API: Deep Analyze (60s)
+    // =====================
+
+    async function fetchDeepFeedback() {
+        if (!currentSession || !currentSession.id) return;
+
+        // Skip if no new transcript since last call
+        if (!deepTranscriptBuffer.trim()) {
+            console.log('⏭️ No new transcript for deep analyze, skipping');
+            return;
+        }
+
+        // Show toast: sending deep analysis (stays until response)
+        showDeepToast('🔍 深度分析中...', true, 0);
+
+        try {
+            const mode = localStorage.getItem('island_parents_mode') || 'practice';
+            const response = await fetch(`${API_BASE}/api/v1/sessions/${currentSession.id}/deep-analyze?mode=${mode}&use_rag=false`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${state.token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Deep analyze:', data.safety_level, data.summary);
+
+                // Clear deep buffer after successful API call
+                deepTranscriptBuffer = '';
+
+                // Update toast: show result, then fade out after 3s
+                showDeepToast(`🔍 ${data.summary}`, false, 4000);
+
+                // Update orb color based on safety_level
+                const newColor = safetyLevelToColor(data.safety_level);
+                setOrbColor(newColor);
+
+                // Update deep feedback text with animation
+                const deepFeedbackEl = document.getElementById('deep-feedback-text');
+                deepFeedbackEl.style.opacity = '0';
+                setTimeout(() => {
+                    deepFeedbackEl.textContent = data.summary || '等待更多對話...';
+                    deepFeedbackEl.style.opacity = '1';
+                }, 300);
+
+                feedbackState.lastDeepFeedback = data.summary;
+
+            } else if (response.status === 400) {
+                // No recordings yet - hide toast
+                console.log('No recordings yet for deep analyze');
+                hideDeepToast();
+            } else {
+                console.error('Deep analyze failed:', response.status);
+                hideDeepToast();
+            }
+        } catch (error) {
+            console.error('Deep analyze error:', error);
+            hideDeepToast();
+        }
+    }
+
+    function useFallbackDeepFeedback() {
+        const deepFeedbackEl = document.getElementById('deep-feedback-text');
+        deepFeedbackEl.style.opacity = '0';
+        setTimeout(() => {
+            deepFeedbackEl.textContent = FALLBACK_DEEP[feedbackState.currentColor];
+            deepFeedbackEl.style.opacity = '1';
+        }, 300);
+    }
+
+    // =====================
+    // End Session
+    // =====================
+
+    function confirmEndSession() {
+        document.getElementById('end-session-modal').classList.remove('hidden');
+    }
+
+    function hideEndSessionModal() {
+        document.getElementById('end-session-modal').classList.add('hidden');
+    }
+
+    function stopAllRecording() {
+        // Close ElevenLabs WebSocket
+        if (elevenlabsWs) {
+            if (elevenlabsWs.readyState === WebSocket.OPEN) {
+                // Send end of stream message
+                elevenlabsWs.send(JSON.stringify({ message_type: 'end_of_stream' }));
+            }
+            elevenlabsWs.close();
+            elevenlabsWs = null;
+            console.log('🔌 ElevenLabs WebSocket closed');
+        }
+
+        // Stop audio processor
+        if (audioProcessor) {
+            audioProcessor.disconnect();
+            audioProcessor = null;
+        }
+
+        // Close AudioContext
+        if (audioContext) {
+            audioContext.close();
+            audioContext = null;
+            console.log('🎤 AudioContext closed');
+        }
+
+        // Stop audio stream tracks
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
+            audioStream = null;
+            console.log('🎤 Audio stream stopped');
+        }
+
+        // Stop timer
+        if (recordingTimer) {
+            clearInterval(recordingTimer);
+            recordingTimer = null;
+        }
+
+        // Stop inactivity timer
+        stopInactivityTimer();
+
+        // Stop all polling
+        clearAllPolling();
+
+        isRecording = false;
+        isPaused = false;
+    }
+
+    async function endSession() {
+        hideEndSessionModal();
+
+        // Append final segment before ending
+        await appendRecording();
+
+        const finalDuration = formatDuration(recordingSeconds);
+        const minutesUsed = Math.ceil(recordingSeconds / 60);
+
+        stopAllRecording();
+
+        // Save session data for complete page
+        localStorage.setItem('island_parents_session_duration', finalDuration);
+        localStorage.setItem('island_parents_minutes_used', minutesUsed.toString());
+
+        console.log('Session ended:', finalDuration, `(${segmentNumber} segments)`);
+
+        // Create usage record and deduct credits
+        await createUsageRecord(recordingSeconds, minutesUsed);
+
+        // Navigate to generating page
+        window.location.href = '/island-parents/generating';
+    }
+
+    // Create usage record for billing
+    async function createUsageRecord(durationSeconds, minutesUsed) {
+        if (!currentSession || !currentSession.id) {
+            console.warn('No session ID, skipping usage record');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('island_parents_auth_token');
+            const response = await fetch(`/api/v1/sessions/${currentSession.id}/usage`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'X-Tenant-Id': 'island_parents'
+                },
+                body: JSON.stringify({
+                    usage_type: 'voice_call',
+                    status: 'completed',
+                    duration_seconds: durationSeconds,
+                    pricing_rule: {
+                        unit: 'minute',
+                        rate: 1  // 1 credit per minute
+                    }
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Usage record created, credits deducted:', data.credits_deducted);
+                // Store actual deducted credits
+                localStorage.setItem('island_parents_credits_deducted', data.credits_deducted?.toString() || '0');
+            } else {
+                console.error('❌ Failed to create usage record:', response.status);
+            }
+        } catch (error) {
+            console.error('❌ Error creating usage record:', error);
+            // Don't block navigation even if billing fails
+        }
+    }
+
+    // =====================
+    // Initialize
+    // =====================
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!await checkAuth()) return;
+
+        const sessionData = localStorage.getItem('island_parents_current_session');
+        if (!sessionData) {
+            window.location.href = '/island-parents/session';
+            return;
+        }
+
+        updateRecordingHeader();
+        startRecordingSession();
+    });
+</script>
+{% endblock %}

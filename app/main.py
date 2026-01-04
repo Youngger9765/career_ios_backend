@@ -208,10 +208,97 @@ async def admin_page(request: Request) -> Response:
     )
 
 
-@app.get("/realtime-counseling", response_class=HTMLResponse)
-async def realtime_counseling_page(request: Request) -> Response:
-    """Realtime STT Counseling page - AI-powered live counseling assistant"""
-    return templates.TemplateResponse("realtime_counseling.html", {"request": request})
+# =====================
+# Island Parents Routes (浮島親子)
+# =====================
+@app.get("/island-parents", response_class=HTMLResponse)
+async def island_parents_login(request: Request) -> Response:
+    """Island Parents - Login page"""
+    return templates.TemplateResponse("island_parents/login.html", {"request": request})
+
+
+@app.get("/island-parents/login", response_class=HTMLResponse)
+async def island_parents_login_alt(request: Request) -> Response:
+    """Island Parents - Login page (alt)"""
+    return templates.TemplateResponse("island_parents/login.html", {"request": request})
+
+
+@app.get("/island-parents/clients", response_class=HTMLResponse)
+async def island_parents_clients(request: Request) -> Response:
+    """Island Parents - Client selection page"""
+    return templates.TemplateResponse(
+        "island_parents/clients.html", {"request": request}
+    )
+
+
+@app.get("/island-parents/clients/create", response_class=HTMLResponse)
+async def island_parents_clients_create(request: Request) -> Response:
+    """Island Parents - Create new client page"""
+    return templates.TemplateResponse(
+        "island_parents/clients_create.html", {"request": request}
+    )
+
+
+@app.get("/island-parents/mode", response_class=HTMLResponse)
+async def island_parents_mode(request: Request) -> Response:
+    """Island Parents - Mode selection page"""
+    return templates.TemplateResponse("island_parents/mode.html", {"request": request})
+
+
+@app.get("/island-parents/session", response_class=HTMLResponse)
+async def island_parents_session(request: Request) -> Response:
+    """Island Parents - Session/scenario selection page"""
+    return templates.TemplateResponse(
+        "island_parents/session.html", {"request": request}
+    )
+
+
+@app.get("/island-parents/scenario-detail", response_class=HTMLResponse)
+async def island_parents_scenario_detail(request: Request) -> Response:
+    """Island Parents - Scenario detail input page"""
+    return templates.TemplateResponse(
+        "island_parents/scenario_detail.html", {"request": request}
+    )
+
+
+@app.get("/island-parents/emergency-hint", response_class=HTMLResponse)
+async def island_parents_emergency_hint(request: Request) -> Response:
+    """Island Parents - Emergency mode hint page"""
+    return templates.TemplateResponse(
+        "island_parents/emergency_hint.html", {"request": request}
+    )
+
+
+@app.get("/island-parents/recording", response_class=HTMLResponse)
+async def island_parents_recording(request: Request) -> Response:
+    """Island Parents - Recording page with color orb"""
+    return templates.TemplateResponse(
+        "island_parents/recording.html", {"request": request}
+    )
+
+
+@app.get("/island-parents/generating", response_class=HTMLResponse)
+async def island_parents_generating(request: Request) -> Response:
+    """Island Parents - Report generating page"""
+    return templates.TemplateResponse(
+        "island_parents/generating.html", {"request": request}
+    )
+
+
+@app.get("/island-parents/complete", response_class=HTMLResponse)
+async def island_parents_complete(request: Request) -> Response:
+    """Island Parents - Session complete page"""
+    return templates.TemplateResponse(
+        "island_parents/complete.html", {"request": request}
+    )
+
+
+@app.get("/island-parents/report/{session_id}", response_class=HTMLResponse)
+async def island_parents_report(request: Request, session_id: str) -> Response:
+    """Island Parents - Session report page"""
+    return templates.TemplateResponse(
+        "island_parents/report.html", {"request": request}
+    )
 
 
 @app.get("/forgot-password", response_class=HTMLResponse)

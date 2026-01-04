@@ -1,5 +1,6 @@
 """Gemini service for chat completions using Vertex AI"""
 
+import asyncio
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -65,7 +66,14 @@ class GeminiService:
             generation_config["response_mime_type"] = "application/json"
 
         config = GenerationConfig(**generation_config)
-        response = self.chat_model.generate_content(prompt, generation_config=config)
+
+        # Use asyncio.to_thread to run sync API call without blocking event loop
+        # This allows concurrent requests (quick-feedback + deep-analyze) to run in parallel
+        response = await asyncio.to_thread(
+            self.chat_model.generate_content,
+            prompt,
+            generation_config=config,
+        )
 
         # Log response details
         logger = logging.getLogger(__name__)
@@ -319,7 +327,13 @@ class GeminiService:
         }
 
         config = GenerationConfig(**generation_config)
-        response = self.chat_model.generate_content(prompt, generation_config=config)
+
+        # Use asyncio.to_thread to run sync API call without blocking event loop
+        response = await asyncio.to_thread(
+            self.chat_model.generate_content,
+            prompt,
+            generation_config=config,
+        )
 
         # Extract usage metadata
         usage_metadata = {}

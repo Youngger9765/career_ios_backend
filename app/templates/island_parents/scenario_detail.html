@@ -1,0 +1,157 @@
+{% extends "island_parents/base.html" %}
+
+{% block title %}創建AI對話 - 浮島親子{% endblock %}
+
+{% block content %}
+<div class="page-container safe-area-top safe-area-bottom">
+    <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+        <!-- Back Button -->
+        <div class="flex items-center mb-4">
+            <button onclick="window.location.href='/island-parents/session'" class="p-2 -ml-2 text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <h1 class="text-lg font-semibold text-gray-900 ml-2">創建AI對話</h1>
+        </div>
+
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-2">詳細描述情境</h2>
+            <p class="text-gray-500">以及您想要進行的親子對話</p>
+        </div>
+
+        <!-- Form -->
+        <form id="scenario-detail-form" onsubmit="return handleStartSession(event)">
+            <textarea
+                id="scenario-description-input"
+                class="input-field resize-none mb-6"
+                rows="6"
+                placeholder="輸入您想要設定情境與對話主題"
+            ></textarea>
+
+            <div id="scenario-error" class="error-message mb-4"></div>
+
+            <button type="submit" id="start-session-btn" class="btn-primary">
+                <span id="start-session-btn-text">開始親子對話練習</span>
+                <span id="start-session-btn-loading" class="hidden flex items-center justify-center">
+                    <div class="spinner"></div>
+                </span>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Get scenario info from localStorage
+    const scenarioKey = localStorage.getItem('island_parents_pending_scenario_key') || 'custom';
+    const scenarioTitle = localStorage.getItem('island_parents_pending_scenario_title') || '自訂情境';
+    const scenarioDesc = localStorage.getItem('island_parents_pending_scenario_desc') || '';
+
+    // Pre-fill description if from preset scenario
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!await checkAuth()) return;
+
+        // Pre-fill the textarea with preset description
+        if (scenarioDesc) {
+            document.getElementById('scenario-description-input').value = scenarioDesc;
+        }
+    });
+
+    // Create session helper
+    async function createSession(name, description, scenarioKey) {
+        const selectedClient = JSON.parse(localStorage.getItem('island_parents_selected_client') || 'null');
+        const selectedCase = JSON.parse(localStorage.getItem('island_parents_selected_case') || 'null');
+
+        if (!selectedClient) {
+            showMessageModal('請先選擇孩子', 'error');
+            window.location.href = '/island-parents/clients';
+            return null;
+        }
+
+        if (!selectedCase || !selectedCase.id) {
+            showMessageModal('請先建立孩子資料', 'error');
+            window.location.href = '/island-parents/clients/create';
+            return null;
+        }
+
+        // Step 1: Create session (POST)
+        const createResponse = await fetch(`${API_BASE}/api/v1/sessions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${state.token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                case_id: selectedCase.id,
+                name: name,
+                notes: description
+            })
+        });
+
+        if (!createResponse.ok) {
+            const errorData = await createResponse.json();
+            throw new Error(errorData.detail || '建立會談失敗');
+        }
+
+        const session = await createResponse.json();
+
+        // Step 2: Update scenario (PATCH)
+        const updateResponse = await fetch(`${API_BASE}/api/v1/sessions/${session.id}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${state.token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                scenario: scenarioKey,
+                scenario_description: description
+            })
+        });
+
+        if (!updateResponse.ok) {
+            console.warn('Failed to update scenario, but session created');
+        }
+
+        return session;
+    }
+
+    // Handle start session
+    async function handleStartSession(event) {
+        event.preventDefault();
+
+        const description = document.getElementById('scenario-description-input').value.trim();
+
+        if (!description) {
+            showError('scenario-error', '請輸入情境描述');
+            return false;
+        }
+
+        hideError('scenario-error');
+        setButtonLoading('start-session-btn', true);
+
+        try {
+            const session = await createSession(scenarioTitle, description, scenarioKey);
+            if (session) {
+                localStorage.setItem('island_parents_current_session', JSON.stringify(session));
+                localStorage.setItem('island_parents_scenario_title', scenarioTitle);
+
+                // Clear pending scenario data
+                localStorage.removeItem('island_parents_pending_scenario_key');
+                localStorage.removeItem('island_parents_pending_scenario_title');
+                localStorage.removeItem('island_parents_pending_scenario_desc');
+
+                window.location.href = '/island-parents/recording';
+            }
+        } catch (error) {
+            showError('scenario-error', error.message || '建立會談失敗');
+        } finally {
+            setButtonLoading('start-session-btn', false);
+        }
+
+        return false;
+    }
+</script>
+{% endblock %}

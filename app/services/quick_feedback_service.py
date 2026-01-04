@@ -26,6 +26,7 @@ class QuickFeedbackService:
         self,
         recent_transcript: str,
         tenant_id: Optional[str] = None,
+        mode: Optional[str] = None,
     ) -> Dict[str, str]:
         """
         使用輕量 AI 生成快速回饋
@@ -33,6 +34,9 @@ class QuickFeedbackService:
         Args:
             recent_transcript: 最近 10 秒的逐字稿
             tenant_id: 租戶 ID（用於選擇對應的 prompt）
+            mode: 模式 ("practice" 練習模式 / "emergency" 實戰模式)
+                  - practice: 家長獨自練習，沒有孩子在場
+                  - emergency: 真實親子互動現場
 
         Returns:
             {
@@ -45,10 +49,11 @@ class QuickFeedbackService:
         start_time = time.time()
 
         try:
-            # 從 PromptRegistry 取得對應的 prompt
+            # 從 PromptRegistry 取得對應的 prompt（支援 mode）
             prompt_template = PromptRegistry.get_prompt(
                 tenant_id or "island_parents",
                 "quick",
+                mode=mode or "practice",  # Default to practice mode
             )
             prompt = prompt_template.format(transcript_segment=recent_transcript)
 

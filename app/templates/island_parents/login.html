@@ -1,0 +1,202 @@
+{% extends "island_parents/base.html" %}
+
+{% block title %}登入 - 浮島親子{% endblock %}
+
+{% block extra_styles %}
+/* Collapsible advanced options */
+.advanced-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: #666;
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    user-select: none;
+}
+
+.advanced-toggle:hover {
+    color: #333;
+}
+
+.advanced-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.advanced-content.open {
+    max-height: 200px;
+}
+
+.chevron {
+    transition: transform 0.3s;
+}
+
+.chevron.open {
+    transform: rotate(180deg);
+}
+{% endblock %}
+
+{% block content %}
+<div class="page-container safe-area-top safe-area-bottom">
+    <div class="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
+        <!-- Logo/Title -->
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">浮島親子</h1>
+            <p class="text-gray-500">親子對話練習助手</p>
+        </div>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step-dot active"></div>
+            <div class="step-dot"></div>
+            <div class="step-dot"></div>
+            <div class="step-dot"></div>
+        </div>
+
+        <!-- Login Card -->
+        <div class="card">
+            <form id="login-form" onsubmit="return handleLogin(event)">
+                <!-- Email Input -->
+                <div class="mb-4">
+                    <input
+                        type="email"
+                        id="email"
+                        class="input-field"
+                        placeholder="輸入電子郵件"
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+
+                <!-- Password Input -->
+                <div class="mb-4">
+                    <input
+                        type="password"
+                        id="password"
+                        class="input-field"
+                        placeholder="輸入密碼"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+
+                <!-- Forgot Password Link -->
+                <div class="text-right mb-6">
+                    <a href="/forgot-password" class="link">忘記密碼？</a>
+                </div>
+
+                <!-- Error Message -->
+                <div id="login-error" class="error-message mb-4"></div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="login-btn" class="btn-primary">
+                    <span id="login-btn-text">開始諮詢</span>
+                    <span id="login-btn-loading" class="hidden flex items-center justify-center">
+                        <div class="spinner"></div>
+                    </span>
+                </button>
+            </form>
+
+            <!-- Advanced Options -->
+            <div class="mt-6">
+                <div class="advanced-toggle" onclick="toggleAdvanced()">
+                    <span>進階選項</span>
+                    <svg id="advanced-chevron" class="chevron w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </div>
+                <div id="advanced-content" class="advanced-content">
+                    <div class="pt-4 space-y-3">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">API 端點</span>
+                            <span class="text-gray-900" id="api-endpoint">Production</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">版本</span>
+                            <span class="text-gray-900">v1.0.0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-8 text-sm text-gray-400">
+            <p>By continuing, you agree to our Terms of Service</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Toggle advanced options
+    function toggleAdvanced() {
+        const content = document.getElementById('advanced-content');
+        const chevron = document.getElementById('advanced-chevron');
+        content.classList.toggle('open');
+        chevron.classList.toggle('open');
+    }
+
+    // Handle login
+    async function handleLogin(event) {
+        event.preventDefault();
+        hideError('login-error');
+        setButtonLoading('login-btn', true);
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            const response = await fetch(`${API_BASE}/api/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: email,
+                    password: password,
+                    tenant_id: 'island_parents'
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || '登入失敗，請檢查您的帳號密碼');
+            }
+
+            // Save token
+            localStorage.setItem('island_parents_token', data.access_token);
+
+            // Navigate to client selection
+            window.location.href = '/island-parents/clients';
+
+        } catch (error) {
+            showError('login-error', error.message);
+        } finally {
+            setButtonLoading('login-btn', false);
+        }
+    }
+
+    // Check if already logged in
+    document.addEventListener('DOMContentLoaded', async () => {
+        const token = localStorage.getItem('island_parents_token');
+        if (token) {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    window.location.href = '/island-parents/clients';
+                }
+            } catch (error) {
+                // Token invalid, stay on login page
+            }
+        }
+    });
+</script>
+{% endblock %}

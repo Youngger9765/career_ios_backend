@@ -640,7 +640,7 @@ class TestSessionNameField:
     def test_session_name_optional(
         self, db_session: Session, auth_headers, test_case_obj
     ):
-        """Test that session name field is optional (nullable)"""
+        """Test that session name field is optional - auto-generates if not provided"""
         # Create session without name
         with TestClient(app) as client:
             response = client.post(
@@ -654,10 +654,11 @@ class TestSessionNameField:
 
             assert response.status_code == 201
             data = response.json()
-            # Name should be null or not present
-            assert data.get("name") is None
+            # Name should be auto-generated: "諮詢 - {date} {time}"
+            assert data.get("name") is not None
+            assert "諮詢 - 2025-01-15" in data.get("name")
 
-            # Verify we can get it back with null name
+            # Verify we can get it back with auto-generated name
             session_id = data["id"]
             get_response = client.get(
                 f"/api/v1/sessions/{session_id}",
@@ -666,7 +667,7 @@ class TestSessionNameField:
 
             assert get_response.status_code == 200
             get_data = get_response.json()
-            assert get_data.get("name") is None
+            assert "諮詢 - 2025-01-15" in get_data.get("name")
 
     def test_update_session_name_to_null(
         self, db_session: Session, auth_headers, test_case_obj

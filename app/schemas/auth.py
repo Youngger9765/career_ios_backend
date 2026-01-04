@@ -37,6 +37,15 @@ class TokenResponse(BaseModel):
     expires_in: int  # seconds
 
 
+class LoginResponse(BaseModel):
+    """Login response with token and user info"""
+
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int  # seconds
+    user: "CounselorInfo"  # Forward reference
+
+
 class CounselorInfo(BaseModel):
     """Current counselor information"""
 
@@ -50,6 +59,9 @@ class CounselorInfo(BaseModel):
     last_login: Optional[datetime]
     created_at: datetime
     updated_at: Optional[datetime]
+
+    # Credit system fields
+    available_credits: float = 0.0
 
     class Config:
         from_attributes = True
@@ -102,3 +114,7 @@ class PasswordResetConfirmResponse(BaseModel):
     """Password reset confirmation response"""
 
     message: str
+
+
+# Resolve forward references for LoginResponse
+LoginResponse.model_rebuild()

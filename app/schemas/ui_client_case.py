@@ -1,27 +1,37 @@
 """
 UI Client-Case Schemas
 UI-optimized request/response models for client-case management
+Supports multi-tenant dynamic field validation
 """
 from datetime import date, datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Set
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
 
 
 class CreateClientCaseRequest(BaseModel):
-    """建立客戶+個案請求（UI 友善版本）"""
+    """
+    建立客戶+個案請求（多租戶動態欄位版本）
 
-    # Client 必填欄位
-    name: str = Field(..., min_length=1, max_length=100, description="客戶姓名")
-    email: Optional[EmailStr] = Field(None, description="Email (選填，親子版可留空)")
-    gender: str = Field(..., description="性別：男/女/其他/不便透露")
-    birth_date: date = Field(..., description="生日（西元年）")
-    phone: str = Field(..., description="手機號碼")
-    identity_option: str = Field(
-        ..., description="身份選項（學生/社會新鮮人/轉職者/在職者/其他）"
+    必填欄位由租戶配置決定 (field_configs.py):
+    - career: name, email, gender, birth_date, phone, identity_option, current_status
+    - island: name, email, phone, gender, birth_date, identity_option, current_status
+    - island_parents: name, grade, relationship (其他都選填)
+    """
+
+    # 所有欄位都是 Optional，由 API 層根據 tenant_id 驗證必填
+    name: str = Field(
+        ..., min_length=1, max_length=100, description="客戶姓名（所有租戶必填）"
     )
-    current_status: str = Field(..., description="目前現況")
+    email: Optional[EmailStr] = Field(None, description="Email")
+    gender: Optional[str] = Field(None, description="性別：男/女/其他/不便透露")
+    birth_date: Optional[date] = Field(None, description="生日（西元年）")
+    phone: Optional[str] = Field(None, description="手機號碼")
+    identity_option: Optional[str] = Field(
+        None, description="身份選項（學生/社會新鮮人/轉職者/在職者/其他）"
+    )
+    current_status: Optional[str] = Field(None, description="目前現況")
 
     # Client 選填欄位
     education: Optional[str] = Field(None, description="學歷")
@@ -34,10 +44,77 @@ class CreateClientCaseRequest(BaseModel):
     location: Optional[str] = Field(None, description="居住地區")
     notes: Optional[str] = Field(None, description="備註")
 
+    # Island Parents 特有欄位
+    grade: Optional[str] = Field(None, description="年級（親子版必填）")
+    relationship: Optional[str] = Field(None, description="與孩子的關係（親子版必填）")
+
     # Case 選填欄位
     case_summary: Optional[str] = Field(None, description="個案摘要")
     case_goals: Optional[str] = Field(None, description="個案目標")
     problem_description: Optional[str] = Field(None, description="問題敘述")
+
+
+def validate_client_case_by_tenant(data: Dict[str, Any], tenant_id: str) -> List[str]:
+    """
+    根據租戶配置驗證必填欄位
+
+    Args:
+        data: Request data dict
+        tenant_id: 租戶 ID
+
+    Returns:
+        List of missing required field names (empty if valid)
+    """
+    # 租戶必填欄位配置
+    tenant_required_fields: Dict[str, Set[str]] = {
+        "career": {
+            "name",
+            "email",
+            "gender",
+            "birth_date",
+            "phone",
+            "identity_option",
+            "current_status",
+        },
+        "island": {
+            "name",
+            "email",
+            "phone",
+            "gender",
+            "birth_date",
+            "identity_option",
+            "current_status",
+        },
+        "island_parents": {"name", "grade", "relationship"},  # 親子版只需要這三個
+    }
+
+    # 取得該租戶的必填欄位，預設使用 career 配置
+    required_fields = tenant_required_fields.get(
+        tenant_id, tenant_required_fields["career"]
+    )
+
+    # 檢查缺少的必填欄位
+    missing_fields = []
+    for field in required_fields:
+        value = data.get(field)
+        if value is None or (isinstance(value, str) and not value.strip()):
+            missing_fields.append(field)
+
+    return missing_fields
+
+
+# 欄位名稱中文映射（用於錯誤訊息）
+FIELD_LABELS: Dict[str, str] = {
+    "name": "姓名",
+    "email": "電子郵件",
+    "gender": "性別",
+    "birth_date": "生日",
+    "phone": "手機號碼",
+    "identity_option": "身分選項",
+    "current_status": "目前現況",
+    "grade": "年級",
+    "relationship": "與孩子的關係",
+}
 
 
 class CreateClientCaseResponse(BaseModel):

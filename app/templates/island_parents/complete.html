@@ -1,0 +1,70 @@
+{% extends "island_parents/base.html" %}
+
+{% block title %}對話完成 - 浮島親子{% endblock %}
+
+{% block content %}
+<div class="page-container safe-area-top safe-area-bottom" style="background: #f5f5f5;">
+    <div class="flex-1 flex flex-col max-w-md mx-auto w-full items-center justify-center">
+        <!-- Success Message -->
+        <h1 class="text-3xl font-bold text-gray-900 mb-4">太棒了！</h1>
+        <p class="text-lg text-gray-700 mb-12">您已完成 <span id="complete-duration">01:30:50</span> 的對話</p>
+
+        <!-- Usage Info -->
+        <div class="text-center text-gray-500 text-sm mb-8">
+            <p>這次對話使用 <span id="complete-minutes-used">90</span> 分鐘的額度，</p>
+            <p>預計還可使用 <span id="complete-minutes-remaining">30</span> 分鐘</p>
+        </div>
+
+        <!-- View Report Button -->
+        <button onclick="viewReport()" class="px-12 py-4 bg-gray-900 text-white rounded-full text-lg font-medium hover:bg-gray-800 transition-colors">
+            查看報告
+        </button>
+    </div>
+
+    <!-- Bottom Navigation Placeholder -->
+    {% include 'island_parents/_components/bottom_nav.html' %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Update completion info
+    function updateCompletionInfo() {
+        const duration = localStorage.getItem('island_parents_session_duration') || '00:00:00';
+        const minutesUsed = parseInt(localStorage.getItem('island_parents_minutes_used') || '0');
+        const remainingMinutes = Math.max(0, 120 - minutesUsed); // Assume 120 min quota
+
+        document.getElementById('complete-duration').textContent = duration;
+        document.getElementById('complete-minutes-used').textContent = minutesUsed.toString();
+        document.getElementById('complete-minutes-remaining').textContent = remainingMinutes.toString();
+    }
+
+    // View report
+    function viewReport() {
+        const currentSession = JSON.parse(localStorage.getItem('island_parents_current_session') || 'null');
+        if (currentSession && currentSession.id) {
+            // Navigate to report page (if exists) or back to home
+            window.location.href = `/island-parents/report/${currentSession.id}`;
+        } else {
+            window.location.href = '/island-parents/clients';
+        }
+    }
+
+    // Start new conversation
+    function startNewConversation() {
+        // Clear session data
+        localStorage.removeItem('island_parents_current_session');
+        localStorage.removeItem('island_parents_scenario_title');
+        localStorage.removeItem('island_parents_session_duration');
+        localStorage.removeItem('island_parents_minutes_used');
+
+        window.location.href = '/island-parents/mode';
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!await checkAuth()) return;
+        updateCompletionInfo();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,2592 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>浮島親子</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="/static/js/api-client.js"></script>
+    <script type="module" src="/static/js/island-parents-steps.js"></script>
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            min-height: 100vh;
+        }
+
+        /* Safe area for mobile notches */
+        .safe-area-top {
+            padding-top: max(1rem, env(safe-area-inset-top));
+        }
+
+        .safe-area-bottom {
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        }
+
+        /* Input styling */
+        .input-field {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            background: white;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #000;
+            box-shadow: 0 0 0 1px #000;
+        }
+
+        .input-field::placeholder {
+            color: #9ca3af;
+        }
+
+        /* Primary button */
+        .btn-primary {
+            width: 100%;
+            padding: 1rem;
+            background: #000;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn-primary:hover {
+            background: #333;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* Collapsible advanced options */
+        .advanced-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: #666;
+            font-size: 0.875rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            user-select: none;
+        }
+
+        .advanced-toggle:hover {
+            color: #333;
+        }
+
+        .advanced-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .advanced-content.open {
+            max-height: 200px;
+        }
+
+        .chevron {
+            transition: transform 0.3s;
+        }
+
+        .chevron.open {
+            transform: rotate(180deg);
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Step indicator */
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e0e0e0;
+        }
+
+        .step-dot.active {
+            background: #000;
+        }
+
+        /* Error message */
+        .error-message {
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* Page container */
+        .page-container {
+            display: none;
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+        }
+
+        .page-container.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Card styling */
+        .card {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Link styling */
+        .link {
+            color: #666;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+
+        .link:hover {
+            color: #000;
+            text-decoration: underline;
+        }
+
+        /* Child avatar styling */
+        .child-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 3px solid transparent;
+            position: relative;
+        }
+
+        .child-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .child-avatar.selected {
+            border-color: #000;
+        }
+
+        .child-avatar-inner {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+        }
+
+        .child-avatar-face {
+            position: relative;
+            width: 60px;
+            height: 60px;
+        }
+
+        .child-avatar-face .eyes {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+        }
+
+        .child-avatar-face .eye {
+            width: 6px;
+            height: 6px;
+            background: #333;
+            border-radius: 50%;
+        }
+
+        .child-avatar-face .mouth {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 10px;
+            border: 2px solid #333;
+            border-top: none;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .child-avatar-face .blush {
+            position: absolute;
+            top: 28px;
+            width: 8px;
+            height: 4px;
+            background: rgba(255, 150, 150, 0.5);
+            border-radius: 50%;
+        }
+
+        .child-avatar-face .blush.left {
+            left: 5px;
+        }
+
+        .child-avatar-face .blush.right {
+            right: 5px;
+        }
+
+        .child-name {
+            text-align: center;
+            margin-top: 0.5rem;
+            font-weight: 500;
+            color: #333;
+        }
+
+        /* Avatar colors */
+        .avatar-mint {
+            background: linear-gradient(135deg, #a8e6cf 0%, #88d8b0 100%);
+        }
+
+        .avatar-yellow {
+            background: linear-gradient(135deg, #fff59d 0%, #fff176 100%);
+        }
+
+        .avatar-pink {
+            background: linear-gradient(135deg, #f8bbd9 0%, #f48fb1 100%);
+        }
+
+        .avatar-blue {
+            background: linear-gradient(135deg, #90caf9 0%, #64b5f6 100%);
+        }
+
+        .avatar-purple {
+            background: linear-gradient(135deg, #ce93d8 0%, #ba68c8 100%);
+        }
+
+        .avatar-orange {
+            background: linear-gradient(135deg, #ffcc80 0%, #ffa726 100%);
+        }
+
+        /* Child item container */
+        .child-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* RWD - Mobile First */
+        @media (max-width: 480px) {
+            .page-container {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+                border-radius: 0.75rem;
+            }
+
+            h1 {
+                font-size: 1.5rem !important;
+            }
+
+            .input-field {
+                padding: 0.875rem;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+
+            .btn-primary {
+                padding: 0.875rem;
+            }
+
+            .child-avatar {
+                width: 80px;
+                height: 80px;
+            }
+
+            .child-avatar-inner {
+                width: 72px;
+                height: 72px;
+            }
+
+            .child-avatar-face {
+                width: 48px;
+                height: 48px;
+            }
+
+            .child-avatar-face .eyes {
+                top: 16px;
+                gap: 10px;
+            }
+
+            .child-avatar-face .eye {
+                width: 5px;
+                height: 5px;
+            }
+
+            .child-avatar-face .mouth {
+                bottom: 12px;
+                width: 16px;
+                height: 8px;
+            }
+
+            .child-name {
+                font-size: 0.875rem;
+            }
+
+            #children-grid {
+                gap: 1rem;
+            }
+
+            .step-indicator {
+                margin-bottom: 1.5rem;
+            }
+        }
+
+        /* Tablet */
+        @media (min-width: 481px) and (max-width: 768px) {
+            .page-container {
+                padding: 1.5rem;
+            }
+
+            .card {
+                padding: 1.75rem;
+            }
+        }
+
+        /* Desktop */
+        @media (min-width: 769px) {
+            body {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .page-container {
+                max-width: 420px;
+                margin: 0 auto;
+            }
+        }
+
+        /* Full height fix for mobile */
+        @supports (-webkit-touch-callout: none) {
+            /* iOS specific */
+            .page-container {
+                min-height: -webkit-fill-available;
+            }
+        }
+
+        /* Scenario buttons (old style - kept for compatibility) */
+        .scenario-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 0.75rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 80px;
+        }
+
+        .scenario-btn:hover {
+            border-color: #ccc;
+        }
+
+        .scenario-btn.selected {
+            border-color: #000;
+            background: #f9f9f9;
+        }
+
+        .scenario-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .scenario-text {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #333;
+        }
+
+        /* New Scenario Cards (design mockup style) */
+        .scenario-card {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 0.875rem;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .scenario-card:hover {
+            border-color: #d1d5db;
+        }
+
+        .scenario-card.selected {
+            border: 2px solid #10b981;
+            background: #f0fdf4;
+        }
+
+        .scenario-check {
+            color: #10b981;
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-left: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .scenario-card:active {
+            transform: scale(0.98);
+        }
+
+        .scenario-card-icon {
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .scenario-card-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .scenario-card-title {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+        }
+
+        .scenario-card-desc {
+            font-size: 0.8125rem;
+            color: #6b7280;
+            line-height: 1.4;
+        }
+
+        /* Secondary button style */
+        .btn-secondary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.5rem;
+            background: #1f2937;
+            color: white;
+            border: none;
+            border-radius: 2rem;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #374151;
+        }
+
+        /* Recording button */
+        .record-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(238, 90, 90, 0.4);
+        }
+
+        .record-button:hover {
+            transform: scale(1.05);
+        }
+
+        .record-button:active {
+            transform: scale(0.95);
+        }
+
+        .record-button.recording {
+            background: linear-gradient(135deg, #333 0%, #222 100%);
+            animation: pulse-recording 1.5s infinite;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .record-icon {
+            color: white;
+        }
+
+        @keyframes pulse-recording {
+            0%, 100% {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            }
+            50% {
+                box-shadow: 0 4px 20px rgba(238, 90, 90, 0.6);
+            }
+        }
+
+        /* Recording indicator */
+        .recording-active {
+            background: #ef4444 !important;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Color Orb Styles */
+        .color-orb-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .color-orb {
+            position: absolute;
+            border-radius: 50%;
+            transition: all 0.5s ease-out;
+        }
+
+        .color-orb.outer {
+            width: 280px;
+            height: 280px;
+            opacity: 0.15;
+        }
+
+        .color-orb.middle {
+            width: 200px;
+            height: 200px;
+            opacity: 0.3;
+        }
+
+        .color-orb.inner {
+            width: 140px;
+            height: 140px;
+            opacity: 0.5;
+        }
+
+        /* Green state (positive) */
+        .orb-green .color-orb {
+            background: #4ade80;
+        }
+        .orb-green .color-orb.inner {
+            background: #22c55e;
+        }
+
+        /* Pink state (warning) */
+        .orb-pink .color-orb {
+            background: #f472b6;
+        }
+        .orb-pink .color-orb.inner {
+            background: #ec4899;
+        }
+
+        /* Yellow state (reminder) */
+        .orb-yellow .color-orb {
+            background: #facc15;
+        }
+        .orb-yellow .color-orb.inner {
+            background: #eab308;
+        }
+
+        /* Orb pulse animation */
+        @keyframes orbPulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.02);
+            }
+        }
+
+        .color-orb-container.pulsing .color-orb {
+            animation: orbPulse 2s ease-in-out infinite;
+        }
+
+        .color-orb-container.pulsing .color-orb.middle {
+            animation-delay: 0.1s;
+        }
+
+        .color-orb-container.pulsing .color-orb.inner {
+            animation-delay: 0.2s;
+        }
+
+        /* Feedback text overlay */
+        .orb-feedback-text {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 0 1.5rem;
+            max-width: 240px;
+        }
+
+        .deep-feedback {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #1f2937;
+            line-height: 1.4;
+            margin-bottom: 0.5rem;
+        }
+
+        .quick-feedback {
+            font-size: 0.875rem;
+            color: #6b7280;
+            line-height: 1.3;
+        }
+
+        /* Recording action buttons */
+        .recording-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 2rem;
+            border-radius: 2rem;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            min-width: 140px;
+        }
+
+        .recording-action-btn.pause {
+            background: #1f2937;
+            color: white;
+        }
+
+        .recording-action-btn.pause:hover {
+            background: #374151;
+        }
+
+        .recording-action-btn.end {
+            background: transparent;
+            border: 2px solid #1f2937;
+            color: #1f2937;
+        }
+
+        .recording-action-btn.end:hover {
+            background: #f3f4f6;
+        }
+
+        /* Speaker toggle buttons */
+        .speaker-btn {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            background: transparent;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .speaker-btn.active {
+            background: white;
+            color: #000;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Transcript message styles */
+        .transcript-msg {
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            max-width: 85%;
+        }
+
+        .transcript-msg.parent {
+            background: #e0f2fe;
+            margin-left: auto;
+            border-bottom-right-radius: 0.25rem;
+        }
+
+        .transcript-msg.child {
+            background: #f0fdf4;
+            margin-right: auto;
+            border-bottom-left-radius: 0.25rem;
+        }
+
+        .transcript-msg .speaker {
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .transcript-msg.parent .speaker {
+            color: #0369a1;
+        }
+
+        .transcript-msg.child .speaker {
+            color: #16a34a;
+        }
+
+        .transcript-msg .text {
+            font-size: 0.875rem;
+            color: #333;
+        }
+
+        /* Mobile adjustments for recording */
+        @media (max-width: 480px) {
+            .scenario-btn {
+                min-height: 70px;
+                padding: 0.75rem;
+            }
+
+            .scenario-icon {
+                font-size: 1.25rem;
+            }
+
+            .scenario-text {
+                font-size: 0.75rem;
+            }
+
+            .record-button {
+                width: 70px;
+                height: 70px;
+            }
+
+            .record-button svg {
+                width: 1.75rem;
+                height: 1.75rem;
+            }
+
+            .speaker-btn {
+                padding: 0.625rem 0.75rem;
+                font-size: 0.8rem;
+            }
+
+            #transcript-container {
+                min-height: 150px;
+                max-height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Step 1: Login Page -->
+    <div id="page-login" class="page-container active safe-area-top safe-area-bottom">
+        <div class="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
+            <!-- Logo/Title -->
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">浮島親子</h1>
+                <p class="text-gray-500">親子對話練習助手</p>
+            </div>
+
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+            </div>
+
+            <!-- Login Card -->
+            <div class="card">
+                <form id="login-form" onsubmit="return handleLogin(event)">
+                    <!-- Email Input -->
+                    <div class="mb-4">
+                        <input
+                            type="email"
+                            id="email"
+                            class="input-field"
+                            placeholder="輸入電子郵件"
+                            required
+                            autocomplete="email"
+                        >
+                    </div>
+
+                    <!-- Password Input -->
+                    <div class="mb-4">
+                        <input
+                            type="password"
+                            id="password"
+                            class="input-field"
+                            placeholder="輸入密碼"
+                            required
+                            autocomplete="current-password"
+                        >
+                    </div>
+
+                    <!-- Forgot Password Link -->
+                    <div class="text-right mb-6">
+                        <a href="/forgot-password" class="link">忘記密碼？</a>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="login-error" class="error-message mb-4"></div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="login-btn" class="btn-primary">
+                        <span id="login-btn-text">開始諮詢</span>
+                        <span id="login-btn-loading" class="hidden flex items-center justify-center">
+                            <div class="spinner"></div>
+                        </span>
+                    </button>
+                </form>
+
+                <!-- Advanced Options -->
+                <div class="mt-6">
+                    <div class="advanced-toggle" onclick="toggleAdvanced()">
+                        <span>進階選項</span>
+                        <svg id="advanced-chevron" class="chevron w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </div>
+                    <div id="advanced-content" class="advanced-content">
+                        <div class="pt-4 space-y-3">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-600">API 端點</span>
+                                <span class="text-gray-900" id="api-endpoint">Production</span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-600">版本</span>
+                                <span class="text-gray-900">v1.0.0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-8 text-sm text-gray-400">
+                <p>By continuing, you agree to our Terms of Service</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2a: Select Child (if clients exist) -->
+    <div id="page-client-select" class="page-container safe-area-top safe-area-bottom">
+        <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+            <!-- Header with Logout -->
+            <div class="flex justify-end mb-2">
+                <button onclick="handleLogout()" class="text-gray-500 text-sm py-2 px-3 hover:text-gray-700">
+                    登出
+                </button>
+            </div>
+
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step-dot"></div>
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+            </div>
+
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">您好</h1>
+                <p class="text-gray-500">已為您建立與孩子的溝通策略</p>
+            </div>
+
+            <!-- Children Grid -->
+            <div id="children-grid" class="flex flex-wrap justify-center gap-6 mb-8">
+                <!-- Children will be dynamically inserted here -->
+            </div>
+
+            <!-- Action Button -->
+            <div class="mt-auto">
+                <button id="select-child-btn" class="btn-primary mb-4" onclick="handleSelectChild()" disabled>
+                    我要和孩子好好談談
+                </button>
+                <button class="w-full py-3 text-gray-600 text-sm" onclick="showCreateChild()">
+                    + 新增孩子
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2b: Create Child (if no clients or adding new) -->
+    <div id="page-client-create" class="page-container safe-area-top safe-area-bottom">
+        <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+            <!-- Header with Logout -->
+            <div class="flex justify-between mb-2">
+                <div></div>
+                <button onclick="handleLogout()" class="text-gray-500 text-sm py-2 px-3 hover:text-gray-700">
+                    登出
+                </button>
+            </div>
+
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step-dot"></div>
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+            </div>
+
+            <!-- Form -->
+            <div class="flex-1">
+                <form id="create-child-form" onsubmit="return handleCreateChild(event)">
+                    <!-- Child Name -->
+                    <div class="mb-6">
+                        <label class="block text-lg font-bold text-gray-900 mb-3">輸入孩子暱稱</label>
+                        <input
+                            type="text"
+                            id="child-name"
+                            class="input-field"
+                            placeholder="ex.小寶"
+                            required
+                        >
+                    </div>
+
+                    <!-- Child Grade -->
+                    <div class="mb-6">
+                        <label class="block text-lg font-bold text-gray-900 mb-3">孩子年級</label>
+                        <div class="relative">
+                            <select id="child-grade" class="input-field appearance-none pr-10" required>
+                                <option value="">輸入年級</option>
+                                <option value="幼兒園小班">幼兒園小班</option>
+                                <option value="幼兒園中班">幼兒園中班</option>
+                                <option value="幼兒園大班">幼兒園大班</option>
+                                <option value="國小一年級">國小一年級</option>
+                                <option value="國小二年級">國小二年級</option>
+                                <option value="國小三年級">國小三年級</option>
+                                <option value="國小四年級">國小四年級</option>
+                                <option value="國小五年級">國小五年級</option>
+                                <option value="國小六年級">國小六年級</option>
+                                <option value="國中一年級">國中一年級</option>
+                                <option value="國中二年級">國中二年級</option>
+                                <option value="國中三年級">國中三年級</option>
+                                <option value="高中一年級">高中一年級</option>
+                                <option value="高中二年級">高中二年級</option>
+                                <option value="高中三年級">高中三年級</option>
+                            </select>
+                            <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Parent Role -->
+                    <div class="mb-8">
+                        <label class="block text-lg font-bold text-gray-900 mb-3">你是孩子的</label>
+                        <div class="relative">
+                            <select id="parent-role" class="input-field appearance-none pr-10" required>
+                                <option value="爸爸">爸爸</option>
+                                <option value="媽媽">媽媽</option>
+                                <option value="其他照顧者">其他照顧者</option>
+                            </select>
+                            <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="create-child-error" class="error-message mb-4"></div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="create-child-btn" class="btn-primary">
+                        <span id="create-child-btn-text">建立孩子</span>
+                        <span id="create-child-btn-loading" class="hidden flex items-center justify-center">
+                            <div class="spinner"></div>
+                        </span>
+                    </button>
+
+                    <!-- Back Button (if came from select) -->
+                    <button type="button" id="back-to-select-btn" class="w-full py-3 text-gray-600 text-sm mt-4 hidden" onclick="backToSelectChild()">
+                        返回選擇孩子
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2.5: Mode Selection (預先練習 / 和孩子談談) -->
+    <div id="page-mode-select" class="page-container safe-area-top safe-area-bottom">
+        <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+            <!-- Back Button -->
+            <div class="flex items-center mb-4">
+                <button onclick="backToClientSelect()" class="p-2 -ml-2 text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Logo -->
+            <div class="flex justify-center mb-6">
+                <svg class="w-20 h-16" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 40 L25 20 L35 30 L50 10 L65 25 L70 40" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5 40 L75 40" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-xl font-bold text-gray-900 mb-2">選擇您目前的情境</h1>
+                <p class="text-gray-500" id="remaining-time-display">預計還可以使用 120 分鐘</p>
+            </div>
+
+            <!-- Mode Buttons -->
+            <div class="space-y-4 px-4">
+                <!-- Practice Mode -->
+                <button onclick="selectMode('practice')" class="w-full py-6 px-6 bg-gray-900 text-white rounded-xl text-lg font-medium hover:bg-gray-800 transition-colors">
+                    預先練習
+                </button>
+
+                <!-- Emergency Mode -->
+                <button onclick="selectMode('emergency')" class="w-full py-6 px-6 bg-gray-900 text-white rounded-xl text-lg font-medium hover:bg-gray-800 transition-colors border-2 border-gray-900">
+                    和孩子談談
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2.6: Emergency Mode Hint Page (和孩子談談 - 事中提醒) -->
+    <div id="page-emergency-hint" class="page-container safe-area-top safe-area-bottom">
+        <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+            <!-- Back Button -->
+            <div class="flex items-center mb-4">
+                <button onclick="backToModeSelect()" class="p-2 -ml-2 text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-xl font-bold text-gray-900 mb-2">請先跟孩子說明以下</h1>
+                <p class="text-lg font-semibold text-gray-900">會對於你們的信任關係更有幫助</p>
+            </div>
+
+            <!-- Hint Card -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+                <div class="flex items-center justify-center gap-2 mb-4">
+                    <span class="text-xl">💡</span>
+                    <span class="font-semibold text-gray-900">Hint</span>
+                </div>
+                <div class="text-center text-gray-700 leading-relaxed">
+                    <p class="mb-4">我現在有點不知道怎麼跟你說，所以我想用一個可以幫助我說話的工具。</p>
+                    <p>它不會記錄你是壞小孩，只是幫我學習怎麼跟你講得更好，你願不願意陪我一起試試看？</p>
+                </div>
+            </div>
+
+            <!-- Start Button -->
+            <div class="mt-auto px-4 pb-4">
+                <button onclick="startEmergencySession()" class="w-full py-4 px-6 bg-gray-900 text-white rounded-full text-base font-medium hover:bg-gray-800 transition-colors">
+                    我已經跟孩子說了，直接開始對話
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Scenario Selection (Practice Mode) -->
+    <div id="page-scenario" class="page-container safe-area-top safe-area-bottom">
+        <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+            <!-- Back Button -->
+            <div class="flex items-center mb-4">
+                <button onclick="backToModeSelect()" class="p-2 -ml-2 text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+            </div>
+
+            <!-- Header -->
+            <div class="text-center mb-6">
+                <h1 class="text-xl font-bold text-gray-900 mb-1">設定練習情境</h1>
+            </div>
+
+            <!-- Preset Scenarios (Main View) -->
+            <div id="preset-scenarios-view">
+                <!-- Scenario Cards -->
+                <div class="space-y-3 mb-6">
+                    <!-- Scenario 1: 成績出來了 -->
+                    <button type="button" class="scenario-card" data-scenario="grades" onclick="highlightScenario(this, 'grades', '成績出來了 我不知道怎麼開口', '我其實很擔心，但又怕一開口就變成責怪')">
+                        <div class="scenario-card-icon" style="background: linear-gradient(135deg, #a8d8ea 0%, #6eb5c0 100%);">
+                            <span>😊</span>
+                        </div>
+                        <div class="scenario-card-content">
+                            <p class="scenario-card-title">成績出來了 我不知道怎麼開口</p>
+                            <p class="scenario-card-desc">我其實很擔心，但又怕一開口就變成責怪</p>
+                        </div>
+                        <span class="scenario-check hidden">✓</span>
+                    </button>
+
+                    <!-- Scenario 2: 手機不放 -->
+                    <button type="button" class="scenario-card" data-scenario="phone" onclick="highlightScenario(this, 'phone', '手機不放，怎麼講都沒用', '已經說過很多次，但只要一提到手機，氣氛就變得很差。')">
+                        <div class="scenario-card-icon" style="background: linear-gradient(135deg, #ffb6b6 0%, #e88a8a 100%);">
+                            <span>😐</span>
+                        </div>
+                        <div class="scenario-card-content">
+                            <p class="scenario-card-title">手機不放，怎麼講都沒用</p>
+                            <p class="scenario-card-desc">已經說過很多次，但只要一提到手機，氣氛就變得很差。</p>
+                        </div>
+                        <span class="scenario-check hidden">✓</span>
+                    </button>
+
+                    <!-- Scenario 3: 孩子一直拖拖拉拉 -->
+                    <button type="button" class="scenario-card" data-scenario="procrastinate" onclick="highlightScenario(this, 'procrastinate', '孩子一直拖拖拉拉', '每天叫不動、催不聽，明明很小的事，卻快把我逼瘋了。')">
+                        <div class="scenario-card-icon" style="background: linear-gradient(135deg, #c8e6c9 0%, #81c784 100%);">
+                            <span>😔</span>
+                        </div>
+                        <div class="scenario-card-content">
+                            <p class="scenario-card-title">孩子一直拖拖拉拉</p>
+                            <p class="scenario-card-desc">每天叫不動、催不聽，明明很小的事，卻快把我逼瘋了。</p>
+                        </div>
+                        <span class="scenario-check hidden">✓</span>
+                    </button>
+
+                    <!-- Scenario 4: 孩子說不想去上學 -->
+                    <button type="button" class="scenario-card" data-scenario="school" onclick="highlightScenario(this, 'school', '孩子說不想去上學', '不是請假一天的問題，而是我不知道該怎麼聽、怎麼回。')">
+                        <div class="scenario-card-icon" style="background: linear-gradient(135deg, #f8bbd9 0%, #f06292 100%);">
+                            <span>😊</span>
+                        </div>
+                        <div class="scenario-card-content">
+                            <p class="scenario-card-title">孩子說不想去上學</p>
+                            <p class="scenario-card-desc">不是請假一天的問題，而是我不知道該怎麼聽、怎麼回。</p>
+                        </div>
+                        <span class="scenario-check hidden">✓</span>
+                    </button>
+                </div>
+
+                <!-- Create AI Dialogue Button -->
+                <button type="button" class="w-full py-3 px-6 bg-black text-white rounded-full text-base font-medium hover:bg-gray-800 transition-colors" onclick="showCustomDialogueView()">
+                    ✨ 創建 AI 對話
+                </button>
+            </div>
+
+            <!-- Custom Dialogue View (Hidden by default) -->
+            <div id="custom-dialogue-view" class="hidden">
+                <!-- Header for Custom Dialogue -->
+                <div class="text-center mb-6">
+                    <h1 class="text-xl font-bold text-gray-900 mb-4">創建AI對話</h1>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">詳細描述情境</h2>
+                    <p class="text-gray-500">以及您想要進行的親子對話</p>
+                </div>
+
+                <form id="custom-session-form" onsubmit="return handleCreateCustomSession(event)">
+                    <textarea
+                        id="custom-scenario-input"
+                        class="input-field resize-none mb-4"
+                        rows="6"
+                        placeholder="輸入您想要設定情境與對話主題"
+                    ></textarea>
+
+                    <!-- Error Message -->
+                    <div id="custom-session-error" class="error-message mb-4"></div>
+
+                    <button type="submit" id="start-custom-session-btn" class="btn-primary">
+                        <span id="start-custom-btn-text">開始親子對話練習</span>
+                        <span id="start-custom-btn-loading" class="hidden flex items-center justify-center">
+                            <div class="spinner"></div>
+                        </span>
+                    </button>
+                </form>
+
+                <button type="button" class="w-full py-3 text-gray-500 text-sm mt-4" onclick="showPresetScenariosView()">
+                    ← 返回預設情境
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Recording & Analysis (New Color Orb Design) -->
+    <div id="page-recording" class="page-container safe-area-top safe-area-bottom" style="background: #f5f5f5;">
+        <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+            <!-- Header -->
+            <div class="text-center pt-4 pb-6">
+                <h1 class="text-lg font-semibold text-gray-900 mb-1" id="recording-header">練習與 小寶 對話中...</h1>
+                <div class="flex items-center justify-center gap-2">
+                    <div id="recording-indicator" class="w-2 h-2 rounded-full bg-red-500 recording-active"></div>
+                    <span id="recording-timer" class="font-mono text-gray-500">00:00</span>
+                </div>
+            </div>
+
+            <!-- Color Orb with Feedback -->
+            <div class="flex-1 flex flex-col items-center justify-center py-8">
+                <div id="color-orb-wrapper" class="color-orb-container pulsing orb-green">
+                    <!-- Concentric circles -->
+                    <div class="color-orb outer"></div>
+                    <div class="color-orb middle"></div>
+                    <div class="color-orb inner"></div>
+
+                    <!-- Feedback text overlay -->
+                    <div class="orb-feedback-text">
+                        <p id="deep-feedback-text" class="deep-feedback">讓孩子知道你站在他這邊</p>
+                        <p id="quick-feedback-text" class="quick-feedback">很好，繼續保持同理心</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden fields for scenario info -->
+            <input type="hidden" id="recording-child-name" value="小寶">
+            <input type="hidden" id="recording-scenario" value="">
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-center gap-4 pb-8 px-4">
+                <button id="pause-btn" class="recording-action-btn pause" onclick="togglePauseRecording()">
+                    <svg id="pause-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/>
+                    </svg>
+                    <span id="pause-btn-text">暫停</span>
+                </button>
+                <button class="recording-action-btn end" onclick="confirmEndSession()">
+                    <span>結束對話</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- End Session Confirmation Modal -->
+    <div id="end-session-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 mx-4 max-w-sm w-full">
+            <h3 class="text-lg font-bold text-gray-900 mb-2">結束對話？</h3>
+            <p class="text-gray-500 mb-6">結束後將產生本次對話的分析報告</p>
+            <div class="flex gap-3">
+                <button onclick="hideEndSessionModal()" class="flex-1 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium">
+                    繼續對話
+                </button>
+                <button onclick="endSession()" class="flex-1 py-3 rounded-lg bg-red-500 text-white font-medium">
+                    結束對話
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- General Message Modal -->
+    <div id="message-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 mx-4 max-w-sm w-full">
+            <div id="message-modal-icon" class="text-center text-4xl mb-4">⚠️</div>
+            <h3 id="message-modal-title" class="text-lg font-bold text-gray-900 mb-2 text-center">提示</h3>
+            <p id="message-modal-text" class="text-gray-600 mb-6 text-center"></p>
+            <button onclick="hideMessageModal()" class="w-full py-3 rounded-lg bg-gray-900 text-white font-medium">
+                確定
+            </button>
+        </div>
+    </div>
+
+    <!-- Step 5: Report Generating Page -->
+    <div id="page-generating" class="page-container safe-area-top safe-area-bottom" style="background: #f5f5f5;">
+        <div class="flex-1 flex flex-col max-w-md mx-auto w-full items-center justify-center">
+            <!-- Mountain Logo -->
+            <div class="mb-6">
+                <svg class="w-24 h-16" viewBox="0 0 80 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 40 L25 20 L35 30 L50 10 L65 25 L70 40" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5 40 L75 40" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+
+            <!-- Tagline -->
+            <p class="text-gray-700 text-lg mb-12">陪你把話好好說完</p>
+
+            <!-- Loading Status -->
+            <h1 class="text-xl font-bold text-gray-900 mb-4">報告生成中，請稍等</h1>
+
+            <!-- Loading Dots -->
+            <div class="flex gap-2 mb-12">
+                <div class="w-3 h-3 rounded-full bg-gray-900 animate-pulse"></div>
+                <div class="w-3 h-3 rounded-full bg-gray-300 animate-pulse" style="animation-delay: 0.2s;"></div>
+                <div class="w-3 h-3 rounded-full bg-gray-300 animate-pulse" style="animation-delay: 0.4s;"></div>
+                <div class="w-3 h-3 rounded-full bg-gray-300 animate-pulse" style="animation-delay: 0.6s;"></div>
+            </div>
+
+            <!-- Scenario Hint -->
+            <p id="generating-scenario-hint" class="text-gray-500 text-sm">適合用在：升學規劃、成績、學涯…</p>
+        </div>
+
+        <!-- Bottom Navigation Placeholder -->
+        <div class="flex justify-center gap-8 pb-8">
+            <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
+                <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 6: Session Complete Page -->
+    <div id="page-complete" class="page-container safe-area-top safe-area-bottom" style="background: #f5f5f5;">
+        <div class="flex-1 flex flex-col max-w-md mx-auto w-full items-center justify-center">
+            <!-- Success Message -->
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">太棒了！</h1>
+            <p class="text-lg text-gray-700 mb-12">您已完成 <span id="complete-duration">01:30:50</span> 的對話</p>
+
+            <!-- Usage Info -->
+            <div class="text-center text-gray-500 text-sm mb-8">
+                <p>這次對話使用 <span id="complete-minutes-used">90</span> 分鐘的額度，</p>
+                <p>預計還可使用 <span id="complete-minutes-remaining">30</span> 分鐘</p>
+            </div>
+
+            <!-- View Report Button -->
+            <button onclick="viewReport()" class="px-12 py-4 bg-gray-900 text-white rounded-full text-lg font-medium hover:bg-gray-800 transition-colors">
+                查看報告
+            </button>
+        </div>
+
+        <!-- Bottom Navigation Placeholder -->
+        <div class="flex justify-center gap-8 pb-8">
+            <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
+                <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        const state = {
+            token: localStorage.getItem('island_parents_token'),
+            user: null,
+            clients: [],
+            selectedClient: null,
+            selectedCase: null,
+            currentPage: 'login',
+            // Session & Recording state
+            selectedScenario: null,
+            currentSession: null,
+            isRecording: false,
+            currentSpeaker: 'parent',
+            transcripts: []
+        };
+
+        // Avatar colors
+        const AVATAR_COLORS = ['mint', 'yellow', 'pink', 'blue', 'purple', 'orange'];
+
+        // API base URL
+        const API_BASE = '';
+
+        // Toggle advanced options
+        function toggleAdvanced() {
+            const content = document.getElementById('advanced-content');
+            const chevron = document.getElementById('advanced-chevron');
+            content.classList.toggle('open');
+            chevron.classList.toggle('open');
+        }
+
+        // Show error message
+        function showError(elementId, message) {
+            const errorEl = document.getElementById(elementId);
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+        }
+
+        // Hide error message
+        function hideError(elementId) {
+            const errorEl = document.getElementById(elementId);
+            errorEl.classList.remove('show');
+        }
+
+        // Show message modal (replacement for alert)
+        function showMessageModal(message, type = 'info') {
+            const icons = {
+                'info': 'ℹ️',
+                'success': '✅',
+                'warning': '⚠️',
+                'error': '❌'
+            };
+            const titles = {
+                'info': '提示',
+                'success': '成功',
+                'warning': '警告',
+                'error': '錯誤'
+            };
+
+            document.getElementById('message-modal-icon').textContent = icons[type] || icons.info;
+            document.getElementById('message-modal-title').textContent = titles[type] || titles.info;
+            document.getElementById('message-modal-text').textContent = message;
+            document.getElementById('message-modal').classList.remove('hidden');
+        }
+
+        // Hide message modal
+        function hideMessageModal() {
+            document.getElementById('message-modal').classList.add('hidden');
+        }
+
+        // Set button loading state
+        function setButtonLoading(btnId, isLoading) {
+            const btn = document.getElementById(btnId);
+            const textEl = document.getElementById(`${btnId}-text`);
+            const loadingEl = document.getElementById(`${btnId}-loading`);
+
+            if (btn) btn.disabled = isLoading;
+            if (textEl) textEl.classList.toggle('hidden', isLoading);
+            if (loadingEl) loadingEl.classList.toggle('hidden', !isLoading);
+        }
+
+        // Navigate to page
+        function navigateTo(pageId) {
+            document.querySelectorAll('.page-container').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(`page-${pageId}`).classList.add('active');
+            state.currentPage = pageId;
+        }
+
+        // Handle login
+        async function handleLogin(event) {
+            event.preventDefault();
+            hideError('login-error');
+            setButtonLoading('login-btn', true);
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        tenant_id: 'island_parents'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || '登入失敗，請檢查您的帳號密碼');
+                }
+
+                // Save token
+                state.token = data.access_token;
+                localStorage.setItem('island_parents_token', data.access_token);
+
+                // Load clients and navigate
+                await loadClientsAndNavigate();
+
+            } catch (error) {
+                showError('login-error', error.message);
+            } finally {
+                setButtonLoading('login-btn', false);
+            }
+        }
+
+        // Load clients from API
+        async function loadClients() {
+            const response = await fetch(`${API_BASE}/api/v1/clients`, {
+                headers: {
+                    'Authorization': `Bearer ${state.token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('無法載入孩子列表');
+            }
+
+            const data = await response.json();
+            // Handle different response formats: {items: [...]} or {clients: [...]} or [...]
+            state.clients = data.items || data.clients || (Array.isArray(data) ? data : []);
+            return state.clients;
+        }
+
+        // Load clients and navigate to appropriate page
+        async function loadClientsAndNavigate() {
+            try {
+                const clients = await loadClients();
+
+                if (clients.length > 0) {
+                    renderChildrenGrid();
+                    navigateTo('client-select');
+                } else {
+                    // No clients, show create form
+                    document.getElementById('skip-create-btn').classList.add('hidden');
+                    document.getElementById('back-to-select-btn').classList.add('hidden');
+                    navigateTo('client-create');
+                }
+            } catch (error) {
+                console.error('Failed to load clients:', error);
+                // Show create form on error
+                navigateTo('client-create');
+            }
+        }
+
+        // Render children grid
+        function renderChildrenGrid() {
+            const grid = document.getElementById('children-grid');
+            grid.innerHTML = '';
+
+            state.clients.forEach((client, index) => {
+                const colorClass = AVATAR_COLORS[index % AVATAR_COLORS.length];
+                const childItem = document.createElement('div');
+                childItem.className = 'child-item';
+                childItem.innerHTML = `
+                    <div class="child-avatar ${state.selectedClient?.id === client.id ? 'selected' : ''}"
+                         onclick="selectChild('${client.id}')"
+                         data-client-id="${client.id}">
+                        <div class="child-avatar-inner avatar-${colorClass}">
+                            <div class="child-avatar-face">
+                                <div class="eyes">
+                                    <div class="eye"></div>
+                                    <div class="eye"></div>
+                                </div>
+                                <div class="mouth"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="child-name">${client.name}</div>
+                `;
+                grid.appendChild(childItem);
+            });
+        }
+
+        // Select a child
+        function selectChild(clientId) {
+            state.selectedClient = state.clients.find(c => c.id === clientId);
+
+            // Update UI
+            document.querySelectorAll('.child-avatar').forEach(avatar => {
+                avatar.classList.remove('selected');
+            });
+            document.querySelector(`[data-client-id="${clientId}"]`).classList.add('selected');
+
+            // Enable button
+            document.getElementById('select-child-btn').disabled = false;
+        }
+
+        // Handle select child button
+        async function handleSelectChild() {
+            if (!state.selectedClient) return;
+
+            // Get the first case for this client, or create one
+            try {
+                // Use correct API: GET /api/v1/cases?client_id={id}
+                const response = await fetch(`${API_BASE}/api/v1/cases?client_id=${state.selectedClient.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // API returns {items: [...], total, skip, limit}
+                    const cases = data.items || data.cases || [];
+
+                    if (cases.length > 0) {
+                        state.selectedCase = cases[0];
+                    }
+                }
+                // Navigate to mode selection (don't need case yet)
+                navigateTo('mode-select');
+            } catch (error) {
+                console.error('Failed to get cases:', error);
+                // Try to create a case as fallback
+                await createDefaultCase();
+            }
+        }
+
+        // Create a default case for the client
+        async function createDefaultCase() {
+            try {
+                // Use correct API: POST /api/v1/cases with client_id in body
+                const response = await fetch(`${API_BASE}/api/v1/cases`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        client_id: state.selectedClient.id,
+                        summary: `${state.selectedClient.name}的親子溝通`,
+                        problem_description: '親子對話練習'
+                    })
+                });
+
+                if (response.ok) {
+                    const caseData = await response.json();
+                    state.selectedCase = caseData;
+                    navigateTo('mode-select');
+                } else {
+                    const errorData = await response.json();
+                    console.error('Failed to create case:', errorData);
+                    showMessageModal('無法建立案例，請重試', 'error');
+                }
+            } catch (error) {
+                console.error('Failed to create case:', error);
+                showMessageModal('無法建立案例，請重試', 'error');
+            }
+        }
+
+        // Show create child form
+        function showCreateChild() {
+            document.getElementById('skip-create-btn').classList.add('hidden');
+            document.getElementById('back-to-select-btn').classList.remove('hidden');
+            navigateTo('client-create');
+        }
+
+        // Back to select child
+        function backToSelectChild() {
+            navigateTo('client-select');
+        }
+
+        // Select mode (practice / emergency)
+        function selectMode(mode) {
+            state.selectedMode = mode;
+
+            if (mode === 'practice') {
+                // Practice mode: go to scenario selection
+                navigateTo('scenario');
+            } else if (mode === 'emergency') {
+                // Emergency mode: go to hint page first
+                navigateTo('emergency-hint');
+            }
+        }
+
+        // Start emergency session (after reading hint)
+        async function startEmergencySession() {
+            // Ensure we have a case
+            if (!state.selectedCase && state.selectedClient) {
+                await createDefaultCase();
+            }
+
+            if (!state.selectedCase) {
+                showMessageModal('無法建立案例，請重新選擇孩子', 'error');
+                return;
+            }
+
+            try {
+                // Create session for emergency mode
+                const response = await fetch(`${API_BASE}/api/v1/sessions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        case_id: state.selectedCase.id,
+                        name: '和孩子談談',
+                        notes: '實戰對話模式',
+                        scenario: 'emergency',
+                        scenario_description: '實戰對話模式'
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '建立會談失敗');
+                }
+
+                state.currentSession = await response.json();
+                state.selectedMode = 'emergency';
+
+                // Navigate to recording page
+                updateRecordingHeader();
+                document.getElementById('recording-scenario').value = '和孩子談談';
+                navigateTo('recording');
+                resetRecordingUI();
+                await startRecordingSession();
+
+            } catch (error) {
+                showMessageModal(error.message || '建立會談失敗', 'error');
+            }
+        }
+
+        // Back to mode selection
+        function backToModeSelect() {
+            navigateTo('mode-select');
+        }
+
+        // Skip create child (only shown when no children)
+        function skipCreateChild() {
+            // This would skip to session creation without a child
+            // For now, just stay on the page
+        }
+
+        // Estimate birth year from grade
+        function estimateBirthDateFromGrade(grade) {
+            const currentYear = new Date().getFullYear();
+            const ageMap = {
+                '幼兒園小班': 3,
+                '幼兒園中班': 4,
+                '幼兒園大班': 5,
+                '國小一年級': 6,
+                '國小二年級': 7,
+                '國小三年級': 8,
+                '國小四年級': 9,
+                '國小五年級': 10,
+                '國小六年級': 11,
+                '國中一年級': 12,
+                '國中二年級': 13,
+                '國中三年級': 14,
+                '高中一年級': 15,
+                '高中二年級': 16,
+                '高中三年級': 17
+            };
+            const age = ageMap[grade] || 10;
+            const birthYear = currentYear - age;
+            return `${birthYear}-01-01`;
+        }
+
+        // Handle create child
+        async function handleCreateChild(event) {
+            event.preventDefault();
+            hideError('create-child-error');
+            setButtonLoading('create-child-btn', true);
+
+            const childName = document.getElementById('child-name').value;
+            const childGrade = document.getElementById('child-grade').value;
+            const parentRole = document.getElementById('parent-role').value;
+
+            try {
+                // Create client with required fields
+                const clientResponse = await fetch(`${API_BASE}/api/v1/clients`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: childName,
+                        nickname: childName,
+                        gender: '不透露',
+                        birth_date: estimateBirthDateFromGrade(childGrade),
+                        phone: '0000000000',
+                        identity_option: '學生',
+                        current_status: childGrade,
+                        notes: `年級: ${childGrade}, 關係: ${parentRole}`
+                    })
+                });
+
+                if (!clientResponse.ok) {
+                    const errorData = await clientResponse.json();
+                    throw new Error(errorData.detail || '建立孩子失敗');
+                }
+
+                const clientData = await clientResponse.json();
+                state.selectedClient = clientData;
+
+                // Create default case
+                const caseResponse = await fetch(`${API_BASE}/api/v1/clients/${clientData.id}/cases`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: `${childName}的親子溝通`,
+                        description: `年級: ${childGrade}, 關係: ${parentRole}`
+                    })
+                });
+
+                if (caseResponse.ok) {
+                    state.selectedCase = await caseResponse.json();
+                }
+
+                // Reload clients and navigate
+                await loadClients();
+
+                // If we have clients now, go to select page
+                if (state.clients.length > 1) {
+                    renderChildrenGrid();
+                    selectChild(clientData.id);
+                    navigateTo('client-select');
+                } else {
+                    // First child created, go directly to session
+                    navigateTo('scenario');
+                }
+
+            } catch (error) {
+                showError('create-child-error', error.message);
+            } finally {
+                setButtonLoading('create-child-btn', false);
+            }
+        }
+
+        // Handle logout
+        function handleLogout() {
+            localStorage.removeItem('island_parents_token');
+            state.token = null;
+            state.user = null;
+            state.clients = [];
+            state.selectedClient = null;
+            state.selectedCase = null;
+            navigateTo('login');
+        }
+
+        // Check if already logged in
+        async function checkAuth() {
+            if (state.token) {
+                try {
+                    const response = await fetch(`${API_BASE}/api/auth/me`, {
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        await loadClientsAndNavigate();
+                    } else {
+                        // Token expired
+                        localStorage.removeItem('island_parents_token');
+                        state.token = null;
+                    }
+                } catch (error) {
+                    // Network error, stay on login
+                }
+            }
+        }
+
+        // =====================
+        // Step 3: Session Functions
+        // =====================
+
+        const SCENARIO_LABELS = {
+            'homework': '功課問題',
+            'behavior': '行為管教',
+            'emotion': '情緒處理',
+            'other': '其他話題'
+        };
+
+        // Navigate back to client selection
+        function backToClientSelect() {
+            navigateTo('client-select');
+        }
+
+        // Select a scenario (old style - kept for compatibility)
+        function selectScenario(scenario) {
+            state.selectedScenario = scenario;
+
+            // Update UI
+            document.querySelectorAll('.scenario-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.querySelector(`[data-scenario="${scenario}"]`).classList.add('selected');
+        }
+
+        // Highlight selected scenario (just visual, no navigation)
+        function highlightScenario(element, scenarioKey, title, description) {
+            // Remove selection from all scenario cards
+            document.querySelectorAll('.scenario-card').forEach(card => {
+                card.classList.remove('selected');
+                const check = card.querySelector('.scenario-check');
+                if (check) check.classList.add('hidden');
+            });
+
+            // Add selection to clicked card
+            element.classList.add('selected');
+            const check = element.querySelector('.scenario-check');
+            if (check) check.classList.remove('hidden');
+
+            // Store selected scenario in state
+            state.selectedScenario = scenarioKey;
+            state.scenarioTitle = title;
+            state.scenarioDescription = description;
+        }
+
+        // Select a preset scenario and immediately create session
+        async function selectPresetScenario(scenarioKey, title, description) {
+            state.selectedScenario = scenarioKey;
+            state.scenarioTitle = title;
+            state.scenarioDescription = description;
+
+            // Ensure we have a case
+            if (!state.selectedCase && state.selectedClient) {
+                await createDefaultCase();
+            }
+
+            if (!state.selectedCase) {
+                showMessageModal('無法建立案例，請重新選擇孩子', 'error');
+                return;
+            }
+
+            try {
+                // Create session via API
+                const response = await fetch(`${API_BASE}/api/v1/sessions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        case_id: state.selectedCase.id,
+                        name: title,
+                        notes: description,
+                        scenario: scenarioKey,
+                        scenario_description: description
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '建立會談失敗');
+                }
+
+                state.currentSession = await response.json();
+
+                // Navigate to recording page
+                updateRecordingHeader();
+                document.getElementById('recording-scenario').value = title;
+                navigateTo('recording');
+                resetRecordingUI();
+                await startRecordingSession();
+
+            } catch (error) {
+                showMessageModal(error.message || '建立會談失敗', 'error');
+            }
+        }
+
+        // Show custom dialogue view
+        function showCustomDialogueView() {
+            document.getElementById('preset-scenarios-view').classList.add('hidden');
+            document.getElementById('custom-dialogue-view').classList.remove('hidden');
+        }
+
+        // Show preset scenarios view
+        function showPresetScenariosView() {
+            document.getElementById('custom-dialogue-view').classList.add('hidden');
+            document.getElementById('preset-scenarios-view').classList.remove('hidden');
+        }
+
+        // Handle create custom session
+        async function handleCreateCustomSession(event) {
+            event.preventDefault();
+
+            const customInput = document.getElementById('custom-scenario-input').value.trim();
+
+            if (!customInput) {
+                showError('custom-session-error', '請輸入情境描述');
+                return;
+            }
+
+            hideError('custom-session-error');
+            setButtonLoading('start-custom-session-btn', true);
+
+            try {
+                // Ensure we have a case
+                if (!state.selectedCase && state.selectedClient) {
+                    await createDefaultCase();
+                }
+
+                if (!state.selectedCase) {
+                    throw new Error('無法建立案例，請重新選擇孩子');
+                }
+
+                // Create session via API
+                const response = await fetch(`${API_BASE}/api/v1/sessions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        case_id: state.selectedCase.id,
+                        name: '自訂情境',
+                        notes: customInput,
+                        scenario: 'custom',
+                        scenario_description: customInput
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '建立會談失敗');
+                }
+
+                state.currentSession = await response.json();
+                state.selectedScenario = 'custom';
+                state.scenarioTitle = '自訂情境';
+                state.scenarioDescription = customInput;
+
+                // Clear form
+                document.getElementById('custom-scenario-input').value = '';
+
+                // Navigate to recording page
+                updateRecordingHeader();
+                document.getElementById('recording-scenario').value = '自訂情境';
+                navigateTo('recording');
+                resetRecordingUI();
+                await startRecordingSession();
+
+            } catch (error) {
+                showError('custom-session-error', error.message);
+            } finally {
+                setButtonLoading('start-custom-session-btn', false);
+            }
+        }
+
+        // Handle create session (old style - kept for compatibility)
+        async function handleCreateSession(event) {
+            event.preventDefault();
+
+            if (!state.selectedScenario) {
+                showError('session-error', '請選擇一個情境');
+                return;
+            }
+
+            hideError('session-error');
+            setButtonLoading('start-session-btn', true);
+
+            const notes = document.getElementById('session-notes').value;
+
+            try {
+                // Ensure we have a case - create one if not
+                if (!state.selectedCase && state.selectedClient) {
+                    await createDefaultCase();
+                }
+
+                if (!state.selectedCase) {
+                    throw new Error('無法建立案例，請重新選擇孩子');
+                }
+
+                // Create session via API - POST /api/v1/sessions with case_id in body
+                const response = await fetch(`${API_BASE}/api/v1/sessions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        case_id: state.selectedCase.id,
+                        name: SCENARIO_LABELS[state.selectedScenario],
+                        notes: notes || '',
+                        scenario: state.selectedScenario,
+                        scenario_description: notes || ''
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '建立會談失敗');
+                }
+
+                state.currentSession = await response.json();
+
+                // Update recording page info
+                document.getElementById('recording-child-name').textContent = `與${state.selectedClient.name}的對話`;
+                document.getElementById('recording-scenario').textContent = SCENARIO_LABELS[state.selectedScenario];
+
+                // Navigate to recording page
+                navigateTo('recording');
+                resetRecordingUI();
+
+            } catch (error) {
+                showError('session-error', error.message);
+            } finally {
+                setButtonLoading('start-session-btn', false);
+            }
+        }
+
+        // Update session page when navigating to it
+        function updateSessionPage() {
+            // Session page (scenario selection) doesn't need child name display
+            // Child name is shown on recording page via updateRecordingPage()
+            console.log('Session page loaded for client:', state.selectedClient?.name);
+        }
+
+        // Override navigateTo to update session page
+        const originalNavigateTo = navigateTo;
+        function navigateTo(pageId) {
+            document.querySelectorAll('.page-container').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(`page-${pageId}`).classList.add('active');
+            state.currentPage = pageId;
+
+            if (pageId === 'session') {
+                updateSessionPage();
+            }
+        }
+
+        // =====================
+        // Step 4: Recording Functions (Color Orb Design)
+        // =====================
+
+        let recordingTimer = null;
+        let recordingSeconds = 0;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let quickFeedbackInterval = null;
+        let deepFeedbackInterval = null;
+        let isPaused = false;
+
+        // Feedback state
+        const feedbackState = {
+            currentColor: 'green', // green, pink, yellow
+            quickFeedback: '',
+            deepFeedback: '',
+            transcriptBuffer: [] // Buffer for API calls
+        };
+
+        // Quick feedback templates (10 second polling)
+        const QUICK_FEEDBACK_TEMPLATES = {
+            green: [
+                '很好，繼續保持同理心',
+                '孩子感受到你的支持',
+                '你的語氣很溫和',
+                '繼續傾聽孩子的想法'
+            ],
+            pink: [
+                '試著放慢語速',
+                '注意你的語氣',
+                '深呼吸，冷靜一下',
+                '避免批評性的字眼'
+            ],
+            yellow: [
+                '試著用開放式問題',
+                '確認你理解孩子的意思',
+                '讓孩子多說一些',
+                '避免打斷孩子'
+            ]
+        };
+
+        // Deep feedback templates (60 second polling)
+        const DEEP_FEEDBACK_TEMPLATES = {
+            green: '讓孩子知道你站在他這邊',
+            pink: '當心不當的字彙，可能讓孩子受傷喔',
+            yellow: '孩子可能覺得你不懂'
+        };
+
+        // Reset recording UI
+        function resetRecordingUI() {
+            state.isRecording = false;
+            state.currentSpeaker = 'parent';
+            state.transcripts = [];
+            recordingSeconds = 0;
+            isPaused = false;
+            feedbackState.currentColor = 'green';
+            feedbackState.transcriptBuffer = [];
+
+            // Reset timer display
+            document.getElementById('recording-timer').textContent = '00:00';
+
+            // Reset color orb to green
+            setOrbColor('green');
+
+            // Reset feedback text
+            document.getElementById('deep-feedback-text').textContent = DEEP_FEEDBACK_TEMPLATES.green;
+            document.getElementById('quick-feedback-text').textContent = QUICK_FEEDBACK_TEMPLATES.green[0];
+
+            // Reset pause button
+            document.getElementById('pause-btn-text').textContent = '暫停';
+            document.getElementById('pause-icon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/>';
+
+            // Update recording indicator
+            document.getElementById('recording-indicator').classList.add('recording-active');
+
+            // Clear any existing intervals
+            clearFeedbackIntervals();
+        }
+
+        // Set orb color state
+        function setOrbColor(color) {
+            const orbWrapper = document.getElementById('color-orb-wrapper');
+            orbWrapper.classList.remove('orb-green', 'orb-pink', 'orb-yellow');
+            orbWrapper.classList.add(`orb-${color}`);
+            feedbackState.currentColor = color;
+        }
+
+        // Update header with child name
+        function updateRecordingHeader() {
+            const childName = state.selectedClient?.name || '小寶';
+            document.getElementById('recording-header').textContent = `練習與 ${childName} 對話中...`;
+            document.getElementById('recording-child-name').value = childName;
+        }
+
+        // Start recording session
+        async function startRecordingSession() {
+            try {
+                // Request microphone permission
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                // Create MediaRecorder
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.start(1000); // Collect data every second
+
+                state.isRecording = true;
+                isPaused = false;
+
+                // Start timer
+                startTimer();
+
+                // Start feedback polling
+                startFeedbackPolling();
+
+                console.log('Recording started');
+
+            } catch (error) {
+                console.error('Failed to start recording:', error);
+                showMessageModal('無法啟動麥克風，請確認已授予權限', 'error');
+            }
+        }
+
+        // Toggle pause/resume recording
+        function togglePauseRecording() {
+            if (isPaused) {
+                resumeRecording();
+            } else {
+                pauseRecording();
+            }
+        }
+
+        // Pause recording
+        function pauseRecording() {
+            isPaused = true;
+
+            // Stop timer
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+                recordingTimer = null;
+            }
+
+            // Pause media recorder
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.pause();
+            }
+
+            // Stop feedback polling
+            clearFeedbackIntervals();
+
+            // Update UI
+            document.getElementById('pause-btn-text').textContent = '繼續';
+            document.getElementById('pause-icon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>';
+            document.getElementById('recording-indicator').classList.remove('recording-active');
+
+            // Stop orb pulsing
+            document.getElementById('color-orb-wrapper').classList.remove('pulsing');
+        }
+
+        // Resume recording
+        function resumeRecording() {
+            isPaused = false;
+
+            // Resume media recorder
+            if (mediaRecorder && mediaRecorder.state === 'paused') {
+                mediaRecorder.resume();
+            }
+
+            // Resume timer
+            startTimer();
+
+            // Resume feedback polling
+            startFeedbackPolling();
+
+            // Update UI
+            document.getElementById('pause-btn-text').textContent = '暫停';
+            document.getElementById('pause-icon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/>';
+            document.getElementById('recording-indicator').classList.add('recording-active');
+
+            // Resume orb pulsing
+            document.getElementById('color-orb-wrapper').classList.add('pulsing');
+        }
+
+        // Start timer
+        function startTimer() {
+            recordingTimer = setInterval(() => {
+                recordingSeconds++;
+                const mins = Math.floor(recordingSeconds / 60).toString().padStart(2, '0');
+                const secs = (recordingSeconds % 60).toString().padStart(2, '0');
+                document.getElementById('recording-timer').textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        // Clear feedback intervals
+        function clearFeedbackIntervals() {
+            if (quickFeedbackInterval) {
+                clearInterval(quickFeedbackInterval);
+                quickFeedbackInterval = null;
+            }
+            if (deepFeedbackInterval) {
+                clearInterval(deepFeedbackInterval);
+                deepFeedbackInterval = null;
+            }
+        }
+
+        // Start feedback polling
+        function startFeedbackPolling() {
+            // Quick feedback every 10 seconds
+            quickFeedbackInterval = setInterval(() => {
+                if (!isPaused) {
+                    fetchQuickFeedback();
+                }
+            }, 10000);
+
+            // Deep feedback every 60 seconds
+            deepFeedbackInterval = setInterval(() => {
+                if (!isPaused) {
+                    fetchDeepFeedback();
+                }
+            }, 60000);
+
+            // Initial fetch after 5 seconds
+            setTimeout(() => {
+                if (state.isRecording && !isPaused) {
+                    fetchQuickFeedback();
+                }
+            }, 5000);
+        }
+
+        // Fetch quick feedback (10 second polling)
+        async function fetchQuickFeedback() {
+            try {
+                // In production, this would call the API:
+                // POST /api/v1/sessions/{session_id}/quick-feedback
+                // For demo, simulate with random templates
+
+                // Simulate API call delay
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Randomly change color occasionally (demo)
+                const colors = ['green', 'pink', 'yellow'];
+                const shouldChangeColor = Math.random() < 0.2; // 20% chance to change
+                if (shouldChangeColor) {
+                    const newColor = colors[Math.floor(Math.random() * colors.length)];
+                    setOrbColor(newColor);
+                }
+
+                // Get random quick feedback for current color
+                const templates = QUICK_FEEDBACK_TEMPLATES[feedbackState.currentColor];
+                const randomIndex = Math.floor(Math.random() * templates.length);
+                const quickText = templates[randomIndex];
+
+                // Update UI
+                document.getElementById('quick-feedback-text').textContent = quickText;
+
+                console.log('Quick feedback updated:', quickText);
+
+            } catch (error) {
+                console.error('Failed to fetch quick feedback:', error);
+            }
+        }
+
+        // Fetch deep feedback (60 second polling)
+        async function fetchDeepFeedback() {
+            try {
+                // In production, this would call the API:
+                // POST /api/v1/sessions/{session_id}/deep-analyze
+                // For demo, simulate with templates
+
+                // Simulate API call delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Get deep feedback for current color
+                const deepText = DEEP_FEEDBACK_TEMPLATES[feedbackState.currentColor];
+
+                // Update UI with animation
+                const deepFeedbackEl = document.getElementById('deep-feedback-text');
+                deepFeedbackEl.style.opacity = '0';
+                setTimeout(() => {
+                    deepFeedbackEl.textContent = deepText;
+                    deepFeedbackEl.style.opacity = '1';
+                }, 300);
+
+                console.log('Deep feedback updated:', deepText);
+
+            } catch (error) {
+                console.error('Failed to fetch deep feedback:', error);
+            }
+        }
+
+        // Switch speaker (for future use)
+        function switchSpeaker(speaker) {
+            state.currentSpeaker = speaker;
+        }
+
+        // Add transcript message (for future use with real STT)
+        function addTranscriptToBuffer(speaker, text) {
+            feedbackState.transcriptBuffer.push({
+                speaker,
+                text,
+                timestamp: new Date().toISOString()
+            });
+            state.transcripts.push({ speaker, text, timestamp: new Date().toISOString() });
+        }
+
+        // Confirm end session
+        function confirmEndSession() {
+            document.getElementById('end-session-modal').classList.remove('hidden');
+        }
+
+        // Hide end session modal
+        function hideEndSessionModal() {
+            document.getElementById('end-session-modal').classList.add('hidden');
+        }
+
+        // Stop all recording activities
+        function stopAllRecording() {
+            // Stop media recorder
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+
+            // Clear timer
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+                recordingTimer = null;
+            }
+
+            // Clear feedback intervals
+            clearFeedbackIntervals();
+
+            state.isRecording = false;
+            isPaused = false;
+        }
+
+        // End session
+        async function endSession() {
+            hideEndSessionModal();
+
+            // Save the duration before stopping
+            const finalDuration = formatDuration(recordingSeconds);
+            const minutesUsed = Math.ceil(recordingSeconds / 60);
+
+            stopAllRecording();
+
+            // Navigate to generating page
+            navigateTo('generating');
+
+            // In real app, save transcript and generate report
+            try {
+                // Update session with transcript if we have any
+                if (state.currentSession && state.transcripts.length > 0) {
+                    await fetch(`${API_BASE}/api/v1/sessions/${state.currentSession.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${state.token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            transcript: state.transcripts.map(t => `${t.speaker === 'parent' ? '家長' : '孩子'}：${t.text}`).join('\n')
+                        })
+                    });
+                }
+
+                // Simulate report generation (3 seconds)
+                await new Promise(resolve => setTimeout(resolve, 3000));
+
+                // Update complete page with session info
+                document.getElementById('complete-duration').textContent = finalDuration;
+                document.getElementById('complete-minutes-used').textContent = minutesUsed;
+                document.getElementById('complete-minutes-remaining').textContent = Math.max(0, 120 - minutesUsed);
+
+                // Navigate to complete page
+                navigateTo('complete');
+
+            } catch (error) {
+                console.error('Failed to save session:', error);
+                showMessageModal('儲存對話時發生錯誤', 'error');
+                navigateTo('client-select');
+            }
+        }
+
+        // Format duration as HH:MM:SS
+        function formatDuration(seconds) {
+            const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            return `${hrs}:${mins}:${secs}`;
+        }
+
+        // View report (placeholder - will navigate to report page)
+        function viewReport() {
+            // Reset state
+            state.selectedScenario = null;
+            state.currentSession = null;
+            state.transcripts = [];
+            feedbackState.transcriptBuffer = [];
+
+            // TODO: Navigate to actual report page
+            // For now, go back to client selection
+            navigateTo('client-select');
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+        });
+    </script>
+</body>
+</html>
