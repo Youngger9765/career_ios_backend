@@ -31,6 +31,9 @@ from app.schemas.session import (
     RAGSource,
     RealtimeAnalyzeResponse,
 )
+from app.schemas.session import (
+    QuickFeedbackRequest as SessionQuickFeedbackRequest,
+)
 from app.services.gemini_service import GeminiService
 from app.services.quick_feedback_service import quick_feedback_service
 
@@ -63,12 +66,8 @@ class DeepAnalyzeRequest(BaseModel):
     time_range: str = Field(default="0:00-2:00", description="時間範圍")
 
 
-class QuickFeedbackRequest(BaseModel):
-    """快速反饋請求"""
-
-    transcript: str = Field(..., min_length=1, description="最近的逐字稿")
-    session_id: Optional[str] = Field(None, description="Session ID（選填）")
-    tenant_id: str = Field(default="island_parents", description="租戶 ID")
+# Note: QuickFeedbackRequest is imported from session.py as SessionQuickFeedbackRequest
+# It uses 'recent_transcript' field for backward compatibility
 
 
 class ReportRequest(BaseModel):
@@ -230,7 +229,9 @@ async def deep_analyze(
 
 
 @router.post("/quick-feedback", response_model=QuickFeedbackResponse)
-async def quick_feedback(request: QuickFeedbackRequest, db: Session = Depends(get_db)):
+async def quick_feedback(
+    request: SessionQuickFeedbackRequest, db: Session = Depends(get_db)
+):
     """
     快速反饋（輕量級，~8秒）
 
@@ -238,14 +239,8 @@ async def quick_feedback(request: QuickFeedbackRequest, db: Session = Depends(ge
     - 返回 1 句話（20字內）
     """
     try:
-        # Get transcript (from request or session)
-        transcript = request.transcript
-        if request.session_id:
-            session_transcript = await _get_transcript_from_session(
-                request.session_id, db
-            )
-            if session_transcript:
-                transcript = session_transcript
+        # Get transcript (from request)
+        transcript = request.recent_transcript
 
         # Call quick feedback service
         result = await quick_feedback_service.get_quick_feedback(

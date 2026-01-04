@@ -1,6 +1,6 @@
 """
 Integration tests for Quick Feedback API
-Tests the /api/v1/realtime/quick-feedback endpoint
+Tests the /api/v1/transcript/quick-feedback endpoint
 """
 
 import pytest
@@ -41,10 +41,10 @@ class TestQuickFeedbackAPI:
 
     @skip_without_gcp
     def test_quick_feedback_success(self):
-        """Test POST /api/v1/realtime/quick-feedback - Success case with valid transcript"""
+        """Test POST /api/v1/transcript/quick-feedback - Success case with valid transcript"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/realtime/quick-feedback",
+                "/api/v1/transcript/quick-feedback",
                 json={
                     "recent_transcript": "家長：你再這樣我就生氣了！\n孩子：我不是故意的..."
                 },
@@ -75,7 +75,7 @@ class TestQuickFeedbackAPI:
         """Test validation rejects empty transcript"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/realtime/quick-feedback", json={"recent_transcript": ""}
+                "/api/v1/transcript/quick-feedback", json={"recent_transcript": ""}
             )
 
             assert response.status_code == 422  # Validation error
@@ -91,7 +91,7 @@ class TestQuickFeedbackAPI:
     def test_quick_feedback_missing_transcript_field(self):
         """Test validation rejects missing recent_transcript field"""
         with TestClient(app) as client:
-            response = client.post("/api/v1/realtime/quick-feedback", json={})
+            response = client.post("/api/v1/transcript/quick-feedback", json={})
 
             assert response.status_code == 422  # Validation error
 
@@ -99,7 +99,7 @@ class TestQuickFeedbackAPI:
         """Test validation rejects whitespace-only transcript"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/realtime/quick-feedback",
+                "/api/v1/transcript/quick-feedback",
                 json={"recent_transcript": "   \n\t  "},
             )
 
@@ -110,7 +110,7 @@ class TestQuickFeedbackAPI:
         """Test latency is reasonable (< 5 seconds for integration test)"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/realtime/quick-feedback",
+                "/api/v1/transcript/quick-feedback",
                 json={"recent_transcript": "家長：今天天氣不錯\n孩子：是啊"},
             )
 
@@ -127,7 +127,7 @@ class TestQuickFeedbackAPI:
         """Test message is concise and appropriate"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/realtime/quick-feedback",
+                "/api/v1/transcript/quick-feedback",
                 json={"recent_transcript": "家長：你做得很好！\n孩子：謝謝媽媽"},
             )
 
@@ -149,7 +149,7 @@ class TestQuickFeedbackAPI:
         """Test response to potentially dangerous conversation"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/realtime/quick-feedback",
+                "/api/v1/transcript/quick-feedback",
                 json={
                     "recent_transcript": "家長：你再這樣我就打死你！\n孩子：我害怕..."
                 },
@@ -168,7 +168,7 @@ class TestQuickFeedbackAPI:
         """Test response to question-based interaction"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/realtime/quick-feedback",
+                "/api/v1/transcript/quick-feedback",
                 json={"recent_transcript": "家長：你今天在學校開心嗎？\n孩子：很開心"},
             )
 
@@ -195,7 +195,7 @@ class TestQuickFeedbackAPI:
 
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/realtime/quick-feedback",
+                "/api/v1/transcript/quick-feedback",
                 json={"recent_transcript": long_transcript},
             )
 

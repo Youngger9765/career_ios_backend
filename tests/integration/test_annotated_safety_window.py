@@ -69,7 +69,7 @@ class TestExperiment1RedToGreenRelaxation:
             transcript = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
 
             response = client.post(
-                "/api/v1/realtime/analyze",
+                "/api/v1/transcript/deep-analyze",
                 json={
                     "transcript": transcript,
                     "speakers": speakers,
@@ -127,7 +127,7 @@ class TestExperiment1RedToGreenRelaxation:
             transcript = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
 
             response = client.post(
-                "/api/v1/realtime/analyze",
+                "/api/v1/transcript/deep-analyze",
                 json={
                     "transcript": transcript,
                     "speakers": speakers,
@@ -182,7 +182,7 @@ class TestExperiment2GreenToRedEscalation:
             transcript = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
 
             response = client.post(
-                "/api/v1/realtime/analyze",
+                "/api/v1/transcript/deep-analyze",
                 json={
                     "transcript": transcript,
                     "speakers": speakers,
@@ -230,7 +230,7 @@ class TestExperiment2GreenToRedEscalation:
             transcript = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
 
             response = client.post(
-                "/api/v1/realtime/analyze",
+                "/api/v1/transcript/deep-analyze",
                 json={
                     "transcript": transcript,
                     "speakers": speakers,
@@ -281,7 +281,7 @@ class TestExperiment3CompareApproaches:
             transcript = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
 
             response = client.post(
-                "/api/v1/realtime/analyze",
+                "/api/v1/transcript/deep-analyze",
                 json={
                     "transcript": transcript,
                     "speakers": speakers,
@@ -335,7 +335,7 @@ class TestExperiment3CompareApproaches:
             transcript = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
 
             response = client.post(
-                "/api/v1/realtime/analyze",
+                "/api/v1/transcript/deep-analyze",
                 json={
                     "transcript": transcript,
                     "speakers": speakers,
@@ -392,7 +392,7 @@ class TestExperiment4BoundaryCases:
             transcript = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
 
             response = client.post(
-                "/api/v1/realtime/analyze",
+                "/api/v1/transcript/deep-analyze",
                 json={
                     "transcript": transcript,
                     "speakers": speakers,
@@ -445,7 +445,7 @@ class TestExperiment4BoundaryCases:
             transcript = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
 
             response = client.post(
-                "/api/v1/realtime/analyze",
+                "/api/v1/transcript/deep-analyze",
                 json={
                     "transcript": transcript,
                     "speakers": speakers,
@@ -483,7 +483,7 @@ class TestExperiment4BoundaryCases:
             transcript = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
 
             response = client.post(
-                "/api/v1/realtime/analyze",
+                "/api/v1/transcript/deep-analyze",
                 json={
                     "transcript": transcript,
                     "speakers": speakers,
@@ -543,7 +543,7 @@ class TestExperiment5AIComplianceCheck:
             transcript = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
 
             response = client.post(
-                "/api/v1/realtime/analyze",
+                "/api/v1/transcript/deep-analyze",
                 json={
                     "transcript": transcript,
                     "speakers": speakers,
@@ -593,7 +593,7 @@ class TestExperiment5AIComplianceCheck:
             transcript = "\n".join([f"{s['speaker']}: {s['text']}" for s in speakers])
 
             response = client.post(
-                "/api/v1/realtime/analyze",
+                "/api/v1/transcript/deep-analyze",
                 json={
                     "transcript": transcript,
                     "speakers": speakers,

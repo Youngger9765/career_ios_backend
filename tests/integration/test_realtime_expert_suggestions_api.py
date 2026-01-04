@@ -57,7 +57,7 @@ class TestRealtimeExpertSuggestionsAPI:
         """Emergency mode should select 1-2 suggestions from 200 expert suggestions
 
         Expected behavior (RED - will fail until implemented):
-        - POST /api/v1/realtime/analyze with mode="emergency"
+        - POST /api/v1/transcript/deep-analyze with mode="emergency"
         - Response contains 1-2 suggestions
         - Each suggestion MUST be from the expert suggestion pool
         - Should NOT be LLM-generated freeform text
@@ -81,7 +81,7 @@ class TestRealtimeExpertSuggestionsAPI:
             "provider": "gemini",
         }
 
-        response = client.post("/api/v1/realtime/analyze", json=request_data)
+        response = client.post("/api/v1/transcript/deep-analyze", json=request_data)
 
         # Verify response structure
         assert response.status_code == 200
@@ -132,7 +132,7 @@ class TestRealtimeExpertSuggestionsAPI:
             "provider": "gemini",
         }
 
-        response = client.post("/api/v1/realtime/analyze", json=request_data)
+        response = client.post("/api/v1/transcript/deep-analyze", json=request_data)
 
         assert response.status_code == 200
         data = response.json()
@@ -161,7 +161,7 @@ class TestRealtimeExpertSuggestionsAPI:
         """Practice mode should select 3-4 suggestions from 200 expert suggestions
 
         Expected behavior (RED - will fail until implemented):
-        - POST /api/v1/realtime/analyze with mode="practice"
+        - POST /api/v1/transcript/deep-analyze with mode="practice"
         - Response contains 3-4 suggestions
         - Each suggestion MUST be from the expert suggestion pool
         - Should NOT be LLM-generated freeform text
@@ -185,7 +185,7 @@ class TestRealtimeExpertSuggestionsAPI:
             "provider": "gemini",
         }
 
-        response = client.post("/api/v1/realtime/analyze", json=request_data)
+        response = client.post("/api/v1/transcript/deep-analyze", json=request_data)
 
         assert response.status_code == 200
         data = response.json()
@@ -230,7 +230,7 @@ class TestRealtimeExpertSuggestionsAPI:
             "provider": "gemini",
         }
 
-        response = client.post("/api/v1/realtime/analyze", json=request_data)
+        response = client.post("/api/v1/transcript/deep-analyze", json=request_data)
 
         assert response.status_code == 200
         data = response.json()
@@ -284,7 +284,7 @@ class TestRealtimeExpertSuggestionsAPI:
             "provider": "gemini",
         }
 
-        response = client.post("/api/v1/realtime/analyze", json=red_request)
+        response = client.post("/api/v1/transcript/deep-analyze", json=red_request)
         assert response.status_code == 200
         data = response.json()
 
@@ -312,7 +312,7 @@ class TestRealtimeExpertSuggestionsAPI:
             "provider": "gemini",
         }
 
-        response = client.post("/api/v1/realtime/analyze", json=green_request)
+        response = client.post("/api/v1/transcript/deep-analyze", json=green_request)
         assert response.status_code == 200
         data = response.json()
 
@@ -353,7 +353,7 @@ class TestRealtimeExpertSuggestionsAPI:
             "provider": "gemini",
         }
 
-        response = client.post("/api/v1/realtime/analyze", json=yellow_request)
+        response = client.post("/api/v1/transcript/deep-analyze", json=yellow_request)
         assert response.status_code == 200
         data = response.json()
 
@@ -375,7 +375,7 @@ class TestRealtimeExpertSuggestionsAPI:
             "provider": "gemini",
         }
 
-        response = client.post("/api/v1/realtime/analyze", json=red_request)
+        response = client.post("/api/v1/transcript/deep-analyze", json=red_request)
         assert response.status_code == 200
         data = response.json()
 
@@ -408,7 +408,7 @@ class TestRealtimeExpertSuggestionsAPI:
             "provider": "gemini",
         }
 
-        response = client.post("/api/v1/realtime/analyze", json=green_request)
+        response = client.post("/api/v1/transcript/deep-analyze", json=green_request)
         assert response.status_code == 200
         data = response.json()
 
@@ -449,7 +449,7 @@ class TestRealtimeExpertSuggestionsAPI:
             "provider": "gemini",
         }
 
-        response = client.post("/api/v1/realtime/analyze", json=request_data)
+        response = client.post("/api/v1/transcript/deep-analyze", json=request_data)
 
         assert response.status_code == 200
         data = response.json()
@@ -491,7 +491,7 @@ class TestRealtimeExpertSuggestionsAPI:
             "provider": "gemini",
         }
 
-        response = client.post("/api/v1/realtime/analyze", json=request_data)
+        response = client.post("/api/v1/transcript/deep-analyze", json=request_data)
 
         # Should not crash (either validation error or handled gracefully)
         assert (

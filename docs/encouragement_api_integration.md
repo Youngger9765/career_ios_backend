@@ -2,7 +2,7 @@
 
 **版本**: v2.0
 **最後更新**: 2026-01-01
-**狀態**: ✅ 已整合到 `/api/v1/realtime/quick-feedback`
+**狀態**: ✅ 已整合到 `/api/v1/transcript/quick-feedback`
 
 ---
 
@@ -11,8 +11,8 @@
 ### 核心理念
 
 **Quick Feedback 是「補充」而非「取代」**：
-- 主要分析：`/api/v1/realtime/analyze`（完整 AI 分析，8 大派 + 200 句專家建議）
-- 快速鼓勵：`/api/v1/realtime/quick-feedback`（輕量 AI 雞湯文，填補空檔）
+- 主要分析：`/api/v1/transcript/deep-analyze`（完整 AI 分析，8 大派 + 200 句專家建議）
+- 快速鼓勵：`/api/v1/transcript/quick-feedback`（輕量 AI 雞湯文，填補空檔）
 
 ### 動態協調策略
 
@@ -33,7 +33,7 @@
 ### Endpoint
 
 ```
-POST /api/v1/realtime/quick-feedback
+POST /api/v1/transcript/quick-feedback
 ```
 
 ### Request
@@ -252,7 +252,7 @@ extension APIClient {
         recentTranscript: String,
         completion: @escaping (Result<QuickFeedback, Error>) -> Void
     ) {
-        let endpoint = "/api/v1/realtime/quick-feedback"
+        let endpoint = "/api/v1/transcript/quick-feedback"
         let body: [String: Any] = ["recent_transcript": recentTranscript]
 
         request(endpoint: endpoint, method: .post, body: body) { result in
@@ -382,7 +382,7 @@ if newSafetyLevel != currentSafetyLevel {
 ## 🧪 測試檢查清單
 
 ### Backend 測試
-- [ ] `/api/v1/realtime/quick-feedback` 正常運作
+- [ ] `/api/v1/transcript/quick-feedback` 正常運作
 - [ ] 延遲 < 2 秒
 - [ ] 錯誤時返回 fallback 訊息
 - [ ] 訊息長度 ≤ 20 字
@@ -423,4 +423,4 @@ if newSafetyLevel != currentSafetyLevel {
 
 **文件版本**: v2.0（AI-Powered with Dynamic Intervals）
 **最後更新**: 2026-01-01
-**對應 API**: `/api/v1/realtime/quick-feedback`
+**對應 API**: `/api/v1/transcript/quick-feedback`

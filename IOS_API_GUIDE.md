@@ -762,7 +762,7 @@ Content-Type: application/json
 **6.1 語音轉文字（取得 WebSocket Token）**
 
 ```http
-POST /api/v1/realtime/elevenlabs-token
+POST /api/v1/transcript/elevenlabs-token
 Authorization: Bearer {token}
 ```
 

@@ -115,7 +115,7 @@ async def benchmark_provider(
 
             try:
                 response = await client.post(
-                    f"{API_BASE_URL}/api/v1/realtime/analyze",
+                    f"{API_BASE_URL}/api/v1/transcript/deep-analyze",
                     json=payload,
                 )
 

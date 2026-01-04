@@ -28,7 +28,6 @@ from app.api import (
     rag_report,
     rag_search,
     rag_stats,
-    realtime,
     reports,
     session_analysis,
     sessions,
@@ -107,10 +106,8 @@ app.include_router(session_analysis.router)
 # Include analyze routes
 app.include_router(analyze.router)
 
-# Include realtime STT counseling routes (Demo Feature)
-app.include_router(realtime.router)
-
-# Transcript Analysis (unified endpoint for deep-analyze, quick-feedback, report)
+# Transcript Analysis (unified endpoint for deep-analyze, quick-feedback, report, elevenlabs-token)
+# Replaces deprecated /realtime/ routes
 app.include_router(transcript.router)
 
 # Include UI API routes

@@ -72,7 +72,7 @@ class TestRealtimeGBQPersistence:
             }
 
             # Make API call
-            response = client.post("/api/v1/realtime/analyze", json=request)
+            response = client.post("/api/v1/transcript/deep-analyze", json=request)
 
             # API should return immediately (200 OK)
             assert response.status_code == 200
@@ -131,7 +131,7 @@ class TestRealtimeGBQPersistence:
             }
 
             # API should still return 200 despite GBQ failure
-            response = client.post("/api/v1/realtime/analyze", json=request)
+            response = client.post("/api/v1/transcript/deep-analyze", json=request)
             assert response.status_code == 200
 
             # Response should contain analysis results
@@ -163,7 +163,7 @@ class TestRealtimeGBQPersistence:
                 "provider": "gemini",
             }
 
-            response = client.post("/api/v1/realtime/analyze", json=request)
+            response = client.post("/api/v1/transcript/deep-analyze", json=request)
             assert response.status_code == 200
 
             # Verify GBQ data
@@ -194,7 +194,7 @@ class TestRealtimeGBQPersistence:
                 "provider": "gemini",
             }
 
-            response = client.post("/api/v1/realtime/analyze", json=request)
+            response = client.post("/api/v1/transcript/deep-analyze", json=request)
             assert response.status_code == 200
 
             # Verify response time is recorded
@@ -236,7 +236,7 @@ class TestRealtimeGBQPersistence:
             }
 
             with caplog.at_level(logging.ERROR):
-                response = client.post("/api/v1/realtime/analyze", json=request)
+                response = client.post("/api/v1/transcript/deep-analyze", json=request)
                 assert response.status_code == 200
 
             # Verify error was logged

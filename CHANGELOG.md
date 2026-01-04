@@ -208,14 +208,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dual-API Analysis System - Quick Feedback (雞湯文) + Deep Analysis** (2026-01-02)
   - Implemented simultaneous quick feedback and deep analysis timers
   - **Quick Feedback API** (雞湯文 - Inspirational quotes):
-    - Endpoint: POST `/api/v1/realtime/quick-feedback`
+    - Endpoint: POST `/api/v1/transcript/quick-feedback`
     - Triggers: Every 10 seconds during 🟢 Green and 🟡 Yellow safety levels
     - Disabled during 🔴 Red (already fast enough with 15s deep analysis)
     - Toast: Yellow gradient ("⚡ 快速分析中...")
     - Purpose: Fill gaps between deep analyses with lightweight encouragement
     - Response time: ~1-2 seconds (Gemini Flash lightweight prompt)
   - **Deep Analysis API** (Full analysis with safety level updates):
-    - Endpoint: POST `/api/v1/realtime/analyze` (existing)
+    - Endpoint: POST `/api/v1/transcript/deep-analyze` (existing)
     - Triggers: Adaptive intervals based on safety level
       - 🟢 Green: Every 60 seconds
       - 🟡 Yellow: Every 30 seconds
@@ -235,7 +235,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Files changed:
     - app/templates/realtime_counseling.html (dual-timer implementation)
     - Backend: quick_feedback_service.py, realtime.py (API already existed)
-  - Reference: Based on `/api/v1/realtime/quick-feedback` endpoint (added 2026-01-01)
+  - Reference: Based on `/api/v1/transcript/quick-feedback` endpoint (added 2026-01-01)
 
 ### Changed
 - **Web/iOS API Architecture Verification** (2026-01-01)
@@ -322,7 +322,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Quick Feedback API for Real-Time Encouragement** (2026-01-01)
-  - New `/api/v1/realtime/quick-feedback` endpoint for lightweight AI-powered encouragement messages
+  - New `/api/v1/transcript/quick-feedback` endpoint for lightweight AI-powered encouragement messages
   - Provides 1-2 second AI-generated feedback to fill gaps between full analysis cycles
   - **Unified 10-second polling interval** for consistent user experience:
     - 🟢 Green: 60-second full analysis + **10-second quick-feedback** (6 encouragements/minute)
@@ -698,7 +698,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Added "⚡ 立即分析" button for instant testing
     - Phase 1.5: 8/9 integration tests pass, 106 total tests pass
 - **Parents Report API & Unified Session Management** (2025-12-26)
-  - ✅ New endpoint: `POST /api/v1/realtime/parents-report`
+  - ✅ New endpoint: `POST /api/v1/transcript/report`
     - Generates comprehensive parenting communication reports
     - Analyzes parent-child conversation transcripts
     - Provides structured feedback in 4 sections:
@@ -712,8 +712,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Generated once at session start: `session-{timestamp}-{random}`
     - Persisted in localStorage for cross-request tracking
     - Used consistently across all realtime APIs:
-      - `/api/v1/realtime/analyze` (now includes session_id + use_cache)
-      - `/api/v1/realtime/parents-report`
+      - `/api/v1/transcript/deep-analyze` (now includes session_id + use_cache)
+      - `/api/v1/transcript/report`
       - Future GBQ data persistence
     - Enables Gemini context caching for cost optimization
   - ✅ Frontend Integration
@@ -824,7 +824,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ✅ Cache Manager service with Strategy A (always update with accumulated transcript)
   - ✅ Multi-layer cleanup mechanism (manual delete + TTL + cleanup script)
   - ✅ Automatic fallback for short content (<1024 tokens)
-  - ✅ Integration with `/api/v1/realtime/analyze` endpoint
+  - ✅ Integration with `/api/v1/transcript/deep-analyze` endpoint
   - ✅ Cache metadata tracking in API responses
   - ✅ 8 integration tests covering all scenarios
 - **Cache Strategy Comparison Experiments** (2025-12-10)

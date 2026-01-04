@@ -406,7 +406,7 @@
 #### API 端點
 | Method | Endpoint | 用途 |
 |--------|----------|------|
-| POST | `/api/v1/realtime/analyze` | AI 分析逐字稿（舊版，每 60 秒） |
+| POST | `/api/v1/transcript/deep-analyze` | AI 分析逐字稿（舊版，每 60 秒） |
 | POST | `/api/v1/sessions/{id}/quick-feedback` | 快速反饋（固定 20 秒間隔） |
 | POST | `/api/v1/sessions/{id}/deep-analyze` | 深層分析（動態間隔，根據燈號） |
 
@@ -652,7 +652,7 @@ for minute in range(2, 61):
 **未來優化方向：**
 - [x] ~~實作 Explicit Context Caching（需評估儲存成本）~~ → **已驗證可行** (2025-12-10)
 - [x] ~~成本分析評估~~ → **完成** (2025-12-10)
-- [x] ~~Production 實作：整合到 `/api/v1/realtime/analyze` endpoint~~ → **已上線** (2025-12-10)
+- [x] ~~Production 實作：整合到 `/api/v1/transcript/deep-analyze` endpoint~~ → **已上線** (2025-12-10)
 - [x] ~~Cache 管理策略：session 開始時創建，結束時自動清理~~ → **已實作** (2025-12-10)
 - [ ] 監控 cache performance metrics (hit rate, token savings)
 
@@ -669,7 +669,7 @@ for minute in range(2, 61):
   - Cleanup script (`scripts/cleanup_caches.py`)
   - BigQuery monitoring (未來)
 
-**API 整合 (`/api/v1/realtime/analyze`)**:
+**API 整合 (`/api/v1/transcript/deep-analyze`)**:
 ```python
 # Request with cache enabled
 {

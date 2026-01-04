@@ -23,7 +23,7 @@ Performance tests were conducted on the Realtime Analysis API with 10-minute tra
 ## Test 1: Realtime Analysis - 10-Minute Transcript (手足衝突)
 
 ### Test Setup
-- **Endpoint**: `POST /api/v1/realtime/analyze`
+- **Endpoint**: `POST /api/v1/transcript/deep-analyze`
 - **Transcript Length**: 10 minutes
 - **Topic**: 手足衝突 (Sibling Conflict)
 - **Speakers**: ~28 speaker turns
@@ -53,7 +53,7 @@ Performance tests were conducted on the Realtime Analysis API with 10-minute tra
 ## Test 2: Realtime Analysis - 10-Minute Transcript v2 (青少年网络成瘾)
 
 ### Test Setup
-- **Endpoint**: `POST /api/v1/realtime/analyze`
+- **Endpoint**: `POST /api/v1/transcript/deep-analyze`
 - **Transcript Length**: 10 minutes
 - **Topic**: 青少年网络成瘾 (Teen Internet Addiction)
 - **Speakers**: ~28 speaker turns
