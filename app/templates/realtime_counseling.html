@@ -2414,7 +2414,7 @@
         async function startRealRecording() {
             // Step 1: Get single-use token from backend
             console.log('📞 呼叫後端取得 ElevenLabs token...');
-            const tokenResponse = await fetch('/api/v1/realtime/elevenlabs-token', {
+            const tokenResponse = await fetch('/api/v1/transcript/elevenlabs-token', {
                 method: 'POST'
             });
 

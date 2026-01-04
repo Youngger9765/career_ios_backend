@@ -1,5 +1,15 @@
 """
 Realtime STT Counseling API
+
+⚠️ DEPRECATED: This module is deprecated in favor of /api/v1/transcript/ endpoints.
+New code should use:
+  - POST /api/v1/transcript/deep-analyze    (replaces /realtime/analyze)
+  - POST /api/v1/transcript/quick-feedback  (replaces /realtime/quick-feedback)
+  - POST /api/v1/transcript/report          (replaces /realtime/parents-report)
+  - POST /api/v1/transcript/elevenlabs-token (replaces /realtime/elevenlabs-token)
+
+This module is kept for backward compatibility with existing tests.
+Planned removal: 2026-Q1
 """
 import logging
 import os

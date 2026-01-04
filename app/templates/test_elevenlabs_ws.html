@@ -68,7 +68,7 @@
             try {
                 // Step 1: Get token from backend
                 log('📞 呼叫後端取得 token...', 'info');
-                const tokenResponse = await fetch('/api/v1/realtime/elevenlabs-token', {
+                const tokenResponse = await fetch('/api/v1/transcript/elevenlabs-token', {
                     method: 'POST'
                 });
 

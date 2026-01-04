@@ -5,15 +5,18 @@ Transcript Analysis API - 逐字稿分析統一入口
 - POST /api/v1/transcript/deep-analyze    深層分析
 - POST /api/v1/transcript/quick-feedback  快速反饋
 - POST /api/v1/transcript/report          親子對話報告
+- POST /api/v1/transcript/elevenlabs-token  ElevenLabs STT token
 
 所有 endpoint 都接受 tenant_id 參數（預設 island_parents）
 """
 import logging
+import os
 import time
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
+import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -418,3 +421,59 @@ async def generate_report(
     except Exception as e:
         logger.error(f"Report generation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/elevenlabs-token")
+async def generate_elevenlabs_token():
+    """Generate a single-use token for ElevenLabs Speech-to-Text WebSocket.
+
+    This endpoint calls ElevenLabs API to generate a temporary token that
+    can be used by the frontend to connect to their WebSocket service.
+    This approach keeps the API key secure on the server side.
+
+    Returns:
+        Dict with 'token' key containing the single-use token
+
+    Raises:
+        HTTPException: If token generation fails
+    """
+    try:
+        # Get API key from environment
+        api_key = os.getenv("ELEVEN_LABS_API_KEY")
+        if not api_key:
+            logger.error("ELEVEN_LABS_API_KEY not found in environment")
+            raise HTTPException(
+                status_code=500, detail="ElevenLabs API key not configured"
+            )
+
+        # Call ElevenLabs API to generate single-use token
+        url = "https://api.elevenlabs.io/v1/single-use-token/realtime_scribe"
+        headers = {"xi-api-key": api_key}
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, headers=headers, timeout=30.0)
+
+            if response.status_code != 200:
+                logger.error(
+                    f"ElevenLabs API error: {response.status_code} - {response.text}"
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to generate token: {response.text}",
+                )
+
+            token_data = response.json()
+            logger.info("Successfully generated ElevenLabs token")
+
+            return {"token": token_data.get("token")}
+
+    except httpx.TimeoutException:
+        logger.error("Timeout calling ElevenLabs API")
+        raise HTTPException(
+            status_code=504, detail="Timeout generating token from ElevenLabs"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Token generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Token generation failed: {e}")
