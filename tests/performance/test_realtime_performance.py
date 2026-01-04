@@ -2,7 +2,7 @@
 Performance tests for Realtime Analysis API
 
 Tests the performance of:
-1. /api/v1/transcript/deep-analyze - 10-minute transcript analysis
+1. /api/v1/realtime/analyze - 10-minute transcript analysis
 2. /api/v1/sessions/{session_id}/recordings/append - Append recording
 3. Combined iOS flow (append + analyze-partial if exists)
 
@@ -94,7 +94,7 @@ class TestRealtimePerformance:
 
         # Measure performance
         start_time = time.time()
-        response = client.post("/api/v1/transcript/deep-analyze", json=request_data)
+        response = client.post("/api/v1/realtime/analyze", json=request_data)
         end_time = time.time()
 
         duration_ms = (end_time - start_time) * 1000
@@ -146,7 +146,7 @@ class TestRealtimePerformance:
 
         # Measure performance
         start_time = time.time()
-        response = client.post("/api/v1/transcript/deep-analyze", json=request_data)
+        response = client.post("/api/v1/realtime/analyze", json=request_data)
         end_time = time.time()
 
         duration_ms = (end_time - start_time) * 1000

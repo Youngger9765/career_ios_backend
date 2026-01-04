@@ -45,7 +45,7 @@ class TestSafetyLevelTransitions:
             )
 
             response_red = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": initial_transcript,
                     "speakers": [
@@ -80,7 +80,7 @@ class TestSafetyLevelTransitions:
 案主：好，我願意學習。我希望和孩子的關係可以更好。"""
 
             response_green = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": cumulative_transcript,
                     "speakers": [
@@ -146,7 +146,7 @@ class TestSafetyLevelTransitions:
 案主：是的，他變得更開朗了。"""
 
             response_green = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": initial_transcript,
                     "speakers": [
@@ -183,7 +183,7 @@ class TestSafetyLevelTransitions:
 案主：我真的快要崩潰了，有時候我想乾脆去死算了。"""
 
             response_red = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": cumulative_transcript,
                     "speakers": [
@@ -244,7 +244,7 @@ class TestSafetyLevelTransitions:
             )
 
             response_red = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": red_transcript,
                     "speakers": [
@@ -270,7 +270,7 @@ class TestSafetyLevelTransitions:
 案主：對，我快被他氣死了，但我知道不能打他。"""
 
             response_yellow = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": yellow_transcript,
                     "speakers": [
@@ -311,7 +311,7 @@ class TestSafetyLevelTransitions:
 案主：好，我願意試試看。我相信我可以做得更好。"""
 
             response_green = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": green_transcript,
                     "speakers": [
@@ -384,7 +384,7 @@ class TestSafetyLevelTransitions:
 案主：是的，我很開心。"""
 
             response_green = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": green_transcript,
                     "speakers": [
@@ -410,7 +410,7 @@ class TestSafetyLevelTransitions:
 案主：他說謊，我真的很煩，快被他氣死了。"""
 
             response_yellow = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": yellow_transcript,
                     "speakers": [
@@ -443,7 +443,7 @@ class TestSafetyLevelTransitions:
 案主：我覺得活著沒意義，每天都是這樣的折磨。"""
 
             response_red = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": red_transcript,
                     "speakers": [
@@ -493,7 +493,7 @@ class TestSafetyLevelTransitions:
         with TestClient(app) as client:
             # Test RED - Should get urgent suggestions
             red_response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "案主：我想打死他！受不了了！我要去死算了！",
                     "speakers": [
@@ -516,7 +516,7 @@ class TestSafetyLevelTransitions:
 
             # Test GREEN - Should get reflective suggestions
             green_response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "案主：我和孩子今天一起玩遊戲，很開心。我們的關係越來越好了。",
                     "speakers": [
@@ -557,7 +557,7 @@ class TestSafetyLevelTransitions:
 
             # Test each stage
             response1 = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": base,
                     "speakers": [{"speaker": "client", "text": "孩子今天很乖。"}],
@@ -566,7 +566,7 @@ class TestSafetyLevelTransitions:
             )
 
             response2 = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": dangerous,
                     "speakers": [
@@ -578,7 +578,7 @@ class TestSafetyLevelTransitions:
             )
 
             response3 = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": calm,
                     "speakers": [

@@ -49,7 +49,7 @@ class TestRealtimeModeSwitching:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "mode": "emergency",
                     "transcript": "家長：我要打死你！你給我滾出去！我受夠了！",
@@ -103,7 +103,7 @@ class TestRealtimeModeSwitching:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "mode": "practice",
                     "transcript": "家長：寶貝，我們一起想想怎麼做好嗎？我知道你也覺得很難。",
@@ -144,7 +144,7 @@ class TestRealtimeModeSwitching:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     # No "mode" field
                     "transcript": "家長：我們今天學到很多，謝謝你的配合。",
@@ -179,7 +179,7 @@ class TestRiskLevelIndicators:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "家長：我要打死你！你給我滾出去！我快受不了了！",
                     "speakers": [
@@ -212,7 +212,7 @@ class TestRiskLevelIndicators:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "家長：你怎麼又把房間弄亂！你說謊！我快氣死了！",
                     "speakers": [
@@ -245,7 +245,7 @@ class TestRiskLevelIndicators:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "家長：寶貝，我們一起收拾好嗎？我知道你累了，我們慢慢來。",
                     "speakers": [
@@ -278,7 +278,7 @@ class TestRiskLevelIndicators:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "家長：我恨死這樣的生活了，我真的受不了了！",
                     "speakers": [
@@ -308,7 +308,7 @@ class TestRiskLevelIndicators:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "家長：你怎麼又不聽話！我真的快煩死了！",
                     "speakers": [
@@ -342,7 +342,7 @@ class TestSchemaValidation:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "mode": "emergency",
                     "transcript": "家長：我需要立即的建議！",
@@ -364,7 +364,7 @@ class TestSchemaValidation:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "mode": "practice",
                     "transcript": "家長：我想學習更好的親子溝通方式。",
@@ -387,7 +387,7 @@ class TestSchemaValidation:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "mode": "invalid_mode",
                     "transcript": "家長：測試",
@@ -408,7 +408,7 @@ class TestSchemaValidation:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "家長：今天天氣不錯。",
                     "speakers": [{"speaker": "client", "text": "今天天氣不錯。"}],
@@ -438,7 +438,7 @@ class TestSchemaValidation:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "mode": "emergency",
                     "transcript": "家長：我快受不了了！",
@@ -483,7 +483,7 @@ class TestModeSwitchingWithRiskLevel:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "mode": "emergency",
                     "transcript": "家長：我要打死他！我受夠了！滾開！",
@@ -518,7 +518,7 @@ class TestModeSwitchingWithRiskLevel:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "mode": "practice",
                     "transcript": "家長：寶貝，我們一起想想怎麼解決這個問題好嗎？",

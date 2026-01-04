@@ -208,14 +208,14 @@
 - **雙 API 分析系統 - 快速回饋（雞湯文）+ 深度分析** (2026-01-02)
   - 實作同時運行的快速回饋與深度分析計時器
   - **快速回饋 API**（雞湯文 - 即時鼓勵訊息）：
-    - 端點：POST `/api/v1/transcript/quick-feedback`
+    - 端點：POST `/api/v1/realtime/quick-feedback`
     - 觸發時機：在 🟢 綠燈和 🟡 黃燈安全等級下，每 10 秒觸發一次
     - 🔴 紅燈時停用（15 秒深度分析已經夠快）
     - Toast 提示：黃色漸層（「⚡ 快速分析中...」）
     - 目的：填補深度分析之間的空白，提供輕量級鼓勵
     - 回應時間：約 1-2 秒（Gemini Flash 輕量 prompt）
   - **深度分析 API**（完整分析含安全等級更新）：
-    - 端點：POST `/api/v1/transcript/deep-analyze`（既有端點）
+    - 端點：POST `/api/v1/realtime/analyze`（既有端點）
     - 觸發時機：基於安全等級的自適應間隔
       - 🟢 綠燈：每 60 秒
       - 🟡 黃燈：每 30 秒
@@ -235,7 +235,7 @@
   - 檔案變更：
     - app/templates/realtime_counseling.html（雙計時器實作）
     - 後端：quick_feedback_service.py、realtime.py（API 已存在）
-  - 參考：基於 `/api/v1/transcript/quick-feedback` 端點（2026-01-01 新增）
+  - 參考：基於 `/api/v1/realtime/quick-feedback` 端點（2026-01-01 新增）
 
 ### 變更
 - **Web/iOS API 架構驗證** (2026-01-01)
@@ -292,7 +292,7 @@
 
 ### 新增
 - **即時鼓勵快速回饋 API** (2026-01-01)
-  - 新增 `/api/v1/transcript/quick-feedback` 端點，提供輕量級 AI 驅動的鼓勵訊息
+  - 新增 `/api/v1/realtime/quick-feedback` 端點，提供輕量級 AI 驅動的鼓勵訊息
   - 提供 1-2 秒 AI 生成回饋，填補完整分析週期之間的空檔
   - 根據燈號動態協調頻率，避免與 realtime/analyze 衝突：
     - 🟢 綠燈：30 秒間隔（補充 60 秒完整分析）
@@ -688,7 +688,7 @@
     - 新增「⚡ 立即分析」按鈕用於即時測試
     - Phase 1.5：8/9 integration tests 通過，106 個總測試通過
 - **家長報告 API 與統一 Session 管理** (2025-12-26)
-  - ✅ 新增端點：`POST /api/v1/transcript/report`
+  - ✅ 新增端點：`POST /api/v1/realtime/parents-report`
     - 生成完整的親子溝通報告
     - 分析家長與孩子的對話逐字稿
     - 提供 4 個結構化回饋區塊：
@@ -702,8 +702,8 @@
     - 在 session 開始時生成一次：`session-{timestamp}-{random}`
     - 持久化於 localStorage 以跨請求追蹤
     - 所有即時分析 API 統一使用：
-      - `/api/v1/transcript/deep-analyze`（現包含 session_id + use_cache）
-      - `/api/v1/transcript/report`
+      - `/api/v1/realtime/analyze`（現包含 session_id + use_cache）
+      - `/api/v1/realtime/parents-report`
       - 未來的 GBQ 資料持久化
     - 啟用 Gemini context caching 優化成本
   - ✅ 前端整合
@@ -788,7 +788,7 @@
   - ✅ Cache Manager 服務採用 Strategy A（總是更新累積對話）
   - ✅ 多層清理機制（手動刪除 + TTL + 清理腳本）
   - ✅ 短內容自動降級（< 1024 tokens）
-  - ✅ 整合到 `/api/v1/transcript/deep-analyze` endpoint
+  - ✅ 整合到 `/api/v1/realtime/analyze` endpoint
   - ✅ API 回應包含 cache metadata
   - ✅ 8 個整合測試覆蓋所有場景
 - **Cache 策略對比實驗** (2025-12-10)

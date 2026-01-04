@@ -116,7 +116,7 @@ def analyze_cached(transcript_hash: str, mode: str):
 
 #### 3. Streaming Response (Better UX)
 ```python
-# New endpoint: /api/v1/transcript/deep-analyze-stream
+# New endpoint: /api/v1/realtime/analyze-stream
 # Stream partial results as they arrive
 # User sees first feedback in < 1s
 ```

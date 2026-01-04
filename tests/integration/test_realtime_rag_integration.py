@@ -49,7 +49,7 @@ class TestRealtimeRAGIntegration:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "諮詢師：你和孩子的關係如何？\n案主：我不知道怎麼和他溝通。",
                     "speakers": [
@@ -91,7 +91,7 @@ class TestRealtimeRAGIntegration:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "案主：我的孩子很叛逆，不知道怎麼管教，也不知道怎麼和他溝通。",
                     "speakers": [
@@ -131,7 +131,7 @@ class TestRealtimeRAGIntegration:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "諮詢師：今天天氣如何？\n案主：天氣很好。",
                     "speakers": [
@@ -177,7 +177,7 @@ class TestRealtimeRAGIntegration:
         with TestClient(app) as client:
             for keyword, text in keywords_to_test:
                 response = client.post(
-                    "/api/v1/transcript/deep-analyze",
+                    "/api/v1/realtime/analyze",
                     json={
                         "transcript": f"案主：{text}",
                         "speakers": [{"speaker": "client", "text": text}],
@@ -207,7 +207,7 @@ class TestRealtimeRAGIntegration:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "案主：我的孩子很叛逆，需要學習親子溝通和管教技巧。",
                     "speakers": [
@@ -266,7 +266,7 @@ class TestRealtimeRAGIntegration:
             start_time = time.time()
 
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "案主：我的孩子不聽話，不知道怎麼管教。",
                     "speakers": [
@@ -298,7 +298,7 @@ class TestRealtimeRAGIntegration:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "案主：我想了解親子溝通、教養方式、情緒管理、管教技巧等所有相關知識。",
                     "speakers": [
@@ -329,7 +329,7 @@ class TestRealtimeRAGIntegration:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "案主：我的孩子很叛逆，需要親子溝通技巧。",
                     "speakers": [

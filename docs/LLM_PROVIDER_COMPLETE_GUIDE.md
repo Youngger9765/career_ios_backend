@@ -430,7 +430,7 @@ async def analyze_with_codeer(
 **統一介面**:
 
 ```json
-POST /api/v1/transcript/deep-analyze
+POST /api/v1/realtime/analyze
 {
   "transcript": "counselor: 你好\nclient: 你好",
   "speakers": [

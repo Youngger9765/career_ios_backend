@@ -17,7 +17,7 @@ import httpx
 
 # Staging API URL
 STAGING_URL = "https://career-app-api-staging-kxaznpplqq-uc.a.run.app"
-API_ENDPOINT = f"{STAGING_URL}/api/v1/transcript/deep-analyze"
+API_ENDPOINT = f"{STAGING_URL}/api/v1/realtime/analyze"
 STATS_ENDPOINT = f"{STAGING_URL}/api/rag/stats"
 
 

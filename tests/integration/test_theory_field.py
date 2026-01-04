@@ -47,7 +47,7 @@ class TestTheoryField:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "案主：我的孩子很叛逆，需要學習親子溝通和管教技巧。",
                     "speakers": [
@@ -120,7 +120,7 @@ class TestTheoryField:
         with TestClient(app) as client:
             for transcript, expected_theories in test_cases:
                 response = client.post(
-                    "/api/v1/transcript/deep-analyze",
+                    "/api/v1/realtime/analyze",
                     json={
                         "transcript": transcript,
                         "speakers": [{"speaker": "client", "text": transcript}],
@@ -160,7 +160,7 @@ class TestTheoryField:
         """
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "案主：我的孩子很叛逆，需要親子溝通技巧和情緒教養方法。",
                     "speakers": [

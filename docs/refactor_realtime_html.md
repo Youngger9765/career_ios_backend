@@ -190,9 +190,9 @@ export const CONFIG = {
 
     // API Endpoints
     API: {
-        ANALYZE: '/api/v1/transcript/deep-analyze',
-        PARENTS_REPORT: '/api/v1/transcript/report',
-        ELEVENLABS_TOKEN: '/api/v1/transcript/elevenlabs-token'
+        ANALYZE: '/api/v1/realtime/analyze',
+        PARENTS_REPORT: '/api/v1/realtime/parents-report',
+        ELEVENLABS_TOKEN: '/api/v1/realtime/elevenlabs-token'
     },
 
     // ElevenLabs

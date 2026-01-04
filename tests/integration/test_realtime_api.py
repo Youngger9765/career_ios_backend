@@ -61,10 +61,10 @@ class TestRealtimeAnalysisAPI:
 
     @skip_without_gcp
     def test_analyze_transcript_success(self):
-        """Test POST /api/v1/transcript/deep-analyze - Success case with valid input"""
+        """Test POST /api/v1/realtime/analyze - Success case with valid input"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "諮詢師：你最近工作上有什麼困擾嗎？\n案主：我覺得活著沒什麼意義...",
                     "speakers": [
@@ -102,7 +102,7 @@ class TestRealtimeAnalysisAPI:
         """Test with minimal valid input"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "諮詢師：你好。\n案主：你好。",
                     "speakers": [
@@ -122,7 +122,7 @@ class TestRealtimeAnalysisAPI:
         """Test that suicide-related keywords trigger alerts"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "案主：我想自殺，活著太痛苦了。",
                     "speakers": [
@@ -139,11 +139,11 @@ class TestRealtimeAnalysisAPI:
             assert len(data["alerts"]) > 0
 
     def test_analyze_transcript_invalid_missing_fields(self):
-        """Test POST /api/v1/transcript/deep-analyze - Missing required fields returns 422"""
+        """Test POST /api/v1/realtime/analyze - Missing required fields returns 422"""
         with TestClient(app) as client:
             # Missing transcript field
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={"speakers": [], "time_range": "0:00-1:00"},
             )
 
@@ -153,7 +153,7 @@ class TestRealtimeAnalysisAPI:
         """Test with empty transcript"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={"transcript": "", "speakers": [], "time_range": "0:00-1:00"},
             )
 
@@ -164,7 +164,7 @@ class TestRealtimeAnalysisAPI:
         """Test with invalid speaker role"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "測試內容",
                     "speakers": [{"speaker": "invalid_role", "text": "測試"}],
@@ -172,9 +172,8 @@ class TestRealtimeAnalysisAPI:
                 },
             )
 
-            # New /transcript/deep-analyze API is lenient - invalid speaker roles are ignored
-            # The endpoint processes the transcript regardless of speaker validation
-            assert response.status_code == 200
+            # Should return 422 for invalid speaker role
+            assert response.status_code == 422
 
     @skip_without_gcp
     def test_analyze_transcript_long_content(self):
@@ -191,7 +190,7 @@ class TestRealtimeAnalysisAPI:
 案主：最近特別強烈。
             """
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": long_transcript,
                     "speakers": [
@@ -231,7 +230,7 @@ class TestRealtimeAnalysisAPI:
         with TestClient(app) as client:
             for time_range in ["0:00-1:00", "1:00-2:00", "5:00-6:00"]:
                 response = client.post(
-                    "/api/v1/transcript/deep-analyze",
+                    "/api/v1/realtime/analyze",
                     json={
                         "transcript": "諮詢師：你好。\n案主：你好。",
                         "speakers": [
@@ -255,7 +254,7 @@ class TestRealtimeAnalysisAPI:
             start_time = time.time()
 
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "諮詢師：你最近怎麼樣？\n案主：還好。",
                     "speakers": [
@@ -277,7 +276,7 @@ class TestRealtimeAnalysisAPI:
         """Test that response follows expected JSON format"""
         with TestClient(app) as client:
             response = client.post(
-                "/api/v1/transcript/deep-analyze",
+                "/api/v1/realtime/analyze",
                 json={
                     "transcript": "諮詢師：今天感覺如何？\n案主：我覺得有點焦慮。",
                     "speakers": [
@@ -311,9 +310,9 @@ class TestElevenLabsTokenAPI:
 
     @skip_without_elevenlabs
     def test_generate_token_success(self):
-        """Test POST /api/v1/transcript/elevenlabs-token - Should return a valid token"""
+        """Test POST /api/v1/realtime/elevenlabs-token - Should return a valid token"""
         with TestClient(app) as client:
-            response = client.post("/api/v1/transcript/elevenlabs-token")
+            response = client.post("/api/v1/realtime/elevenlabs-token")
 
             assert response.status_code == 200
             data = response.json()

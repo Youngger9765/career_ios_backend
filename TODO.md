@@ -113,7 +113,7 @@
 **解決方案**: ✅ 採用「方案 B: 輕量 AI 雞湯文」
 
 **已完成實施**:
-- [x] 新增 `/api/v1/transcript/quick-feedback` endpoint
+- [x] 新增 `/api/v1/realtime/quick-feedback` endpoint
 - [x] 設計輕量 AI prompt（情緒控制、表達引導）
 - [x] 使用 Gemini Flash（最快模型）+ 不使用 RAG
 - [x] 測試響應時間：1-2 秒延遲

@@ -244,7 +244,7 @@ class TestIOSAPIPerformance:
         # Test Realtime API (no auth required for demo)
         realtime_response, realtime_time = self._measure_time(
             test_client.post,
-            "/api/v1/transcript/deep-analyze",
+            "/api/v1/realtime/analyze",
             json={
                 "transcript": short_transcript,
                 "speakers": [{"speaker": "client", "text": short_transcript}],
