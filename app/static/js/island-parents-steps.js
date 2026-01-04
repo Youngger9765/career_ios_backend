@@ -771,11 +771,12 @@ Authorization: Bearer {access_token}</pre>
   "total_recordings": 1,
   "transcript_text": "完整逐字稿..."     // 累積
 }</pre>
-                            <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong></p>
+                            <p style="margin: 8px 0; color: #22c55e;"><strong>💡 前端建議：</strong></p>
                             <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
-                                <li>每 10 秒 append 一次</li>
-                                <li>不用傳 duration_seconds，後端會算</li>
-                                <li>累積的 transcript_text 用於分析</li>
+                                <li><strong>Console 測試</strong>：每 10 秒 append 一次</li>
+                                <li><strong>iOS</strong>：間隔由 iOS 自己決定（建議 10-15 秒）</li>
+                                <li>不用傳 duration_seconds，後端會從 start_time/end_time 計算</li>
+                                <li>累積的 transcript_text 用於 Quick/Deep/Report 分析</li>
                             </ul>
                         </div>
                     </details>
@@ -885,12 +886,13 @@ Authorization: Bearer {access_token}</pre>
   "timestamp": "2024-01-01T15:10:00Z",
   "latency_ms": 7727                    // ~8秒
 }</pre>
-                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong></p>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 前端建議：</strong></p>
                         <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
-                            <li>每 10 秒調用一次</li>
+                            <li><strong>Console 測試</strong>：每 10 秒調用一次</li>
+                            <li><strong>iOS</strong>：間隔自己決定（建議 10-15 秒）</li>
+                            <li><strong>⏱️ 後端分析</strong>：自動取最近 15 秒的 segments</li>
                             <li>message 約 20-50 字，顯示為 Toast</li>
                             <li>session_id 在 URL 路徑中，不需要 body</li>
-                            <li>需要 Authorization header</li>
                         </ul>
                     </div>
                 </details>
@@ -989,13 +991,13 @@ use_rag=false    // 選填: 預設 false</pre>
     "model": "gemini-3-flash-preview"
   }
 }</pre>
-                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong></p>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 前端建議：</strong></p>
                         <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
-                            <li>用戶點擊「立即分析」時調用</li>
+                            <li><strong>iOS</strong>：用戶點擊「立即分析」時調用（或定時 60 秒）</li>
+                            <li><strong>⏱️ 後端分析</strong>：自動取最近 60 秒的 segments</li>
                             <li>根據 safety_level 顯示對應顏色</li>
                             <li>suggestions 只有 1 條，直接顯示</li>
                             <li>session_id 在 URL 路徑中，mode 在 query string</li>
-                            <li>需要 Authorization header</li>
                         </ul>
                     </div>
                 </details>
@@ -1159,32 +1161,31 @@ use_rag=false    // 選填: 預設 false</pre>
                         <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 會談結束後生成親子對話報告</p>
                         <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
                         <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Authorization: Bearer {token}</pre>
-                        <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong> 無（從 session 自動讀取逐字稿）</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Query Params:</strong> use_rag=true (預設啟用 RAG)</p>
                         <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
                         <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
-  "summary": "對話主題摘要...",           // ⭐ 1-2句話描述對話主題
-  "highlights": [                        // ⭐ 溝通亮點 (3-5個)
-    "家長願意傾聯孩子的心聲",
-    "使用了同理心的表達方式",
-    "給予孩子正向鼓勵"
-  ],
-  "improvements": [                      // ⭐ 改進建議 (2-4個)
+  "encouragement": "這次你已經做了一件重要的事：願意好好跟孩子談。",  // 💪 鼓勵標題
+  "issue": "對話陷入無效重複，缺乏雙向互動。",                      // ❓ 待解決議題
+  "analyze": "重複相同的指令容易讓孩子產生「聽而不聞」...",         // 📊 溝通分析
+  "suggestion": "「我知道你還想玩，要停下來很難。你是想...」",      // 💡 建議說法
+  "references": [                                                   // 📚 RAG 參考資料
     {
-      "issue": "語速較快，可能讓孩子感到壓力",
-      "suggestion": "建議放慢語速，給孩子思考時間"
+      "title": "正向教養：溫和而堅定的教養方式",
+      "content": "當孩子不配合時，提供有限選擇讓孩子感受到自主權...",
+      "source": "正向教養指南.pdf",
+      "theory": "正向教養"
     }
   ],
-  "rag_references": [],                  // RAG 知識參考
   "timestamp": "2024-01-01T15:30:00Z"
 }</pre>
                         <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong></p>
                         <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
-                            <li>會談結束後調用，生成完整報告</li>
-                            <li>summary: 顯示在報告頂部</li>
-                            <li>highlights: 用綠色列表顯示</li>
-                            <li>improvements: 用黃色卡片顯示每個 issue + suggestion</li>
-                            <li>session_id 在 URL 路徑中，不需要 body</li>
-                            <li>需要 Authorization header</li>
+                            <li>會談結束後調用，生成完整報告 + 結算 Billing</li>
+                            <li>encouragement: 綠色卡片，正向鼓勵</li>
+                            <li>issue: 橙色卡片，待改進議題</li>
+                            <li>analyze: 藍色卡片，溝通分析</li>
+                            <li>suggestion: 紫色卡片，建議說法</li>
+                            <li>references: 灰色區塊，RAG 教養理論參考</li>
                         </ul>
                     </div>
                 </details>
@@ -1214,30 +1215,43 @@ use_rag=false    // 選填: 預設 false</pre>
             renderPreview: (data) => `
                 <div class="info-card">
                     <h3>✅ 親子對話報告生成成功</h3>
-                    <div class="info-row">
-                        <span class="info-label">Summary</span>
-                        <span class="info-value">${data.summary || '無'}</span>
+
+                    <div style="margin-top: 16px; padding: 16px; background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border-radius: 8px; border-left: 4px solid #4caf50;">
+                        <h4 style="font-size: 14px; color: #2e7d32; margin-bottom: 8px;">💪 鼓勵</h4>
+                        <p style="margin: 0; color: #1b5e20; font-size: 15px;">${data.encouragement || '感謝你願意花時間與孩子溝通。'}</p>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Key Points</span>
-                        <span class="info-value">${data.key_points?.length || 0} 個重點</span>
+
+                    <div style="margin-top: 12px; padding: 16px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #ff9800;">
+                        <h4 style="font-size: 14px; color: #e65100; margin-bottom: 8px;">❓ 待解決的議題</h4>
+                        <p style="margin: 0; color: #bf360c; font-size: 14px;">${data.issue || '無'}</p>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Suggestions</span>
-                        <span class="info-value">${data.suggestions?.length || 0} 條建議</span>
+
+                    <div style="margin-top: 12px; padding: 16px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+                        <h4 style="font-size: 14px; color: #1565c0; margin-bottom: 8px;">📊 溝通內容分析</h4>
+                        <p style="margin: 0; color: #0d47a1; font-size: 14px;">${data.analyze || '無'}</p>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">RAG Sources</span>
-                        <span class="info-value">${data.rag_sources?.length || 0} 筆知識庫</span>
+
+                    <div style="margin-top: 12px; padding: 16px; background: #f3e5f5; border-radius: 8px; border-left: 4px solid #9c27b0;">
+                        <h4 style="font-size: 14px; color: #7b1fa2; margin-bottom: 8px;">💡 建議下次可以這樣說</h4>
+                        <p style="margin: 0; color: #4a148c; font-size: 14px;">${data.suggestion || '無'}</p>
                     </div>
-                    ${data.report_content ? `
-                        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.1);">
-                            <h4 style="font-size: 14px; margin-bottom: 8px;">📄 報告內容：</h4>
-                            <div style="background: #f9fafb; padding: 12px; border-radius: 6px; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap;">
-${data.report_content}
-                            </div>
+
+                    ${data.references && data.references.length > 0 ? `
+                        <div style="margin-top: 16px; padding: 16px; background: #fafafa; border-radius: 8px; border: 1px solid #e0e0e0;">
+                            <h4 style="font-size: 14px; color: #616161; margin-bottom: 12px;">📚 參考資料 (${data.references.length} 筆)</h4>
+                            ${data.references.map((ref, i) => `
+                                <div style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border-left: 3px solid #9e9e9e;">
+                                    <div style="font-weight: 600; color: #424242; font-size: 13px;">${i + 1}. ${ref.title || ref.source}</div>
+                                    <div style="color: #757575; font-size: 12px; margin-top: 4px;">${ref.content}</div>
+                                    <div style="color: #9e9e9e; font-size: 11px; margin-top: 4px;">來源: ${ref.source} | ${ref.theory || '教養理論'}</div>
+                                </div>
+                            `).join('')}
                         </div>
                     ` : ''}
+
+                    <div style="margin-top: 12px; text-align: right; color: #9e9e9e; font-size: 11px;">
+                        生成時間: ${data.timestamp || new Date().toISOString()}
+                    </div>
                 </div>
             `
         }

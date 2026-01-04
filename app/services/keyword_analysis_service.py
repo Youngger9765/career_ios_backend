@@ -11,7 +11,7 @@ import logging
 import math  # For ceiling rounding
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Dict, List
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy.orm import Session as DBSession
@@ -163,6 +163,7 @@ class KeywordAnalysisService:
     async def analyze_keywords_simplified(
         self,
         transcript_segment: str,
+        full_transcript: Optional[str] = None,
         mode: str = "practice",
         tenant_id: str = "island_parents",
     ) -> Dict:
@@ -173,7 +174,8 @@ class KeywordAnalysisService:
         a single Gemini call, reducing latency from ~40s to ~15s.
 
         Args:
-            transcript_segment: Recent transcript text
+            transcript_segment: Recent transcript text (last 60s - focus area)
+            full_transcript: Complete transcript (background context)
             mode: "practice" or "emergency"
             tenant_id: Tenant identifier
 
@@ -210,8 +212,13 @@ class KeywordAnalysisService:
             )
             red_sample = random.sample(RED_SUGGESTIONS, min(10, len(RED_SUGGESTIONS)))
 
+            # Use full_transcript as fallback if not provided
+            if full_transcript is None:
+                full_transcript = transcript_segment
+
             prompt = prompt_template.format(
                 transcript_segment=transcript_segment[:500],
+                full_transcript=full_transcript,
                 green_suggestions="\n".join(f"- {s}" for s in green_sample),
                 yellow_suggestions="\n".join(f"- {s}" for s in yellow_sample),
                 red_suggestions="\n".join(f"- {s}" for s in red_sample),

@@ -244,7 +244,7 @@ class TestSessionDeepAnalyzeAPI:
             )
 
         assert response.status_code == 400
-        assert "no recordings" in response.json()["detail"].lower()
+        assert "no transcript" in response.json()["detail"].lower()
 
     def test_deep_analyze_unauthorized(
         self, db_session: Session, counselor_with_session
@@ -351,13 +351,14 @@ class TestSessionQuickFeedbackAPI:
         db_session.add(case)
         db_session.flush()
 
-        # Create session with recordings
+        # Create session with recordings AND transcript_text
         session = SessionModel(
             id=uuid4(),
             case_id=case.id,
             tenant_id="island_parents",
             session_number=1,
             session_date=datetime.now(timezone.utc),
+            transcript_text="家長: 我看到你現在很難過",  # Full transcript (aggregated)
             recordings=[
                 {
                     "segment_number": 1,

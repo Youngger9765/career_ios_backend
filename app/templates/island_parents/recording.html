@@ -851,23 +851,32 @@
     // Polling Management
     // =====================
 
+    // Deep interval based on safety level (color)
+    const DEEP_INTERVALS = {
+        green: 60000,   // 60s - 狀況良好，較少干擾
+        yellow: 45000,  // 45s - 需要關注，稍微頻繁
+        pink: 30000     // 30s - 警告狀態，更頻繁監控
+    };
+
     function startAllPolling() {
-        // Append + Quick feedback every 15 seconds
+        // Append every 10 seconds (獨立間隔)
         appendInterval = setInterval(async () => {
             if (!isPaused && isRecording) {
                 await appendRecording();
+            }
+        }, 10000);
+
+        // Quick feedback every 15 seconds (獨立間隔)
+        quickFeedbackInterval = setInterval(async () => {
+            if (!isPaused && isRecording) {
                 await fetchQuickFeedback();
             }
         }, 15000);
 
-        // Deep analyze every 60 seconds
-        deepFeedbackInterval = setInterval(async () => {
-            if (!isPaused && isRecording) {
-                await fetchDeepFeedback();
-            }
-        }, 60000);
+        // Deep analyze - 動態間隔，根據燈號調整
+        scheduleNextDeepFeedback();
 
-        // Initial quick feedback after 8 seconds
+        // Initial: append + quick after 8 seconds
         setTimeout(async () => {
             if (isRecording && !isPaused) {
                 await appendRecording();
@@ -875,7 +884,26 @@
             }
         }, 8000);
 
-        console.log('Polling started: append+quick=15s, deep=60s');
+        console.log('Polling started: append=10s, quick=15s, deep=動態(green:60s/yellow:45s/red:30s)');
+    }
+
+    // 動態排程 Deep Feedback
+    function scheduleNextDeepFeedback() {
+        if (deepFeedbackInterval) {
+            clearTimeout(deepFeedbackInterval);
+        }
+
+        const interval = DEEP_INTERVALS[feedbackState.currentColor] || 60000;
+
+        deepFeedbackInterval = setTimeout(async () => {
+            if (!isPaused && isRecording) {
+                await fetchDeepFeedback();
+                // 遞迴排程下一次（間隔可能因燈號改變）
+                scheduleNextDeepFeedback();
+            }
+        }, interval);
+
+        console.log(`🔍 Next deep analyze in ${interval/1000}s (color: ${feedbackState.currentColor})`);
     }
 
     function clearAllPolling() {

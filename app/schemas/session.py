@@ -282,6 +282,15 @@ class ParentsReportRequest(BaseModel):
     }
 
 
+class ParentsReportReference(BaseModel):
+    """報告參考資料（來自 RAG 教養理論）"""
+
+    title: str = Field(..., description="參考資料標題")
+    content: str = Field(..., description="相關內容摘要")
+    source: str = Field(..., description="來源文件名稱")
+    theory: str = Field(default="", description="所屬理論（正向教養、情緒教養等）")
+
+
 class ParentsReportResponse(BaseModel):
     """家長對話報告回應"""
 
@@ -292,6 +301,9 @@ class ParentsReportResponse(BaseModel):
     issue: str = Field(..., description="待解決的議題")
     analyze: str = Field(..., description="溝通內容分析")
     suggestion: str = Field(..., description="建議下次可以這樣說")
+    references: List[ParentsReportReference] = Field(
+        default=[], description="參考資料列表（來自 RAG 教養理論知識庫）"
+    )
     timestamp: str = Field(..., description="生成時間戳（ISO 8601 格式）")
 
     model_config = {
@@ -302,6 +314,14 @@ class ParentsReportResponse(BaseModel):
                     "issue": "對話陷入無效重複，缺乏雙向互動。",
                     "analyze": "重複相同的指令容易讓孩子產生「聽而不聞」的習慣，且未針對孩子的需求做出回應。",
                     "suggestion": "「我知道你還想玩，要停下來很難。你是想現在開始，還是再玩 3 分鐘？」",
+                    "references": [
+                        {
+                            "title": "正向教養：溫和而堅定的教養方式",
+                            "content": "當孩子不配合時，提供有限選擇讓孩子感受到自主權...",
+                            "source": "正向教養指南.pdf",
+                            "theory": "正向教養",
+                        }
+                    ],
                     "timestamp": "2025-12-26T10:00:00Z",
                 }
             ]

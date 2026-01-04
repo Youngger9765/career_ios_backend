@@ -25,6 +25,7 @@ class QuickFeedbackService:
     async def get_quick_feedback(
         self,
         recent_transcript: str,
+        full_transcript: Optional[str] = None,
         tenant_id: Optional[str] = None,
         mode: Optional[str] = None,
     ) -> Dict[str, str]:
@@ -32,7 +33,8 @@ class QuickFeedbackService:
         使用輕量 AI 生成快速回饋
 
         Args:
-            recent_transcript: 最近 10 秒的逐字稿
+            recent_transcript: 最近 15 秒的逐字稿（重點分析對象）
+            full_transcript: 完整累積逐字稿（背景脈絡）
             tenant_id: 租戶 ID（用於選擇對應的 prompt）
             mode: 模式 ("practice" 練習模式 / "emergency" 實戰模式)
                   - practice: 家長獨自練習，沒有孩子在場
@@ -48,6 +50,10 @@ class QuickFeedbackService:
         """
         start_time = time.time()
 
+        # Use full_transcript as fallback if not provided
+        if full_transcript is None:
+            full_transcript = recent_transcript
+
         try:
             # 從 PromptRegistry 取得對應的 prompt（支援 mode）
             prompt_template = PromptRegistry.get_prompt(
@@ -55,9 +61,13 @@ class QuickFeedbackService:
                 "quick",
                 mode=mode or "practice",  # Default to practice mode
             )
-            prompt = prompt_template.format(transcript_segment=recent_transcript)
+            # Format with both transcripts
+            prompt = prompt_template.format(
+                transcript_segment=recent_transcript,
+                full_transcript=full_transcript,
+            )
 
-            # 呼叫 Gemini Flash（最快模型）
+            # 呼叫 Gemini 3 Flash（最快模型）
             # Strategy: Set high max_tokens as safety ceiling
             # - max_output_tokens (Vertex AI) only counts OUTPUT, not input
             # - Actual length controlled by prompt: "請用 1 句話（20 字內）"

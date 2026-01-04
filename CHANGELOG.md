@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Time-based Transcript Segmentation for Quick/Deep APIs** (2026-01-05)
+  - New `_extract_transcripts_by_time()` helper in `session_analysis.py`
+  - Quick Feedback: extracts last 15 seconds of recordings
+  - Deep Analyze: extracts last 60 seconds of recordings
+  - Both APIs now receive `full_transcript` (context) + `transcript_segment` (focus)
+  - Fallback: uses last segment if no recordings within time window
+  - Updated prompts with dual-section structure:
+    - 【完整對話背景 - 供參考脈絡】
+    - 【最近 N 秒內容 - 重點分析對象】
+  - Frontend polling intervals updated:
+    - Append: 10 seconds (fixed)
+    - Quick: 15 seconds (fixed)
+    - Deep: dynamic based on safety level (green:60s, yellow:45s, pink:30s)
+  - Files: `session_analysis.py`, `quick_feedback_service.py`, `keyword_analysis_service.py`, `parenting.py`, `recording.html`
+
 - **PromptRegistry - Unified Prompt Architecture** (2026-01-04)
   - New centralized prompt management system in `app/prompts/`
   - File structure:

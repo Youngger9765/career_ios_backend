@@ -5,7 +5,8 @@ import json
 import logging
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from typing import List, Tuple
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
@@ -16,15 +17,89 @@ from app.core.deps import get_current_user, get_tenant_id
 from app.core.exceptions import BadRequestError, InternalServerError, NotFoundError
 from app.models.counselor import Counselor
 from app.schemas.session import (
+    ParentsReportReference,
     ParentsReportResponse,
     ProviderMetadata,
     QuickFeedbackResponse,
     RealtimeAnalyzeResponse,
 )
+from app.services.keyword_analysis_service import KeywordAnalysisService
 from app.services.session_service import SessionService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/sessions", tags=["Sessions - Analysis"])
+
+
+def _extract_transcripts_by_time(
+    recordings: List[dict], seconds_ago: int
+) -> Tuple[str, str]:
+    """
+    Extract recent transcript and full transcript from recordings.
+
+    Args:
+        recordings: List of recording segments with start_time, end_time, transcript_text
+        seconds_ago: How many seconds back to consider as "recent" (e.g., 15 for Quick, 60 for Deep)
+
+    Returns:
+        Tuple of (recent_transcript, full_transcript)
+        - recent_transcript: Segments from the last N seconds
+        - full_transcript: All segments combined
+    """
+    if not recordings:
+        return "", ""
+
+    # Sort by segment_number
+    sorted_recordings = sorted(recordings, key=lambda r: r.get("segment_number", 0))
+
+    # Build full transcript
+    full_parts = []
+    for r in sorted_recordings:
+        text = r.get("transcript_text", "")
+        if text:
+            full_parts.append(text)
+    full_transcript = "\n".join(full_parts)
+
+    # Calculate cutoff time
+    now = datetime.now(timezone.utc)
+    cutoff_time = now - timedelta(seconds=seconds_ago)
+
+    # Extract recent segments (end_time >= cutoff_time)
+    recent_parts = []
+    for r in sorted_recordings:
+        end_time_str = r.get("end_time")
+        if not end_time_str:
+            continue
+
+        try:
+            # Parse end_time (ISO 8601 format)
+            if isinstance(end_time_str, str):
+                end_time = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
+                if end_time.tzinfo is None:
+                    end_time = end_time.replace(tzinfo=timezone.utc)
+            elif isinstance(end_time_str, datetime):
+                end_time = end_time_str
+                if end_time.tzinfo is None:
+                    end_time = end_time.replace(tzinfo=timezone.utc)
+            else:
+                continue
+
+            # Check if this segment is recent
+            if end_time >= cutoff_time:
+                text = r.get("transcript_text", "")
+                if text:
+                    recent_parts.append(text)
+        except (ValueError, TypeError) as e:
+            logger.debug(f"Failed to parse end_time '{end_time_str}': {e}")
+            continue
+
+    recent_transcript = "\n".join(recent_parts) if recent_parts else ""
+
+    # Fallback: if no recent segments found, use the last segment
+    if not recent_transcript and sorted_recordings:
+        last_segment = sorted_recordings[-1]
+        recent_transcript = last_segment.get("transcript_text", "")
+
+    return recent_transcript, full_transcript
 
 
 def _handle_generic_error(e: Exception, operation: str, instance: str):
@@ -66,29 +141,34 @@ async def session_quick_feedback(
 
         session, client, case, has_report = result
 
-        # Get recordings from session
+        # Extract recent (last 15s) and full transcript from recordings
+        # This allows LLM to focus on recent content while having full context
         recordings = session.recordings or []
-        if not recordings:
-            raise BadRequestError(
-                detail="Session has no recordings",
-                instance=instance,
-            )
+        recent_transcript, full_transcript = _extract_transcripts_by_time(
+            recordings, seconds_ago=15
+        )
 
-        # Get the LATEST recording as "recent transcript"
-        # Sort by segment_number to ensure correct order
-        sorted_recordings = sorted(recordings, key=lambda r: r.get("segment_number", 0))
-        latest_recording = sorted_recordings[-1]
-        recent_transcript = latest_recording.get("transcript_text", "")
-
+        # Fallback to transcript_text if no recordings
+        if not full_transcript:
+            full_transcript = session.transcript_text or ""
         if not recent_transcript:
+            recent_transcript = full_transcript  # Use full if no recent
+
+        if not full_transcript:
             raise BadRequestError(
-                detail="Latest recording has no transcript",
+                detail="Session has no transcript",
                 instance=instance,
             )
 
-        # Call quick feedback service with mode (practice vs emergency)
+        logger.info(
+            f"Quick feedback: recent={len(recent_transcript)} chars, "
+            f"full={len(full_transcript)} chars"
+        )
+
+        # Call quick feedback service with both transcripts
         feedback_result = await quick_feedback_service.get_quick_feedback(
             recent_transcript=recent_transcript,
+            full_transcript=full_transcript,
             tenant_id=tenant_id,
             mode=mode,
         )
@@ -144,37 +224,38 @@ async def session_deep_analyze(
 
         session, client, case, has_report = result
 
-        # Get recordings from session
+        # Extract recent (last 60s) and full transcript from recordings
+        # This allows LLM to focus on recent content while having full context
         recordings = session.recordings or []
-        if not recordings:
-            raise BadRequestError(
-                detail="Session has no recordings",
-                instance=instance,
-            )
+        recent_transcript, full_transcript = _extract_transcripts_by_time(
+            recordings, seconds_ago=60
+        )
 
-        # Sort recordings by segment_number
-        sorted_recordings = sorted(recordings, key=lambda r: r.get("segment_number", 0))
+        # Fallback to transcript_text if no recordings
+        if not full_transcript:
+            full_transcript = session.transcript_text or ""
+        if not recent_transcript:
+            recent_transcript = full_transcript  # Use full if no recent
 
-        # Get latest recording (current segment to analyze)
-        latest_recording = sorted_recordings[-1]
-        current_segment = latest_recording.get("transcript_text", "")
-        if not current_segment:
+        if not full_transcript:
             raise BadRequestError(
-                detail="Latest recording has no transcript",
+                detail="Session has no transcript",
                 instance=instance,
             )
 
         # Initialize keyword service
         keyword_service = KeywordAnalysisService(db)
 
-        # Call SIMPLIFIED analysis (1 Gemini call instead of 2)
+        # Call SIMPLIFIED analysis with both transcripts
         logger.info(
             f"Deep analyze (simplified) session {session_id}: "
-            f"tenant={tenant_id}, mode={mode}, segment_len={len(current_segment)}"
+            f"tenant={tenant_id}, mode={mode}, "
+            f"recent={len(recent_transcript)} chars, full={len(full_transcript)} chars"
         )
 
         analysis_result = await keyword_service.analyze_keywords_simplified(
-            transcript_segment=current_segment,
+            transcript_segment=recent_transcript,
+            full_transcript=full_transcript,
             mode=mode,
             tenant_id=tenant_id,
         )
@@ -215,6 +296,7 @@ async def session_deep_analyze(
 async def session_report(
     session_id: UUID,
     request: Request,
+    use_rag: bool = True,
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
@@ -224,8 +306,11 @@ async def session_report(
 
     - 從 session 自動讀取逐字稿
     - 分析對話並提供：摘要、亮點、改進建議
+    - use_rag=True 時會檢索相關教養理論作為參考
     """
     from app.services.gemini_service import GeminiService
+    from app.services.openai_service import OpenAIService
+    from app.services.rag_retriever import RAGRetriever
 
     instance = str(request.url.path)
     start_time = time.time()
@@ -247,9 +332,57 @@ async def session_report(
                 instance=instance,
             )
 
-        # Build analysis prompt
-        analysis_prompt = f"""你是專業的親子溝通分析師，負責分析家長與孩子的對話，提供建設性的回饋。
+        # RAG: Retrieve relevant parenting theories
+        rag_context = ""
+        rag_sources = []  # List of document names for logging
+        rag_references = []  # List of ParentsReportReference for response
+        if use_rag:
+            try:
+                openai_service = OpenAIService()
+                rag_retriever = RAGRetriever(openai_service)
+                # Search for parenting-related theories
+                rag_results = await rag_retriever.search(
+                    query=transcript[:500],  # Use first 500 chars as query
+                    top_k=5,
+                    threshold=0.3,  # Lower threshold for better recall
+                    db=db,
+                    category="parenting",
+                )
+                if rag_results:
+                    rag_context = "\n\n【參考理論】\n"
+                    for i, theory in enumerate(rag_results, 1):
+                        theory_text = theory.get("text", "")[:200]
+                        theory_doc = theory.get("document", "")
+                        theory_title = theory.get("title", theory_doc)
+                        theory_category = theory.get("category", "教養理論")
 
+                        rag_context += f"{i}. {theory_text}... (來源: {theory_doc})\n"
+                        rag_sources.append(theory_doc)
+
+                        # Build reference for response
+                        rag_references.append(
+                            ParentsReportReference(
+                                title=theory_title,
+                                content=theory_text,
+                                source=theory_doc,
+                                theory=theory_category,
+                            )
+                        )
+                    logger.info(f"RAG found {len(rag_results)} theories for report")
+            except Exception as e:
+                # RAG failure should not block report generation
+                logger.warning(f"RAG search failed (continuing without RAG): {e}")
+                rag_context = ""
+
+        # Build analysis prompt with optional RAG context
+        rag_instruction = ""
+        if rag_context:
+            rag_instruction = """
+【重要】請參考上述理論來支持你的分析和建議。在 analyze 和 suggestion 中可以引用相關理論。
+"""
+
+        analysis_prompt = f"""你是專業的親子溝通分析師，負責分析家長與孩子的對話，提供建設性的回饋。
+{rag_context}{rag_instruction}
 【對話逐字稿】
 {transcript}
 
@@ -329,11 +462,58 @@ async def session_report(
         latency_ms = int((time.time() - start_time) * 1000)
         logger.info(f"Report generated for session {session_id} in {latency_ms}ms")
 
+        # Billing: Save analysis log and deduct credits
+        try:
+            keyword_service = KeywordAnalysisService(db)
+
+            # Get token usage from Gemini response
+            token_usage_data = {
+                "prompt_tokens": gemini_response.get("prompt_tokens", 0),
+                "completion_tokens": gemini_response.get("completion_tokens", 0),
+                "total_tokens": gemini_response.get("total_tokens", 0),
+                "estimated_cost_usd": gemini_response.get("estimated_cost_usd", 0),
+            }
+
+            # Build result data for logging
+            result_data = {
+                "analysis_type": "report",
+                "encouragement": analysis.get("encouragement", ""),
+                "issue": analysis.get("issue", ""),
+                "analyze": analysis.get("analyze", ""),
+                "suggestion": analysis.get("suggestion", ""),
+                "rag_sources": rag_sources,
+                "_metadata": {
+                    "duration_ms": latency_ms,
+                    "use_rag": use_rag,
+                    "rag_documents_count": len(rag_sources),
+                    "transcript_length": len(transcript),
+                    "token_usage": token_usage_data,
+                    "llm_raw_response": llm_raw_response,
+                },
+            }
+
+            # Save to session_analysis_logs and update billing
+            keyword_service.save_analysis_log_and_usage(
+                session_id=session_id,
+                counselor_id=current_user.id,
+                tenant_id=tenant_id,
+                transcript_segment=transcript,
+                result_data=result_data,
+                rag_documents=[{"source": s} for s in rag_sources],
+                rag_sources=rag_sources,
+                token_usage_data=token_usage_data,
+            )
+            logger.info(f"Billing recorded for report session {session_id}")
+        except Exception as e:
+            # Billing failure should not block report response
+            logger.error(f"Failed to record billing for report: {e}", exc_info=True)
+
         return ParentsReportResponse(
             encouragement=analysis.get("encouragement", "感謝你願意花時間與孩子溝通。"),
             issue=analysis.get("issue", ""),
             analyze=analysis.get("analyze", ""),
             suggestion=analysis.get("suggestion", ""),
+            references=rag_references,
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
 
