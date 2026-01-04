@@ -1525,9 +1525,17 @@
                 <div class="step-subtitle">PATCH /api/v1/sessions/{id}</div>
             </div>
 
-            <div class="flow-step" data-step="island-append-recording">
+            <div class="flow-step" data-step="island-elevenlabs-token">
                 <div>
                     <span class="step-number">5</span>
+                    <span class="step-title">🎤 取得 ElevenLabs Token</span>
+                </div>
+                <div class="step-subtitle">POST /api/v1/transcript/elevenlabs-token</div>
+            </div>
+
+            <div class="flow-step" data-step="island-append-recording">
+                <div>
+                    <span class="step-number">6</span>
                     <span class="step-title">🎙️ Append 錄音片段</span>
                 </div>
                 <div class="step-subtitle">POST /api/v1/sessions/{id}/recordings/append</div>
@@ -1535,7 +1543,7 @@
 
             <div class="flow-step" data-step="island-quick-feedback">
                 <div>
-                    <span class="step-number">6</span>
+                    <span class="step-number">7</span>
                     <span class="step-title">💡 Quick Feedback</span>
                 </div>
                 <div class="step-subtitle">POST /api/v1/sessions/{id}/quick-feedback</div>
@@ -1543,7 +1551,7 @@
 
             <div class="flow-step" data-step="island-deep-analysis">
                 <div>
-                    <span class="step-number">7</span>
+                    <span class="step-number">8</span>
                     <span class="step-title">🔬 Deep Analysis</span>
                 </div>
                 <div class="step-subtitle">POST /api/v1/sessions/{id}/deep-analyze</div>
@@ -1551,7 +1559,7 @@
 
             <div class="flow-step" data-step="island-generate-report">
                 <div>
-                    <span class="step-number">8</span>
+                    <span class="step-number">9</span>
                     <span class="step-title">📄 生成親子對話報告</span>
                 </div>
                 <div class="step-subtitle">POST /api/v1/sessions/{id}/report</div>

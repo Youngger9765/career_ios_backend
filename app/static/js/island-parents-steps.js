@@ -588,6 +588,69 @@ Authorization: Bearer {access_token}</pre>
             `
         },
 
+        'island-elevenlabs-token': {
+            title: '🎤 取得 ElevenLabs Token',
+            subtitle: 'POST /api/v1/transcript/elevenlabs-token',
+            renderForm: () => `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>POST /api/v1/transcript/elevenlabs-token</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 取得 ElevenLabs STT WebSocket 連線用的臨時 token</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Content-Type: application/json</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong> 無</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "token": "xxx..."  // ⭐ 用於 WebSocket 連線
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong></p>
+                        <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li>開始錄音前調用</li>
+                            <li>Token 是一次性的（single-use）</li>
+                            <li>用 token 連接 ElevenLabs WebSocket</li>
+                            <li>WebSocket URL: wss://api.elevenlabs.io/v1/speech-to-text/realtime</li>
+                        </ul>
+                    </div>
+                </details>
+                <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
+                    <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
+                        💡 此 API 不需要 Authorization，但需要後端有設定 ELEVEN_LABS_API_KEY
+                    </p>
+                </div>
+                <button class="btn btn-primary" onclick="window.executeIslandElevenlabsToken()" style="margin-top: 16px;">取得 Token</button>
+            `,
+            execute: async () => {
+                const response = await fetch(`${BASE_URL}/api/v1/transcript/elevenlabs-token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                // Store token for potential use
+                if (response.ok && data.token) {
+                    islandTestData.elevenlabsToken = data.token;
+                }
+
+                return { response, data };
+            },
+            renderPreview: (data) => `
+                <div class="info-card">
+                    <h3>✅ ElevenLabs Token 取得成功</h3>
+                    <div class="info-row">
+                        <span class="info-label">Token</span>
+                        <span class="info-value" style="font-size: 11px; word-break: break-all;">${data.token ? data.token.substring(0, 50) + '...' : 'N/A'}</span>
+                    </div>
+                    <div class="alert alert-info" style="margin-top: 12px;">
+                        💡 使用此 token 連接 ElevenLabs WebSocket 進行語音轉文字
+                    </div>
+                </div>
+            `
+        },
+
         'island-append-recording': {
             title: '🎙️ Append 錄音片段',
             subtitle: 'POST /api/v1/sessions/{id}/recordings/append',
@@ -1183,6 +1246,7 @@ ${data.report_content}
     window.executeIslandCreateClientCase = () => window.executeStep('island-create-client-case');
     window.executeIslandCreateSession = () => window.executeStep('island-create-session');
     window.executeIslandSetScenario = () => window.executeStep('island-set-scenario');
+    window.executeIslandElevenlabsToken = () => window.executeStep('island-elevenlabs-token');
     window.executeIslandAppendRecording = () => window.executeStep('island-append-recording');
     window.executeIslandQuickFeedback = () => window.executeStep('island-quick-feedback');
     window.executeIslandDeepAnalysis = () => window.executeStep('island-deep-analysis');
