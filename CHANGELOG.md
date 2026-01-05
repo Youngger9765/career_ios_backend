@@ -65,6 +65,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Now correctly displays remaining credits from `available_credits` field
   - File: `app/templates/island_parents/clients_history.html`
 
+### Documentation
+- **IOS_GUIDE_PARENTS.md v1.4** (2026-01-05)
+  - Fixed Deep Analyze endpoint: `/api/v1/sessions/{id}/deep-analyze` (was incorrectly documented as `analyze-partial`)
+  - Fixed recordings/append format: `start_time` and `end_time` must be ISO 8601 datetime strings (not floats)
+  - Validated complete 11-step API flow via browser automation testing
+  - Test flow: Login → Get Credits → Create Client+Case → Create Session → Set Scenario → Get ElevenLabs Token → Append Recording → Quick Feedback → Deep Analysis → Generate Report → History Page
+  - All APIs tested and confirmed working
+
 ### Fixed
 - **Traditional Chinese (zh-TW) Enforcement** (2026-01-02)
   - Issue: Simplified Chinese characters found in AI prompts and code comments

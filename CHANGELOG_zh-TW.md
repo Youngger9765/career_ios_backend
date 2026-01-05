@@ -50,6 +50,14 @@
   - 現在正確從 `available_credits` 欄位顯示剩餘點數
   - 檔案：`app/templates/island_parents/clients_history.html`
 
+### 文件
+- **IOS_GUIDE_PARENTS.md v1.4** (2026-01-05)
+  - 修正深度分析端點：`/api/v1/sessions/{id}/deep-analyze`（原錯誤記載為 `analyze-partial`）
+  - 修正錄音 append 格式：`start_time` 和 `end_time` 必須為 ISO 8601 日期時間字串（非浮點數）
+  - 透過瀏覽器自動化測試驗證完整 11 步 API 流程
+  - 測試流程：登入 → 取得點數 → 建立客戶+案件 → 建立會談 → 設定情境 → 取得 ElevenLabs Token → 新增錄音 → 快速回饋 → 深度分析 → 產生報告 → 歷史頁面
+  - 所有 API 已測試確認正常運作
+
 ### 修復
 - **繁體中文（zh-TW）強制執行** (2026-01-02)
   - 問題：AI prompt 和程式碼註解中發現簡體中文字元

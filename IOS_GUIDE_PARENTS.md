@@ -1,6 +1,6 @@
 # Island Parents iOS App 開發指南
 
-> **版本**: v1.0
+> **版本**: v1.4
 > **適用對象**: iOS 開發者
 > **後端版本**: career_ios_backend
 
@@ -16,7 +16,7 @@ Island Parents 是一款 **AI 親子教養助手**，幫助家長在與孩子互
 |------|------|-----|
 | 即時轉錄 | 語音轉文字 (Scribe v2) | ElevenLabs SDK |
 | 快速回饋 | 15 秒一次的鼓勵訊息 | `POST /sessions/{id}/quick-feedback` |
-| 深度分析 | 紅黃綠燈安全評估 | `POST /sessions/{id}/analyze-partial` |
+| 深度分析 | 紅黃綠燈安全評估 | `POST /sessions/{id}/deep-analyze` |
 | 諮詢報告 | 完整對話分析報告 | `POST /sessions/{id}/report` |
 
 ### 1.3 技術架構
@@ -180,17 +180,19 @@ Content-Type: application/json
 
 {
   "transcript_segment": "媽媽：寶貝，功課寫完了嗎？\n孩子：還沒，我想先玩一下。",
-  "start_time": 0.0,
-  "end_time": 15.0
+  "start_time": "2025-01-05T10:00:00.000Z",
+  "end_time": "2025-01-05T10:00:15.000Z"
 }
 ```
+
+**注意**: `start_time` 和 `end_time` 必須是 **ISO 8601 格式的字串**（非數字），例如 `new Date().toISOString()`。
 
 **Response (200):**
 ```json
 {
   "success": true,
   "session_id": "session-uuid",
-  "total_duration": 15.0,
+  "total_duration_seconds": 15.0,
   "transcript_length": 45
 }
 ```
@@ -235,14 +237,12 @@ Content-Type: application/json
 **用途**: 紅黃綠燈評估 + 專家建議
 
 ```
-POST /api/v1/sessions/{session_id}/analyze-partial
+POST /api/v1/sessions/{session_id}/deep-analyze
 Authorization: Bearer <token>
 Content-Type: application/json
-
-{
-  "transcript_segment": "最近 60 秒的逐字稿內容..."
-}
 ```
+
+**注意**: 此 API 不需要 request body，會自動使用 session 中累積的逐字稿。
 
 **Response (200):**
 ```json
@@ -718,7 +718,7 @@ if session.hasReport {
 | GET | `/api/v1/sessions/{id}/report` | 取得報告 (by session_id) ⭐ NEW |
 | POST | `/api/v1/sessions/{id}/recordings/append` | 上傳逐字稿 |
 | POST | `/api/v1/sessions/{id}/quick-feedback` | 快速回饋 |
-| POST | `/api/v1/sessions/{id}/analyze-partial` | 深度分析 |
+| POST | `/api/v1/sessions/{id}/deep-analyze` | 深度分析 |
 | POST | `/api/v1/sessions/{id}/report` | 生成報告 |
 | PUT | `/api/v1/sessions/{id}/complete` | 結束 Session |
 
@@ -757,6 +757,7 @@ if session.hasReport {
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v1.4 | 2026-01-05 | 修正: Deep Analyze 使用 `/deep-analyze` (非 analyze-partial)；錄音 append 的 start_time/end_time 為 ISO 8601 格式字串 |
 | v1.3 | 2025-01-05 | 新增 GET /api/v1/sessions/{id}/report - 用 session_id 取得報告 (History Page) |
 | v1.2 | 2025-01-05 | 重命名 mode 為 session_mode (避免 PostgreSQL 保留字衝突)；新增取得會談 API 文檔 |
 | v1.1 | 2025-01-05 | 新增 History Page API (session_mode 篩選、client_id 篩選) |
@@ -772,4 +773,4 @@ if session.hasReport {
 
 ---
 
-**最後更新**: 2025-01-05
+**最後更新**: 2026-01-05
