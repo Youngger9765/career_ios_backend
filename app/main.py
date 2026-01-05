@@ -239,10 +239,30 @@ async def island_parents_clients_create(request: Request) -> Response:
     )
 
 
+@app.get("/island-parents/clients/{client_id}/edit", response_class=HTMLResponse)
+async def island_parents_clients_edit(request: Request, client_id: str) -> Response:
+    """Island Parents - Edit client page"""
+    return templates.TemplateResponse(
+        "island_parents/clients_edit.html",
+        {"request": request, "client_id": client_id},
+    )
+
+
+@app.get("/island-parents/clients/{client_id}/history", response_class=HTMLResponse)
+async def island_parents_clients_history(request: Request, client_id: str) -> Response:
+    """Island Parents - Client session history page"""
+    return templates.TemplateResponse(
+        "island_parents/clients_history.html",
+        {"request": request, "client_id": client_id},
+    )
+
+
 @app.get("/island-parents/mode", response_class=HTMLResponse)
-async def island_parents_mode(request: Request) -> Response:
-    """Island Parents - Mode selection page"""
-    return templates.TemplateResponse("island_parents/mode.html", {"request": request})
+async def island_parents_session_mode(request: Request) -> Response:
+    """Island Parents - Session mode selection page"""
+    return templates.TemplateResponse(
+        "island_parents/session_mode.html", {"request": request}
+    )
 
 
 @app.get("/island-parents/session", response_class=HTMLResponse)

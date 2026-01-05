@@ -1,0 +1,286 @@
+{% extends "island_parents/base.html" %}
+
+{% block title %}編輯孩子 - 浮島親子{% endblock %}
+
+{% block extra_styles %}
+{% endblock %}
+
+{% block content %}
+<div class="page-container safe-area-top safe-area-bottom">
+    <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+        <!-- Back Button -->
+        <div class="flex items-center mb-4">
+            <button onclick="window.location.href='/island-parents/clients'" class="p-2 -ml-2 text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">編輯孩子</h1>
+            <p class="text-gray-500">更新孩子的資料</p>
+        </div>
+
+        <!-- Form -->
+        <form id="edit-client-form" onsubmit="return handleEditClient(event)">
+            <!-- Child Name -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">孩子的名字</label>
+                <input
+                    type="text"
+                    id="child-name"
+                    class="input-field"
+                    placeholder="輸入孩子的名字或暱稱"
+                    required
+                >
+            </div>
+
+            <!-- Child Grade (年級) -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">年級 <span class="text-red-500">*</span></label>
+                <select id="child-grade" class="input-field" required>
+                    <option value="">選擇年級</option>
+                    <option value="1 (小一)">小一</option>
+                    <option value="2 (小二)">小二</option>
+                    <option value="3 (小三)">小三</option>
+                    <option value="4 (小四)">小四</option>
+                    <option value="5 (小五)">小五</option>
+                    <option value="6 (小六)">小六</option>
+                    <option value="7 (國一)">國一</option>
+                    <option value="8 (國二)">國二</option>
+                    <option value="9 (國三)">國三</option>
+                    <option value="10 (高一)">高一</option>
+                    <option value="11 (高二)">高二</option>
+                    <option value="12 (高三)">高三</option>
+                </select>
+            </div>
+
+            <!-- Relationship (與孩子的關係) -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">你是孩子的 <span class="text-red-500">*</span></label>
+                <select id="child-relationship" class="input-field" required>
+                    <option value="">選擇關係</option>
+                    <option value="爸爸">爸爸</option>
+                    <option value="媽媽">媽媽</option>
+                    <option value="爺爺">爺爺</option>
+                    <option value="奶奶">奶奶</option>
+                    <option value="外公">外公</option>
+                    <option value="外婆">外婆</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+
+            <!-- Error Message -->
+            <div id="edit-error" class="error-message mb-4"></div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="edit-btn" class="btn-primary">
+                <span id="edit-btn-text">儲存變更</span>
+                <span id="edit-btn-loading" class="hidden flex items-center justify-center">
+                    <div class="spinner"></div>
+                </span>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const clientId = '{{ client_id }}';
+    let originalClient = null;
+
+    // Load existing client data
+    async function loadClientData() {
+        // Try localStorage first
+        const stored = localStorage.getItem('island_parents_edit_client');
+        if (stored) {
+            const client = JSON.parse(stored);
+            if (client.id === clientId) {
+                populateForm(client);
+                return;
+            }
+        }
+
+        // Fetch from API
+        try {
+            const response = await fetch(`${API_BASE}/api/v1/clients/${clientId}`, {
+                headers: {
+                    'Authorization': `Bearer ${state.token}`
+                }
+            });
+
+            if (response.ok) {
+                const client = await response.json();
+                populateForm(client);
+            } else {
+                showMessageModal('找不到此孩子資料', 'error');
+                window.location.href = '/island-parents/clients';
+            }
+        } catch (error) {
+            console.error('Failed to load client:', error);
+            showMessageModal('載入失敗', 'error');
+        }
+    }
+
+    // Convert grade option value to display text for storage
+    // e.g., "3 (小三)" -> "小三"
+    function getGradeDisplayText(gradeValue) {
+        const match = gradeValue.match(/\((.+)\)/);
+        return match ? match[1] : gradeValue;
+    }
+
+    // Parse grade from current_status (format: "年級: 小學3年級")
+    function parseGrade(currentStatus) {
+        if (!currentStatus) return null;
+        // Map display text to option values
+        const gradeMap = {
+            '小學1年級': '1 (小一)', '小一': '1 (小一)',
+            '小學2年級': '2 (小二)', '小二': '2 (小二)',
+            '小學3年級': '3 (小三)', '小三': '3 (小三)',
+            '小學4年級': '4 (小四)', '小四': '4 (小四)',
+            '小學5年級': '5 (小五)', '小五': '5 (小五)',
+            '小學6年級': '6 (小六)', '小六': '6 (小六)',
+            '國中1年級': '7 (國一)', '國一': '7 (國一)',
+            '國中2年級': '8 (國二)', '國二': '8 (國二)',
+            '國中3年級': '9 (國三)', '國三': '9 (國三)',
+            '高中1年級': '10 (高一)', '高一': '10 (高一)',
+            '高中2年級': '11 (高二)', '高二': '11 (高二)',
+            '高中3年級': '12 (高三)', '高三': '12 (高三)',
+        };
+        const match = currentStatus.match(/年級:\s*(.+)/);
+        if (match) {
+            return gradeMap[match[1]] || null;
+        }
+        return null;
+    }
+
+    // Parse relationship from notes (format: "關係: 爸爸")
+    function parseRelationship(notes) {
+        if (!notes) return null;
+        const match = notes.match(/關係:\s*(.+)/);
+        if (match) {
+            return match[1];
+        }
+        return null;
+    }
+
+    // Populate form with client data
+    function populateForm(client) {
+        originalClient = client;
+
+        document.getElementById('child-name').value = client.name || '';
+
+        // Set grade - try metadata first, then parse from current_status
+        const gradeSelect = document.getElementById('child-grade');
+        let gradeValue = client.metadata?.grade || parseGrade(client.current_status);
+        if (gradeValue) {
+            for (let option of gradeSelect.options) {
+                if (option.value === gradeValue) {
+                    option.selected = true;
+                    break;
+                }
+            }
+        }
+
+        // Set relationship - try metadata first, then parse from notes
+        const relationshipSelect = document.getElementById('child-relationship');
+        let relationshipValue = client.metadata?.relationship || parseRelationship(client.notes);
+        if (relationshipValue) {
+            for (let option of relationshipSelect.options) {
+                if (option.value === relationshipValue) {
+                    option.selected = true;
+                    break;
+                }
+            }
+        }
+
+    }
+
+    // Handle edit client
+    async function handleEditClient(event) {
+        event.preventDefault();
+        hideError('edit-error');
+        setButtonLoading('edit-btn', true);
+
+        const name = document.getElementById('child-name').value.trim();
+        const grade = document.getElementById('child-grade').value;
+        const relationship = document.getElementById('child-relationship').value;
+
+        // 驗證必填欄位
+        if (!name) {
+            showError('edit-error', '請輸入孩子的名字');
+            setButtonLoading('edit-btn', false);
+            return false;
+        }
+        if (!grade) {
+            showError('edit-error', '請選擇年級');
+            setButtonLoading('edit-btn', false);
+            return false;
+        }
+        if (!relationship) {
+            showError('edit-error', '請選擇與孩子的關係');
+            setButtonLoading('edit-btn', false);
+            return false;
+        }
+
+        try {
+            // Update client via API (use PATCH, not PUT)
+            // Store grade in current_status, relationship in notes (matching create format)
+            const response = await fetch(`${API_BASE}/api/v1/clients/${clientId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${state.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: name,
+                    current_status: `年級: ${getGradeDisplayText(grade)}`,
+                    notes: `關係: ${relationship}`
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || '更新失敗');
+            }
+
+            const updatedClient = await response.json();
+
+            // Clear edit storage
+            localStorage.removeItem('island_parents_edit_client');
+
+            // Update selected client in storage if it's the same
+            const selectedClient = localStorage.getItem('island_parents_selected_client');
+            if (selectedClient) {
+                const parsed = JSON.parse(selectedClient);
+                if (parsed.id === clientId) {
+                    localStorage.setItem('island_parents_selected_client', JSON.stringify(updatedClient));
+                }
+            }
+
+            showMessageModal('已儲存變更', 'success');
+
+            // Navigate back to clients
+            setTimeout(() => {
+                window.location.href = '/island-parents/clients';
+            }, 1000);
+
+        } catch (error) {
+            showError('edit-error', error.message);
+        } finally {
+            setButtonLoading('edit-btn', false);
+        }
+
+        return false;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!await checkAuth()) return;
+        await loadClientData();
+    });
+</script>
+{% endblock %}

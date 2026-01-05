@@ -1,0 +1,613 @@
+{% extends "island_parents/base.html" %}
+
+{% block title %}對話紀錄 - 浮島親子{% endblock %}
+
+{% block extra_styles %}
+/* Child selector header */
+.child-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    padding: 0.5rem 0;
+}
+
+.child-selector-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.child-selector-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.child-selector-arrow {
+    width: 20px;
+    height: 20px;
+    color: #666;
+    transition: transform 0.2s;
+}
+
+.child-selector-arrow.open {
+    transform: rotate(180deg);
+}
+
+/* Usage stats */
+.usage-stats {
+    font-size: 0.875rem;
+    color: #666;
+    margin: 0.5rem 0 1rem 0;
+}
+
+.usage-stats .used {
+    color: #4A90A4;
+}
+
+/* Mode tabs */
+.mode-tabs {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.mode-tab {
+    padding: 0.625rem 1.25rem;
+    border-radius: 2rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid #e0e0e0;
+    background: white;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mode-tab.active {
+    background: #1a1a1a;
+    color: white;
+    border-color: #1a1a1a;
+}
+
+.mode-tab:hover:not(.active) {
+    border-color: #999;
+}
+
+/* Session list */
+.session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 5rem;
+}
+
+.session-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.session-info h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 0.25rem 0;
+}
+
+.session-info p {
+    font-size: 0.8125rem;
+    color: #999;
+    margin: 0;
+}
+
+.view-report-btn {
+    padding: 0.5rem 1rem;
+    background: #1a1a1a;
+    color: white;
+    border: none;
+    border-radius: 2rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.view-report-btn:hover {
+    background: #333;
+}
+
+.view-report-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Bottom navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    padding: 0.75rem 0;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.nav-item {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nav-item.active {
+    background: #e8e8e8;
+    color: #1a1a1a;
+}
+
+.nav-item:hover {
+    background: #e8e8e8;
+}
+
+.nav-item svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Child switcher bottom sheet */
+.bottom-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+}
+
+.bottom-sheet-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 1.5rem 1.5rem 0 0;
+    padding: 1.5rem;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+    z-index: 101;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-out;
+}
+
+.bottom-sheet.open {
+    transform: translateY(0);
+}
+
+.bottom-sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: #ddd;
+    border-radius: 2px;
+    margin: 0 auto 1rem;
+}
+
+.bottom-sheet-title {
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 1.5rem;
+}
+
+.children-grid {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.child-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.child-option-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+.child-option.selected .child-option-avatar {
+    border-color: #1a1a1a;
+}
+
+.child-option-name {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: #333;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #999;
+}
+
+.empty-state svg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Avatar colors */
+.avatar-mint { background: linear-gradient(135deg, #a8e6cf 0%, #88d8b0 100%); }
+.avatar-yellow { background: linear-gradient(135deg, #fff59d 0%, #fff176 100%); }
+.avatar-pink { background: linear-gradient(135deg, #f8bbd9 0%, #f48fb1 100%); }
+.avatar-blue { background: linear-gradient(135deg, #90caf9 0%, #64b5f6 100%); }
+.avatar-purple { background: linear-gradient(135deg, #ce93d8 0%, #ba68c8 100%); }
+.avatar-orange { background: linear-gradient(135deg, #ffcc80 0%, #ffa726 100%); }
+{% endblock %}
+
+{% block content %}
+<div class="page-container safe-area-top" style="padding-bottom: 0;">
+    <div class="flex-1 flex flex-col max-w-md mx-auto w-full">
+        <!-- Header -->
+        <div class="text-center py-4">
+            <h1 class="text-xl font-bold text-gray-900">對話紀錄</h1>
+        </div>
+
+        <!-- Child Selector -->
+        <div class="child-selector" onclick="toggleChildSwitcher()">
+            <div id="current-avatar" class="child-selector-avatar avatar-yellow">
+                <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <span id="current-name" class="child-selector-name">載入中...</span>
+            <svg id="selector-arrow" class="child-selector-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </div>
+
+        <!-- Usage Stats -->
+        <div class="usage-stats">
+            目前已使用 <span class="used" id="used-minutes">0</span> 分鐘，剩餘 <span id="remaining-minutes">0</span> 分鐘
+        </div>
+
+        <!-- Mode Tabs -->
+        <div class="mode-tabs">
+            <button class="mode-tab active" data-mode="practice" onclick="filterByMode('practice')">對話練習</button>
+            <button class="mode-tab" data-mode="emergency" onclick="filterByMode('emergency')">親子溝通</button>
+        </div>
+
+        <!-- Session List -->
+        <div id="session-list" class="session-list">
+            <!-- Dynamically populated -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state hidden">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+            </svg>
+            <p>還沒有對話紀錄</p>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Navigation -->
+<div class="bottom-nav">
+    <div class="nav-item" onclick="goHome()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+        </svg>
+    </div>
+    <div class="nav-item active">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+    </div>
+    <div class="nav-item" onclick="goSettings()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+    </div>
+</div>
+
+<!-- Child Switcher Bottom Sheet -->
+<div id="bottom-sheet-overlay" class="bottom-sheet-overlay" onclick="closeChildSwitcher()"></div>
+<div id="bottom-sheet" class="bottom-sheet">
+    <div class="bottom-sheet-handle"></div>
+    <div class="bottom-sheet-title">切換用戶</div>
+    <div id="children-grid" class="children-grid">
+        <!-- Dynamically populated -->
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const AVATAR_COLORS = ['mint', 'yellow', 'pink', 'blue', 'purple', 'orange'];
+    const clientId = '{{ client_id }}';
+    let allSessions = [];
+    let currentMode = 'practice';
+    let allClients = [];
+
+    // Format date
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = date.getHours();
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const hour12 = hours % 12 || 12;
+
+        return `${year}.${month}.${day} - ${hour12}:${minutes} ${ampm}`;
+    }
+
+    // Get report title based on mode and index
+    function getReportTitle(session, index, total) {
+        const num = total - index;
+        if (session.session_mode === 'emergency') {
+            return `親子溝通報告 ${num}`;
+        } else {
+            return `對話練習報告 #${String(num).padStart(2, '0')}`;
+        }
+    }
+
+    // Render sessions list
+    function renderSessions(sessions) {
+        const list = document.getElementById('session-list');
+        const emptyState = document.getElementById('empty-state');
+
+        // Filter by current mode
+        const filtered = sessions.filter(s => {
+            if (currentMode === 'practice') {
+                return s.session_mode === 'practice' || !s.session_mode;
+            } else {
+                return s.session_mode === 'emergency';
+            }
+        });
+
+        if (filtered.length === 0) {
+            list.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+            return;
+        }
+
+        list.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+
+        list.innerHTML = filtered.map((session, index) => {
+            const title = getReportTitle(session, index, filtered.length);
+            const hasReport = session.has_report;
+
+            return `
+                <div class="session-card">
+                    <div class="session-info">
+                        <h3>${title}</h3>
+                        <p>${formatDate(session.created_at)}</p>
+                    </div>
+                    <button class="view-report-btn" onclick="viewReport('${session.id}', ${hasReport})" ${!hasReport ? 'disabled' : ''}>
+                        查看報告
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Filter by mode
+    function filterByMode(mode) {
+        currentMode = mode;
+
+        // Update tab UI
+        document.querySelectorAll('.mode-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.mode === mode);
+        });
+
+        // Re-render with filter
+        renderSessions(allSessions);
+    }
+
+    // View report
+    function viewReport(sessionId, hasReport) {
+        if (hasReport) {
+            window.location.href = `/island-parents/report/${sessionId}`;
+        }
+    }
+
+    // Toggle child switcher
+    function toggleChildSwitcher() {
+        const overlay = document.getElementById('bottom-sheet-overlay');
+        const sheet = document.getElementById('bottom-sheet');
+        const arrow = document.getElementById('selector-arrow');
+
+        overlay.classList.toggle('open');
+        sheet.classList.toggle('open');
+        arrow.classList.toggle('open');
+    }
+
+    // Close child switcher
+    function closeChildSwitcher() {
+        const overlay = document.getElementById('bottom-sheet-overlay');
+        const sheet = document.getElementById('bottom-sheet');
+        const arrow = document.getElementById('selector-arrow');
+
+        overlay.classList.remove('open');
+        sheet.classList.remove('open');
+        arrow.classList.remove('open');
+    }
+
+    // Switch to different child
+    function switchChild(newClientId) {
+        closeChildSwitcher();
+        if (newClientId !== clientId) {
+            window.location.href = `/island-parents/clients/${newClientId}/history`;
+        }
+    }
+
+    // Render children grid in bottom sheet
+    function renderChildrenGrid(clients) {
+        const grid = document.getElementById('children-grid');
+
+        grid.innerHTML = clients.map((client, index) => {
+            const colorClass = client.metadata?.avatar_color || AVATAR_COLORS[index % AVATAR_COLORS.length];
+            const isSelected = client.id === clientId;
+
+            return `
+                <div class="child-option ${isSelected ? 'selected' : ''}" onclick="switchChild('${client.id}')">
+                    <div class="child-option-avatar avatar-${colorClass}">
+                        <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <span class="child-option-name">${client.name}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Update current child display
+    function updateCurrentChild(client, index) {
+        const avatar = document.getElementById('current-avatar');
+        const name = document.getElementById('current-name');
+        const colorClass = client.metadata?.avatar_color || AVATAR_COLORS[index % AVATAR_COLORS.length];
+
+        // Update avatar color
+        avatar.className = `child-selector-avatar avatar-${colorClass}`;
+        name.textContent = client.name;
+    }
+
+    // Load usage stats
+    async function loadUsageStats() {
+        try {
+            const response = await fetch(`${API_BASE}/api/v1/credits/balance`, {
+                headers: {
+                    'Authorization': `Bearer ${state.token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const usedMinutes = Math.floor((data.used_credits || 0) / 60);
+                const remainingMinutes = Math.floor((data.remaining_credits || 0) / 60);
+
+                document.getElementById('used-minutes').textContent = usedMinutes;
+                document.getElementById('remaining-minutes').textContent = remainingMinutes;
+            }
+        } catch (error) {
+            console.error('Failed to load usage stats:', error);
+        }
+    }
+
+    // Load sessions for client
+    async function loadSessions() {
+        try {
+            const response = await fetch(`${API_BASE}/api/v1/sessions?client_id=${clientId}`, {
+                headers: {
+                    'Authorization': `Bearer ${state.token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('無法載入對話紀錄');
+            }
+
+            const data = await response.json();
+            allSessions = data.items || data.sessions || [];
+
+            // Sort by date descending
+            allSessions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            renderSessions(allSessions);
+        } catch (error) {
+            console.error('Failed to load sessions:', error);
+            showMessageModal('載入對話紀錄失敗', 'error');
+        }
+    }
+
+    // Load all clients
+    async function loadClients() {
+        try {
+            const response = await fetch(`${API_BASE}/api/v1/clients`, {
+                headers: {
+                    'Authorization': `Bearer ${state.token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                allClients = data.items || data.clients || [];
+
+                // Find current client and its index
+                const currentIndex = allClients.findIndex(c => c.id === clientId);
+                if (currentIndex >= 0) {
+                    updateCurrentChild(allClients[currentIndex], currentIndex);
+                }
+
+                renderChildrenGrid(allClients);
+            }
+        } catch (error) {
+            console.error('Failed to load clients:', error);
+        }
+    }
+
+    // Navigation
+    function goHome() {
+        window.location.href = '/island-parents/clients';
+    }
+
+    function goSettings() {
+        // TODO: Settings page
+        showMessageModal('設定功能開發中', 'info');
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!await checkAuth()) return;
+
+        await Promise.all([
+            loadClients(),
+            loadSessions(),
+            loadUsageStats()
+        ]);
+    });
+</script>
+{% endblock %}

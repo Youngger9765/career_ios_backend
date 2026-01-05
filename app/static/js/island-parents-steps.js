@@ -472,6 +472,228 @@ Authorization: Bearer {access_token}</pre>
             `
         },
 
+        'island-get-client': {
+            title: '👁️ 查看孩子資料',
+            subtitle: 'GET /api/v1/clients/{id}',
+            renderForm: () => `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>GET /api/v1/clients/{client_id}</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 取得單一孩子的詳細資料</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Authorization: Bearer {access_token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "id": "uuid",
+  "code": "C240115-001",
+  "name": "小明",
+  "email": null,
+  "gender": "不透露",
+  "birth_date": "2015-01-01",
+  "phone": "0000000000",
+  "identity_option": "孩子",
+  "current_status": "年級: 小學3年級",
+  "notes": "關係: 爸爸",
+  "metadata": null
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS Edit Page 用法：</strong></p>
+                        <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li>從 <code>current_status</code> 解析年級：<code>年級: 小學3年級</code></li>
+                            <li>從 <code>notes</code> 解析關係：<code>關係: 爸爸</code></li>
+                        </ul>
+                    </div>
+                </details>
+                <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
+                    <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
+                        <strong>Client ID:</strong> ${islandTestData.clientId || '請先選擇或建立孩子'}
+                    </p>
+                </div>
+                <div class="form-group" style="margin-top: 16px;">
+                    <label>Client ID</label>
+                    <input type="text" id="island-get-client-id" value="${islandTestData.clientId || ''}" placeholder="從 2a 選擇孩子後自動帶入" />
+                </div>
+                <button class="btn btn-primary" onclick="window.executeIslandGetClient()" ${!islandTestData.clientId ? 'disabled' : ''}>查看孩子資料</button>
+            `,
+            execute: async () => {
+                const inputId = document.getElementById('island-get-client-id').value.trim();
+                const clientId = inputId || islandTestData.clientId;
+                if (!clientId) {
+                    throw new Error('請先選擇或建立孩子');
+                }
+
+                const response = await fetch(`${BASE_URL}/api/v1/clients/${clientId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`
+                    }
+                });
+
+                const data = await response.json();
+                return { response, data };
+            },
+            renderPreview: (data) => `
+                <div class="info-card">
+                    <h3>👶 孩子資料</h3>
+                    <div class="info-row">
+                        <span class="info-label">ID</span>
+                        <span class="info-value" style="font-size: 11px;">${data.id}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">編號</span>
+                        <span class="info-value">${data.code}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">名字</span>
+                        <span class="info-value">${data.name}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">年級</span>
+                        <span class="info-value">${data.current_status || '-'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">關係</span>
+                        <span class="info-value">${data.notes || '-'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">生日</span>
+                        <span class="info-value">${data.birth_date || '-'}</span>
+                    </div>
+                </div>
+            `
+        },
+
+        'island-update-client': {
+            title: '✏️ 更新孩子資料',
+            subtitle: 'PATCH /api/v1/clients/{id}',
+            renderForm: () => `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>PATCH /api/v1/clients/{client_id}</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 更新孩子資料（部分更新）</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Content-Type: application/json
+Authorization: Bearer {access_token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Request Body (只傳需要更新的欄位):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "name": "小明",                    // 選填
+  "current_status": "年級: 小學4年級", // 選填：年級
+  "notes": "關係: 媽媽"               // 選填：關係
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS Edit Page 用法：</strong></p>
+                        <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li>使用 PATCH（不是 PUT）</li>
+                            <li>年級存在 <code>current_status</code>：格式 <code>年級: 小學3年級</code></li>
+                            <li>關係存在 <code>notes</code>：格式 <code>關係: 爸爸</code></li>
+                        </ul>
+                    </div>
+                </details>
+                <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
+                    <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
+                        <strong>Client ID:</strong> ${islandTestData.clientId || '請先選擇或建立孩子'}
+                    </p>
+                </div>
+                <div class="form-group" style="margin-top: 16px;">
+                    <label>Client ID</label>
+                    <input type="text" id="island-update-client-id" value="${islandTestData.clientId || ''}" placeholder="從 2a 選擇孩子後自動帶入" />
+                </div>
+                <div class="form-group">
+                    <label>孩子名字</label>
+                    <input type="text" id="island-update-client-name" placeholder="小明" />
+                </div>
+                <div class="form-group">
+                    <label>年級</label>
+                    <select id="island-update-client-grade">
+                        <option value="">-- 不更新 --</option>
+                        <option value="小學1年級">小學1年級</option>
+                        <option value="小學2年級">小學2年級</option>
+                        <option value="小學3年級">小學3年級</option>
+                        <option value="小學4年級">小學4年級</option>
+                        <option value="小學5年級">小學5年級</option>
+                        <option value="小學6年級">小學6年級</option>
+                        <option value="國中1年級">國中1年級</option>
+                        <option value="國中2年級">國中2年級</option>
+                        <option value="國中3年級">國中3年級</option>
+                        <option value="高中1年級">高中1年級</option>
+                        <option value="高中2年級">高中2年級</option>
+                        <option value="高中3年級">高中3年級</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>關係（你是孩子的）</label>
+                    <select id="island-update-client-relation">
+                        <option value="">-- 不更新 --</option>
+                        <option value="爸爸">爸爸</option>
+                        <option value="媽媽">媽媽</option>
+                        <option value="爺爺">爺爺</option>
+                        <option value="奶奶">奶奶</option>
+                        <option value="外公">外公</option>
+                        <option value="外婆">外婆</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="window.executeIslandUpdateClient()" ${!islandTestData.clientId ? 'disabled' : ''}>更新孩子資料</button>
+            `,
+            execute: async () => {
+                const inputId = document.getElementById('island-update-client-id').value.trim();
+                const clientId = inputId || islandTestData.clientId;
+                if (!clientId) {
+                    throw new Error('請先選擇或建立孩子');
+                }
+
+                const name = document.getElementById('island-update-client-name').value.trim();
+                const grade = document.getElementById('island-update-client-grade').value;
+                const relationship = document.getElementById('island-update-client-relation').value;
+
+                // Build update body with only non-empty fields
+                const body = {};
+                if (name) body.name = name;
+                if (grade) body.current_status = `年級: ${grade}`;
+                if (relationship) body.notes = `關係: ${relationship}`;
+
+                if (Object.keys(body).length === 0) {
+                    throw new Error('請至少填寫一個欄位');
+                }
+
+                const response = await fetch(`${BASE_URL}/api/v1/clients/${clientId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${state.token}`
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+                return { response, data };
+            },
+            renderPreview: (data) => `
+                <div class="info-card">
+                    <h3>✅ 孩子資料已更新</h3>
+                    <div class="info-row">
+                        <span class="info-label">ID</span>
+                        <span class="info-value" style="font-size: 11px;">${data.id}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">名字</span>
+                        <span class="info-value">${data.name}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">年級</span>
+                        <span class="info-value">${data.current_status || '-'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">關係</span>
+                        <span class="info-value">${data.notes || '-'}</span>
+                    </div>
+                </div>
+            `
+        },
+
         'island-create-session': {
             title: '📋 建立會談',
             subtitle: 'POST /api/v1/sessions',
@@ -487,8 +709,11 @@ Authorization: Bearer {access_token}</pre>
 Authorization: Bearer {access_token}</pre>
                         <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong></p>
                         <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
-  "case_id": "uuid",        // 必填：從 Step 2b 取得
-  "name": "諮詢 - 2024-01-01"  // 選填：會談名稱
+  "case_id": "uuid",           // 必填：從 Step 2b 取得
+  "name": "諮詢 - 2024-01-01", // 選填：會談名稱
+  "session_mode": "practice",   // 選填：practice(對話練習) / emergency(親子溝通)
+  "scenario": "功課問題",       // 選填：情境標題
+  "scenario_description": "..."  // 選填：情境描述
   // session_date, start_time 自動產生
 }</pre>
                         <p style="margin: 8px 0; color: #64748b;"><strong>Response (201 Created):</strong></p>
@@ -498,10 +723,16 @@ Authorization: Bearer {access_token}</pre>
   "case_id": "uuid",
   "session_number": 1,
   "name": "諮詢 - 2024-01-01 15:09",
+  "session_mode": "practice",  // ⭐ 用於 History Page 分類
   "session_date": "2024-01-01T15:09:04Z",
   "start_time": "2024-01-01T15:09:04Z"
 }</pre>
-                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 提示：</strong> 儲存 session_id (id 欄位)，後續 API 都需要！</p>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS History Page:</strong></p>
+                        <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li><code>GET /api/v1/sessions?client_id=xxx</code> - 取得孩子的所有 session</li>
+                            <li><code>GET /api/v1/sessions?session_mode=practice</code> - 篩選對話練習</li>
+                            <li><code>GET /api/v1/sessions?session_mode=emergency</code> - 篩選親子溝通</li>
+                        </ul>
                     </div>
                 </details>
                 <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
@@ -510,12 +741,20 @@ Authorization: Bearer {access_token}</pre>
                     </p>
                 </div>
                 <div class="form-group" style="margin-top: 16px;">
+                    <label>模式</label>
+                    <select id="island-session-mode">
+                        <option value="">-- 不指定 --</option>
+                        <option value="practice">🎯 對話練習 (practice)</option>
+                        <option value="emergency">🔴 親子溝通 (emergency)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>會談名稱 <span style="color:#888;font-size:12px">(選填，留空自動產生)</span></label>
                     <input type="text" id="island-session-name" placeholder="諮詢 - 自動產生日期時間" />
                 </div>
                 <div class="info-card" style="margin-top: 12px; background: #f0fdf4; border-left: 4px solid #22c55e;">
                     <p style="margin: 0; font-size: 12px; color: #166534;">
-                        💡 <strong>簡化版</strong>：只需 case_id，其他欄位自動填入
+                        💡 <strong>簡化版</strong>：只需 case_id + session_mode，其他欄位自動填入
                     </p>
                 </div>
                 <button class="btn btn-primary" onclick="window.executeIslandCreateSession()" ${!islandTestData.caseId ? 'disabled' : ''} style="margin-top: 16px;">建立會談</button>
@@ -526,11 +765,15 @@ Authorization: Bearer {access_token}</pre>
                 }
 
                 const sessionName = document.getElementById('island-session-name').value.trim();
+                const sessionMode = document.getElementById('island-session-mode').value;
 
-                // Send case_id and optional name - session_date, start_time auto-filled by backend
+                // Send case_id and optional fields - session_date, start_time auto-filled by backend
                 const requestBody = { case_id: islandTestData.caseId };
                 if (sessionName) {
                     requestBody.name = sessionName;
+                }
+                if (sessionMode) {
+                    requestBody.session_mode = sessionMode;
                 }
 
                 const response = await fetch(`${BASE_URL}/api/v1/sessions`, {
@@ -560,12 +803,103 @@ Authorization: Bearer {access_token}</pre>
                         <span class="info-value">${data.name}</span>
                     </div>
                     <div class="info-row">
+                        <span class="info-label">Mode</span>
+                        <span class="info-value">${data.session_mode ? (data.session_mode === 'practice' ? '🎯 對話練習' : '🔴 親子溝通') : '未指定'}</span>
+                    </div>
+                    <div class="info-row">
                         <span class="info-label">Session Date</span>
                         <span class="info-value">${data.session_date}</span>
                     </div>
+                </div>
+            `
+        },
+
+        'island-get-session': {
+            title: '📖 取得會談',
+            subtitle: 'GET /api/v1/sessions/{id}',
+            renderForm: () => `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>GET /api/v1/sessions/{session_id}</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 取得 Session 完整資料（確認狀態、查看逐字稿）</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Authorization: Bearer {access_token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "id": "uuid",
+  "client_id": "uuid",
+  "client_name": "小明",
+  "client_code": "CHILD001",
+  "case_id": "uuid",
+  "session_number": 1,
+  "session_mode": "practice",
+  "scenario": "功課問題",
+  "scenario_description": "孩子不願意寫功課",
+  "transcript_text": "累積的逐字稿...",
+  "has_report": false
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS 使用時機:</strong></p>
+                        <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li>錄音頁面載入時確認 Session 狀態</li>
+                            <li>確認 scenario 設定是否正確</li>
+                            <li>查看累積的 transcript_text</li>
+                        </ul>
+                    </div>
+                </details>
+                <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
+                    <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
+                        <strong>Session ID:</strong> ${islandTestData.sessionId || '請先建立會談'}
+                    </p>
+                </div>
+                <button class="btn btn-primary" onclick="window.executeIslandGetSession()" ${!islandTestData.sessionId ? 'disabled' : ''}>
+                    取得會談資料
+                </button>
+            `,
+            execute: async () => {
+                if (!islandTestData.sessionId) {
+                    throw new Error('請先建立會談');
+                }
+
+                const response = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`,
+                        'X-Tenant-Id': 'island_parents'
+                    }
+                });
+
+                const data = await response.json();
+                return { response, data };
+            },
+            renderPreview: (data) => `
+                <div class="info-card">
+                    <h3>✅ 取得會談成功</h3>
                     <div class="info-row">
-                        <span class="info-label">Status</span>
-                        <span class="info-value">${data.status}</span>
+                        <span class="info-label">Session ID</span>
+                        <span class="info-value">${data.id}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Client Name</span>
+                        <span class="info-value">${data.client_name}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Mode</span>
+                        <span class="info-value">${data.session_mode ? (data.session_mode === 'practice' ? '🎯 對話練習' : '🔴 親子溝通') : '未指定'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Scenario</span>
+                        <span class="info-value">${data.scenario || '未設定'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Has Report</span>
+                        <span class="info-value">${data.has_report ? '✅ 有' : '❌ 無'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Transcript Length</span>
+                        <span class="info-value">${data.transcript_text ? data.transcript_text.length : 0} 字</span>
                     </div>
                 </div>
             `
@@ -909,7 +1243,9 @@ Authorization: Bearer {access_token}</pre>
                 }
 
                 // New session-based API - no need to fetch transcript separately
-                const response = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}/quick-feedback`, {
+                // Use session_mode from stored session data
+                const sessionMode = islandTestData.sessionMode || 'practice';
+                const response = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}/quick-feedback?session_mode=${sessionMode}`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${state.token}`
@@ -967,13 +1303,13 @@ Authorization: Bearer {access_token}</pre>
                     <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS 工程師必讀)</summary>
                     <div style="margin-top: 12px; font-size: 13px;">
                         <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
-                            <code>POST /api/v1/sessions/{session_id}/deep-analyze?mode=practice</code>
+                            <code>POST /api/v1/sessions/{session_id}/deep-analyze?session_mode=practice</code>
                         </div>
                         <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 深層分析（約15-20秒），返回安全等級 + 專家建議</p>
                         <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
                         <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Authorization: Bearer {token}</pre>
                         <p style="margin: 8px 0; color: #64748b;"><strong>Query Parameters:</strong></p>
-                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">mode=practice    // 選填: practice|emergency，預設 practice
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">session_mode=practice    // 選填: practice|emergency，預設 practice
 use_rag=false    // 選填: 預設 false</pre>
                         <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong> 無（從 session 自動讀取逐字稿）</p>
                         <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
@@ -1020,10 +1356,10 @@ use_rag=false    // 選填: 預設 false</pre>
                     throw new Error('請先建立會談並添加錄音');
                 }
 
-                const mode = document.getElementById('island-deep-mode').value;
+                const sessionMode = document.getElementById('island-deep-mode').value;
 
                 // New session-based API - no need to fetch transcript separately
-                const response = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}/deep-analyze?mode=${mode}&use_rag=false`, {
+                const response = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}/deep-analyze?session_mode=${sessionMode}&use_rag=false`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${state.token}`
@@ -1254,6 +1590,219 @@ use_rag=false    // 選填: 預設 false</pre>
                     </div>
                 </div>
             `
+        },
+
+        'island-get-session-report': {
+            title: '📄 取得會談報告 (History)',
+            subtitle: 'GET /api/v1/sessions/{id}/report',
+            renderForm: () => `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS History Page 必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>GET /api/v1/sessions/{session_id}/report</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 用 session_id 取得報告 (History Page 點擊會談時使用)</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Authorization: Bearer {access_token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "id": "report-uuid",
+  "session_id": "session-uuid",
+  "client_name": "小明",
+  "session_number": 5,
+  "content_json": {
+    "encouragement": "這次你已經做了...",
+    "issue": "對話陷入無效重複...",
+    "analyze": "重複相同的指令...",
+    "suggestion": "我知道你還想玩..."
+  },
+  "status": "completed"
+}</pre>
+                        <p style="margin: 8px 0; color: #ef4444;"><strong>⚠️ 注意：</strong> 如果該 session 沒有報告會回傳 404</p>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS History Page 流程:</strong></p>
+                        <ol style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li>GET /api/v1/sessions → 列出會談 (含 has_report 欄位)</li>
+                            <li>點擊 has_report=true 的會談</li>
+                            <li>GET /api/v1/sessions/{id}/report → 取得報告內容</li>
+                        </ol>
+                    </div>
+                </details>
+                <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
+                    <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
+                        <strong>Session ID:</strong> ${islandTestData.sessionId || '請先建立會談並生成報告'}
+                    </p>
+                </div>
+                <button class="btn btn-primary" onclick="window.executeIslandGetSessionReport()" ${!islandTestData.sessionId ? 'disabled' : ''} style="margin-top: 16px;">取得報告</button>
+            `,
+            execute: async () => {
+                if (!islandTestData.sessionId) {
+                    throw new Error('請先建立會談');
+                }
+
+                const response = await fetch(`${BASE_URL}/api/v1/sessions/${islandTestData.sessionId}/report`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`,
+                        'X-Tenant-Id': 'island_parents'
+                    }
+                });
+
+                const data = await response.json();
+                return { response, data };
+            },
+            renderPreview: (data) => `
+                <div class="info-card">
+                    <h3>${data.detail ? '❌ ' + data.detail : '✅ 取得報告成功'}</h3>
+
+                    ${!data.detail ? `
+                        <div class="info-row">
+                            <span class="info-label">Report ID</span>
+                            <span class="info-value">${data.id}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Client</span>
+                            <span class="info-value">${data.client_name} (第 ${data.session_number} 次會談)</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Status</span>
+                            <span class="info-value">${data.status === 'completed' ? '✅ 已完成' : data.status}</span>
+                        </div>
+
+                        ${data.content_json ? `
+                            <div style="margin-top: 16px; padding: 16px; background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border-radius: 8px; border-left: 4px solid #4caf50;">
+                                <h4 style="font-size: 14px; color: #2e7d32; margin-bottom: 8px;">💪 鼓勵</h4>
+                                <p style="margin: 0; color: #1b5e20; font-size: 14px;">${data.content_json.encouragement || '-'}</p>
+                            </div>
+
+                            <div style="margin-top: 12px; padding: 16px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #ff9800;">
+                                <h4 style="font-size: 14px; color: #e65100; margin-bottom: 8px;">❓ 待解決議題</h4>
+                                <p style="margin: 0; color: #bf360c; font-size: 14px;">${data.content_json.issue || '-'}</p>
+                            </div>
+
+                            <div style="margin-top: 12px; padding: 16px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+                                <h4 style="font-size: 14px; color: #1565c0; margin-bottom: 8px;">📊 分析</h4>
+                                <p style="margin: 0; color: #0d47a1; font-size: 14px;">${data.content_json.analyze || '-'}</p>
+                            </div>
+
+                            <div style="margin-top: 12px; padding: 16px; background: #f3e5f5; border-radius: 8px; border-left: 4px solid #9c27b0;">
+                                <h4 style="font-size: 14px; color: #6a1b9a; margin-bottom: 8px;">💡 建議</h4>
+                                <p style="margin: 0; color: #4a148c; font-size: 14px;">${data.content_json.suggestion || '-'}</p>
+                            </div>
+                        ` : '<p style="color: #9ca3af; margin-top: 12px;">報告內容為空</p>'}
+                    ` : ''}
+                </div>
+            `
+        },
+
+        'island-list-sessions': {
+            title: '📋 列出所有會談 (History)',
+            subtitle: 'GET /api/v1/sessions',
+            renderForm: () => `
+                <details class="api-docs" style="margin-bottom: 16px; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px;">
+                    <summary style="cursor: pointer; font-weight: 600; color: #475569;">📖 API 說明 (iOS History Page 必讀)</summary>
+                    <div style="margin-top: 12px; font-size: 13px;">
+                        <div style="background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <code>GET /api/v1/sessions</code>
+                        </div>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>用途：</strong> 列出所有會談記錄 (History Page)</p>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Headers:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">Authorization: Bearer {access_token}</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Query Parameters:</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">client_id: UUID       // 依孩子篩選
+session_mode: string  // practice / emergency
+search: string        // 搜尋孩子名稱
+skip: int             // 分頁偏移 (default: 0)
+limit: int            // 每頁筆數 (default: 20)</pre>
+                        <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
+                        <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
+  "total": 15,
+  "items": [
+    {
+      "id": "session-uuid",
+      "client_name": "小明",
+      "session_mode": "practice",
+      "scenario": "功課問題",
+      "has_report": true,
+      "created_at": "2025-01-05T10:00:00Z"
+    }
+  ]
+}</pre>
+                        <p style="margin: 8px 0; color: #22c55e;"><strong>💡 iOS History Page 用法:</strong></p>
+                        <ul style="margin: 4px 0; padding-left: 20px; color: #64748b;">
+                            <li><code>?client_id=xxx</code> - 取得某孩子的所有會談</li>
+                            <li><code>?session_mode=practice</code> - 篩選對話練習</li>
+                            <li><code>?session_mode=emergency</code> - 篩選親子溝通</li>
+                        </ul>
+                    </div>
+                </details>
+                <div class="form-group">
+                    <label>篩選模式</label>
+                    <select id="island-list-mode">
+                        <option value="">全部</option>
+                        <option value="practice">🎯 對話練習 (practice)</option>
+                        <option value="emergency">🔴 親子溝通 (emergency)</option>
+                    </select>
+                </div>
+                <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
+                    <p style="margin: 0; font-size: 13px; color: #0c4a6e;">
+                        <strong>Client ID:</strong> ${islandTestData.clientId || '將列出所有會談'}
+                    </p>
+                </div>
+                <button class="btn btn-primary" onclick="window.executeIslandListSessions()" style="margin-top: 16px;">列出會談</button>
+            `,
+            execute: async () => {
+                const mode = document.getElementById('island-list-mode').value;
+                let url = `${BASE_URL}/api/v1/sessions`;
+                const params = [];
+
+                if (islandTestData.clientId) {
+                    params.push(`client_id=${islandTestData.clientId}`);
+                }
+                if (mode) {
+                    params.push(`session_mode=${mode}`);
+                }
+                if (params.length > 0) {
+                    url += '?' + params.join('&');
+                }
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`,
+                        'X-Tenant-Id': 'island_parents'
+                    }
+                });
+
+                const data = await response.json();
+                return { response, data };
+            },
+            renderPreview: (data) => `
+                <div class="info-card">
+                    <h3>✅ 列出會談成功</h3>
+                    <div class="info-row">
+                        <span class="info-label">總數</span>
+                        <span class="info-value">${data.total || 0} 筆</span>
+                    </div>
+
+                    ${data.items && data.items.length > 0 ? `
+                        <div style="margin-top: 16px;">
+                            <h4 style="font-size: 14px; color: #475569; margin-bottom: 8px;">會談列表</h4>
+                            ${data.items.slice(0, 5).map((session, i) => `
+                                <div style="margin-bottom: 8px; padding: 10px; background: #f8fafc; border-radius: 6px; border-left: 3px solid ${session.session_mode === 'practice' ? '#22c55e' : session.session_mode === 'emergency' ? '#ef4444' : '#9ca3af'};">
+                                    <div style="font-weight: 600; color: #1e293b; font-size: 13px;">
+                                        ${session.session_mode === 'practice' ? '🎯' : session.session_mode === 'emergency' ? '🔴' : '📋'} ${session.client_name || '未知'} - ${session.scenario || '無情境'}
+                                    </div>
+                                    <div style="color: #64748b; font-size: 12px; margin-top: 4px;">
+                                        報告: ${session.has_report ? '✅' : '❌'} | ${session.created_at ? new Date(session.created_at).toLocaleDateString('zh-TW') : 'N/A'}
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${data.items.length > 5 ? `<p style="color: #9ca3af; font-size: 12px;">還有 ${data.items.length - 5} 筆...</p>` : ''}
+                        </div>
+                    ` : '<p style="color: #9ca3af; margin-top: 12px;">沒有會談記錄</p>'}
+                </div>
+            `
         }
     };
 
@@ -1339,7 +1888,10 @@ use_rag=false    // 選填: 預設 false</pre>
     window.executeIslandGetCredits = () => window.executeStep('island-get-credits');
     window.executeIslandSelectClient = () => window.executeStep('island-select-client');
     window.executeIslandCreateClientCase = () => window.executeStep('island-create-client-case');
+    window.executeIslandGetClient = () => window.executeStep('island-get-client');
+    window.executeIslandUpdateClient = () => window.executeStep('island-update-client');
     window.executeIslandCreateSession = () => window.executeStep('island-create-session');
+    window.executeIslandGetSession = () => window.executeStep('island-get-session');
     window.executeIslandSetScenario = () => window.executeStep('island-set-scenario');
     window.executeIslandElevenlabsToken = () => window.executeStep('island-elevenlabs-token');
     window.executeIslandAppendRecording = () => window.executeStep('island-append-recording');
@@ -1347,6 +1899,8 @@ use_rag=false    // 選填: 預設 false</pre>
     window.executeIslandDeepAnalysis = () => window.executeStep('island-deep-analysis');
     window.executeIslandVerifySuggestions = () => window.executeStep('island-verify-suggestions');
     window.executeIslandGenerateReport = () => window.executeStep('island-generate-report');
+    window.executeIslandGetSessionReport = () => window.executeStep('island-get-session-report');
+    window.executeIslandListSessions = () => window.executeStep('island-list-sessions');
 
     // Merge island steps into global steps object
     if (window.steps) {
