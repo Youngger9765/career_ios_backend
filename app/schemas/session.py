@@ -392,6 +392,12 @@ class SessionCreateRequest(BaseModel):
     notes: Optional[str] = None
     reflection: Optional[dict] = None
     recordings: Optional[List[RecordingSegment]] = None
+    # Island Parents - 練習情境
+    scenario: Optional[str] = None  # 情境標題
+    scenario_description: Optional[str] = None  # 情境描述
+    session_mode: Optional[
+        str
+    ] = None  # 模式：practice (對話練習) / emergency (親子溝通)
 
     model_config = {
         "json_schema_extra": {
@@ -402,6 +408,9 @@ class SessionCreateRequest(BaseModel):
                     "start_time": "2025-01-15 10:00",
                     "end_time": "2025-01-15 11:30",
                     "notes": "個案對職涯選擇表現出積極態度",
+                    "session_mode": "practice",
+                    "scenario": "功課問題",
+                    "scenario_description": "孩子回家後不願意寫功課",
                 }
             ]
         }
@@ -423,6 +432,7 @@ class SessionUpdateRequest(BaseModel):
     # Island Parents - 練習情境
     scenario: Optional[str] = None
     scenario_description: Optional[str] = None
+    session_mode: Optional[str] = None  # 模式：practice / emergency
 
 
 class SessionResponse(BaseModel):
@@ -447,6 +457,7 @@ class SessionResponse(BaseModel):
     # Island Parents - 練習情境
     scenario: Optional[str] = None
     scenario_description: Optional[str] = None
+    session_mode: Optional[str] = None  # 模式：practice / emergency
     has_report: bool
     created_at: datetime
     updated_at: Optional[datetime]

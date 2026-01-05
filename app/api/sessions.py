@@ -19,8 +19,10 @@ from app.core.exceptions import (
 from app.models.case import Case
 from app.models.client import Client
 from app.models.counselor import Counselor
+from app.models.report import Report
 from app.models.session import Session
 from app.repositories.session_repository import SessionRepository
+from app.schemas.report import ReportResponse
 from app.schemas.session import (
     AppendRecordingRequest,
     AppendRecordingResponse,
@@ -64,6 +66,7 @@ def _build_session_response(
         # Island Parents - 練習情境
         scenario=session.scenario,
         scenario_description=session.scenario_description,
+        session_mode=session.session_mode,
         has_report=has_report,
         created_at=session.created_at,
         updated_at=session.updated_at,
@@ -112,6 +115,10 @@ def create_session(
 @router.get("", response_model=SessionListResponse)
 def list_sessions(
     client_id: Optional[UUID] = Query(None, description="Filter by client"),
+    case_id: Optional[UUID] = Query(None, description="Filter by case"),
+    session_mode: Optional[str] = Query(
+        None, description="Filter by session_mode: practice / emergency"
+    ),
     search: Optional[str] = Query(None, description="Search by client name or code"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
@@ -119,12 +126,21 @@ def list_sessions(
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
 ) -> SessionListResponse:
-    """列出會談記錄"""
+    """列出會談記錄
+
+    支援篩選條件：
+    - client_id: 依孩子（Client）篩選
+    - case_id: 依案例（Case）篩選
+    - session_mode: 依模式篩選 (practice=對話練習, emergency=親子溝通)
+    - search: 依孩子名稱或代碼搜尋
+    """
     service = SessionService(db)
     session_data, total = service.list_sessions(
         counselor=current_user,
         tenant_id=tenant_id,
         client_id=client_id,
+        case_id=case_id,
+        mode=session_mode,
         search=search,
         skip=skip,
         limit=limit,
@@ -323,3 +339,85 @@ def append_recording(
         _handle_permission_error(e, instance)
     except Exception as e:
         _handle_generic_error(e, "append recording", instance)
+
+
+@router.get("/{session_id}/report", response_model=ReportResponse)
+def get_session_report(
+    session_id: UUID,
+    request: Request,
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+    db: DBSession = Depends(get_db),
+) -> ReportResponse:
+    """取得會談的報告 (by session_id) - 用於 History Page"""
+    instance = str(request.url.path)
+
+    # First verify the session exists and user has access
+    service = SessionService(db)
+    result = service.get_session_with_details(session_id, current_user, tenant_id)
+    if not result:
+        raise NotFoundError(
+            detail="Session not found",
+            instance=instance,
+        )
+
+    session, client, case, has_report = result
+
+    if not has_report:
+        raise NotFoundError(
+            detail="No report found for this session",
+            instance=instance,
+        )
+
+    # Get the report for this session
+    from sqlalchemy import select
+
+    report = db.execute(
+        select(Report).where(
+            Report.session_id == session_id,
+            Report.deleted_at.is_(None),
+        )
+    ).scalar_one_or_none()
+
+    if not report:
+        raise NotFoundError(
+            detail="Report not found",
+            instance=instance,
+        )
+
+    # Build response
+    report_dict = {
+        "id": report.id,
+        "session_id": report.session_id,
+        "client_id": case.client_id,
+        "created_by_id": report.created_by_id,
+        "tenant_id": report.tenant_id,
+        "version": report.version,
+        "status": report.status,
+        "mode": report.mode,
+        "client_name": client.name,
+        "session_number": session.session_number,
+        "content_json": report.content_json,
+        "content_markdown": report.content_markdown,
+        "edited_content_json": report.edited_content_json,
+        "edited_content_markdown": report.edited_content_markdown,
+        "edited_at": str(report.edited_at) if report.edited_at else None,
+        "edit_count": report.edit_count,
+        "citations_json": report.citations_json,
+        "quality_score": report.quality_score,
+        "quality_grade": report.quality_grade,
+        "quality_strengths": report.quality_strengths,
+        "quality_weaknesses": report.quality_weaknesses,
+        "error_message": report.error_message,
+        "ai_model": report.ai_model,
+        "prompt_tokens": report.prompt_tokens,
+        "completion_tokens": report.completion_tokens,
+        "summary": report.summary,
+        "analysis": report.analysis,
+        "recommendations": report.recommendations,
+        "action_items": report.action_items,
+        "created_at": report.created_at,
+        "updated_at": report.updated_at,
+    }
+
+    return ReportResponse(**report_dict)

@@ -42,6 +42,9 @@ class Session(Base, BaseModel):
         String(200), nullable=True
     )  # 情境標題（如：成績出來了 我不知道怎麼開口）
     scenario_description = Column(Text, nullable=True)  # 情境描述（詳細說明）
+    session_mode = Column(
+        String(20), nullable=True
+    )  # 模式：practice (對話練習) / emergency (親子溝通)，null 表示未指定
 
     # Recordings - 會談逐字稿片段（JSON list）
     # 支援會談中斷後繼續的場景，每個 recording 包含：

@@ -6,6 +6,7 @@ Multi-tenant support:
 - career: 職涯諮詢分析
 - island_parents: 親子教養分析
 """
+
 import json
 import logging
 import math  # For ceiling rounding
@@ -166,6 +167,7 @@ class KeywordAnalysisService:
         full_transcript: Optional[str] = None,
         mode: str = "practice",
         tenant_id: str = "island_parents",
+        scenario_context: Optional[str] = None,
     ) -> Dict:
         """
         Simplified keyword analysis - 1 Gemini call (optimized).
@@ -178,6 +180,7 @@ class KeywordAnalysisService:
             full_transcript: Complete transcript (background context)
             mode: "practice" or "emergency"
             tenant_id: Tenant identifier
+            scenario_context: Parent's concern/scenario description
 
         Returns:
             Dict with:
@@ -224,13 +227,30 @@ class KeywordAnalysisService:
                 red_suggestions="\n".join(f"- {s}" for s in red_sample),
             )
 
+            # Prepend scenario context if provided
+            if scenario_context:
+                prompt = f"{scenario_context}\n\n{prompt}"
+
             # Single Gemini call
             ai_response = await self.gemini_service.generate_text(
-                prompt, temperature=0.3, response_format={"type": "json_object"}
+                prompt,
+                temperature=0.3,
+                response_format={"type": "json_object"},
             )
 
+            # Extract text and usage metadata from Gemini response
+            text = (
+                ai_response.text if hasattr(ai_response, "text") else str(ai_response)
+            )
+            prompt_tokens = 0
+            completion_tokens = 0
+            if hasattr(ai_response, "usage_metadata"):
+                usage = ai_response.usage_metadata
+                prompt_tokens = getattr(usage, "prompt_token_count", 0) or 0
+                completion_tokens = getattr(usage, "candidates_token_count", 0) or 0
+
             # Parse response
-            result = self._parse_ai_response(ai_response)
+            result = self._parse_ai_response(text)
 
             # Ensure required fields
             result.setdefault("safety_level", "green")
@@ -242,7 +262,7 @@ class KeywordAnalysisService:
                 [result["quick_suggestion"]] if result.get("quick_suggestion") else []
             )
 
-            # Add metadata
+            # Add metadata with REAL token usage
             duration_ms = int((time.time() - start_time) * 1000)
             result["_metadata"] = {
                 "mode": mode,
@@ -250,6 +270,9 @@ class KeywordAnalysisService:
                 "prompt_type": "deep_simplified",
                 "rag_used": False,
             }
+            result["prompt_tokens"] = prompt_tokens
+            result["completion_tokens"] = completion_tokens
+            result["total_tokens"] = prompt_tokens + completion_tokens
 
             logger.info(
                 f"Simplified analysis completed in {duration_ms}ms: "

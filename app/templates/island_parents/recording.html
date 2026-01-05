@@ -992,12 +992,15 @@
 
         // Skip if no new transcript since last call
         if (!quickTranscriptBuffer.trim()) {
-            console.log('⏭️ No new transcript for quick feedback, skipping');
+            console.log(`⏭️ [${formatDuration(recordingSeconds)}] Quick: No transcript, skipping`);
             return;
         }
 
         // Show toast: sending quick analysis (stays until response)
         showQuickToast('⚡ 快速分析中...', true, 0);
+
+        const sendTime = Date.now();
+        console.log(`⚡ [${formatDuration(recordingSeconds)}] Quick SEND`);
 
         try {
             const response = await fetch(`${API_BASE}/api/v1/sessions/${currentSession.id}/quick-feedback`, {
@@ -1008,9 +1011,11 @@
                 }
             });
 
+            const networkMs = Date.now() - sendTime;
+
             if (response.ok) {
                 const data = await response.json();
-                console.log('Quick feedback:', data.message, `(${data.latency_ms}ms)`);
+                console.log(`⚡ [${formatDuration(recordingSeconds)}] Quick BACK | Network: ${networkMs}ms | Backend: ${data.latency_ms}ms`);
 
                 // Clear quick buffer after successful API call
                 quickTranscriptBuffer = '';
@@ -1051,15 +1056,18 @@
 
         // Skip if no new transcript since last call
         if (!deepTranscriptBuffer.trim()) {
-            console.log('⏭️ No new transcript for deep analyze, skipping');
+            console.log(`⏭️ [${formatDuration(recordingSeconds)}] Deep: No transcript, skipping`);
             return;
         }
 
         // Show toast: sending deep analysis (stays until response)
         showDeepToast('🔍 深度分析中...', true, 0);
 
+        const sendTime = Date.now();
+        console.log(`🔍 [${formatDuration(recordingSeconds)}] Deep SEND`);
+
         try {
-            const mode = localStorage.getItem('island_parents_mode') || 'practice';
+            const mode = localStorage.getItem('island_parents_session_mode') || 'practice';
             const response = await fetch(`${API_BASE}/api/v1/sessions/${currentSession.id}/deep-analyze?mode=${mode}&use_rag=false`, {
                 method: 'POST',
                 headers: {
@@ -1068,9 +1076,11 @@
                 }
             });
 
+            const networkMs = Date.now() - sendTime;
+
             if (response.ok) {
                 const data = await response.json();
-                console.log('Deep analyze:', data.safety_level, data.summary);
+                console.log(`🔍 [${formatDuration(recordingSeconds)}] Deep BACK | Network: ${networkMs}ms | Backend: ${data.latency_ms}ms | Color: ${data.safety_level}`);
 
                 // Clear deep buffer after successful API call
                 deepTranscriptBuffer = '';

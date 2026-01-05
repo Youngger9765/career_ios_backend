@@ -82,12 +82,24 @@ class SessionRepository:
         counselor_id: UUID,
         tenant_id: str,
         client_id: Optional[UUID] = None,
+        case_id: Optional[UUID] = None,
+        mode: Optional[str] = None,
         search: Optional[str] = None,
         skip: int = 0,
         limit: int = 20,
     ) -> Tuple[List[Tuple[Session, Case, Client, bool]], int]:
         """
         List sessions with filters and pagination.
+
+        Args:
+            counselor_id: 諮詢師 ID
+            tenant_id: 租戶 ID
+            client_id: 依孩子（Client）篩選
+            case_id: 依案例（Case）篩選
+            mode: 依模式篩選 (practice / emergency)
+            search: 依孩子名稱或代碼搜尋
+            skip: 分頁偏移
+            limit: 每頁筆數
 
         Returns: (list of (Session, Case, Client, has_report) tuples, total_count)
         """
@@ -110,6 +122,12 @@ class SessionRepository:
         # Apply filters
         if client_id:
             query = query.where(Client.id == client_id)
+
+        if case_id:
+            query = query.where(Case.id == case_id)
+
+        if mode:
+            query = query.where(Session.session_mode == mode)
 
         if search:
             search_pattern = f"%{search}%"
@@ -136,6 +154,10 @@ class SessionRepository:
         )
         if client_id:
             count_query = count_query.where(Client.id == client_id)
+        if case_id:
+            count_query = count_query.where(Case.id == case_id)
+        if mode:
+            count_query = count_query.where(Session.session_mode == mode)
         if search:
             search_pattern = f"%{search}%"
             count_query = count_query.where(
@@ -146,14 +168,13 @@ class SessionRepository:
             )
         total = self.db.execute(count_query).scalar()
 
-        # Apply pagination and ordering
+        # Apply pagination and ordering (最新的在前面)
         query = (
             query.offset(skip)
             .limit(limit)
             .order_by(
-                Case.id.asc(),
-                func.coalesce(Session.start_time, Session.session_date).asc(),
-                Session.created_at.asc(),
+                func.coalesce(Session.start_time, Session.session_date).desc(),
+                Session.created_at.desc(),
             )
         )
 

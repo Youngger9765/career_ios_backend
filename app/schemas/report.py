@@ -45,10 +45,10 @@ class ReportResponse(BaseModel):
     completion_tokens: Optional[int]
 
     # Legacy fields
-    summary: Optional[str]
-    analysis: Optional[str]
-    recommendations: Optional[str]
-    action_items: Optional[List[Dict[str, Any]]]
+    summary: Optional[str] = None
+    analysis: Optional[str] = None
+    recommendations: Optional[str] = None
+    action_items: Optional[List[Dict[str, Any]]] = None
 
     created_at: datetime
     updated_at: Optional[datetime]

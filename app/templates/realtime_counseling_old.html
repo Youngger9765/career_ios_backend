@@ -1024,7 +1024,7 @@
                             class="px-6 py-4 rounded-lg bg-red-500 text-white font-semibold text-base transition-all hover:bg-red-600 shadow-md"
                             onclick="setOnboardingMode('emergency')"
                         >
-                            🚨 實戰模式
+                            🚨 對談模式
                         </button>
                         <button
                             id="onboardingPracticeBtn"
@@ -1035,7 +1035,7 @@
                         </button>
                     </div>
                     <p class="text-xs text-gray-500 mt-3 text-center">
-                        實戰：即時介入，快速建議<br>
+                        對談：即時介入，快速建議<br>
                         練習：事前準備，詳細指導
                     </p>
                 </div>
@@ -1189,7 +1189,7 @@
                         </label>
                         <div class="flex gap-2">
                             <button id="emergencyModeBtn" class="flex-1 px-3 py-2 rounded-lg bg-red-500 text-white font-semibold text-sm transition-all hover:bg-red-600">
-                                🚨 實戰
+                                🚨 對談
                             </button>
                             <button id="practiceModeBtn" class="flex-1 px-3 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold text-sm transition-all hover:bg-gray-300">
                                 🎓 練習
@@ -1253,7 +1253,7 @@
                         預先練習
                     </button>
 
-                    <!-- 實戰按鈕 -->
+                    <!-- 對談按鈕 -->
                     <button id="realTalkBtn" class="haptic-feedback btn-touch w-full bg-black active:bg-gray-800 text-white py-6 px-8 rounded-3xl font-bold text-lg transition-smooth shadow-xl">
                         和孩子談談
                     </button>
@@ -1692,7 +1692,7 @@
                             </label>
                             <div class="grid grid-cols-2 gap-3">
                                 <button id="emergencyModeBtnDesktop" class="px-4 py-3 rounded-lg bg-red-500 text-white font-bold text-sm transition-all hover:bg-red-600 shadow-md hover:shadow-lg">
-                                    🚨 實戰
+                                    🚨 對談
                                 </button>
                                 <button id="practiceModeBtnDesktop" class="px-4 py-3 rounded-lg bg-gray-200 text-gray-700 font-bold text-sm transition-all hover:bg-gray-300">
                                     🎓 練習
@@ -2083,7 +2083,7 @@
         if (realTalkBtn) {
             realTalkBtn.addEventListener('click', () => {
                 sessionMode = 'realTalk';
-                // Sync consultation mode to 'emergency' (實戰)
+                // Sync consultation mode to 'emergency' (對談)
                 setCounselingMode('emergency');
                 if (initialUI) initialUI.classList.add('hidden');
                 if (practiceIntroUI) practiceIntroUI.classList.remove('hidden');

@@ -89,6 +89,10 @@ class SessionService:
             notes=request.notes,
             reflection=request.reflection or {},
             recordings=recordings_data,
+            # Island Parents - 練習情境
+            scenario=request.scenario,
+            scenario_description=request.scenario_description,
+            session_mode=request.session_mode,
         )
 
         self.db.commit()
@@ -165,6 +169,8 @@ class SessionService:
         counselor: Counselor,
         tenant_id: str,
         client_id: Optional[UUID] = None,
+        case_id: Optional[UUID] = None,
+        mode: Optional[str] = None,
         search: Optional[str] = None,
         skip: int = 0,
         limit: int = 20,
@@ -174,6 +180,8 @@ class SessionService:
             counselor_id=counselor.id,
             tenant_id=tenant_id,
             client_id=client_id,
+            case_id=case_id,
+            mode=mode,
             search=search,
             skip=skip,
             limit=limit,
@@ -262,6 +270,9 @@ class SessionService:
 
         if request.scenario_description is not None:
             session.scenario_description = request.scenario_description
+
+        if request.session_mode is not None:
+            session.session_mode = request.session_mode
 
         # Recalculate session_number if time changed
         if time_changed:

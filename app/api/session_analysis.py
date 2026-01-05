@@ -1,6 +1,7 @@
 """
 Session Analysis API - Deep analysis, quick feedback, and report generation
 """
+
 import json
 import logging
 import re
@@ -9,13 +10,15 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Tuple
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from sqlalchemy import select
 from sqlalchemy.orm import Session as DBSession
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_tenant_id
 from app.core.exceptions import BadRequestError, InternalServerError, NotFoundError
 from app.models.counselor import Counselor
+from app.models.report import Report, ReportStatus
 from app.schemas.session import (
     ParentsReportReference,
     ParentsReportResponse,
@@ -28,6 +31,38 @@ from app.services.session_service import SessionService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/sessions", tags=["Sessions - Analysis"])
+
+
+def _log_analysis_background(
+    session_id: UUID,
+    counselor_id: UUID,
+    tenant_id: str,
+    transcript_segment: str,
+    result_data: dict,
+    token_usage_data: dict,
+    analysis_type: str,
+):
+    """Background task to log analysis to SessionAnalysisLog (runs AFTER response)"""
+    from app.core.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        keyword_service = KeywordAnalysisService(db)
+        keyword_service.save_analysis_log_and_usage(
+            session_id=session_id,
+            counselor_id=counselor_id,
+            tenant_id=tenant_id,
+            transcript_segment=transcript_segment,
+            result_data=result_data,
+            rag_documents=[],
+            rag_sources=[],
+            token_usage_data=token_usage_data,
+        )
+        logger.info(f"{analysis_type} logged for session {session_id} (background)")
+    except Exception as e:
+        logger.error(f"Failed to log {analysis_type} (background): {e}", exc_info=True)
+    finally:
+        db.close()
 
 
 def _extract_transcripts_by_time(
@@ -113,7 +148,8 @@ def _handle_generic_error(e: Exception, operation: str, instance: str):
 async def session_quick_feedback(
     session_id: UUID,
     request: Request,
-    mode: str = "practice",
+    background_tasks: BackgroundTasks,
+    session_mode: str = "practice",
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
@@ -126,7 +162,7 @@ async def session_quick_feedback(
     - 返回 1 句話（50字內）
 
     Args:
-        mode: "practice" (練習模式，無孩子在場) 或 "emergency" (實戰模式，有孩子在場)
+        session_mode: "practice" (練習模式，無孩子在場) 或 "emergency" (對談模式，有孩子在場)
     """
     from app.services.quick_feedback_service import quick_feedback_service
 
@@ -165,12 +201,56 @@ async def session_quick_feedback(
             f"full={len(full_transcript)} chars"
         )
 
-        # Call quick feedback service with both transcripts
+        # Build scenario context for analysis
+        scenario_context = ""
+        if session.scenario or session.scenario_description:
+            scenario_context = f"【家長煩惱情境】{session.scenario or ''}"
+            if session.scenario_description:
+                scenario_context += f"\n{session.scenario_description}"
+
+        # Call quick feedback service with both transcripts + scenario
         feedback_result = await quick_feedback_service.get_quick_feedback(
             recent_transcript=recent_transcript,
             full_transcript=full_transcript,
             tenant_id=tenant_id,
-            mode=mode,
+            mode=session_mode,
+            scenario_context=scenario_context,
+        )
+
+        # Schedule logging as background task (runs AFTER response returned)
+        result_data = {
+            "analysis_type": "quick_feedback",
+            "message": feedback_result["message"],
+            "type": feedback_result["type"],
+            "_metadata": {
+                "session_mode": session_mode,
+                "latency_ms": feedback_result["latency_ms"],
+                "recent_transcript_length": len(recent_transcript),
+                "full_transcript_length": len(full_transcript),
+                "scenario": session.scenario,
+            },
+        }
+        # Use REAL token usage from Gemini response
+        prompt_tokens = feedback_result.get("prompt_tokens", 0)
+        completion_tokens = feedback_result.get("completion_tokens", 0)
+        total_tokens = feedback_result.get(
+            "total_tokens", prompt_tokens + completion_tokens
+        )
+        token_usage_data = {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            "estimated_cost_usd": total_tokens * 0.000001,  # Gemini Flash pricing
+        }
+        background_tasks.add_task(
+            _log_analysis_background,
+            session_id=session_id,
+            counselor_id=current_user.id,
+            tenant_id=tenant_id,
+            transcript_segment=recent_transcript[:500],
+            result_data=result_data,
+            token_usage_data=token_usage_data,
+            analysis_type="quick_feedback",
         )
 
         return QuickFeedbackResponse(
@@ -196,7 +276,8 @@ async def session_quick_feedback(
 async def session_deep_analyze(
     session_id: UUID,
     request: Request,
-    mode: str = "practice",
+    background_tasks: BackgroundTasks,
+    session_mode: str = "practice",
     use_rag: bool = False,
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
@@ -246,18 +327,27 @@ async def session_deep_analyze(
         # Initialize keyword service
         keyword_service = KeywordAnalysisService(db)
 
-        # Call SIMPLIFIED analysis with both transcripts
+        # Build scenario context for analysis
+        scenario_context = ""
+        if session.scenario or session.scenario_description:
+            scenario_context = f"【家長煩惱情境】{session.scenario or ''}"
+            if session.scenario_description:
+                scenario_context += f"\n{session.scenario_description}"
+
+        # Call SIMPLIFIED analysis with both transcripts + scenario
         logger.info(
             f"Deep analyze (simplified) session {session_id}: "
-            f"tenant={tenant_id}, mode={mode}, "
-            f"recent={len(recent_transcript)} chars, full={len(full_transcript)} chars"
+            f"tenant={tenant_id}, session_mode={session_mode}, "
+            f"recent={len(recent_transcript)} chars, full={len(full_transcript)} chars, "
+            f"scenario={bool(scenario_context)}"
         )
 
         analysis_result = await keyword_service.analyze_keywords_simplified(
             transcript_segment=recent_transcript,
             full_transcript=full_transcript,
-            mode=mode,
+            mode=session_mode,
             tenant_id=tenant_id,
+            scenario_context=scenario_context,
         )
 
         # Extract results
@@ -270,6 +360,44 @@ async def session_deep_analyze(
         )
 
         logger.info(f"Deep analyze completed in {latency_ms}ms")
+
+        # Schedule logging as background task (runs AFTER response returned)
+        result_data = {
+            "analysis_type": "deep_analyze",
+            "safety_level": analysis_result.get("safety_level", "green"),
+            "display_text": analysis_result.get("display_text", ""),
+            "quick_suggestions": quick_suggestions,
+            "_metadata": {
+                "session_mode": session_mode,
+                "use_rag": use_rag,
+                "latency_ms": latency_ms,
+                "recent_transcript_length": len(recent_transcript),
+                "full_transcript_length": len(full_transcript),
+                "scenario": session.scenario,
+            },
+        }
+        # Use REAL token usage from Gemini response
+        prompt_tokens = analysis_result.get("prompt_tokens", 0)
+        completion_tokens = analysis_result.get("completion_tokens", 0)
+        total_tokens = analysis_result.get(
+            "total_tokens", prompt_tokens + completion_tokens
+        )
+        token_usage_data = {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            "estimated_cost_usd": total_tokens * 0.000001,  # Gemini Flash pricing
+        }
+        background_tasks.add_task(
+            _log_analysis_background,
+            session_id=session_id,
+            counselor_id=current_user.id,
+            tenant_id=tenant_id,
+            transcript_segment=recent_transcript[:1000],
+            result_data=result_data,
+            token_usage_data=token_usage_data,
+            analysis_type="deep_analyze",
+        )
 
         return RealtimeAnalyzeResponse(
             safety_level=analysis_result.get("safety_level", "green"),
@@ -340,14 +468,25 @@ async def session_report(
             try:
                 openai_service = OpenAIService()
                 rag_retriever = RAGRetriever(openai_service)
+
+                # Build a more effective search query
+                # Include scenario info + key parts of transcript
+                scenario_info = session.scenario or ""
+                scenario_desc = session.scenario_description or ""
+                search_query = f"{scenario_info} {scenario_desc}\n{transcript[:800]}"
+                logger.info(
+                    f"RAG search query (first 200 chars): {search_query[:200]}..."
+                )
+
                 # Search for parenting-related theories
                 rag_results = await rag_retriever.search(
-                    query=transcript[:500],  # Use first 500 chars as query
+                    query=search_query,
                     top_k=5,
-                    threshold=0.3,  # Lower threshold for better recall
+                    threshold=0.25,  # Lower threshold for better recall
                     db=db,
                     category="parenting",
                 )
+
                 if rag_results:
                     rag_context = "\n\n【參考理論】\n"
                     for i, theory in enumerate(rag_results, 1):
@@ -369,6 +508,11 @@ async def session_report(
                             )
                         )
                     logger.info(f"RAG found {len(rag_results)} theories for report")
+                else:
+                    logger.warning(
+                        "RAG search returned no results - "
+                        "check if parenting documents exist in vector DB"
+                    )
             except Exception as e:
                 # RAG failure should not block report generation
                 logger.warning(f"RAG search failed (continuing without RAG): {e}")
@@ -381,49 +525,83 @@ async def session_report(
 【重要】請參考上述理論來支持你的分析和建議。在 analyze 和 suggestion 中可以引用相關理論。
 """
 
-        analysis_prompt = f"""你是專業的親子溝通分析師，負責分析家長與孩子的對話，提供建設性的回饋。
-{rag_context}{rag_instruction}
-【對話逐字稿】
+        # Calculate transcript duration hint
+        transcript_length = len(transcript)
+        duration_hint = (
+            "短對話"
+            if transcript_length < 500
+            else "中等對話"
+            if transcript_length < 2000
+            else "長對話"
+        )
+
+        # Build scenario context for report
+        scenario_section = ""
+        if session.scenario or session.scenario_description:
+            scenario_section = f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【家長煩惱情境】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{session.scenario or ''}
+{session.scenario_description or ''}
+
+⚠️ 請圍繞上述家長的煩惱情境進行分析，提供針對性的建議。
+"""
+
+        analysis_prompt = f"""你是專業的親子溝通分析師，精通 8 大教養流派（阿德勒正向教養、薩提爾、ABA行為分析、Dan Siegel 全腦教養、Gottman 情緒輔導、Ross Greene 協作問題解決、Dr. Becky Kennedy、社會意識教養），負責分析家長與孩子的對話，提供建設性的回饋。
+{scenario_section}{rag_context}{rag_instruction}
+【對話逐字稿】（{duration_hint}，共 {transcript_length} 字）
 {transcript}
 
 【分析要求】
-請以中性、客觀、溫和的立場分析這次對話，提供以下 4 個部分：
+請以中性、客觀、溫和的立場**深入分析**這次對話。
+⚠️ 重要：請根據對話長度提供**相應深度的分析**：
+- 短對話（< 500 字）：提供基本分析
+- 中等對話（500-2000 字）：提供詳細分析，包含多個觀察點
+- 長對話（> 2000 字）：提供完整、深入的分析，涵蓋對話中的各個關鍵時刻
+
+請提供以下 4 個部分：
 
 1. **鼓勵標題**（encouragement）
-   - 一句正向鼓勵的話，肯定家長願意溝通的心意
-   - 例如：「這次你已經做了一件重要的事：願意好好跟孩子談。」
-   - ≤ 40 字
+   - 一段正向鼓勵的話，肯定家長願意溝通的心意
+   - 具體指出家長做得好的地方
+   - 例如：「這次你已經做了一件重要的事：願意好好跟孩子談。當你說『我想聽聽你的想法』時，展現了開放的態度。」
 
 2. **待解決的議題**（issue）
    - 指出這次對話中最需要改進的地方
    - 客觀描述，不批判
-   - ≤ 50 字
+   - 如果對話較長，可以列出多個議題
 
 3. **溝通內容分析**（analyze）
-   - 分析為何這樣的溝通方式可能有問題
-   - 解釋背後的心理或教養原理
-   - ≤ 100 字
+   - **深入分析**為何這樣的溝通方式可能有問題
+   - 解釋背後的心理學或教養理論原理
+   - 引用相關教養流派的觀點（如：薩提爾冰山理論、阿德勒歸屬感、Gottman 情緒輔導等）
+   - 分析對話中的情緒動態、權力關係、溝通模式
+   - ⚠️ 對於長對話，請提供完整、詳盡的分析（300-500 字）
 
 4. **建議下次可以這樣說**（suggestion）
    - 提供具體、可直接使用的替代說法
-   - 用引號標示建議的話語
-   - ≤ 80 字
+   - 用「」標示建議的話語
+   - 提供多個情境下的建議話術
+   - 解釋為什麼這樣說更有效
+   - ⚠️ 對於長對話，提供多種情境的建議（200-400 字）
 
 【語氣要求】
 - 溫和、同理、建設性
 - 避免批判或讓家長感到被指責
+- 展現專業深度，讓家長感受到「有料」的分析
 
 【輸出格式】
 請以 JSON 格式回應：
 
 {{
-  "encouragement": "正向鼓勵標題",
-  "issue": "待解決的議題",
-  "analyze": "溝通內容分析",
-  "suggestion": "建議下次可以這樣說"
+  "encouragement": "正向鼓勵標題（包含具體觀察）",
+  "issue": "待解決的議題（可以是多點，用換行分隔）",
+  "analyze": "溝通內容深入分析（根據對話長度，提供 150-500 字的分析）",
+  "suggestion": "建議下次可以這樣說（提供多個情境的具體話術，150-400 字）"
 }}
 
-請開始分析。"""
+請開始深入分析。"""
 
         # Call Gemini
         gemini_service = GeminiService()
@@ -507,6 +685,73 @@ async def session_report(
         except Exception as e:
             # Billing failure should not block report response
             logger.error(f"Failed to record billing for report: {e}", exc_info=True)
+
+        # Create or update Report record for has_report flag
+        try:
+            existing_report = db.execute(
+                select(Report).where(
+                    Report.session_id == session_id,
+                    Report.deleted_at.is_(None),
+                )
+            ).scalar_one_or_none()
+
+            # Build content for Report
+            report_content_json = {
+                "encouragement": analysis.get("encouragement", ""),
+                "issue": analysis.get("issue", ""),
+                "analyze": analysis.get("analyze", ""),
+                "suggestion": analysis.get("suggestion", ""),
+                "references": [ref.model_dump() for ref in rag_references],
+            }
+
+            # Build markdown content
+            report_content_markdown = f"""# 親子對話報告
+
+## 🌟 鼓勵
+{analysis.get("encouragement", "")}
+
+## 💡 待解決的議題
+{analysis.get("issue", "")}
+
+## 📊 溝通內容分析
+{analysis.get("analyze", "")}
+
+## 💬 建議下次可以這樣說
+{analysis.get("suggestion", "")}
+"""
+
+            if existing_report:
+                # Update existing report
+                existing_report.content_json = report_content_json
+                existing_report.content_markdown = report_content_markdown
+                existing_report.status = ReportStatus.DRAFT
+                existing_report.prompt_tokens = gemini_response.get("prompt_tokens", 0)
+                existing_report.completion_tokens = gemini_response.get(
+                    "completion_tokens", 0
+                )
+                logger.info(f"Updated existing Report for session {session_id}")
+            else:
+                # Create new report
+                new_report = Report(
+                    session_id=session_id,
+                    client_id=client.id,
+                    created_by_id=current_user.id,
+                    tenant_id=tenant_id,
+                    status=ReportStatus.DRAFT,
+                    mode="island_parents",
+                    content_json=report_content_json,
+                    content_markdown=report_content_markdown,
+                    prompt_tokens=gemini_response.get("prompt_tokens", 0),
+                    completion_tokens=gemini_response.get("completion_tokens", 0),
+                )
+                db.add(new_report)
+                logger.info(f"Created new Report for session {session_id}")
+
+            db.commit()
+        except Exception as e:
+            # Report creation failure should not block response
+            logger.error(f"Failed to create/update Report record: {e}", exc_info=True)
+            db.rollback()
 
         return ParentsReportResponse(
             encouragement=analysis.get("encouragement", "感謝你願意花時間與孩子溝通。"),
