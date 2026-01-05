@@ -171,15 +171,19 @@
 
             const data = await response.json();
 
-            // Populate report
-            document.getElementById('report-encouragement').textContent = data.encouragement || '';
-            document.getElementById('report-issue').textContent = data.issue || '';
-            document.getElementById('report-analyze').textContent = data.analyze || '';
-            document.getElementById('report-suggestion').textContent = data.suggestion || '';
+            // Extract content from content_json (API returns nested structure)
+            const content = data.content_json || data;
 
-            // Format timestamp
-            if (data.timestamp) {
-                const date = new Date(data.timestamp);
+            // Populate report
+            document.getElementById('report-encouragement').textContent = content.encouragement || '';
+            document.getElementById('report-issue').textContent = content.issue || '';
+            document.getElementById('report-analyze').textContent = content.analyze || '';
+            document.getElementById('report-suggestion').textContent = content.suggestion || '';
+
+            // Format timestamp (use created_at from report or data.timestamp)
+            const timestamp = data.created_at || data.timestamp;
+            if (timestamp) {
+                const date = new Date(timestamp);
                 document.getElementById('report-timestamp').textContent = date.toLocaleString('zh-TW');
             }
 
