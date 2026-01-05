@@ -49,6 +49,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     | report | ✅ 職涯報告 | ✅ 8學派報告 | ✅ 通用 |
   - PRD updated with full architecture documentation
 
+### Changed
+- **Recording-Based Billing** (2026-01-05)
+  - Changed billing calculation from elapsed time to actual recording time
+  - Old method: `duration = current_time - session.start_time` (included idle/pause time)
+  - New method: `duration = sum(recordings[].duration_seconds)` (only counts recording time)
+  - User benefits:
+    - Pausing the conversation no longer incurs charges
+    - Counselor stepping away doesn't consume credits
+    - Only active recording time is billed
+  - File: `app/services/keyword_analysis_service.py`
+
+- **Credits API for Island Parents** (2026-01-05)
+  - Fixed clients_history.html to use `/api/auth/me` instead of non-existent `/api/v1/credits/balance`
+  - Now correctly displays remaining credits from `available_credits` field
+  - File: `app/templates/island_parents/clients_history.html`
+
 ### Fixed
 - **Traditional Chinese (zh-TW) Enforcement** (2026-01-02)
   - Issue: Simplified Chinese characters found in AI prompts and code comments

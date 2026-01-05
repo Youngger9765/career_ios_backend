@@ -515,10 +515,10 @@
         name.textContent = client.name;
     }
 
-    // Load usage stats
+    // Load usage stats from /api/auth/me
     async function loadUsageStats() {
         try {
-            const response = await fetch(`${API_BASE}/api/v1/credits/balance`, {
+            const response = await fetch(`${API_BASE}/api/auth/me`, {
                 headers: {
                     'Authorization': `Bearer ${state.token}`
                 }
@@ -526,10 +526,11 @@
 
             if (response.ok) {
                 const data = await response.json();
-                const usedMinutes = Math.floor((data.used_credits || 0) / 60);
-                const remainingMinutes = Math.floor((data.remaining_credits || 0) / 60);
+                // available_credits is in minutes (from auth/me)
+                const remainingMinutes = Math.floor(data.available_credits || 0);
 
-                document.getElementById('used-minutes').textContent = usedMinutes;
+                // Note: used_credits is not tracked, showing 0
+                document.getElementById('used-minutes').textContent = '0';
                 document.getElementById('remaining-minutes').textContent = remainingMinutes;
             }
         } catch (error) {

@@ -904,11 +904,19 @@ class KeywordAnalysisService:
 
             if session_usage:
                 # UPDATE existing SessionUsage (subsequent analysis)
-                # Calculate current duration and apply ceiling rounding
-                if session_usage.start_time:
-                    duration_seconds = int(
-                        (current_time - session_usage.start_time).total_seconds()
-                    )
+                # Calculate duration from RECORDING TIME (not elapsed time)
+                # This ensures idle/pause time is NOT charged to user
+                session_record = (
+                    self.db.query(Session).filter(Session.id == session_id).first()
+                )
+
+                # Sum up all recording segment durations
+                recordings = session_record.recordings if session_record else []
+                duration_seconds = sum(
+                    r.get("duration_seconds", 0) for r in (recordings or [])
+                )
+
+                if duration_seconds > 0:
                     current_minutes = math.ceil(duration_seconds / 60)
                     already_billed = session_usage.last_billed_minutes or 0
                     new_minutes = current_minutes - already_billed

@@ -34,6 +34,22 @@
     | report | ✅ 職涯報告 | ✅ 8學派報告 | ✅ 通用 |
   - PRD 已更新完整架構文件
 
+### 變更
+- **錄音時間計費** (2026-01-05)
+  - 計費方式從「經過時間」改為「實際錄音時間」
+  - 舊方式：`duration = current_time - session.start_time`（包含閒置/暫停時間）
+  - 新方式：`duration = sum(recordings[].duration_seconds)`（僅計算錄音時間）
+  - 使用者效益：
+    - 暫停對話時不計費
+    - 諮詢師離開接電話時不計費
+    - 只有實際錄音進行中才計費
+  - 檔案：`app/services/keyword_analysis_service.py`
+
+- **浮島家長版點數 API** (2026-01-05)
+  - 修復 clients_history.html 改用 `/api/auth/me` 取代不存在的 `/api/v1/credits/balance`
+  - 現在正確從 `available_credits` 欄位顯示剩餘點數
+  - 檔案：`app/templates/island_parents/clients_history.html`
+
 ### 修復
 - **繁體中文（zh-TW）強制執行** (2026-01-02)
   - 問題：AI prompt 和程式碼註解中發現簡體中文字元

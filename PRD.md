@@ -374,6 +374,19 @@
 - **詳細設計**: 參見 `docs/SESSION_USAGE_CREDIT_DESIGN.md`
 - **測試覆蓋**: 參見 `tests/integration/test_incremental_billing.py`
 
+#### ✅ Recording-Based Billing (Phase 2.1 - 已完成, 2025-01-05)
+- **計費方式變更**: 從「經過時間」改為「錄音累積時間」
+  - 舊方式: `duration = current_time - session.start_time`（包含暫停/閒置時間）
+  - 新方式: `duration = sum(recordings[].duration_seconds)`（僅計算實際錄音時間）
+- **使用者體驗改善**:
+  - ✅ 暫停對話時不計費
+  - ✅ 諮詢師離開接電話時不計費
+  - ✅ 只有實際錄音進行中才計費
+- **技術實作**:
+  - 修改 `KeywordAnalysisService._process_billing()` 方法
+  - 使用 `session.recordings` JSON 欄位累加 `duration_seconds`
+  - 📋 File: `app/services/keyword_analysis_service.py`
+
 #### 待實作功能（Phase 3）
 - ⚠️ 點數餘額不足警告（前端提示）
 - ⚠️ 訂閱到期提醒（Email/推播通知）
