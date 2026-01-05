@@ -134,6 +134,9 @@ def cleanup_test_records(gbq_service):
                     print(f"Warning: Failed to cleanup test record {record_id}: {e}")
 
 
+@pytest.mark.skip(
+    reason="Requires real Google BigQuery credentials which are not available in CI."
+)
 class TestGBQServiceRealBigQuery:
     """Integration tests for GBQService with real BigQuery"""
 

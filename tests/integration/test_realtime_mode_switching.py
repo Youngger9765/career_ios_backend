@@ -37,10 +37,15 @@ skip_without_gcp = pytest.mark.skipif(
 )
 
 
+@pytest.mark.skip(
+    reason="Endpoint /api/v1/realtime/analyze was removed. Tests need migration to session-based endpoints."
+)
 class TestRealtimeModeSwitching:
     """Test mode switching (emergency vs practice) for realtime counseling"""
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_emergency_mode_returns_simplified_response(self):
         """Test 1: Emergency mode should return ≤2 sentences per suggestion
 
@@ -94,7 +99,9 @@ class TestRealtimeModeSwitching:
                 summary_sentence_count <= 2
             ), f"Emergency mode summary too long: {data['summary']}"
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_practice_mode_returns_detailed_response(self):
         """Test 2: Practice mode should return detailed analysis
 
@@ -135,7 +142,9 @@ class TestRealtimeModeSwitching:
             # Suggestions can be longer in practice mode
             # No strict length limit for practice mode
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_default_mode_is_practice(self):
         """Test 3: Default mode should be 'practice' when mode is not specified
 
@@ -167,10 +176,15 @@ class TestRealtimeModeSwitching:
             assert len(data["suggestions"]) >= 2
 
 
+@pytest.mark.skip(
+    reason="Endpoint /api/v1/realtime/analyze was removed. Tests need migration to session-based endpoints."
+)
 class TestRiskLevelIndicators:
     """Test risk level assessment (red/yellow/green) for realtime counseling"""
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_safety_level_red_for_violent_language(self):
         """Test 4: Violent language should trigger RED risk level
 
@@ -203,7 +217,9 @@ class TestRiskLevelIndicators:
                 data["safety_level"] == "red"
             ), f"Expected 'red' but got '{data['safety_level']}'"
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_safety_level_yellow_for_escalating_conflict(self):
         """Test 5: Escalating conflict should trigger YELLOW risk level
 
@@ -236,7 +252,9 @@ class TestRiskLevelIndicators:
                 data["safety_level"] == "yellow"
             ), f"Expected 'yellow' but got '{data['safety_level']}'"
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_safety_level_green_for_positive_interaction(self):
         """Test 6: Positive interaction should trigger GREEN risk level
 
@@ -269,7 +287,9 @@ class TestRiskLevelIndicators:
                 data["safety_level"] == "green"
             ), f"Expected 'green' but got '{data['safety_level']}'"
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_safety_level_red_for_extreme_emotions(self):
         """Test 7: Extreme emotions should trigger RED risk level
 
@@ -299,7 +319,9 @@ class TestRiskLevelIndicators:
                 data["safety_level"] == "red"
             ), f"Expected 'red' but got '{data['safety_level']}'"
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_safety_level_yellow_for_frustration(self):
         """Test 8: Frustration without violence should trigger YELLOW
 
@@ -330,10 +352,15 @@ class TestRiskLevelIndicators:
             ), f"Expected 'yellow' but got '{data['safety_level']}'"
 
 
+@pytest.mark.skip(
+    reason="Endpoint /api/v1/realtime/analyze was removed. Tests need migration to session-based endpoints."
+)
 class TestSchemaValidation:
     """Test schema validation for mode and safety_level fields"""
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_schema_validation_mode_field_emergency(self):
         """Test 9: Verify mode field accepts 'emergency'
 
@@ -355,7 +382,9 @@ class TestSchemaValidation:
             data = response.json()
             assert "safety_level" in data
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_schema_validation_mode_field_practice(self):
         """Test 10: Verify mode field accepts 'practice'
 
@@ -379,11 +408,19 @@ class TestSchemaValidation:
             data = response.json()
             assert "safety_level" in data
 
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Mode validation now happens at session-based endpoints."
+    )
     def test_schema_validation_invalid_mode(self):
         """Test 11: Verify invalid mode is rejected
 
         Scenario: POST with mode="invalid"
         Expected: Should return 422 validation error
+
+        NOTE: This test is skipped because the /api/v1/realtime/analyze endpoint
+        was removed. Mode validation is now handled by session-based endpoints
+        like /api/v1/sessions/{session_id}/deep-analyze which use query params
+        instead of request body for mode.
         """
         with TestClient(app) as client:
             response = client.post(
@@ -399,7 +436,9 @@ class TestSchemaValidation:
             # Should fail validation
             assert response.status_code == 422
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_schema_validation_safety_level_in_response(self):
         """Test 12: Verify response includes safety_level field
 
@@ -429,7 +468,9 @@ class TestSchemaValidation:
                 "green",
             ], f"Invalid safety_level: {data['safety_level']}"
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_complete_response_schema(self):
         """Test 13: Verify complete response schema with all new fields
 
@@ -471,10 +512,15 @@ class TestSchemaValidation:
             assert data["safety_level"] in ["red", "yellow", "green"]
 
 
+@pytest.mark.skip(
+    reason="Endpoint /api/v1/realtime/analyze was removed. Tests need migration to session-based endpoints."
+)
 class TestModeSwitchingWithRiskLevel:
     """Test interaction between mode switching and risk level"""
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_emergency_mode_with_red_safety_level(self):
         """Test 14: Emergency mode + RED risk should provide urgent, simplified guidance
 
@@ -509,7 +555,9 @@ class TestModeSwitchingWithRiskLevel:
                 )
                 assert sentence_count <= 2
 
-    @skip_without_gcp
+    @pytest.mark.skip(
+        reason="Endpoint /api/v1/realtime/analyze was removed. Use /api/v1/sessions/{session_id}/deep-analyze instead."
+    )
     def test_practice_mode_with_green_safety_level(self):
         """Test 15: Practice mode + GREEN risk should provide detailed learning guidance
 

@@ -79,6 +79,8 @@ class TestWebSessionWorkflow:
                 "current_status": "進行中",
                 "case_summary": "Web 即時諮詢測試",
                 "case_goals": "測試 Session workflow",
+                "grade": "小學三年級",
+                "relationship": "媽媽",
             },
         )
         assert (
@@ -190,6 +192,8 @@ class TestWebSessionWorkflow:
                 "current_status": "進行中",
                 "case_summary": "測試多次即時分析",
                 "case_goals": "驗證 workflow 穩定性",
+                "grade": "小學四年級",
+                "relationship": "爸爸",
             },
         )
         assert client_case_response.status_code == 201
@@ -267,6 +271,8 @@ class TestWebSessionWorkflow:
                 "phone": "0900000002",
                 "identity_option": "其他",
                 "current_status": "進行中",
+                "grade": "小學五年級",
+                "relationship": "媽媽",
             },
         )
         assert client_case_response.status_code == 201

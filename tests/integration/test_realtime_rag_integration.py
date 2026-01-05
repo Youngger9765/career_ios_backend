@@ -37,6 +37,9 @@ skip_without_gcp = pytest.mark.skipif(
 )
 
 
+@pytest.mark.skip(
+    reason="Endpoint /api/v1/realtime/analyze was removed. Tests need migration to session-based endpoints."
+)
 class TestRealtimeRAGIntegration:
     """Test RAG integration with Realtime Analysis API"""
 

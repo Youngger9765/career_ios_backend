@@ -38,6 +38,9 @@ skip_without_gcp = pytest.mark.skipif(
 )
 
 
+@pytest.mark.skip(
+    reason="Endpoint /api/v1/realtime/analyze was removed. Tests need migration to session-based endpoints."
+)
 class TestRealtimeExpertSuggestionsAPI:
     """Test Realtime API integration with 200 expert suggestions
 
