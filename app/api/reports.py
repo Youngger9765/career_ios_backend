@@ -105,6 +105,44 @@ async def _generate_report_background(
         except Exception as summary_error:
             print(f"Warning: Failed to generate session summary: {summary_error}")
 
+        # Generate scenario/scenario_description if missing (Island Parents)
+        try:
+            from app.services.scenario_generator_service import (
+                scenario_generator_service,
+            )
+
+            session_result = db.execute(
+                select(SessionModel).where(SessionModel.id == session_id)
+            )
+            session_obj = session_result.scalar_one_or_none()
+            if session_obj:
+                needs_update = False
+
+                # Generate scenario if missing
+                if not session_obj.scenario:
+                    session_obj.scenario = (
+                        await scenario_generator_service.generate_scenario(transcript)
+                    )
+                    needs_update = True
+                    print(f"Auto-generated scenario: {session_obj.scenario}")
+
+                # Generate scenario_description if missing
+                if not session_obj.scenario_description:
+                    session_obj.scenario_description = (
+                        await scenario_generator_service.generate_scenario_description(
+                            transcript
+                        )
+                    )
+                    needs_update = True
+                    print(
+                        f"Auto-generated scenario_description: {session_obj.scenario_description[:50]}..."
+                    )
+
+                if needs_update:
+                    db.commit()
+        except Exception as scenario_error:
+            print(f"Warning: Failed to generate scenario: {scenario_error}")
+
     except Exception as e:
         # Mark as failed
         if report:
