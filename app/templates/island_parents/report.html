@@ -20,7 +20,7 @@
         <!-- Loading State -->
         <div id="loading-state" class="flex flex-col items-center justify-center py-12">
             <div class="loading-spinner mb-4"></div>
-            <p class="text-gray-600">正在生成報告...</p>
+            <p class="text-gray-600" id="loading-message">正在載入報告...</p>
         </div>
 
         <!-- Error State -->
@@ -120,14 +120,16 @@
         return parts[parts.length - 1];
     }
 
-    // Load report from API
+    // Load report from API (GET first, POST to generate if not exists)
     async function loadReport() {
         const loadingState = document.getElementById('loading-state');
+        const loadingMessage = document.getElementById('loading-message');
         const errorState = document.getElementById('error-state');
         const reportContent = document.getElementById('report-content');
 
         // Show loading
         loadingState.classList.remove('hidden');
+        loadingMessage.textContent = '正在載入報告...';
         errorState.classList.add('hidden');
         reportContent.classList.add('hidden');
 
@@ -138,14 +140,26 @@
                 return;
             }
 
-            const response = await fetch(`/api/v1/sessions/${sessionId}/report`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'X-Tenant-Id': 'island_parents'
-                }
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'X-Tenant-Id': 'island_parents'
+            };
+
+            // Step 1: Try GET existing report first
+            let response = await fetch(`/api/v1/sessions/${sessionId}/report`, {
+                method: 'GET',
+                headers: headers
             });
+
+            // Step 2: If no report exists (404), generate one with POST
+            if (response.status === 404) {
+                loadingMessage.textContent = '正在生成報告...';
+                response = await fetch(`/api/v1/sessions/${sessionId}/report`, {
+                    method: 'POST',
+                    headers: headers
+                });
+            }
 
             if (!response.ok) {
                 if (response.status === 401) {
@@ -177,7 +191,7 @@
             console.error('Failed to load report:', error);
             loadingState.classList.add('hidden');
             errorState.classList.remove('hidden');
-            document.getElementById('error-message').textContent = `生成報告時發生錯誤：${error.message}`;
+            document.getElementById('error-message').textContent = `載入報告時發生錯誤：${error.message}`;
         }
     }
 
