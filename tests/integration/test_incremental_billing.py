@@ -13,7 +13,6 @@ Test Requirements:
 import math
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -119,45 +118,58 @@ class TestIncrementalBilling:
         elapsed_seconds,
     ):
         """
-        Call analyze-partial endpoint with mocked time.
+        Call analyze-partial endpoint with recording-based billing.
 
-        This simulates an analysis at a specific elapsed time from session start.
+        This simulates an analysis with recordings that have a specific total duration.
+        NEW: Billing is now based on sum of recording durations, not elapsed time.
 
         Args:
             db_session: Database session
             session_id: Session UUID
             transcript_segment: Transcript text
             auth_headers: Auth headers
-            elapsed_seconds: Seconds elapsed from session start
+            elapsed_seconds: Duration in seconds to add as recording
 
         Returns:
             Response from API
         """
-        # Get session_usage to get start_time (or use current time if first analysis)
-        session_usage = (
-            db_session.query(SessionUsage)
-            .filter(SessionUsage.session_id == session_id)
-            .first()
+        # NEW: Add recording with the specified duration for recording-based billing
+        # Each call represents a new recording segment
+        session_record = (
+            db_session.query(SessionModel).filter(SessionModel.id == session_id).first()
         )
 
-        if session_usage and session_usage.start_time:
-            analysis_time = session_usage.start_time + timedelta(
-                seconds=elapsed_seconds
+        if session_record:
+            # Get existing recordings or create empty list
+            existing_recordings = session_record.recordings or []
+
+            # Calculate new recording duration (difference from previous total)
+            existing_total = sum(
+                r.get("duration_seconds", 0) for r in existing_recordings
             )
-        else:
-            analysis_time = datetime.now(timezone.utc)
+            new_duration = elapsed_seconds - existing_total
+
+            if new_duration > 0:
+                # Add new recording segment
+                new_recording = {
+                    "id": str(uuid4()),
+                    "start_time": datetime.now(timezone.utc).isoformat(),
+                    "end_time": (
+                        datetime.now(timezone.utc) + timedelta(seconds=new_duration)
+                    ).isoformat(),
+                    "duration_seconds": new_duration,
+                    "transcript_segment": transcript_segment,
+                }
+                session_record.recordings = existing_recordings + [new_recording]
+                db_session.commit()
+                db_session.refresh(session_record)
 
         with TestClient(app) as client:
-            # Mock datetime.now() to return specific time
-            with patch("app.services.keyword_analysis_service.datetime") as mock_dt:
-                mock_dt.now.return_value = analysis_time
-                mock_dt.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
-
-                response = client.post(
-                    f"/api/v1/sessions/{session_id}/analyze-partial",
-                    headers=auth_headers,
-                    json={"transcript_segment": transcript_segment},
-                )
+            response = client.post(
+                f"/api/v1/sessions/{session_id}/analyze-partial",
+                headers=auth_headers,
+                json={"transcript_segment": transcript_segment},
+            )
 
         return response
 
