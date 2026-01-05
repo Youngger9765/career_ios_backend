@@ -15,6 +15,21 @@
         <div class="w-10"></div>
     </div>
 
+    <!-- Session Info -->
+    <div id="session-info" class="hidden px-4 py-3 bg-gray-50 border-b">
+        <div class="max-w-md mx-auto">
+            <p id="session-scenario" class="text-base font-semibold text-gray-900"></p>
+            <p id="session-description" class="text-sm text-gray-600 mb-1"></p>
+            <p class="text-xs text-gray-400">
+                <span id="session-client-name"></span>
+                <span class="mx-1">•</span>
+                <span id="session-start-time"></span>
+                <span class="mx-1">•</span>
+                <span id="session-duration"></span>
+            </p>
+        </div>
+    </div>
+
     <!-- Content -->
     <div class="flex-1 overflow-y-auto px-4 py-6">
         <!-- Loading State -->
@@ -120,6 +135,78 @@
         return parts[parts.length - 1];
     }
 
+    // Render basic markdown (bold only, sanitized)
+    function renderMarkdown(text) {
+        if (!text) return '';
+        // Escape HTML first to prevent XSS
+        const escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        // Convert **text** to <strong>text</strong>
+        return escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    }
+
+    // Format duration in minutes (round UP)
+    function formatDuration(seconds) {
+        if (!seconds) return '0 分鐘';
+        const minutes = Math.ceil(seconds / 60);
+        return `${minutes} 分鐘`;
+    }
+
+    // Format date/time
+    function formatDateTime(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleString('zh-TW', {
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    // Calculate duration from start_time and end_time
+    function calculateDuration(startTime, endTime) {
+        if (!startTime || !endTime) return 0;
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        return Math.round((end - start) / 1000); // seconds
+    }
+
+    // Load session info
+    async function loadSessionInfo(headers) {
+        try {
+            const response = await fetch(`/api/v1/sessions/${sessionId}`, {
+                method: 'GET',
+                headers: headers
+            });
+            if (response.ok) {
+                const session = await response.json();
+
+                // Scenario title and description
+                const scenario = session.scenario_title || session.name || '對話';
+                const description = session.scenario_description || session.scenario_goal || '';
+                document.getElementById('session-scenario').textContent = scenario;
+                document.getElementById('session-description').textContent = description;
+
+                // Client name, time, duration
+                document.getElementById('session-client-name').textContent = session.client_name || '未知';
+                document.getElementById('session-start-time').textContent = formatDateTime(session.start_time || session.created_at);
+
+                // Calculate duration from start_time and end_time
+                const durationSeconds = session.duration_seconds ||
+                    calculateDuration(session.start_time, session.end_time) ||
+                    (session.duration_minutes ? session.duration_minutes * 60 : 0);
+                document.getElementById('session-duration').textContent = formatDuration(durationSeconds);
+
+                document.getElementById('session-info').classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Failed to load session info:', error);
+        }
+    }
+
     // Load report from API (GET first, POST to generate if not exists)
     async function loadReport() {
         const loadingState = document.getElementById('loading-state');
@@ -174,11 +261,14 @@
             // Extract content from content_json (API returns nested structure)
             const content = data.content_json || data;
 
-            // Populate report
-            document.getElementById('report-encouragement').textContent = content.encouragement || '';
-            document.getElementById('report-issue').textContent = content.issue || '';
-            document.getElementById('report-analyze').textContent = content.analyze || '';
-            document.getElementById('report-suggestion').textContent = content.suggestion || '';
+            // Populate report with markdown rendering
+            document.getElementById('report-encouragement').innerHTML = renderMarkdown(content.encouragement);
+            document.getElementById('report-issue').innerHTML = renderMarkdown(content.issue);
+            document.getElementById('report-analyze').innerHTML = renderMarkdown(content.analyze);
+            document.getElementById('report-suggestion').innerHTML = renderMarkdown(content.suggestion);
+
+            // Load session info (child name, start time, duration)
+            loadSessionInfo(headers);
 
             // Format timestamp (use created_at from report or data.timestamp)
             const timestamp = data.created_at || data.timestamp;
