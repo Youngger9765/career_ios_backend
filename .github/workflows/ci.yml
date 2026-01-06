@@ -61,10 +61,14 @@ jobs:
         CODEER_AGENT_GEMINI_FLASH: ${{ secrets.CODEER_AGENT_GEMINI_FLASH }}
         CODEER_AGENT_GPT5_MINI: ${{ secrets.CODEER_AGENT_GPT5_MINI }}
       run: |
-        # Both main and staging use same test config (skip GCP-dependent tests)
-        # Full tests requiring GCP credentials should be run locally before merge
+        # Skip tests requiring GCP/Gemini credentials
+        # Full tests should be run locally before merge
         echo "⚡ Running integration tests (skipping GCP-dependent tests)"
-        poetry run pytest tests/integration/ -v -rs --ignore=tests/integration/test_rwd_mobile_playwright.py
+        poetry run pytest tests/integration/ -v -rs \
+          --ignore=tests/integration/test_rwd_mobile_playwright.py \
+          --ignore=tests/integration/test_enhanced_formats.py \
+          --ignore=tests/integration/test_legacy_formats.py \
+          --ignore=tests/integration/test_reports_api.py
 
   deploy:
     name: Deploy to Cloud Run
