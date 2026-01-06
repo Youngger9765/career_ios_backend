@@ -61,14 +61,10 @@ jobs:
         CODEER_AGENT_GEMINI_FLASH: ${{ secrets.CODEER_AGENT_GEMINI_FLASH }}
         CODEER_AGENT_GPT5_MINI: ${{ secrets.CODEER_AGENT_GPT5_MINI }}
       run: |
-        if [ "$CI_BRANCH" == "main" ]; then
-          echo "🔍 Running COMPLETE tests on main branch (includes expensive RAG tests)"
-          poetry run pytest tests/integration/ -v -ra --ignore=tests/integration/test_rwd_mobile_playwright.py
-        else
-          echo "⚡ Running FAST tests on staging branch (skips expensive RAG tests)"
-          echo "ℹ️  Expensive tests will be marked as SKIPPED and shown in summary"
-          poetry run pytest tests/integration/ -v -rs --ignore=tests/integration/test_rwd_mobile_playwright.py
-        fi
+        # Both main and staging use same test config (skip GCP-dependent tests)
+        # Full tests requiring GCP credentials should be run locally before merge
+        echo "⚡ Running integration tests (skipping GCP-dependent tests)"
+        poetry run pytest tests/integration/ -v -rs --ignore=tests/integration/test_rwd_mobile_playwright.py
 
   deploy:
     name: Deploy to Cloud Run
