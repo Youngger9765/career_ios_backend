@@ -114,14 +114,9 @@
   - 需加入 `ENVIRONMENT != "production" AND != "staging"` 檢查
   - 參考已修復的 `admin_counselors.py`
 
-#### 4. 代碼品質 🟡
-- [ ] **Pydantic V2 Deprecation Warnings** - 16 處 class Config 需改為 ConfigDict
-  - `app/schemas/analysis.py` (2處)
-  - `app/schemas/ui_client_case.py` (3處)
-  - `app/schemas/session_usage.py` (2處)
-  - 其他 schemas
-- [ ] **datetime.utcnow() Deprecation** - `app/core/security.py:63`
-  - 改用 `datetime.now(timezone.utc)`
+#### 4. 代碼品質 ✅ **已完成**
+- [x] **Pydantic V2 Deprecation Warnings** - 14 處 class Config 改為 ConfigDict
+- [x] **datetime.utcnow() Deprecation** - 3 處改用 `datetime.now(timezone.utc)`
 
 #### 5. 文件同步機制 🟢 (可選)
 - [ ] 建立 API 文件驗證腳本 `scripts/validate_api_docs.py`

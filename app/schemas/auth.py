@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.counselor import CounselorRole
 
@@ -63,8 +63,7 @@ class CounselorInfo(BaseModel):
     # Credit system fields
     available_credits: float = 0.0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CounselorUpdate(BaseModel):
@@ -81,11 +80,11 @@ class PasswordResetRequest(BaseModel):
     phone: Optional[str] = None
     tenant_id: str
 
-    class Config:
-        # At least one of email or phone must be provided
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {"email": "user@example.com", "tenant_id": "test_tenant"}
         }
+    )
 
 
 class PasswordResetResponse(BaseModel):

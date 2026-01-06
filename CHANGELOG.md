@@ -30,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No impact on iOS app or end-user APIs
 
 ### Fixed
+- **Pydantic V2 Deprecation Warnings** (2026-01-07)
+  - Migrated 14 `class Config:` blocks to `model_config = ConfigDict(...)` pattern
+  - Files updated: auth.py, analysis.py, ui_client_case.py, session_usage.py, client.py, session.py, report.py
+  - All 333 integration tests pass
+- **datetime.utcnow() Deprecation** (2026-01-07)
+  - Replaced deprecated `datetime.utcnow()` with `datetime.now(timezone.utc)`
+  - Files: security.py, credit_billing.py, billing_analyzer.py
 - **IOS_GUIDE_PARENTS.md** - Authentication API documentation corrections (2026-01-07)
   - Fixed login endpoint: `/api/v1/auth/login` → `/api/auth/login`
   - Fixed login body: `username` → `email` + added `tenant_id` requirement
