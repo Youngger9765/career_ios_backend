@@ -2,7 +2,7 @@
 Integration tests for Admin Credit Management APIs
 Following TDD approach - these tests define the expected behavior
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -249,7 +249,7 @@ class TestAdminBillingRates:
             "rule_name": "voice_call",
             "calculation_method": "per_second",
             "rate_config": {"credits_per_second": 0.0278},
-            "effective_from": datetime.utcnow().isoformat(),
+            "effective_from": datetime.now(timezone.utc).isoformat(),
         }
 
         response = client.post(
@@ -273,7 +273,7 @@ class TestAdminBillingRates:
             "rule_name": existing_billing_rate["rule_name"],
             "calculation_method": "per_second",
             "rate_config": {"credits_per_second": 0.03},  # Updated rate
-            "effective_from": datetime.utcnow().isoformat(),
+            "effective_from": datetime.now(timezone.utc).isoformat(),
         }
 
         response = client.post(
@@ -333,7 +333,7 @@ class TestAdminBillingRates:
             "rule_name": "test",
             "calculation_method": "per_second",
             "rate_config": {"credits_per_second": 1},
-            "effective_from": datetime.utcnow().isoformat(),
+            "effective_from": datetime.now(timezone.utc).isoformat(),
         }
 
         response = client.post(
@@ -579,7 +579,7 @@ def billing_rates(db_session):
             rate_config={"credits_per_second": 0.0278},
             version=1,
             is_active=True,
-            effective_from=datetime.utcnow() - timedelta(days=30),
+            effective_from=datetime.now(timezone.utc) - timedelta(days=30),
         ),
         CreditRate(
             rule_name="text_session",
@@ -587,7 +587,7 @@ def billing_rates(db_session):
             rate_config={"credits_per_minute": 10},
             version=1,
             is_active=True,
-            effective_from=datetime.utcnow() - timedelta(days=30),
+            effective_from=datetime.now(timezone.utc) - timedelta(days=30),
         ),
     ]
 
