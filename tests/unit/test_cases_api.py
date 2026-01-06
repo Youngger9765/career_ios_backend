@@ -343,8 +343,8 @@ class TestDeleteCase:
             db=db,
         )
 
-        assert db.delete.called_with(mock_case)
-        assert db.commit.called
+        db.delete.assert_called_with(mock_case)
+        db.commit.assert_called()
 
     def test_delete_case_not_found(self):
         """Test deleting non-existent case raises 404"""

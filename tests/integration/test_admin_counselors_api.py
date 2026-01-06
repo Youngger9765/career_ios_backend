@@ -633,7 +633,8 @@ class TestAdminCreateCounselor:
 
         assert reset_token is not None
         assert reset_token.used is False
-        assert reset_token.expires_at > datetime.now(timezone.utc)
+        # Compare as naive datetimes (SQLite stores naive)
+        assert reset_token.expires_at > datetime.now(timezone.utc).replace(tzinfo=None)
 
     def test_create_counselor_email_send_failure_does_not_block_creation(
         self, client, admin_token, monkeypatch
