@@ -52,7 +52,13 @@ def require_admin(
     In production mode or with authentication, the tenant_id from the JWT token is used.
     """
     # DEBUG MODE: Allow access without credentials
-    if settings.DEBUG and credentials is None:
+    # SECURITY: Only allow in development environment, NEVER in production
+    is_safe_debug = (
+        settings.DEBUG
+        and settings.ENVIRONMENT != "production"
+        and settings.ENVIRONMENT != "staging"
+    )
+    if is_safe_debug and credentials is None:
         # Use tenant_id from query parameter or default to 'career'
         # This allows frontend tenant switcher to work in debug mode
         mock_tenant_id = tenant_id or "career"

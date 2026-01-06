@@ -22,6 +22,13 @@
   - 更新 `__init__.py` 支援向後相容的重新匯出
   - 全部 333 個整合測試通過
 
+### 安全性
+- **Admin API DEBUG 模式強化** (2026-01-07)
+  - 修復允許未認證訪問管理功能的安全漏洞
+  - DEBUG 模式現在需要 `ENVIRONMENT != production AND != staging`
+  - 影響 12 個管理端點：諮詢師管理 + 點數管理
+  - 不影響 iOS App 或一般用戶 API
+
 ### 修復
 - **IOS_GUIDE_PARENTS.md** - 修正 quick-feedback API 文件
   - 移除過時的 `recent_transcript` body 需求

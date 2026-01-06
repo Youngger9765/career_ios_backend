@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `__init__.py` with backward-compatible re-exports
   - All 333 integration tests pass
 
+### Security
+- **Admin API DEBUG Mode Hardening** (2026-01-07)
+  - Fixed security vulnerability allowing unauthenticated admin access
+  - DEBUG mode now requires `ENVIRONMENT != production AND != staging`
+  - Affects 12 admin endpoints: counselor management + credits management
+  - No impact on iOS app or end-user APIs
+
 ### Fixed
 - **IOS_GUIDE_PARENTS.md** - Corrected quick-feedback API documentation
   - Removed outdated `recent_transcript` body requirement
