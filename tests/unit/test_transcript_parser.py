@@ -14,7 +14,7 @@ import pytest
 
 # Import will fail initially - this is expected (RED phase)
 try:
-    from app.services.transcript_parser import TranscriptParser
+    from app.services.analysis.transcript_parser import TranscriptParser
 except ImportError:
     TranscriptParser = None
 

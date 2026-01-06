@@ -19,7 +19,7 @@ class EvaluationRecommendationsService:
         Returns:
             Dictionary with recommendations, summary, and statistics
         """
-        from app.services.evaluation_analysis import (
+        from app.services.evaluation.evaluation_analysis import (
             analyze_chunk_strategy_performance,
             analyze_instruction_version_performance,
             calculate_coverage_metrics,

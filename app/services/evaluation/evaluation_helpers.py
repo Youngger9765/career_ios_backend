@@ -17,7 +17,7 @@ from sqlalchemy import String, bindparam, text
 from sqlalchemy.orm import Session
 
 from app.models.evaluation import EvaluationExperiment
-from app.services.openai_service import OpenAIService
+from app.services.external.openai_service import OpenAIService
 
 
 def safe_metric(value) -> Optional[float]:

@@ -21,7 +21,7 @@ from app.schemas.reports import (
     GenerateReportResponse,
     ProcessingStatus,
 )
-from app.services.report_operations_service import ReportOperationsService
+from app.services.reporting.report_operations_service import ReportOperationsService
 
 router = APIRouter(prefix="/api/v1/reports", tags=["Reports"])
 
@@ -41,7 +41,7 @@ async def _generate_report_background(
     from app.core.database import SessionLocal
     from app.models.report import Report
     from app.models.session import Session as SessionModel
-    from app.services.session_summary_service import session_summary_service
+    from app.services.core.session_summary_service import session_summary_service
     from app.utils.report_formatters import create_formatter, unwrap_report
 
     db = SessionLocal()
@@ -107,7 +107,7 @@ async def _generate_report_background(
 
         # Generate scenario/scenario_description if missing (Island Parents)
         try:
-            from app.services.scenario_generator_service import (
+            from app.services.core.scenario_generator_service import (
                 scenario_generator_service,
             )
 

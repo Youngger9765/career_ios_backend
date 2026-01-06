@@ -124,11 +124,11 @@ class TestE2ESessionWorkflow:
             }
 
         with patch(
-            "app.services.keyword_analysis_service.GeminiService"
+            "app.services.analysis.keyword_analysis_service.GeminiService"
         ) as mock_deep, patch(
-            "app.services.quick_feedback_service.GeminiService"
+            "app.services.core.quick_feedback_service.GeminiService"
         ) as mock_quick, patch(
-            "app.services.gemini_service.GeminiService"
+            "app.services.external.gemini_service.GeminiService"
         ) as mock_report:
             # Deep analyze mock
             mock_deep_instance = mock_deep.return_value

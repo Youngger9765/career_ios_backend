@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.services.openai_service import OpenAIService
+from app.services.external.openai_service import OpenAIService
 
 
 class TestOpenAIService:

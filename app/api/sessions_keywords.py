@@ -23,8 +23,8 @@ from app.schemas.analysis import (
     IslandParentAnalysisResponse,
 )
 from app.schemas.session import KeywordAnalysisRequest, KeywordAnalysisResponse
-from app.services.keyword_analysis_service import KeywordAnalysisService
-from app.services.session_service import SessionService
+from app.services.analysis.keyword_analysis_service import KeywordAnalysisService
+from app.services.core.session_service import SessionService
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["Sessions - Keywords"])
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ def save_analysis_log_and_gbq(
     """
     import asyncio
 
-    from app.services.gbq_service import gbq_service
+    from app.services.external.gbq_service import gbq_service
 
     try:
         # Extract metadata

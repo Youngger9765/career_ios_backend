@@ -14,7 +14,7 @@ import pytest
 
 # Import will fail initially - this is expected (RED phase)
 try:
-    from app.services.dialogue_extractor import DialogueExtractor
+    from app.services.analysis.dialogue_extractor import DialogueExtractor
 except ImportError:
     DialogueExtractor = None
 

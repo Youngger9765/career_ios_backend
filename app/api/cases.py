@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, get_tenant_id
 from app.models.counselor import Counselor
 from app.schemas.case import CaseCreate, CaseResponse, CaseUpdate
-from app.services.case_service import CaseService
+from app.services.clients.case_service import CaseService
 
 router = APIRouter(prefix="/api/v1/cases", tags=["Cases"])
 

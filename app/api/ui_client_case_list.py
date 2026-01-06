@@ -22,7 +22,7 @@ from app.schemas.ui_client_case import (
     UpdateClientCaseRequest,
     validate_client_case_by_tenant,
 )
-from app.services.client_case_service import ClientCaseService
+from app.services.clients.client_case_service import ClientCaseService
 
 router = APIRouter(prefix="/api/v1/ui", tags=["UI APIs"])
 

@@ -26,9 +26,9 @@ from app.models.session_analysis_log import SessionAnalysisLog
 from app.models.session_usage import SessionUsage
 from app.prompts import PromptRegistry
 from app.schemas.session import CounselingMode
-from app.services.gemini_service import GeminiService
-from app.services.openai_service import OpenAIService
-from app.services.rag_retriever import RAGRetriever
+from app.services.external.gemini_service import GeminiService
+from app.services.external.openai_service import OpenAIService
+from app.services.rag.rag_retriever import RAGRetriever
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ import time
 from typing import Dict, Optional
 
 from app.prompts import PromptRegistry
-from app.services.gemini_service import GeminiService
+from app.services.external.gemini_service import GeminiService
 
 logger = logging.getLogger(__name__)
 

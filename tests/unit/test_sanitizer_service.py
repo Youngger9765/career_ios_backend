@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.services.sanitizer_service import SanitizerService
+from app.services.analysis.sanitizer_service import SanitizerService
 
 
 class TestSanitizerService:

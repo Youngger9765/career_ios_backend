@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.services.chunking import ChunkingService
+from app.services.rag.chunking import ChunkingService
 
 
 class TestChunkingService:

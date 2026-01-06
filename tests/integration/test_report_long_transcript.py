@@ -284,7 +284,7 @@ class TestReportLongTranscript:
                     "estimated_cost_usd": 0.003,
                 }
 
-        with patch("app.services.gemini_service.GeminiService") as mock_gemini:
+        with patch("app.services.external.gemini_service.GeminiService") as mock_gemini:
             mock_instance = mock_gemini.return_value
             mock_instance.chat_completion = AsyncMock(side_effect=mock_chat_completion)
             yield mock_instance

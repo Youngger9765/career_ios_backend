@@ -16,7 +16,7 @@ from app.schemas.client import (
     ClientResponse,
     ClientUpdate,
 )
-from app.services.client_service import ClientService
+from app.services.clients.client_service import ClientService
 
 router = APIRouter(prefix="/api/v1/clients", tags=["Clients"])
 

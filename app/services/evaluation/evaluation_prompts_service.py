@@ -147,7 +147,7 @@ class EvaluationPromptsService:
         Raises:
             HTTPException: If either version not found
         """
-        from app.services.evaluation_analysis import (
+        from app.services.evaluation.evaluation_analysis import (
             calculate_average_metrics,
             calculate_template_diff,
         )

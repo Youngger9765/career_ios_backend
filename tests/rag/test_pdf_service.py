@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.services.pdf_service import PDFService
+from app.services.rag.pdf_service import PDFService
 
 
 class TestPDFService:

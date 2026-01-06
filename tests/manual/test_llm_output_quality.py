@@ -251,7 +251,9 @@ class TestQuickFeedbackOutputQuality:
         """Mock Gemini for quick feedback"""
         from unittest.mock import AsyncMock, MagicMock
 
-        with patch("app.services.quick_feedback_service.GeminiService") as mock_service:
+        with patch(
+            "app.services.core.quick_feedback_service.GeminiService"
+        ) as mock_service:
             mock_instance = mock_service.return_value
             mock_response = MagicMock()
             mock_response.text = "🟢 語氣溫和，繼續保持同理心"
@@ -431,9 +433,9 @@ class TestModeCombinations:
             return AsyncMock(return_value=mock_response)
 
         with patch(
-            "app.services.keyword_analysis_service.GeminiService"
+            "app.services.analysis.keyword_analysis_service.GeminiService"
         ) as mock_deep, patch(
-            "app.services.quick_feedback_service.GeminiService"
+            "app.services.core.quick_feedback_service.GeminiService"
         ) as mock_quick:
             mock_deep.return_value.generate_text = create_mock_for_deep()
             mock_quick.return_value.generate_text = create_mock_for_quick()

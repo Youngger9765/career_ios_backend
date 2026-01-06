@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.services.rag_ingest_service import RAGIngestService
+from app.services.rag.rag_ingest_service import RAGIngestService
 
 router = APIRouter(prefix="/api/rag/ingest", tags=["rag-ingest"])
 

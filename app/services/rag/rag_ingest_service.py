@@ -8,10 +8,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models.document import Chunk, Datasource, Document, Embedding
-from app.services.chunking import ChunkingService
-from app.services.openai_service import OpenAIService
-from app.services.pdf_service import PDFService
-from app.services.storage import StorageService
+from app.services.external.openai_service import OpenAIService
+from app.services.external.storage import StorageService
+from app.services.rag.chunking import ChunkingService
+from app.services.rag.pdf_service import PDFService
 
 
 class RAGIngestService:

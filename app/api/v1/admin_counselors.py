@@ -26,7 +26,7 @@ from app.schemas.admin_counselor import (
     CounselorListResponse,
     CounselorUpdateRequest,
 )
-from app.services.email_sender import email_sender
+from app.services.external.email_sender import email_sender
 
 logger = logging.getLogger(__name__)
 

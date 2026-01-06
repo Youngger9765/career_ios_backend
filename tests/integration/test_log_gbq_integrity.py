@@ -362,7 +362,7 @@ class TestLogAndGBQIntegrity:
         session_id = test_session.id
 
         # Mock GBQService at the services level where it's imported
-        with patch("app.services.gbq_service.gbq_service") as mock_gbq:
+        with patch("app.services.external.gbq_service.gbq_service") as mock_gbq:
             mock_gbq.write_analysis_log = MagicMock(return_value=True)
 
             with TestClient(app) as client:
@@ -411,7 +411,7 @@ class TestLogAndGBQIntegrity:
             captured_gbq_data.append(data)
             return True
 
-        with patch("app.services.gbq_service.gbq_service") as mock_gbq:
+        with patch("app.services.external.gbq_service.gbq_service") as mock_gbq:
             mock_gbq.write_analysis_log = mock_write_analysis_log
 
             with TestClient(app) as client:
@@ -582,7 +582,7 @@ class TestLogAndGBQIntegrity:
             background_task_called.append(True)
             return True
 
-        with patch("app.services.gbq_service.gbq_service") as mock_gbq:
+        with patch("app.services.external.gbq_service.gbq_service") as mock_gbq:
             mock_gbq.write_analysis_log = mock_write_with_tracking
 
             with TestClient(app) as client:

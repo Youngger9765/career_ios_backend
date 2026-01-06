@@ -297,7 +297,9 @@ class TestSessionQuickFeedbackAPI:
             else:
                 return "🟢 對話氣氛良好，繼續保持同理回應"
 
-        with patch("app.services.quick_feedback_service.GeminiService") as mock_service:
+        with patch(
+            "app.services.core.quick_feedback_service.GeminiService"
+        ) as mock_service:
             mock_instance = mock_service.return_value
             mock_instance.generate_text = AsyncMock(side_effect=mock_generate_text)
             # Mock the text property on the response

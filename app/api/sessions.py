@@ -34,10 +34,10 @@ from app.schemas.session import (
     SessionTimelineResponse,
     SessionUpdateRequest,
 )
-from app.services.recording_service import RecordingService
-from app.services.reflection_service import ReflectionService
-from app.services.session_service import SessionService
-from app.services.timeline_service import TimelineService
+from app.services.core.recording_service import RecordingService
+from app.services.core.reflection_service import ReflectionService
+from app.services.core.session_service import SessionService
+from app.services.core.timeline_service import TimelineService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/sessions", tags=["Sessions"])

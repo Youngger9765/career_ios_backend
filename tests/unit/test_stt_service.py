@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 
-from app.services.stt_service import STTService
+from app.services.external.stt_service import STTService
 
 
 class TestSTTService:

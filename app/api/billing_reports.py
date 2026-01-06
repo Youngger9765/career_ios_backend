@@ -7,8 +7,8 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.core.config import settings
-from app.services.billing_analyzer import billing_analyzer
-from app.services.email_sender import email_sender
+from app.services.core.billing_analyzer import billing_analyzer
+from app.services.external.email_sender import email_sender
 
 router = APIRouter(prefix="/api/v1/billing", tags=["billing"])
 logger = logging.getLogger(__name__)

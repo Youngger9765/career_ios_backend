@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, get_tenant_id
 from app.models.counselor import Counselor
 from app.schemas.session import AnalysisLogEntry, AnalysisLogsResponse
-from app.services.analysis_log_service import AnalysisLogService
+from app.services.analysis.analysis_log_service import AnalysisLogService
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["Sessions - Analysis"])
 

@@ -8,8 +8,8 @@ import json
 import re
 from typing import Dict, List
 
-from app.services.gemini_service import GeminiService
-from app.services.openai_service import OpenAIService
+from app.services.external.gemini_service import GeminiService
+from app.services.external.openai_service import OpenAIService
 
 
 class DialogueExtractor:

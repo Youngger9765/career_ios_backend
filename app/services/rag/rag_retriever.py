@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy import Float, Integer, String, bindparam, text
 from sqlalchemy.orm import Session
 
-from app.services.openai_service import OpenAIService
+from app.services.external.openai_service import OpenAIService
 
 
 class RAGRetriever:

@@ -8,7 +8,7 @@ Tests that the new prompt:
 3. Can distinguish threatening behavior from microphone testing
 """
 
-from app.services.quick_feedback_service import QUICK_FEEDBACK_PROMPT
+from app.services.core.quick_feedback_service import QUICK_FEEDBACK_PROMPT
 
 
 def verify_prompt_changes():

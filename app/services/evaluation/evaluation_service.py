@@ -105,13 +105,13 @@ class EvaluationService:
         Returns:
             Updated experiment with results
         """
-        from app.services.evaluation_helpers import (
+        from app.services.evaluation.evaluation_helpers import (
             calculate_aggregated_metrics,
             generate_rag_answers,
             get_document_ids_for_strategy,
             run_ragas_evaluation,
         )
-        from app.services.openai_service import OpenAIService
+        from app.services.external.openai_service import OpenAIService
 
         # Get experiment
         experiment = (
@@ -263,7 +263,7 @@ class EvaluationService:
             test_cases: List of test cases
             df: RAGAS results DataFrame
         """
-        from app.services.evaluation_helpers import safe_metric
+        from app.services.evaluation.evaluation_helpers import safe_metric
 
         for idx, case in enumerate(test_cases):
             result_record = EvaluationResult(
@@ -382,7 +382,9 @@ class EvaluationService:
         Returns:
             Comparison data
         """
-        from app.services.evaluation_helpers import compare_experiment_metrics
+        from app.services.evaluation.evaluation_helpers import (
+            compare_experiment_metrics,
+        )
 
         experiments = (
             db.query(EvaluationExperiment)

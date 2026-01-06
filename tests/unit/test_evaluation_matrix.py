@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from app.services.evaluation_matrix import (
+from app.services.evaluation.evaluation_matrix import (
     format_experiments,
     format_prompts,
     format_testsets,

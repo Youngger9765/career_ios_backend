@@ -23,7 +23,7 @@ from app.schemas.session_usage import (
     SessionUsageResponse,
     SessionUsageUpdate,
 )
-from app.services.credit_billing import CreditBillingService
+from app.services.core.credit_billing import CreditBillingService
 
 router = APIRouter(tags=["Session Usage"])
 

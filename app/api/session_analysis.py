@@ -26,8 +26,8 @@ from app.schemas.session import (
     QuickFeedbackResponse,
     RealtimeAnalyzeResponse,
 )
-from app.services.keyword_analysis_service import KeywordAnalysisService
-from app.services.session_service import SessionService
+from app.services.analysis.keyword_analysis_service import KeywordAnalysisService
+from app.services.core.session_service import SessionService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/sessions", tags=["Sessions - Analysis"])
@@ -164,7 +164,7 @@ async def session_quick_feedback(
     Args:
         session_mode: "practice" (練習模式，無孩子在場) 或 "emergency" (對談模式，有孩子在場)
     """
-    from app.services.quick_feedback_service import quick_feedback_service
+    from app.services.core.quick_feedback_service import quick_feedback_service
 
     instance = str(request.url.path)
 
@@ -291,7 +291,7 @@ async def session_deep_analyze(
     - 返回 safety_level, summary, suggestions
     - 比原版快 ~50%（1 次呼叫 vs 2 次呼叫）
     """
-    from app.services.keyword_analysis_service import KeywordAnalysisService
+    from app.services.analysis.keyword_analysis_service import KeywordAnalysisService
 
     instance = str(request.url.path)
     start_time = time.time()
@@ -436,9 +436,9 @@ async def session_report(
     - 分析對話並提供：摘要、亮點、改進建議
     - use_rag=True 時會檢索相關教養理論作為參考
     """
-    from app.services.gemini_service import GeminiService
-    from app.services.openai_service import OpenAIService
-    from app.services.rag_retriever import RAGRetriever
+    from app.services.external.gemini_service import GeminiService
+    from app.services.external.openai_service import OpenAIService
+    from app.services.rag.rag_retriever import RAGRetriever
 
     instance = str(request.url.path)
     start_time = time.time()

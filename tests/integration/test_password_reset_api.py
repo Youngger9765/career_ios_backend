@@ -27,7 +27,7 @@ from app.models.counselor import Counselor, CounselorRole
 def mock_email_sender():
     """Mock email sender to prevent actual emails during tests"""
     with patch(
-        "app.services.email_sender.email_sender.send_password_reset_email"
+        "app.services.external.email_sender.email_sender.send_password_reset_email"
     ) as mock:
         mock.return_value = AsyncMock(return_value=True)
         yield mock

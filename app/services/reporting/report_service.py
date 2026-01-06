@@ -7,7 +7,7 @@ import httpx
 from openai import AsyncOpenAI
 
 from app.core.config import settings
-from app.services.gemini_service import gemini_service
+from app.services.external.gemini_service import gemini_service
 from app.utils.report_formatters import create_formatter
 
 logger = logging.getLogger(__name__)

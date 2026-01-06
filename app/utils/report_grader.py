@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 from openai import AsyncOpenAI
 
 from app.core.config import settings
-from app.services.gemini_service import gemini_service
+from app.services.external.gemini_service import gemini_service
 
 logger = logging.getLogger(__name__)
 

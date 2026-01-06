@@ -14,7 +14,7 @@ from app.schemas.analyze import (
     TranscriptKeywordRequest,
     TranscriptKeywordResponse,
 )
-from app.services.gemini_service import GeminiService
+from app.services.external.gemini_service import GeminiService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/analyze", tags=["analyze"])

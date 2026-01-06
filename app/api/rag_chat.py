@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.services.rag_chat_service import Citation, RAGChatService
+from app.services.rag.rag_chat_service import Citation, RAGChatService
 
 router = APIRouter(prefix="/api/rag/chat", tags=["rag-chat"])
 

@@ -4,7 +4,7 @@ Unit tests for ScenarioGeneratorService
 
 import pytest
 
-from app.services.scenario_generator_service import ScenarioGeneratorService
+from app.services.core.scenario_generator_service import ScenarioGeneratorService
 
 
 class TestScenarioGeneratorService:

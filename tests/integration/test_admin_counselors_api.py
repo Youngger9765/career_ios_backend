@@ -12,7 +12,7 @@ import pytest
 def mock_email_sender():
     """Mock email sender to prevent actual emails during tests"""
     with patch(
-        "app.services.email_sender.email_sender.send_password_reset_email"
+        "app.services.external.email_sender.email_sender.send_password_reset_email"
     ) as mock:
         mock.return_value = AsyncMock(return_value=True)
         yield mock
@@ -645,11 +645,9 @@ class TestAdminCreateCounselor:
         async def mock_send_email(*args, **kwargs):
             raise Exception("SMTP connection failed")
 
-        from app.services import email_sender
+        from app.services.external.email_sender import email_sender
 
-        monkeypatch.setattr(
-            email_sender.email_sender, "send_password_reset_email", mock_send_email
-        )
+        monkeypatch.setattr(email_sender, "send_password_reset_email", mock_send_email)
 
         request_data = {
             "email": "emailfail@test.com",

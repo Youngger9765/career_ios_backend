@@ -15,7 +15,7 @@ from app.schemas.session import (
     SessionCreateRequest,
     SessionUpdateRequest,
 )
-from app.services.session_service import SessionService
+from app.services.core.session_service import SessionService
 
 
 class TestSessionService:

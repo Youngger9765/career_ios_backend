@@ -5,12 +5,12 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.services.external.openai_service import OpenAIService
 from app.services.helpers.rag_report_prompt_builder import (
     build_enhanced_prompt,
     build_legacy_prompt,
 )
-from app.services.openai_service import OpenAIService
-from app.services.rag_report_service import RAGReportService
+from app.services.reporting.rag_report_service import RAGReportService
 
 router = APIRouter(prefix="/api/report", tags=["report"])
 

@@ -24,7 +24,7 @@ from app.schemas.auth import (
     PasswordResetResponse,
     PasswordResetVerifyResponse,
 )
-from app.services.email_sender import email_sender
+from app.services.external.email_sender import email_sender
 
 router = APIRouter(prefix="/auth/password-reset", tags=["Password Reset"])
 

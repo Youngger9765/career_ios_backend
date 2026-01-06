@@ -9,7 +9,7 @@ from sqlalchemy import Float, Integer, String, bindparam, select, text
 from sqlalchemy.orm import Session
 
 from app.models.document import Document
-from app.services.openai_service import OpenAIService
+from app.services.external.openai_service import OpenAIService
 
 
 class Citation(BaseModel):

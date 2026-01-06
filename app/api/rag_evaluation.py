@@ -20,11 +20,11 @@ from app.schemas.rag_evaluation import (
     parse_experiment_id,
     safe_float,
 )
-from app.services.evaluation_prompts_service import EvaluationPromptsService
-from app.services.evaluation_recommendations_service import (
+from app.services.evaluation.evaluation_prompts_service import EvaluationPromptsService
+from app.services.evaluation.evaluation_recommendations_service import (
     EvaluationRecommendationsService,
 )
-from app.services.evaluation_service import EvaluationService
+from app.services.evaluation.evaluation_service import EvaluationService
 
 router = APIRouter(prefix="/api/rag/evaluation", tags=["rag-evaluation"])
 
@@ -106,7 +106,7 @@ async def get_evaluation_matrix(
     """Get evaluation matrix data for heatmap visualization"""
     from app.api.chunk_strategies import list_chunk_strategies
     from app.models.evaluation import EvaluationTestSet
-    from app.services.evaluation_matrix import (
+    from app.services.evaluation.evaluation_matrix import (
         format_experiments,
         format_prompts,
         format_testsets,

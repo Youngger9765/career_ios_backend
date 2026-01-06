@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 
 from google.cloud import bigquery
 
-from app.services.openai_service import OpenAIService
+from app.services.external.openai_service import OpenAIService
 
 
 class BillingAnalyzerService:

@@ -22,7 +22,7 @@ from app.schemas.credit import (
     CreditRateCreate,
     CreditRateResponse,
 )
-from app.services.credit_billing import CreditBillingService
+from app.services.core.credit_billing import CreditBillingService
 
 router = APIRouter(prefix="/admin/credits", tags=["admin-credits"])
 

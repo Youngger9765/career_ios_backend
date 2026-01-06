@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.services.openai_service import OpenAIService
+from app.services.external.openai_service import OpenAIService
 
 router = APIRouter(prefix="/api/rag/search", tags=["rag-search"])
 

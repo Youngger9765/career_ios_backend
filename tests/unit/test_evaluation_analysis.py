@@ -1,6 +1,6 @@
 """Tests for evaluation analysis helper functions"""
 
-from app.services.evaluation_analysis import (
+from app.services.evaluation.evaluation_analysis import (
     analyze_chunk_strategy_performance,
     calculate_average_metrics,
     calculate_coverage_metrics,

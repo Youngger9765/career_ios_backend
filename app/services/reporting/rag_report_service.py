@@ -4,11 +4,11 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.dialogue_extractor import DialogueExtractor
-from app.services.gemini_service import gemini_service
-from app.services.openai_service import OpenAIService
-from app.services.rag_retriever import RAGRetriever
-from app.services.transcript_parser import TranscriptParser
+from app.services.analysis.dialogue_extractor import DialogueExtractor
+from app.services.analysis.transcript_parser import TranscriptParser
+from app.services.external.gemini_service import gemini_service
+from app.services.external.openai_service import OpenAIService
+from app.services.rag.rag_retriever import RAGRetriever
 
 
 class RAGReportService:

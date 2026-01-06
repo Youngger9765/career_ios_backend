@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.services.report_service import ReportGenerationService
-from app.services.sanitizer_service import SanitizerService
-from app.services.stt_service import STTService
+from app.services.analysis.sanitizer_service import SanitizerService
+from app.services.external.stt_service import STTService
+from app.services.reporting.report_service import ReportGenerationService
 
 
 class TestSTTService:

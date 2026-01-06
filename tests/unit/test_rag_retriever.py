@@ -14,7 +14,7 @@ from fastapi import HTTPException
 
 # Import will fail initially - this is expected (RED phase)
 try:
-    from app.services.rag_retriever import RAGRetriever
+    from app.services.rag.rag_retriever import RAGRetriever
 except ImportError:
     RAGRetriever = None
 

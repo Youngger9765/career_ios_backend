@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 def test_rule_based_service():
     """測試方案 A: Rule-Based"""
-    from app.services.encouragement_service import encouragement_service
+    from app.services.core.encouragement_service import encouragement_service
 
     print("\n" + "=" * 60)
     print("方案 A: Rule-Based 雞湯文服務")
@@ -46,7 +46,7 @@ def test_rule_based_service():
 
 async def test_ai_prompt_service():
     """測試方案 B: AI Prompt"""
-    from app.services.quick_feedback_service import quick_feedback_service
+    from app.services.core.quick_feedback_service import quick_feedback_service
 
     print("\n" + "=" * 60)
     print("方案 B: 輕量 AI Prompt 服務")
@@ -87,7 +87,7 @@ def test_performance_comparison():
     print("效能比較：方案 A vs 方案 B")
     print("=" * 60)
 
-    from app.services.encouragement_service import encouragement_service
+    from app.services.core.encouragement_service import encouragement_service
 
     # 方案 A 效能測試
     test_transcript = "家長：你覺得這樣好嗎？孩子：我不知道..."

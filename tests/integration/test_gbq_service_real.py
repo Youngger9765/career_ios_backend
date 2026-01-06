@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 import pytest
 from google.cloud import bigquery
 
-from app.services.gbq_service import GBQService
+from app.services.external.gbq_service import GBQService
 
 
 # Skip these tests if Google Cloud credentials are not available
