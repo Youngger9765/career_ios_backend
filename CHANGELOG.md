@@ -26,8 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Admin API DEBUG Mode Hardening** (2026-01-07)
   - Fixed security vulnerability allowing unauthenticated admin access
   - DEBUG mode now requires `ENVIRONMENT != production AND != staging`
-  - Affects 12 admin endpoints: counselor management + credits management
-  - No impact on iOS app or end-user APIs
+  - Affects: `admin_counselors.py` and `admin_credits.py`
+  - All admin endpoints now properly protected in staging/production
 
 ### Fixed
 - **Pydantic V2 Deprecation Warnings** (2026-01-07)

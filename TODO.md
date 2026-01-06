@@ -109,10 +109,8 @@
 
 ### 🔧 P1.5 - 重構優化 (2026-01-07 專案審查)
 
-#### 3. 安全性修復 🔴
-- [ ] **admin_credits.py DEBUG 模式漏洞** - 缺少環境檢查
-  - 需加入 `ENVIRONMENT != "production" AND != "staging"` 檢查
-  - 參考已修復的 `admin_counselors.py`
+#### 3. 安全性修復 ✅ **已完成**
+- [x] **admin_credits.py DEBUG 模式漏洞** - 已加入環境檢查
 
 #### 4. 代碼品質 ✅ **已完成**
 - [x] **Pydantic V2 Deprecation Warnings** - 14 處 class Config 改為 ConfigDict
