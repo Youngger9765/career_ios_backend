@@ -159,3 +159,92 @@ jobs:
         echo "📚 API Docs: ${SERVICE_URL}/docs"
         echo "❤️ Health Check: ${SERVICE_URL}/health"
         echo "🌿 Branch: ${{ github.ref_name }}"
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set environment variables
+      id: env
+      run: |
+        echo "SERVICE_NAME=career-app-api-prod" >> $GITHUB_OUTPUT
+        echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
+        echo "DEBUG=false" >> $GITHUB_OUTPUT
+
+    - name: Authenticate to Google Cloud with WIF
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: 'projects/978304030758/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+        service_account: 'github-actions-sa@groovy-iris-473015-h3.iam.gserviceaccount.com'
+        token_format: 'access_token'
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Build Docker image
+      run: |
+        docker build -t us-central1-docker.pkg.dev/groovy-iris-473015-h3/career-app/app:${{ github.sha }} .
+
+    - name: Configure Docker authentication
+      run: |
+        gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+    - name: Push Docker image to Artifact Registry
+      run: |
+        docker push us-central1-docker.pkg.dev/groovy-iris-473015-h3/career-app/app:${{ github.sha }}
+
+    - name: Deploy to Cloud Run (Production)
+      env:
+        DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+        DATABASE_URL_DIRECT: ${{ secrets.PROD_DATABASE_URL_DIRECT }}
+        SECRET_KEY: ${{ secrets.PROD_SECRET_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        SUPABASE_URL: ${{ secrets.PROD_SUPABASE_URL }}
+        SUPABASE_ANON_KEY: ${{ secrets.PROD_SUPABASE_ANON_KEY }}
+        SUPABASE_SERVICE_KEY: ${{ secrets.PROD_SUPABASE_SERVICE_KEY }}
+        ELEVEN_LABS_API_KEY: ${{ secrets.ELEVEN_LABS_API_KEY }}
+        CODEER_API_KEY: ${{ secrets.CODEER_API_KEY }}
+        CODEER_DEFAULT_AGENT: ${{ secrets.CODEER_DEFAULT_AGENT }}
+        CODEER_AGENT_CLAUDE_SONNET: ${{ secrets.CODEER_AGENT_CLAUDE_SONNET }}
+        CODEER_AGENT_GEMINI_FLASH: ${{ secrets.CODEER_AGENT_GEMINI_FLASH }}
+        CODEER_AGENT_GPT5_MINI: ${{ secrets.CODEER_AGENT_GPT5_MINI }}
+        SMTP_USER: ${{ secrets.SMTP_USER }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        APP_URL: ${{ secrets.PROD_APP_URL }}
+      run: |
+        gcloud run deploy ${{ steps.env.outputs.SERVICE_NAME }} \
+          --image=us-central1-docker.pkg.dev/groovy-iris-473015-h3/career-app/app:${{ github.sha }} \
+          --region=us-central1 \
+          --project=groovy-iris-473015-h3 \
+          --service-account=career-app-sa@groovy-iris-473015-h3.iam.gserviceaccount.com \
+          --memory=1Gi \
+          --cpu=1 \
+          --timeout=300 \
+          --min-instances=1 \
+          --max-instances=5 \
+          --concurrency=80 \
+          --port=8080 \
+          --allow-unauthenticated \
+          --set-env-vars="DATABASE_URL=${DATABASE_URL},DATABASE_URL_DIRECT=${DATABASE_URL_DIRECT},SECRET_KEY=${SECRET_KEY},OPENAI_API_KEY=${OPENAI_API_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY},SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY},ELEVEN_LABS_API_KEY=${ELEVEN_LABS_API_KEY},CODEER_API_KEY=${CODEER_API_KEY},CODEER_DEFAULT_AGENT=${CODEER_DEFAULT_AGENT},CODEER_AGENT_CLAUDE_SONNET=${CODEER_AGENT_CLAUDE_SONNET},CODEER_AGENT_GEMINI_FLASH=${CODEER_AGENT_GEMINI_FLASH},CODEER_AGENT_GPT5_MINI=${CODEER_AGENT_GPT5_MINI},SMTP_USER=${SMTP_USER},SMTP_PASSWORD=${SMTP_PASSWORD},FROM_EMAIL=${FROM_EMAIL},APP_URL=${APP_URL},MOCK_MODE=false,DEBUG=${{ steps.env.outputs.DEBUG }},GCS_PROJECT=groovy-iris-473015-h3,ENVIRONMENT=${{ steps.env.outputs.ENVIRONMENT }}"
+
+    - name: Get service URL
+      run: |
+        SERVICE_URL=$(gcloud run services describe ${{ steps.env.outputs.SERVICE_NAME }} \
+          --region=us-central1 \
+          --project=groovy-iris-473015-h3 \
+          --format="value(status.url)")
+        echo "🚀 [${{ steps.env.outputs.ENVIRONMENT }}] Service deployed to: ${SERVICE_URL}"
+        echo "📚 API Docs: ${SERVICE_URL}/docs"
+        echo "❤️ Health Check: ${SERVICE_URL}/health"
+        echo "🌿 Branch: ${{ github.ref_name }}"
