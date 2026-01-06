@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Analysis Services Refactoring** (2026-01-07)
+  - Extracted 4 new modules from large files for better maintainability:
+    - `expert_suggestion_service.py` - AI-powered suggestion selection
+    - `session_billing_service.py` - Incremental billing with ceiling rounding
+    - `analysis_helpers.py` - Utility functions for keyword analysis
+    - `parents_report_service.py` - Parent-child dialogue report generation
+  - File size optimizations:
+    - `keyword_analysis_service.py`: 1397 → 632 lines (-55%)
+    - `session_analysis.py`: 771 → 529 lines (-31%)
+  - Updated `__init__.py` with backward-compatible re-exports
+  - All 333 integration tests pass
+
+### Fixed
+- **IOS_GUIDE_PARENTS.md** - Corrected quick-feedback API documentation
+  - Removed outdated `recent_transcript` body requirement
+  - API now correctly documented as auto-reading from session
+
 ### Added
 - **Time-based Transcript Segmentation for Quick/Deep APIs** (2026-01-05)
   - New `_extract_transcripts_by_time()` helper in `session_analysis.py`

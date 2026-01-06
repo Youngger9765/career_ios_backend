@@ -209,14 +209,14 @@ Content-Type: application/json
 **用途**: 每 15 秒提供即時鼓勵訊息
 
 ```
-POST /api/v1/sessions/{session_id}/quick-feedback
+POST /api/v1/sessions/{session_id}/quick-feedback?session_mode=practice
 Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "recent_transcript": "媽媽：寶貝，功課寫完了嗎？\n孩子：還沒，我想先玩一下。"
-}
 ```
+
+**注意**: 此 API 不需要 request body，會自動從 session 讀取最近 15 秒的逐字稿。
+
+**Query Parameters:**
+- `session_mode`: `practice` (練習模式，預設) 或 `emergency` (對談模式)
 
 **Response (200):**
 ```json

@@ -9,6 +9,24 @@
 
 ## [未發布]
 
+### 變更
+- **分析服務重構** (2026-01-07)
+  - 從大型檔案中提取 4 個新模組以提升可維護性：
+    - `expert_suggestion_service.py` - AI 驅動的建議選擇
+    - `session_billing_service.py` - 無條件進位的增量計費
+    - `analysis_helpers.py` - 關鍵字分析工具函數
+    - `parents_report_service.py` - 親子對話報告生成
+  - 檔案大小優化：
+    - `keyword_analysis_service.py`: 1397 → 632 行 (-55%)
+    - `session_analysis.py`: 771 → 529 行 (-31%)
+  - 更新 `__init__.py` 支援向後相容的重新匯出
+  - 全部 333 個整合測試通過
+
+### 修復
+- **IOS_GUIDE_PARENTS.md** - 修正 quick-feedback API 文件
+  - 移除過時的 `recent_transcript` body 需求
+  - API 現正確記載為自動從 session 讀取逐字稿
+
 ### 新增
 - **PromptRegistry - 統一 Prompt 架構** (2026-01-04)
   - 新增集中式 prompt 管理系統於 `app/prompts/`
