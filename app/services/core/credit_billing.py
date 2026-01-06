@@ -2,7 +2,7 @@
 Credit Billing Service - Business logic for credit system
 """
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional
 from uuid import UUID
 
@@ -31,7 +31,7 @@ class CreditBillingService:
             .filter(
                 CreditRate.rule_name == rule_name,
                 CreditRate.is_active == True,  # noqa: E712
-                CreditRate.effective_from <= datetime.utcnow(),
+                CreditRate.effective_from <= datetime.now(timezone.utc),
             )
             .order_by(desc(CreditRate.version))
             .first()
