@@ -337,8 +337,8 @@ Authorization: Bearer <token>
 ### 👥 客戶與個案管理 API（`/api/v1`）
 
 #### Field Schemas（動態欄位配置）
-- `GET /api/v1/field-schemas/client` - 取得 Client 欄位配置
-- `GET /api/v1/field-schemas/case` - 取得 Case 欄位配置
+- `GET /api/v1/ui/field-schemas/client` - 取得 Client 欄位配置
+- `GET /api/v1/ui/field-schemas/case` - 取得 Case 欄位配置
 
 #### Clients（客戶管理）
 - `GET /api/v1/clients` - 列出客戶（分頁）
