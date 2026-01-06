@@ -30,6 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No impact on iOS app or end-user APIs
 
 ### Fixed
+- **IOS_GUIDE_PARENTS.md** - Authentication API documentation corrections (2026-01-07)
+  - Fixed login endpoint: `/api/v1/auth/login` → `/api/auth/login`
+  - Fixed login body: `username` → `email` + added `tenant_id` requirement
+  - Fixed auth/me endpoint: `/api/v1/auth/me` → `/api/auth/me`
+  - Added `expires_in` field and complete user object in login response
+  - Updated Section 11.1 API reference table
 - **IOS_GUIDE_PARENTS.md** - Corrected quick-feedback API documentation
   - Removed outdated `recent_transcript` body requirement
   - API now correctly documented as auto-reading from session

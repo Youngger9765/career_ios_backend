@@ -41,24 +41,38 @@ Island Parents 是一款 **AI 親子教養助手**，幫助家長在與孩子互
 
 ### 2.1 登入
 ```
-POST /api/v1/auth/login
+POST /api/auth/login
 Content-Type: application/json
 
 {
-  "username": "user@example.com",
-  "password": "password123"
+  "email": "user@example.com",
+  "password": "password123",
+  "tenant_id": "island_parents"
 }
 ```
+
+**⚠️ 注意**：
+- 使用 `email` 而非 `username`
+- 必須傳入 `tenant_id: "island_parents"`
 
 **Response (200):**
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1...",
   "token_type": "bearer",
+  "expires_in": 86400,
   "user": {
     "id": "uuid",
-    "username": "user@example.com",
-    "tenant_id": "island_parents"
+    "email": "user@example.com",
+    "username": "user123",
+    "full_name": "Test User",
+    "role": "counselor",
+    "tenant_id": "island_parents",
+    "is_active": true,
+    "available_credits": 100.0,
+    "last_login": "2025-01-05T10:00:00Z",
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-05T10:00:00Z"
   }
 }
 ```
@@ -248,15 +262,17 @@ Content-Type: application/json
 ```json
 {
   "safety_level": "yellow",
-  "keywords": ["功課", "手機"],
   "summary": "家長嘗試與孩子溝通功課問題，但孩子有些抗拒",
-  "suggestions": [
-    {
-      "issue": "孩子對功課產生抗拒",
-      "analyze": "直接詢問功課可能讓孩子感到壓力",
-      "suggestion": "可以先問「今天在學校有什麼好玩的事嗎？」建立連結後再談功課"
-    }
+  "alerts": [
+    "⚠️ 孩子顯示抗拒情緒",
+    "⚠️ 注意溝通方式是否給孩子壓力"
   ],
+  "suggestions": [
+    "可以先問「今天在學校有什麼好玩的事嗎？」",
+    "建立連結後再談功課"
+  ],
+  "time_range": "0:00-2:00",
+  "timestamp": "2026-01-07T10:00:00+00:00",
   "rag_sources": [
     {
       "title": "正向教養：同理心優先",
@@ -265,6 +281,7 @@ Content-Type: application/json
       "theory": "正向教養"
     }
   ],
+  "cache_metadata": null,
   "provider_metadata": {
     "provider": "gemini",
     "latency_ms": 1200,
@@ -272,6 +289,8 @@ Content-Type: application/json
   }
 }
 ```
+
+**⚠️ 重要：`suggestions` 和 `alerts` 都是字串陣列 `List[str]`，不是物件陣列！**
 
 **safety_level 說明:**
 | Level | 顏色 | 說明 | UI 顯示 |
@@ -704,10 +723,10 @@ if session.hasReport {
 ### 11.1 認證
 | Method | Endpoint | 說明 |
 |--------|----------|------|
-| POST | `/api/v1/auth/login` | 登入 |
-| GET | `/api/v1/auth/me` | 取得用戶資訊 |
-| POST | `/api/v1/password-reset/request` | 請求重設密碼 |
-| POST | `/api/v1/password-reset/confirm` | 確認重設密碼 |
+| POST | `/api/auth/login` | 登入 (需要 email + tenant_id) |
+| GET | `/api/auth/me` | 取得用戶資訊 |
+| POST | `/api/v1/auth/password-reset/request` | 請求重設密碼 |
+| POST | `/api/v1/auth/password-reset/confirm` | 確認重設密碼 |
 
 ### 11.2 Session
 | Method | Endpoint | 說明 |

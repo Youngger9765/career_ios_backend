@@ -30,6 +30,12 @@
   - 不影響 iOS App 或一般用戶 API
 
 ### 修復
+- **IOS_GUIDE_PARENTS.md** - 認證 API 文件修正 (2026-01-07)
+  - 修正登入端點：`/api/v1/auth/login` → `/api/auth/login`
+  - 修正登入 body：`username` → `email` + 新增 `tenant_id` 需求
+  - 修正 auth/me 端點：`/api/v1/auth/me` → `/api/auth/me`
+  - 新增 `expires_in` 欄位和完整用戶物件於登入回應
+  - 更新 Section 11.1 API 參考表格
 - **IOS_GUIDE_PARENTS.md** - 修正 quick-feedback API 文件
   - 移除過時的 `recent_transcript` body 需求
   - API 現正確記載為自動從 session 讀取逐字稿
