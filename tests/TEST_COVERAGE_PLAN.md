@@ -71,10 +71,10 @@
 - [x] POST /api/v1/reports/generate - E2E flow (existing)
 
 ### Field Schemas API (`tests/integration/test_field_schemas_api.py`) - 4 tests ✅ NEW
-- [x] GET /api/v1/field-schemas/client - Success
-- [x] GET /api/v1/field-schemas/client - Unauthorized
-- [x] GET /api/v1/field-schemas/case - Success
-- [x] GET /api/v1/field-schemas/case - Unauthorized
+- [x] GET /api/v1/ui/field-schemas/client - Success
+- [x] GET /api/v1/ui/field-schemas/client - Unauthorized
+- [x] GET /api/v1/ui/field-schemas/case - Success
+- [x] GET /api/v1/ui/field-schemas/case - Unauthorized
 
 ---
 

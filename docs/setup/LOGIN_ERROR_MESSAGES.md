@@ -34,7 +34,7 @@
 
 ## Backend API 規範
 
-### 登入 API (`POST /api/v1/auth/login`)
+### 登入 API (`POST /api/auth/login`)
 
 #### 所有失敗情況統一返回
 
@@ -89,7 +89,7 @@ async def login(request: LoginRequest, db=Depends(get_db)):
 
 ---
 
-### 註冊 API (`POST /api/v1/auth/register`)
+### 註冊 API (`POST /api/auth/register`)
 
 #### Email 已存在
 
