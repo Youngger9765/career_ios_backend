@@ -1,19 +1,6 @@
 # TODO - 開發任務清單
 
-**最後更新**: 2026-01-07 (新增重構優化項目)
-
----
-
-## 📊 當前狀態總覽
-
-### ⏸️ 暫緩項目
-- **P0-C: Phase 3/4** (Web Console 遷移 + 棄用 realtime.py)
-  - 理由：analyze-partial 已功能完整，維護成本可接受
-  - 重啟條件：realtime.py 出現 bug 或邏輯分歧時
-
-- **P1-B: Streaming 支援**
-  - 理由：iOS 不需要，Web 暫不做
-  - 重啟條件：產品明確需求時
+**最後更新**: 2026-01-07 (清理過時項目與錯誤路徑)
 
 ---
 
@@ -82,7 +69,7 @@
 **解決方案**: ✅ 採用「方案 B: 輕量 AI 雞湯文」
 
 **已完成實施**:
-- [x] 新增 `/api/v1/realtime/quick-feedback` endpoint
+- [x] 新增 `/api/v1/sessions/{id}/quick-feedback` endpoint
 - [x] 設計輕量 AI prompt（情緒控制、表達引導）
 - [x] 使用 Gemini Flash（最快模型）+ 不使用 RAG
 - [x] 測試響應時間：1-2 秒延遲
@@ -101,8 +88,8 @@
 - [ ] 用戶體驗測試
 
 **參考文檔**:
-- API 規格：`docs/encouragement_api_integration.md`
-- 服務比較：`docs/encouragement_services_report.md`
+- API 規格：`docs/features/encouragement_api_integration.md`
+- 服務比較：`docs/features/encouragement_services_report.md`
 - CHANGELOG: 2026-01-01 entries
 
 ---
@@ -125,7 +112,6 @@
 ### 📋 P2 - 中優先級 (未來可能需要)
 
 #### 6. Performance Optimization (如需要)
-- [ ] Streaming API 支援（iOS/Web 明確需求時）
 - [ ] 性能基準測試更新
 
 #### 7. Documentation Updates (如需要)
@@ -166,19 +152,8 @@
 
 ## 🔗 參考文件
 
-- **CHANGELOG.md** - 完整變更歷史（已更新 2025-12-31）
-- **CHANGELOG_zh-TW.md** - 中文版變更歷史（已同步）
+- **CHANGELOG.md** - 完整變更歷史
+- **CHANGELOG_zh-TW.md** - 中文版變更歷史
 - **PRD.md** - 產品需求文檔
-- **docs/CONFIGURATION.md** - 配置管理指南
-- **docs/PARENTING_THEORIES.md** - 8 大教養流派指南
-- **docs/bugfix_rag_integration.md** - RAG 修復文檔
-- **TODO_backup_20251231.md** - 完整歷史備份（1491 行）
-
----
-
-**清理統計**:
-- 原始行數: 1491 行
-- 清理後: 109 行 (2025-12-31)
-- 新增需求後: 209 行 (2025-12-31 晚)
-- 縮減比例: 86% (相比原始)
-- 清理原則: 已完成項目移至 CHANGELOG，保留真正待辦事項
+- **docs/setup/CONFIGURATION.md** - 配置管理指南
+- **docs/features/PARENTING_THEORIES.md** - 8 大教養流派指南
