@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Quick Feedback: Use 200 Expert Suggestions** (2026-01-08)
+  - Quick feedback now selects from 200 pre-written expert suggestions (avg 9 chars)
+  - Previously generated free-form text (up to 50 chars) via Gemini
+  - Ensures shorter, consistent messages for circular UI display
+  - Same suggestion pool as deep-analyze for consistency
+  - Returns new `safety_level` field in response
+
 ### Fixed
 - **GET Report API Format Consistency** (2026-01-08)
   - `GET /api/v1/sessions/{session_id}/report` now returns same format as POST

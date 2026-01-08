@@ -9,6 +9,14 @@
 
 ## [未發布]
 
+### 變更
+- **Quick Feedback：改用 200 句專家建議** (2026-01-08)
+  - Quick feedback 現在從 200 句預設專家建議中選擇（平均 9 字）
+  - 之前是讓 Gemini 自由生成文字（最多 50 字）
+  - 確保同心圓 UI 中的文字足夠簡短一致
+  - 與 deep-analyze 使用相同的建議句庫
+  - 回應新增 `safety_level` 欄位
+
 ### 修復
 - **GET Report API 格式統一** (2026-01-08)
   - `GET /api/v1/sessions/{session_id}/report` 現在回傳與 POST 相同的格式
