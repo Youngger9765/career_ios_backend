@@ -396,9 +396,9 @@ def get_session_report(
             instance=instance,
         )
 
-    # For Island Parents mode, return flat ParentsReportResponse
-    # to match POST endpoint format
-    if report.mode == "island_parents":
+    # For Island Parents tenant, return flat ParentsReportResponse
+    # to match POST endpoint format (regardless of how report was generated)
+    if tenant_id == "island_parents":
         content = report.content_json or {}
         return ParentsReportResponse(
             encouragement=content.get("encouragement", ""),
