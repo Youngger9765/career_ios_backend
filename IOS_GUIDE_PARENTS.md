@@ -1,6 +1,6 @@
 # Island Parents iOS App 開發指南
 
-> **版本**: v1.6
+> **版本**: v1.7
 > **適用對象**: iOS 開發者
 > **後端版本**: career_ios_backend
 
@@ -222,6 +222,8 @@ Content-Type: application/json
 ### 4.1 Quick Feedback (快速回饋)
 **用途**: 每 15 秒提供即時鼓勵訊息
 
+> ⚠️ **字數限制**: `message` 欄位強制 **15 字以內**，適合同心圓 UI 顯示
+
 ```
 POST /api/v1/sessions/{session_id}/quick-feedback?session_mode=practice
 Authorization: Bearer <token>
@@ -235,7 +237,7 @@ Authorization: Bearer <token>
 **Response (200):**
 ```json
 {
-  "message": "很好！用「寶貝」開頭是溫和的開場方式",
+  "message": "你沒急著反駁",
   "type": "ai_generated",
   "timestamp": "2025-01-05T10:00:15Z",
   "latency_ms": 850
@@ -309,6 +311,8 @@ Content-Type: application/json
 ### 4.3 Report (諮詢報告)
 **用途**: 對話結束後生成完整分析報告
 
+> ⚠️ **字數限制**: `encouragement` 欄位強制 **15 字以內**，作為報告標題顯示
+
 #### 4.3.1 生成報告 (POST)
 ```
 POST /api/v1/sessions/{session_id}/report
@@ -318,7 +322,7 @@ Authorization: Bearer <token>
 **Response (200):**
 ```json
 {
-  "encouragement": "今天的對話中，您展現了對孩子的關心和耐心...",
+  "encouragement": "你正在接住孩子",
   "issue": "在討論功課時，孩子出現了抗拒反應...",
   "analyze": "從正向教養的角度來看，孩子的抗拒可能源於...\n\n根據情緒教養理論，當孩子感受到壓力時...",
   "suggestion": "下次遇到類似情況，您可以試試：\n1. 「我看到你想玩手機，是不是今天在學校很累？」\n2. 「我們一起想想，怎麼安排時間讓你可以玩也可以寫功課？」",
@@ -805,6 +809,7 @@ if session.hasReport {
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v1.7 | 2026-01-08 | **字數限制**: Quick Feedback `message` 和 Report `encouragement` 都強制 15 字以內，適合 UI 顯示 |
 | v1.6 | 2026-01-08 | **統一 GET/POST 回傳格式**: GET Report 現在回傳與 POST 相同的扁平結構 (ParentsReportResponse)，iOS 可用同一 Model 解析 |
 | v1.5 | 2026-01-08 | **修正**: 4.3 Report API 回傳格式為扁平結構（無 `report` 包裹），欄位改為 `references` + `timestamp` |
 | v1.4 | 2026-01-05 | 修正: Deep Analyze 使用 `/deep-analyze` (非 analyze-partial)；錄音 append 的 start_time/end_time 為 ISO 8601 格式字串 |
