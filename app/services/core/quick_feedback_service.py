@@ -68,10 +68,22 @@ class QuickFeedbackService:
                 recent_transcript, full_transcript, mode, scenario_context
             )
 
-            # Enforce 15 char limit
+            # Validate: too short = incomplete, use fallback
+            min_chars = 7  # 至少 7 字才算完整（可含 emoji）
+            if len(message) < min_chars:
+                logger.warning(
+                    f"Response too short ({len(message)} chars): '{message}', using fallback"
+                )
+                import random
+
+                message = random.choice(FALLBACK_MESSAGES)
+
+            # Log if over 15 chars but don't truncate mid-word
+            # Let AI handle length, just warn
             if len(message) > self.MAX_CHARS:
-                message = message[: self.MAX_CHARS]
-                logger.warning(f"Truncated message to {self.MAX_CHARS} chars")
+                logger.warning(
+                    f"Message over {self.MAX_CHARS} chars: {len(message)} chars"
+                )
 
             latency_ms = int((time.time() - start_time) * 1000)
 
@@ -133,30 +145,43 @@ class QuickFeedbackService:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 【回饋規則】
-1. ⚠️ 必須 15 字以內（這是硬性限制！）
+1. ⚠️ 必須 7-15 字（硬性限制！）
 2. 正向鼓勵為主
 3. 具體指出做得好的地方
 4. 繁體中文
+5. 可以用 emoji 增加溫度 🌟
 
-【範例】（都是 15 字以內）
-- 你正在聽，而不是急著回
-- 語氣很溫和，繼續保持
-- 有在接住孩子的情緒
+【範例】（都是 7-15 字）
+- 你正在聽，而不是急著回 👂
+- 語氣很溫和，繼續保持 💪
+- 有在接住孩子的情緒 🤗
 - 你沒有急著給答案
-- 讓孩子感覺被理解
+- 讓孩子感覺被理解 ❤️
 
 請直接回覆一句話，不要加任何標點或格式。"""
 
         response = await self.gemini_service.generate_text(
             prompt=prompt,
             temperature=0.7,
-            max_tokens=50,  # 限制輸出
+            max_tokens=500,  # 增加到 500，確保不被截斷
         )
 
-        # Extract text
-        text = response.text.strip().strip("\"'。，！")
-        # Remove line breaks
-        text = text.replace("\n", "").replace("\r", "")
+        # Extract text - clean up Gemini's sometimes messy output
+        text = response.text.strip()
+
+        # Take first line only (Gemini sometimes adds commentary)
+        text = text.split("\n")[0].strip()
+
+        # Remove quotes and extra punctuation
+        text = text.strip("\"'。，！「」")
+
+        # Remove any English text or parentheses garbage (Gemini sometimes adds extra text)
+        import re
+
+        text = re.sub(
+            r"[\(（][^）\)]*$", "", text
+        ).strip()  # Remove trailing parentheses
+        text = re.sub(r'[a-zA-Z"]+.*$', "", text).strip()  # Remove English text
 
         # Get token counts
         prompt_tokens = 0
