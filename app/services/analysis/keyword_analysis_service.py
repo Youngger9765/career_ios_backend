@@ -159,10 +159,44 @@ class KeywordAnalysisService:
             result.setdefault("display_text", "分析完成")
             result.setdefault("quick_suggestion", "")
 
+            # Validate display_text (should be within 20 chars per prompt)
+            display_text = result.get("display_text", "")
+            max_display_chars = 20
+            min_display_chars = 4  # fallback "分析完成" is 4 chars
+
+            if len(display_text) < min_display_chars:
+                logger.warning(
+                    f"display_text too short ({len(display_text)} chars): '{display_text}', "
+                    f"using fallback"
+                )
+                result["display_text"] = "分析完成"
+            elif len(display_text) > max_display_chars:
+                logger.warning(
+                    f"display_text over {max_display_chars} chars: "
+                    f"{len(display_text)} chars - '{display_text[:30]}...'"
+                )
+
+            # Validate quick_suggestion (from 200 expert suggestions: 5-17 chars)
+            quick_suggestion = result.get("quick_suggestion", "")
+            max_suggestion_chars = 20  # longest expert suggestion is 17 chars
+            min_suggestion_chars = 5  # shortest expert suggestion is 5 chars
+
+            if quick_suggestion:
+                if len(quick_suggestion) < min_suggestion_chars:
+                    logger.warning(
+                        f"quick_suggestion too short ({len(quick_suggestion)} chars): "
+                        f"'{quick_suggestion}', clearing it"
+                    )
+                    quick_suggestion = ""
+                elif len(quick_suggestion) > max_suggestion_chars:
+                    logger.warning(
+                        f"quick_suggestion over {max_suggestion_chars} chars: "
+                        f"{len(quick_suggestion)} chars - '{quick_suggestion[:30]}...'"
+                    )
+                    # Don't truncate mid-sentence, just log warning
+
             # Wrap quick_suggestion in list for compatibility
-            result["quick_suggestions"] = (
-                [result["quick_suggestion"]] if result.get("quick_suggestion") else []
-            )
+            result["quick_suggestions"] = [quick_suggestion] if quick_suggestion else []
 
             # Add metadata with REAL token usage
             duration_ms = int((time.time() - start_time) * 1000)
