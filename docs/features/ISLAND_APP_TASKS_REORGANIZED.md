@@ -365,49 +365,53 @@
 **預估時間**: 3-4 小時
 
 **API Endpoints**:
-- [ ] `GET /api/v1/island/sessions/{session_id}/report` - 取得報告
-  ```json
-  Response 200:
-  {
-    "session_id": "uuid",
-    "mode": "practice",
-    "scenario_topic": "孩子不寫作業",
-    "report": {
-      "summary": "本次練習重點...",
-      "highlights": [
-        "成功使用同理心回應孩子感受",
-        "語氣溫和，沒有指責"
-      ],
-      "improvements": [
-        {
-          "issue": "當孩子拒絕時，語氣變得急躁",
-          "suggestion": "可以先深呼吸，用「我注意到...」開頭",
-          "example": "我注意到你現在不想寫作業，是因為覺得太難嗎？"
-        }
-      ],
-      "rag_references": [
-        {
-          "theory": "正向教養",
-          "quote": "...",
-          "source": "..."
-        }
-      ],
-      "practice_tips": [  // 僅 practice mode
-        "下次可以提早 5 分鐘提醒",
-        "準備一個計時器讓孩子自己掌控時間"
-      ]
-    },
-    "usage_summary": {
-      "duration_minutes": 15,
-      "credits_consumed": 30,
-      "safety_distribution": {
-        "red": 1,
-        "yellow": 5,
-        "green": 9
-      }
+
+> ⚠️ **注意**: 目前已實作的 API 是 `POST /api/v1/sessions/{session_id}/report`
+> 回傳格式為扁平結構（無 `report` 包裹），詳見下方「目前實作」
+
+**目前實作** (POST /api/v1/sessions/{session_id}/report):
+```json
+Response 200:
+{
+  "encouragement": "今天的對話中，您展現了對孩子的關心和耐心...",
+  "issue": "在討論功課時，孩子出現了抗拒反應...",
+  "analyze": "從正向教養的角度來看，孩子的抗拒可能源於...\n根據情緒教養理論...",
+  "suggestion": "下次遇到類似情況，您可以試試：\n1. 「我看到你想玩手機，是不是...」",
+  "references": [
+    {
+      "title": "正向教養：溫和而堅定的教養方式",
+      "content": "當孩子不配合時，提供有限選擇讓孩子感受到自主權...",
+      "source": "05_self_determination_theory.md",
+      "theory": "教養理論"
+    }
+  ],
+  "timestamp": "2025-01-05T11:00:00Z"
+}
+```
+
+**規劃中** (GET /api/v1/island/sessions/{session_id}/report - 尚未實作):
+```json
+Response 200:
+{
+  "session_id": "uuid",
+  "mode": "practice",
+  "scenario_topic": "孩子不寫作業",
+  "encouragement": "今天的對話中，您展現了對孩子的關心...",
+  "issue": "在討論功課時，孩子出現了抗拒反應...",
+  "analyze": "從正向教養的角度來看...",
+  "suggestion": "下次遇到類似情況，您可以試試...",
+  "references": [...],
+  "usage_summary": {
+    "duration_minutes": 15,
+    "credits_consumed": 30,
+    "safety_distribution": {
+      "red": 1,
+      "yellow": 5,
+      "green": 9
     }
   }
-  ```
+}
+```
 
 **報告差異**:
 | 欄位 | Practice Mode | Emergency Mode |

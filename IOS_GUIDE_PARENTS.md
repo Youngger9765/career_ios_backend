@@ -317,17 +317,23 @@ Authorization: Bearer <token>
 **Response (200):**
 ```json
 {
-  "session_id": "session-uuid",
-  "report": {
-    "encouragement": "今天的對話中，您展現了對孩子的關心和耐心...",
-    "issue": "在討論功課時，孩子出現了抗拒反應...",
-    "analyze": "從正向教養的角度來看，孩子的抗拒可能源於...\n\n根據情緒教養理論，當孩子感受到壓力時...",
-    "suggestion": "下次遇到類似情況，您可以試試：\n1. 「我看到你想玩手機，是不是今天在學校很累？」\n2. 「我們一起想想，怎麼安排時間讓你可以玩也可以寫功課？」"
-  },
-  "rag_sources": [...],
-  "generated_at": "2025-01-05T11:00:00Z"
+  "encouragement": "今天的對話中，您展現了對孩子的關心和耐心...",
+  "issue": "在討論功課時，孩子出現了抗拒反應...",
+  "analyze": "從正向教養的角度來看，孩子的抗拒可能源於...\n\n根據情緒教養理論，當孩子感受到壓力時...",
+  "suggestion": "下次遇到類似情況，您可以試試：\n1. 「我看到你想玩手機，是不是今天在學校很累？」\n2. 「我們一起想想，怎麼安排時間讓你可以玩也可以寫功課？」",
+  "references": [
+    {
+      "title": "正向教養：溫和而堅定的教養方式",
+      "content": "當孩子不配合時，提供有限選擇讓孩子感受到自主權...",
+      "source": "05_self_determination_theory.md",
+      "theory": "教養理論"
+    }
+  ],
+  "timestamp": "2025-01-05T11:00:00Z"
 }
 ```
+
+> ⚠️ **注意**: 回傳格式為**扁平結構**（欄位直接在最外層），沒有 `report` 包裹！
 
 **內容長度:**
 - 動態調整：根據對話長度自動調整報告深度
@@ -776,6 +782,7 @@ if session.hasReport {
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v1.5 | 2026-01-08 | **修正**: 4.3 Report API 回傳格式為扁平結構（無 `report` 包裹），欄位改為 `references` + `timestamp` |
 | v1.4 | 2026-01-05 | 修正: Deep Analyze 使用 `/deep-analyze` (非 analyze-partial)；錄音 append 的 start_time/end_time 為 ISO 8601 格式字串 |
 | v1.3 | 2025-01-05 | 新增 GET /api/v1/sessions/{id}/report - 用 session_id 取得報告 (History Page) |
 | v1.2 | 2025-01-05 | 重命名 mode 為 session_mode (避免 PostgreSQL 保留字衝突)；新增取得會談 API 文檔 |
@@ -792,4 +799,4 @@ if session.hasReport {
 
 ---
 
-**最後更新**: 2026-01-05
+**最後更新**: 2026-01-08
