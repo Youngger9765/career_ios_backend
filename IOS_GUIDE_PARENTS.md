@@ -1,6 +1,6 @@
 # Island Parents iOS App 開發指南
 
-> **版本**: v1.4
+> **版本**: v1.6
 > **適用對象**: iOS 開發者
 > **後端版本**: career_ios_backend
 
@@ -309,6 +309,7 @@ Content-Type: application/json
 ### 4.3 Report (諮詢報告)
 **用途**: 對話結束後生成完整分析報告
 
+#### 4.3.1 生成報告 (POST)
 ```
 POST /api/v1/sessions/{session_id}/report
 Authorization: Bearer <token>
@@ -332,6 +333,26 @@ Authorization: Bearer <token>
   "timestamp": "2025-01-05T11:00:00Z"
 }
 ```
+
+#### 4.3.2 取得報告 (GET)
+```
+GET /api/v1/sessions/{session_id}/report
+Authorization: Bearer <token>
+```
+
+**Response (200):** 與 POST 回傳格式**完全相同**
+```json
+{
+  "encouragement": "...",
+  "issue": "...",
+  "analyze": "...",
+  "suggestion": "...",
+  "references": [...],
+  "timestamp": "2025-01-05T11:00:00Z"
+}
+```
+
+> ✅ **POST 與 GET 回傳格式一致**：兩者都回傳扁平結構，iOS 可以用同一個 Model 解析。
 
 > ⚠️ **注意**: 回傳格式為**扁平結構**（欄位直接在最外層），沒有 `report` 包裹！
 
@@ -782,6 +803,7 @@ if session.hasReport {
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v1.6 | 2026-01-08 | **統一 GET/POST 回傳格式**: GET Report 現在回傳與 POST 相同的扁平結構 (ParentsReportResponse)，iOS 可用同一 Model 解析 |
 | v1.5 | 2026-01-08 | **修正**: 4.3 Report API 回傳格式為扁平結構（無 `report` 包裹），欄位改為 `references` + `timestamp` |
 | v1.4 | 2026-01-05 | 修正: Deep Analyze 使用 `/deep-analyze` (非 analyze-partial)；錄音 append 的 start_time/end_time 為 ISO 8601 格式字串 |
 | v1.3 | 2025-01-05 | 新增 GET /api/v1/sessions/{id}/report - 用 session_id 取得報告 (History Page) |

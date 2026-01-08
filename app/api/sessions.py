@@ -2,7 +2,8 @@
 Sessions (逐字稿) API
 """
 import logging
-from typing import Optional
+from datetime import datetime, timezone
+from typing import Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, status
@@ -26,6 +27,7 @@ from app.schemas.report import ReportResponse
 from app.schemas.session import (
     AppendRecordingRequest,
     AppendRecordingResponse,
+    ParentsReportResponse,
     ReflectionRequest,
     ReflectionResponse,
     SessionCreateRequest,
@@ -341,15 +343,24 @@ def append_recording(
         _handle_generic_error(e, "append recording", instance)
 
 
-@router.get("/{session_id}/report", response_model=ReportResponse)
+@router.get(
+    "/{session_id}/report",
+    response_model=Union[ParentsReportResponse, ReportResponse],
+)
 def get_session_report(
     session_id: UUID,
     request: Request,
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
     db: DBSession = Depends(get_db),
-) -> ReportResponse:
-    """取得會談的報告 (by session_id) - 用於 History Page"""
+) -> Union[ParentsReportResponse, ReportResponse]:
+    """
+    取得會談的報告 (by session_id)
+
+    回傳格式依據報告類型：
+    - island_parents: 回傳 ParentsReportResponse (flat format)
+    - 其他: 回傳 ReportResponse (full format with metadata)
+    """
     instance = str(request.url.path)
 
     # First verify the session exists and user has access
@@ -385,7 +396,22 @@ def get_session_report(
             instance=instance,
         )
 
-    # Build response
+    # For Island Parents mode, return flat ParentsReportResponse
+    # to match POST endpoint format
+    if report.mode == "island_parents":
+        content = report.content_json or {}
+        return ParentsReportResponse(
+            encouragement=content.get("encouragement", ""),
+            issue=content.get("issue", ""),
+            analyze=content.get("analyze", ""),
+            suggestion=content.get("suggestion", ""),
+            references=content.get("references", []),
+            timestamp=report.created_at.replace(tzinfo=timezone.utc).isoformat()
+            if report.created_at
+            else datetime.now(timezone.utc).isoformat(),
+        )
+
+    # For other modes (legacy), return full ReportResponse
     report_dict = {
         "id": report.id,
         "session_id": report.session_id,

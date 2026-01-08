@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **GET Report API Format Consistency** (2026-01-08)
+  - `GET /api/v1/sessions/{session_id}/report` now returns same format as POST
+  - For `island_parents` mode: returns flat `ParentsReportResponse` (encouragement, issue, analyze, suggestion, references, timestamp)
+  - iOS can now use the same Model for both POST and GET responses
+  - Legacy `markdown` mode still returns full `ReportResponse` for backward compatibility
+  - Updated IOS_GUIDE_PARENTS.md v1.6 with GET endpoint documentation
+
 ### Changed
 - **Analysis Services Refactoring** (2026-01-07)
   - Extracted 4 new modules from large files for better maintainability:
