@@ -24,6 +24,12 @@
   - 修復：移除硬截斷，讓 AI 自然生成 prompt 要求的長度
   - 現在回傳完整句子：「你正努力嘗試承接孩子深奧的思想」
 
+- **Deep Analyze 欄位驗證** (2026-01-08)
+  - 新增 `display_text` 最小/最大驗證 (4-20 字)
+  - 新增 `quick_suggestion` 最小/最大驗證 (5-20 字，基於 200 句專家建議)
+  - 超出範圍時記錄警告但不硬截斷
+  - display_text 太短時 fallback 為「分析完成」
+
 - **GET Report API 格式統一** (2026-01-08)
   - `GET /api/v1/sessions/{session_id}/report` 現在回傳與 POST 相同的格式
   - 使用 `tenant_id`（來自 JWT）判斷格式，而非 `report.mode`

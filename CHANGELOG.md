@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fix: Removed hard truncation, let AI naturally generate within prompt's limit
   - Now returns complete sentences: "你正努力嘗試承接孩子深奧的思想"
 
+- **Deep Analyze Field Validation** (2026-01-08)
+  - Added min/max validation for `display_text` (4-20 chars)
+  - Added min/max validation for `quick_suggestion` (5-20 chars, based on 200 expert suggestions)
+  - Log warnings for out-of-range values without hard truncation
+  - Fallback to default "分析完成" if display_text too short
+
 - **GET Report API Format Consistency** (2026-01-08)
   - `GET /api/v1/sessions/{session_id}/report` now returns same format as POST
   - Uses `tenant_id` (from JWT) to determine format, NOT `report.mode`
