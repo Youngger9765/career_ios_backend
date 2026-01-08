@@ -12,9 +12,10 @@
 ### 修復
 - **GET Report API 格式統一** (2026-01-08)
   - `GET /api/v1/sessions/{session_id}/report` 現在回傳與 POST 相同的格式
-  - 對於 `island_parents` 模式：回傳扁平的 `ParentsReportResponse` (encouragement, issue, analyze, suggestion, references, timestamp)
+  - 使用 `tenant_id`（來自 JWT）判斷格式，而非 `report.mode`
+  - 對於 `tenant_id == "island_parents"`：永遠回傳扁平的 `ParentsReportResponse`
   - iOS 現在可以用同一個 Model 解析 POST 和 GET 回應
-  - Legacy `markdown` 模式仍回傳完整 `ReportResponse` 以維持向後相容
+  - 其他租戶仍回傳完整 `ReportResponse` 以維持向後相容
   - 更新 IOS_GUIDE_PARENTS.md v1.6 加入 GET endpoint 文件
 
 ### 變更
