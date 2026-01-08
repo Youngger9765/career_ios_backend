@@ -205,9 +205,9 @@ class ParentsReportService:
 請提供以下 4 個部分：
 
 1. **鼓勵標題**（encouragement）
-   - 一段正向鼓勵的話，肯定家長願意溝通的心意
-   - 具體指出家長做得好的地方
-   - 例如：「這次你已經做了一件重要的事：願意好好跟孩子談。當你說『我想聽聽你的想法』時，展現了開放的態度。」
+   - ⚠️ **必須 15 字以內**（這是硬性限制！）
+   - 一句簡短正向的話，肯定家長願意溝通
+   - 例如：「願意傾聽，很棒」、「你在用心陪伴」、「這次對話很有愛」
 
 2. **待解決的議題**（issue）
    - 指出這次對話中最需要改進的地方
@@ -237,13 +237,15 @@ class ParentsReportService:
 請以 JSON 格式回應：
 
 {{
-  "encouragement": "正向鼓勵標題（包含具體觀察）",
+  "encouragement": "15 字以內的鼓勵標題",
   "issue": "待解決的議題（可以是多點，用換行分隔）",
   "analyze": "溝通內容深入分析（根據對話長度，提供 150-500 字的分析）",
   "suggestion": "建議下次可以這樣說（提供多個情境的具體話術，150-400 字）"
 }}
 
 請開始深入分析。"""
+
+    MAX_ENCOURAGEMENT_CHARS = 15  # 鼓勵標題最大字數
 
     def _parse_report_response(self, llm_raw_response: str) -> Dict:
         """Parse LLM response to extract report data"""
@@ -260,7 +262,21 @@ class ParentsReportService:
                 raise ValueError("No JSON found in response")
 
             json_text = re.sub(r",(\s*[}\]])", r"\1", json_text)
-            return json.loads(json_text)
+            result = json.loads(json_text)
+
+            # Enforce 15-char limit on encouragement
+            if (
+                "encouragement" in result
+                and len(result["encouragement"]) > self.MAX_ENCOURAGEMENT_CHARS
+            ):
+                logger.warning(
+                    f"Truncating encouragement from {len(result['encouragement'])} to {self.MAX_ENCOURAGEMENT_CHARS} chars"
+                )
+                result["encouragement"] = result["encouragement"][
+                    : self.MAX_ENCOURAGEMENT_CHARS
+                ]
+
+            return result
 
         except (json.JSONDecodeError, ValueError) as e:
             logger.error(f"Failed to parse report response: {e}")

@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Report Encouragement: 15-char Limit** (2026-01-08)
+  - Report `encouragement` field now enforced to 15 characters max
+  - Prompt updated with shorter examples: 「願意傾聽，很棒」
+  - Server-side truncation as safety net
+  - Optimized for iOS banner display
+
 - **Quick Feedback: AI Generation with 15-char Limit** (2026-01-08)
   - Quick feedback now enforces strict 15-character limit for circular UI display
   - Still uses Gemini AI generation (not pre-written suggestions)

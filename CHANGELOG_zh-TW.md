@@ -10,6 +10,12 @@
 ## [未發布]
 
 ### 變更
+- **Report Encouragement：15 字限制** (2026-01-08)
+  - 報告 `encouragement` 欄位現在強制 15 字以內
+  - Prompt 更新使用較短範例：「願意傾聽，很棒」
+  - 伺服器端截斷作為安全保護
+  - 針對 iOS 橫幅顯示優化
+
 - **Quick Feedback：AI 生成強制 15 字限制** (2026-01-08)
   - Quick feedback 現在強制 15 字以內，適合同心圓 UI 顯示
   - 仍使用 Gemini AI 生成（非預設建議）
