@@ -15,7 +15,7 @@
   - 之前是讓 Gemini 自由生成文字（最多 50 字）
   - 確保同心圓 UI 中的文字足夠簡短一致
   - 與 deep-analyze 使用相同的建議句庫
-  - 回應新增 `safety_level` 欄位
+  - 回應 `type` 從 `ai_generated` 改為 `expert_suggestion`
 
 ### 修復
 - **GET Report API 格式統一** (2026-01-08)

@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Previously generated free-form text (up to 50 chars) via Gemini
   - Ensures shorter, consistent messages for circular UI display
   - Same suggestion pool as deep-analyze for consistency
-  - Returns new `safety_level` field in response
+  - Response `type` changed from `ai_generated` to `expert_suggestion`
 
 ### Fixed
 - **GET Report API Format Consistency** (2026-01-08)

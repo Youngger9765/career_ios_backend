@@ -51,7 +51,6 @@ class QuickFeedbackService:
         Returns:
             {
                 "message": "從 200 句中選出的專家建議",
-                "safety_level": "green/yellow/red",
                 "type": "expert_suggestion",
                 "timestamp": "當前時間",
                 "latency_ms": 延遲時間
@@ -78,7 +77,6 @@ class QuickFeedbackService:
 
             return {
                 "message": message,
-                "safety_level": safety_level,
                 "type": "expert_suggestion",
                 "timestamp": datetime.datetime.now().isoformat(),
                 "latency_ms": latency_ms,
@@ -93,7 +91,6 @@ class QuickFeedbackService:
             # Fallback to default green suggestion
             return {
                 "message": GREEN_SUGGESTIONS[0],  # "讓孩子知道你站在他這邊"
-                "safety_level": "green",
                 "type": "fallback",
                 "timestamp": datetime.datetime.now().isoformat(),
                 "latency_ms": int((time.time() - start_time) * 1000),
