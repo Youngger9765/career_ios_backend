@@ -354,6 +354,8 @@ Authorization: Bearer <token>
 
 > ✅ **POST 與 GET 回傳格式一致**：兩者都回傳扁平結構，iOS 可以用同一個 Model 解析。
 
+> 💡 **技術細節**: 後端根據 JWT Token 中的 `tenant_id == "island_parents"` 判斷回傳格式，不是根據報告本身的 mode。
+
 > ⚠️ **注意**: 回傳格式為**扁平結構**（欄位直接在最外層），沒有 `report` 包裹！
 
 **內容長度:**
