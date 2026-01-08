@@ -9,22 +9,21 @@
 
 ## [未發布]
 
-### 變更
-- **Report Encouragement：15 字限制** (2026-01-08)
-  - 報告 `encouragement` 欄位現在強制 15 字以內
-  - Prompt 更新使用較短範例：「願意傾聽，很棒」
-  - 伺服器端截斷作為安全保護
-  - 針對 iOS 橫幅顯示優化
-
-- **Quick Feedback：AI 生成強制 15 字限制** (2026-01-08)
-  - Quick feedback 現在強制 15 字以內，適合同心圓 UI 顯示
-  - 仍使用 Gemini AI 生成（非預設建議）
-  - Prompt 明確要求「⚠️ 必須 15 字以內（這是硬性限制！）」
-  - 伺服器端截斷作為安全保護，防止 AI 超過限制
-  - 回應 `type` 維持 `ai_generated`
-  - 回傳：`message`、`type`、`timestamp`、`latency_ms`、token 計數
-
 ### 修復
+- **Quick Feedback 截斷 Bug** (2026-01-08)
+  - 根本原因：`max_tokens=50` 太小，導致 Gemini 截斷在字詞中間
+  - 症狀：不完整的回應如「你」、「能複」、「願意」（1-3 字）
+  - 修復：將 `max_tokens` 從 50 增加到 500
+  - 新增 `min_chars=7` 驗證，不完整時使用 fallback
+  - 改進文字解析，移除垃圾文字（英文、括號）
+  - 現在回傳完整句子 + emoji：「願意學習傾聽是非常棒的進步 🌟」
+
+- **Report Encouragement 截斷 Bug** (2026-01-08)
+  - 根本原因：硬截斷 `[:15]` 會切斷句子中間
+  - 症狀：「你耐心傾聽孩子分享諮商體驗，並」（在「並」被切斷）
+  - 修復：移除硬截斷，讓 AI 自然生成 prompt 要求的長度
+  - 現在回傳完整句子：「你正努力嘗試承接孩子深奧的思想」
+
 - **GET Report API 格式統一** (2026-01-08)
   - `GET /api/v1/sessions/{session_id}/report` 現在回傳與 POST 相同的格式
   - 使用 `tenant_id`（來自 JWT）判斷格式，而非 `report.mode`

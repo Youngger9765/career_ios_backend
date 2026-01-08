@@ -9,22 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- **Report Encouragement: 15-char Limit** (2026-01-08)
-  - Report `encouragement` field now enforced to 15 characters max
-  - Prompt updated with shorter examples: 「願意傾聽，很棒」
-  - Server-side truncation as safety net
-  - Optimized for iOS banner display
-
-- **Quick Feedback: AI Generation with 15-char Limit** (2026-01-08)
-  - Quick feedback now enforces strict 15-character limit for circular UI display
-  - Still uses Gemini AI generation (not pre-written suggestions)
-  - Prompt explicitly requires "⚠️ 必須 15 字以內（這是硬性限制！）"
-  - Server-side truncation as safety net if AI exceeds limit
-  - Response `type` remains `ai_generated`
-  - Returns: `message`, `type`, `timestamp`, `latency_ms`, token counts
-
 ### Fixed
+- **Quick Feedback Truncation Bug** (2026-01-08)
+  - Root cause: `max_tokens=50` was too small, causing Gemini to truncate mid-word
+  - Symptoms: Incomplete responses like "你", "能複", "願意" (1-3 chars)
+  - Fix: Increased `max_tokens` from 50 to 500
+  - Added `min_chars=7` validation with fallback for incomplete responses
+  - Improved text parsing to remove garbage (English text, parentheses)
+  - Now returns complete sentences with optional emoji: "願意學習傾聽是非常棒的進步 🌟"
+
+- **Report Encouragement Truncation Bug** (2026-01-08)
+  - Root cause: Hard truncation `[:15]` was cutting sentences mid-word
+  - Symptoms: "你耐心傾聽孩子分享諮商體驗，並" (cut off at "並")
+  - Fix: Removed hard truncation, let AI naturally generate within prompt's limit
+  - Now returns complete sentences: "你正努力嘗試承接孩子深奧的思想"
+
 - **GET Report API Format Consistency** (2026-01-08)
   - `GET /api/v1/sessions/{session_id}/report` now returns same format as POST
   - Uses `tenant_id` (from JWT) to determine format, NOT `report.mode`
