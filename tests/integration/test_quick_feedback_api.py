@@ -308,11 +308,10 @@ class TestQuickFeedbackAPI:
             # Message should exist and not be empty
             assert len(data["message"]) > 0
 
-            # Message should ideally be concise
-            # Note: AI may not always follow 20-char limit, so we allow flexibility
+            # Message MUST be <= 15 chars (server-side truncation enforced)
             assert (
-                len(data["message"]) <= 50
-            ), f"Message too long: {len(data['message'])} chars"
+                len(data["message"]) <= 15
+            ), f"Message exceeds 15-char limit: {len(data['message'])} chars - '{data['message']}'"
 
     @skip_without_gcp
     def test_quick_feedback_dangerous_transcript(

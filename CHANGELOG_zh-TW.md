@@ -10,12 +10,13 @@
 ## [未發布]
 
 ### 變更
-- **Quick Feedback：改用 200 句專家建議** (2026-01-08)
-  - Quick feedback 現在從 200 句預設專家建議中選擇（平均 9 字）
-  - 之前是讓 Gemini 自由生成文字（最多 50 字）
-  - 確保同心圓 UI 中的文字足夠簡短一致
-  - 與 deep-analyze 使用相同的建議句庫
-  - 回應 `type` 從 `ai_generated` 改為 `expert_suggestion`
+- **Quick Feedback：AI 生成強制 15 字限制** (2026-01-08)
+  - Quick feedback 現在強制 15 字以內，適合同心圓 UI 顯示
+  - 仍使用 Gemini AI 生成（非預設建議）
+  - Prompt 明確要求「⚠️ 必須 15 字以內（這是硬性限制！）」
+  - 伺服器端截斷作為安全保護，防止 AI 超過限制
+  - 回應 `type` 維持 `ai_generated`
+  - 回傳：`message`、`type`、`timestamp`、`latency_ms`、token 計數
 
 ### 修復
 - **GET Report API 格式統一** (2026-01-08)

@@ -10,12 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **Quick Feedback: Use 200 Expert Suggestions** (2026-01-08)
-  - Quick feedback now selects from 200 pre-written expert suggestions (avg 9 chars)
-  - Previously generated free-form text (up to 50 chars) via Gemini
-  - Ensures shorter, consistent messages for circular UI display
-  - Same suggestion pool as deep-analyze for consistency
-  - Response `type` changed from `ai_generated` to `expert_suggestion`
+- **Quick Feedback: AI Generation with 15-char Limit** (2026-01-08)
+  - Quick feedback now enforces strict 15-character limit for circular UI display
+  - Still uses Gemini AI generation (not pre-written suggestions)
+  - Prompt explicitly requires "⚠️ 必須 15 字以內（這是硬性限制！）"
+  - Server-side truncation as safety net if AI exceeds limit
+  - Response `type` remains `ai_generated`
+  - Returns: `message`, `type`, `timestamp`, `latency_ms`, token counts
 
 ### Fixed
 - **GET Report API Format Consistency** (2026-01-08)
