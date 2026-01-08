@@ -265,17 +265,15 @@ class ParentsReportService:
             json_text = re.sub(r",(\s*[}\]])", r"\1", json_text)
             result = json.loads(json_text)
 
-            # Enforce 15-char limit on encouragement
+            # Log if over 15 chars but don't truncate mid-sentence
+            # Let AI naturally generate within the limit
             if (
                 "encouragement" in result
                 and len(result["encouragement"]) > self.MAX_ENCOURAGEMENT_CHARS
             ):
                 logger.warning(
-                    f"Truncating encouragement from {len(result['encouragement'])} to {self.MAX_ENCOURAGEMENT_CHARS} chars"
+                    f"Encouragement over {self.MAX_ENCOURAGEMENT_CHARS} chars: {len(result['encouragement'])} chars"
                 )
-                result["encouragement"] = result["encouragement"][
-                    : self.MAX_ENCOURAGEMENT_CHARS
-                ]
 
             return result
 
