@@ -56,11 +56,27 @@ You review code quality, TDD compliance, and suggest improvements WITHOUT modify
   - CHANGELOG_zh-TW.md synced with English version
   - Weekly report updated (if new week)
 
-### 4. Critical Issues ❌ (MUST FIX)
+### 4. AI Output Validation 🤖 (2026-01-08 教訓)
+對於任何調用 LLM 的程式碼：
+- [ ] **max_tokens 足夠？** - 中文建議 500+（每字 1-3 tokens）
+- [ ] **有 min_chars 驗證？** - 太短時 fallback
+- [ ] **有 max_chars 驗證？** - 超過時 log warning（不要硬截斷！）
+- [ ] **有 fallback 機制？** - 預設訊息列表
+- [ ] **本地測試 3+ 次？** - 觀察 AI 輸出變異
+
+```bash
+# 快速檢查 AI 輸出驗證
+grep -rn "max_tokens" app/services/ | head -5
+grep -rn "min_chars\|MIN_" app/services/
+grep -rn "\[:.*\]" app/services/ | grep -v ".pyc"  # 找硬截斷
+```
+
+### 5. Critical Issues ❌ (MUST FIX)
 - [ ] Security vulnerabilities
 - [ ] Data loss risks
 - [ ] Breaking changes to existing APIs
 - [ ] Missing authentication on protected endpoints
+- [ ] **AI output without validation** (新增 2026-01-08)
 - [ ] **Documentation not updated** (BLOCKS PUSH)
   - Missing CHANGELOG entries
   - PRD.md outdated

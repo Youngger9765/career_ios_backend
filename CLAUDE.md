@@ -53,6 +53,14 @@
    - realtime-counseling 手機模擬：Claude 自己操作驗證
    - 用戶只需要看最終結果報告
 
+8. **🤖 AI 輸出必須驗證** (2026-01-08 教訓)
+   - **所有 AI 生成欄位都需要 min/max 驗證**
+   - max_tokens 要足夠大（中文建議 500+）
+   - **不要硬截斷**（會切斷句子中間）
+   - 用 prompt 控制長度，不是後處理截斷
+   - 太短時用 fallback，太長時 log warning
+   - **本地測試 3+ 次**確認 AI 實際輸出
+
 ---
 
 ## 🔧 Tool Chain
@@ -121,6 +129,7 @@ poetry run pre-commit install --hook-type pre-push
 | **third-party-apis** | External API integration | "ElevenLabs", "OpenAI", "Gemini", "第三方 API" |
 | **debugging** | Debug issues systematically | "bug", "error", "debug", "不work", "壞掉" |
 | **error-handling** | Error handling patterns | "error", "exception", "validation", "錯誤處理" |
+| **ai-output-validation** | Validate AI outputs | "AI 輸出", "LLM", "Gemini", "截斷", "max_tokens" |
 | **context-monitor** | Context usage monitoring | Auto-activates when context high |
 
 ### 🤖 Skill Auto-Activation System
@@ -250,6 +259,6 @@ All development tasks go through agent-manager:
 
 ---
 
-**Version**: v3.1 (Skill Auto-Activation System)
-**Last Updated**: 2025-12-25
+**Version**: v3.2 (AI Output Validation Rule)
+**Last Updated**: 2026-01-08
 **Philosophy**: Context efficiency through progressive disclosure + intelligent automation

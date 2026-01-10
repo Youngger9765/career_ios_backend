@@ -269,9 +269,9 @@ class TestAdminUpdateCounselor:
         self, client, admin_token, test_counselor_id
     ):
         """Admin can update subscription expiry date"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
-        future_date = (datetime.utcnow() + timedelta(days=365)).isoformat()
+        future_date = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
         request_data = {"subscription_expires_at": future_date}
 
         response = client.patch(
@@ -468,7 +468,7 @@ class TestAdminCreateCounselor:
 
     def test_create_counselor_success(self, client, admin_token):
         """Admin can create new counselor with password"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         request_data = {
             "email": "newuser@test.com",
@@ -480,7 +480,7 @@ class TestAdminCreateCounselor:
             "role": "counselor",
             "total_credits": 500,
             "subscription_expires_at": (
-                datetime.utcnow() + timedelta(days=365)
+                datetime.now(timezone.utc) + timedelta(days=365)
             ).isoformat(),
         }
 
@@ -593,7 +593,7 @@ class TestAdminCreateCounselor:
         self, client, admin_token, db_session
     ):
         """Creating counselor should send password reset email"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         request_data = {
             "email": "withresetmail@test.com",
@@ -605,7 +605,7 @@ class TestAdminCreateCounselor:
             "role": "counselor",
             "total_credits": 100,
             "subscription_expires_at": (
-                datetime.utcnow() + timedelta(days=365)
+                datetime.now(timezone.utc) + timedelta(days=365)
             ).isoformat(),
         }
 
@@ -633,13 +633,14 @@ class TestAdminCreateCounselor:
 
         assert reset_token is not None
         assert reset_token.used is False
-        assert reset_token.expires_at > datetime.utcnow()
+        # Compare as naive datetimes (SQLite stores naive)
+        assert reset_token.expires_at > datetime.now(timezone.utc).replace(tzinfo=None)
 
     def test_create_counselor_email_send_failure_does_not_block_creation(
         self, client, admin_token, monkeypatch
     ):
         """Counselor creation should succeed even if email send fails"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         # Mock email sender to raise exception
         async def mock_send_email(*args, **kwargs):
@@ -658,7 +659,7 @@ class TestAdminCreateCounselor:
             "role": "counselor",
             "total_credits": 100,
             "subscription_expires_at": (
-                datetime.utcnow() + timedelta(days=365)
+                datetime.now(timezone.utc) + timedelta(days=365)
             ).isoformat(),
         }
 

@@ -1215,7 +1215,7 @@ Authorization: Bearer {access_token}</pre>
                         <p style="margin: 8px 0; color: #64748b;"><strong>Request Body:</strong> 無（從 session 自動讀取逐字稿）</p>
                         <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
                         <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
-  "message": "語氣穩定，建議先同理...",  // ⭐ 顯示這個！
+  "message": "你沒急著反駁",  // ⭐ 15字以內
   "type": "ai_generated",
   "timestamp": "2024-01-01T15:10:00Z",
   "latency_ms": 7727                    // ~8秒
@@ -1225,7 +1225,7 @@ Authorization: Bearer {access_token}</pre>
                             <li><strong>Console 測試</strong>：每 10 秒調用一次</li>
                             <li><strong>iOS</strong>：間隔自己決定（建議 10-15 秒）</li>
                             <li><strong>⏱️ 後端分析</strong>：自動取最近 15 秒的 segments</li>
-                            <li>message 約 20-50 字，顯示為 Toast</li>
+                            <li>⚠️ message 強制 <strong>15 字以內</strong>，適合同心圓 UI</li>
                             <li>session_id 在 URL 路徑中，不需要 body</li>
                         </ul>
                     </div>
@@ -1500,7 +1500,7 @@ use_rag=false    // 選填: 預設 false</pre>
                         <p style="margin: 8px 0; color: #64748b;"><strong>Query Params:</strong> use_rag=true (預設啟用 RAG)</p>
                         <p style="margin: 8px 0; color: #64748b;"><strong>Response (200 OK):</strong></p>
                         <pre style="background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{
-  "encouragement": "這次你已經做了一件重要的事：願意好好跟孩子談。",  // 💪 鼓勵標題
+  "encouragement": "你正在接住孩子",  // 💪 鼓勵標題 (15字以內)
   "issue": "對話陷入無效重複，缺乏雙向互動。",                      // ❓ 待解決議題
   "analyze": "重複相同的指令容易讓孩子產生「聽而不聞」...",         // 📊 溝通分析
   "suggestion": "「我知道你還想玩，要停下來很難。你是想...」",      // 💡 建議說法
@@ -1612,7 +1612,7 @@ use_rag=false    // 選填: 預設 false</pre>
   "client_name": "小明",
   "session_number": 5,
   "content_json": {
-    "encouragement": "這次你已經做了...",
+    "encouragement": "你正在接住孩子",
     "issue": "對話陷入無效重複...",
     "analyze": "重複相同的指令...",
     "suggestion": "我知道你還想玩..."

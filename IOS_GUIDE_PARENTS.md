@@ -1,6 +1,6 @@
 # Island Parents iOS App 開發指南
 
-> **版本**: v1.4
+> **版本**: v1.7
 > **適用對象**: iOS 開發者
 > **後端版本**: career_ios_backend
 
@@ -41,24 +41,38 @@ Island Parents 是一款 **AI 親子教養助手**，幫助家長在與孩子互
 
 ### 2.1 登入
 ```
-POST /api/v1/auth/login
+POST /api/auth/login
 Content-Type: application/json
 
 {
-  "username": "user@example.com",
-  "password": "password123"
+  "email": "user@example.com",
+  "password": "password123",
+  "tenant_id": "island_parents"
 }
 ```
+
+**⚠️ 注意**：
+- 使用 `email` 而非 `username`
+- 必須傳入 `tenant_id: "island_parents"`
 
 **Response (200):**
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1...",
   "token_type": "bearer",
+  "expires_in": 86400,
   "user": {
     "id": "uuid",
-    "username": "user@example.com",
-    "tenant_id": "island_parents"
+    "email": "user@example.com",
+    "username": "user123",
+    "full_name": "Test User",
+    "role": "counselor",
+    "tenant_id": "island_parents",
+    "is_active": true,
+    "available_credits": 100.0,
+    "last_login": "2025-01-05T10:00:00Z",
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-05T10:00:00Z"
   }
 }
 ```
@@ -208,20 +222,22 @@ Content-Type: application/json
 ### 4.1 Quick Feedback (快速回饋)
 **用途**: 每 15 秒提供即時鼓勵訊息
 
-```
-POST /api/v1/sessions/{session_id}/quick-feedback
-Authorization: Bearer <token>
-Content-Type: application/json
+> ⚠️ **字數限制**: `message` 欄位強制 **15 字以內**，適合同心圓 UI 顯示
 
-{
-  "recent_transcript": "媽媽：寶貝，功課寫完了嗎？\n孩子：還沒，我想先玩一下。"
-}
 ```
+POST /api/v1/sessions/{session_id}/quick-feedback?session_mode=practice
+Authorization: Bearer <token>
+```
+
+**注意**: 此 API 不需要 request body，會自動從 session 讀取最近 15 秒的逐字稿。
+
+**Query Parameters:**
+- `session_mode`: `practice` (練習模式，預設) 或 `emergency` (對談模式)
 
 **Response (200):**
 ```json
 {
-  "message": "很好！用「寶貝」開頭是溫和的開場方式",
+  "message": "你沒急著反駁",
   "type": "ai_generated",
   "timestamp": "2025-01-05T10:00:15Z",
   "latency_ms": 850
@@ -248,15 +264,17 @@ Content-Type: application/json
 ```json
 {
   "safety_level": "yellow",
-  "keywords": ["功課", "手機"],
   "summary": "家長嘗試與孩子溝通功課問題，但孩子有些抗拒",
-  "suggestions": [
-    {
-      "issue": "孩子對功課產生抗拒",
-      "analyze": "直接詢問功課可能讓孩子感到壓力",
-      "suggestion": "可以先問「今天在學校有什麼好玩的事嗎？」建立連結後再談功課"
-    }
+  "alerts": [
+    "⚠️ 孩子顯示抗拒情緒",
+    "⚠️ 注意溝通方式是否給孩子壓力"
   ],
+  "suggestions": [
+    "可以先問「今天在學校有什麼好玩的事嗎？」",
+    "建立連結後再談功課"
+  ],
+  "time_range": "0:00-2:00",
+  "timestamp": "2026-01-07T10:00:00+00:00",
   "rag_sources": [
     {
       "title": "正向教養：同理心優先",
@@ -265,6 +283,7 @@ Content-Type: application/json
       "theory": "正向教養"
     }
   ],
+  "cache_metadata": null,
   "provider_metadata": {
     "provider": "gemini",
     "latency_ms": 1200,
@@ -272,6 +291,8 @@ Content-Type: application/json
   }
 }
 ```
+
+**⚠️ 重要：`suggestions` 和 `alerts` 都是字串陣列 `List[str]`，不是物件陣列！**
 
 **safety_level 說明:**
 | Level | 顏色 | 說明 | UI 顯示 |
@@ -290,6 +311,9 @@ Content-Type: application/json
 ### 4.3 Report (諮詢報告)
 **用途**: 對話結束後生成完整分析報告
 
+> ⚠️ **字數限制**: `encouragement` 欄位強制 **15 字以內**，作為報告標題顯示
+
+#### 4.3.1 生成報告 (POST)
 ```
 POST /api/v1/sessions/{session_id}/report
 Authorization: Bearer <token>
@@ -298,17 +322,45 @@ Authorization: Bearer <token>
 **Response (200):**
 ```json
 {
-  "session_id": "session-uuid",
-  "report": {
-    "encouragement": "今天的對話中，您展現了對孩子的關心和耐心...",
-    "issue": "在討論功課時，孩子出現了抗拒反應...",
-    "analyze": "從正向教養的角度來看，孩子的抗拒可能源於...\n\n根據情緒教養理論，當孩子感受到壓力時...",
-    "suggestion": "下次遇到類似情況，您可以試試：\n1. 「我看到你想玩手機，是不是今天在學校很累？」\n2. 「我們一起想想，怎麼安排時間讓你可以玩也可以寫功課？」"
-  },
-  "rag_sources": [...],
-  "generated_at": "2025-01-05T11:00:00Z"
+  "encouragement": "你正在接住孩子",
+  "issue": "在討論功課時，孩子出現了抗拒反應...",
+  "analyze": "從正向教養的角度來看，孩子的抗拒可能源於...\n\n根據情緒教養理論，當孩子感受到壓力時...",
+  "suggestion": "下次遇到類似情況，您可以試試：\n1. 「我看到你想玩手機，是不是今天在學校很累？」\n2. 「我們一起想想，怎麼安排時間讓你可以玩也可以寫功課？」",
+  "references": [
+    {
+      "title": "正向教養：溫和而堅定的教養方式",
+      "content": "當孩子不配合時，提供有限選擇讓孩子感受到自主權...",
+      "source": "05_self_determination_theory.md",
+      "theory": "教養理論"
+    }
+  ],
+  "timestamp": "2025-01-05T11:00:00Z"
 }
 ```
+
+#### 4.3.2 取得報告 (GET)
+```
+GET /api/v1/sessions/{session_id}/report
+Authorization: Bearer <token>
+```
+
+**Response (200):** 與 POST 回傳格式**完全相同**
+```json
+{
+  "encouragement": "...",
+  "issue": "...",
+  "analyze": "...",
+  "suggestion": "...",
+  "references": [...],
+  "timestamp": "2025-01-05T11:00:00Z"
+}
+```
+
+> ✅ **POST 與 GET 回傳格式一致**：兩者都回傳扁平結構，iOS 可以用同一個 Model 解析。
+
+> 💡 **技術細節**: 後端根據 JWT Token 中的 `tenant_id == "island_parents"` 判斷回傳格式，不是根據報告本身的 mode。
+
+> ⚠️ **注意**: 回傳格式為**扁平結構**（欄位直接在最外層），沒有 `report` 包裹！
 
 **內容長度:**
 - 動態調整：根據對話長度自動調整報告深度
@@ -704,10 +756,10 @@ if session.hasReport {
 ### 11.1 認證
 | Method | Endpoint | 說明 |
 |--------|----------|------|
-| POST | `/api/v1/auth/login` | 登入 |
-| GET | `/api/v1/auth/me` | 取得用戶資訊 |
-| POST | `/api/v1/password-reset/request` | 請求重設密碼 |
-| POST | `/api/v1/password-reset/confirm` | 確認重設密碼 |
+| POST | `/api/auth/login` | 登入 (需要 email + tenant_id) |
+| GET | `/api/auth/me` | 取得用戶資訊 |
+| POST | `/api/v1/auth/password-reset/request` | 請求重設密碼 |
+| POST | `/api/v1/auth/password-reset/confirm` | 確認重設密碼 |
 
 ### 11.2 Session
 | Method | Endpoint | 說明 |
@@ -757,6 +809,9 @@ if session.hasReport {
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v1.7 | 2026-01-08 | **字數限制**: Quick Feedback `message` 和 Report `encouragement` 都強制 15 字以內，適合 UI 顯示 |
+| v1.6 | 2026-01-08 | **統一 GET/POST 回傳格式**: GET Report 現在回傳與 POST 相同的扁平結構 (ParentsReportResponse)，iOS 可用同一 Model 解析 |
+| v1.5 | 2026-01-08 | **修正**: 4.3 Report API 回傳格式為扁平結構（無 `report` 包裹），欄位改為 `references` + `timestamp` |
 | v1.4 | 2026-01-05 | 修正: Deep Analyze 使用 `/deep-analyze` (非 analyze-partial)；錄音 append 的 start_time/end_time 為 ISO 8601 格式字串 |
 | v1.3 | 2025-01-05 | 新增 GET /api/v1/sessions/{id}/report - 用 session_id 取得報告 (History Page) |
 | v1.2 | 2025-01-05 | 重命名 mode 為 session_mode (避免 PostgreSQL 保留字衝突)；新增取得會談 API 文檔 |
@@ -773,4 +828,4 @@ if session.hasReport {
 
 ---
 
-**最後更新**: 2026-01-05
+**最後更新**: 2026-01-08

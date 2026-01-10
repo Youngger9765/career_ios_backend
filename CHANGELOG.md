@@ -9,6 +9,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Quick Feedback Truncation Bug** (2026-01-08)
+  - Root cause: `max_tokens=50` was too small, causing Gemini to truncate mid-word
+  - Symptoms: Incomplete responses like "你", "能複", "願意" (1-3 chars)
+  - Fix: Increased `max_tokens` from 50 to 500
+  - Added `min_chars=7` validation with fallback for incomplete responses
+  - Improved text parsing to remove garbage (English text, parentheses)
+  - Now returns complete sentences with optional emoji: "願意學習傾聽是非常棒的進步 🌟"
+
+- **Report Encouragement Truncation Bug** (2026-01-08)
+  - Root cause: Hard truncation `[:15]` was cutting sentences mid-word
+  - Symptoms: "你耐心傾聽孩子分享諮商體驗，並" (cut off at "並")
+  - Fix: Removed hard truncation, let AI naturally generate within prompt's limit
+  - Now returns complete sentences: "你正努力嘗試承接孩子深奧的思想"
+
+- **Deep Analyze Field Validation** (2026-01-08)
+  - Added min/max validation for `display_text` (4-20 chars)
+  - Added min/max validation for `quick_suggestion` (5-20 chars, based on 200 expert suggestions)
+  - Log warnings for out-of-range values without hard truncation
+  - Fallback to default "分析完成" if display_text too short
+
+- **GET Report API Format Consistency** (2026-01-08)
+  - `GET /api/v1/sessions/{session_id}/report` now returns same format as POST
+  - Uses `tenant_id` (from JWT) to determine format, NOT `report.mode`
+  - For `tenant_id == "island_parents"`: always returns flat `ParentsReportResponse`
+  - iOS can now use the same Model for both POST and GET responses
+  - Other tenants still receive full `ReportResponse` for backward compatibility
+  - Updated IOS_GUIDE_PARENTS.md v1.6 with GET endpoint documentation
+
+### Changed
+- **Analysis Services Refactoring** (2026-01-07)
+  - Extracted 4 new modules from large files for better maintainability:
+    - `expert_suggestion_service.py` - AI-powered suggestion selection
+    - `session_billing_service.py` - Incremental billing with ceiling rounding
+    - `analysis_helpers.py` - Utility functions for keyword analysis
+    - `parents_report_service.py` - Parent-child dialogue report generation
+  - File size optimizations:
+    - `keyword_analysis_service.py`: 1397 → 632 lines (-55%)
+    - `session_analysis.py`: 771 → 529 lines (-31%)
+  - Updated `__init__.py` with backward-compatible re-exports
+  - All 333 integration tests pass
+
+### Security
+- **Admin API DEBUG Mode Hardening** (2026-01-07)
+  - Fixed security vulnerability allowing unauthenticated admin access
+  - DEBUG mode now requires `ENVIRONMENT != production AND != staging`
+  - Affects: `admin_counselors.py` and `admin_credits.py`
+  - All admin endpoints now properly protected in staging/production
+
+### Fixed
+- **Pydantic V2 Deprecation Warnings** (2026-01-07)
+  - Migrated 14 `class Config:` blocks to `model_config = ConfigDict(...)` pattern
+  - Files updated: auth.py, analysis.py, ui_client_case.py, session_usage.py, client.py, session.py, report.py
+  - All 333 integration tests pass
+- **datetime.utcnow() Deprecation** (2026-01-07)
+  - Replaced deprecated `datetime.utcnow()` with `datetime.now(timezone.utc)`
+  - Files: security.py, credit_billing.py, billing_analyzer.py
+- **IOS_GUIDE_PARENTS.md** - Authentication API documentation corrections (2026-01-07)
+  - Fixed login endpoint: `/api/v1/auth/login` → `/api/auth/login`
+  - Fixed login body: `username` → `email` + added `tenant_id` requirement
+  - Fixed auth/me endpoint: `/api/v1/auth/me` → `/api/auth/me`
+  - Added `expires_in` field and complete user object in login response
+  - Updated Section 11.1 API reference table
+- **IOS_GUIDE_PARENTS.md** - Corrected quick-feedback API documentation
+  - Removed outdated `recent_transcript` body requirement
+  - API now correctly documented as auto-reading from session
+
 ### Added
 - **Time-based Transcript Segmentation for Quick/Deep APIs** (2026-01-05)
   - New `_extract_transcripts_by_time()` helper in `session_analysis.py`

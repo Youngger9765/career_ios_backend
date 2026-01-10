@@ -9,6 +9,66 @@
 
 ## [未發布]
 
+### 修復
+- **Quick Feedback 截斷 Bug** (2026-01-08)
+  - 根本原因：`max_tokens=50` 太小，導致 Gemini 截斷在字詞中間
+  - 症狀：不完整的回應如「你」、「能複」、「願意」（1-3 字）
+  - 修復：將 `max_tokens` 從 50 增加到 500
+  - 新增 `min_chars=7` 驗證，不完整時使用 fallback
+  - 改進文字解析，移除垃圾文字（英文、括號）
+  - 現在回傳完整句子 + emoji：「願意學習傾聽是非常棒的進步 🌟」
+
+- **Report Encouragement 截斷 Bug** (2026-01-08)
+  - 根本原因：硬截斷 `[:15]` 會切斷句子中間
+  - 症狀：「你耐心傾聽孩子分享諮商體驗，並」（在「並」被切斷）
+  - 修復：移除硬截斷，讓 AI 自然生成 prompt 要求的長度
+  - 現在回傳完整句子：「你正努力嘗試承接孩子深奧的思想」
+
+- **Deep Analyze 欄位驗證** (2026-01-08)
+  - 新增 `display_text` 最小/最大驗證 (4-20 字)
+  - 新增 `quick_suggestion` 最小/最大驗證 (5-20 字，基於 200 句專家建議)
+  - 超出範圍時記錄警告但不硬截斷
+  - display_text 太短時 fallback 為「分析完成」
+
+- **GET Report API 格式統一** (2026-01-08)
+  - `GET /api/v1/sessions/{session_id}/report` 現在回傳與 POST 相同的格式
+  - 使用 `tenant_id`（來自 JWT）判斷格式，而非 `report.mode`
+  - 對於 `tenant_id == "island_parents"`：永遠回傳扁平的 `ParentsReportResponse`
+  - iOS 現在可以用同一個 Model 解析 POST 和 GET 回應
+  - 其他租戶仍回傳完整 `ReportResponse` 以維持向後相容
+  - 更新 IOS_GUIDE_PARENTS.md v1.6 加入 GET endpoint 文件
+
+### 變更
+- **分析服務重構** (2026-01-07)
+  - 從大型檔案中提取 4 個新模組以提升可維護性：
+    - `expert_suggestion_service.py` - AI 驅動的建議選擇
+    - `session_billing_service.py` - 無條件進位的增量計費
+    - `analysis_helpers.py` - 關鍵字分析工具函數
+    - `parents_report_service.py` - 親子對話報告生成
+  - 檔案大小優化：
+    - `keyword_analysis_service.py`: 1397 → 632 行 (-55%)
+    - `session_analysis.py`: 771 → 529 行 (-31%)
+  - 更新 `__init__.py` 支援向後相容的重新匯出
+  - 全部 333 個整合測試通過
+
+### 安全性
+- **Admin API DEBUG 模式強化** (2026-01-07)
+  - 修復允許未認證訪問管理功能的安全漏洞
+  - DEBUG 模式現在需要 `ENVIRONMENT != production AND != staging`
+  - 影響 12 個管理端點：諮詢師管理 + 點數管理
+  - 不影響 iOS App 或一般用戶 API
+
+### 修復
+- **IOS_GUIDE_PARENTS.md** - 認證 API 文件修正 (2026-01-07)
+  - 修正登入端點：`/api/v1/auth/login` → `/api/auth/login`
+  - 修正登入 body：`username` → `email` + 新增 `tenant_id` 需求
+  - 修正 auth/me 端點：`/api/v1/auth/me` → `/api/auth/me`
+  - 新增 `expires_in` 欄位和完整用戶物件於登入回應
+  - 更新 Section 11.1 API 參考表格
+- **IOS_GUIDE_PARENTS.md** - 修正 quick-feedback API 文件
+  - 移除過時的 `recent_transcript` body 需求
+  - API 現正確記載為自動從 session 讀取逐字稿
+
 ### 新增
 - **PromptRegistry - 統一 Prompt 架構** (2026-01-04)
   - 新增集中式 prompt 管理系統於 `app/prompts/`

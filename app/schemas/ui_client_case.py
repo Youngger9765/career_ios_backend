@@ -7,7 +7,7 @@ from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Set
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class CreateClientCaseRequest(BaseModel):
@@ -135,8 +135,7 @@ class CreateClientCaseResponse(BaseModel):
     created_at: datetime
     message: str = "客戶與個案建立成功"
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ClientCaseDetailResponse(BaseModel):
@@ -176,8 +175,7 @@ class ClientCaseDetailResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UpdateClientCaseRequest(BaseModel):
@@ -245,8 +243,7 @@ class ClientCaseListItem(BaseModel):
     case_created_at: datetime = Field(..., description="個案建立時間")
     case_updated_at: Optional[datetime] = Field(None, description="個案更新時間")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ClientCaseListResponse(BaseModel):

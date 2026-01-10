@@ -2,7 +2,7 @@
 Unit tests for Case API endpoints
 Tests the API logic without requiring a real database
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -35,8 +35,8 @@ def create_mock_case(**kwargs):
         "summary": None,
         "goals": None,
         "problem_description": None,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }
     defaults.update(kwargs)
 
@@ -143,8 +143,8 @@ class TestCreateCase:
         # Mock db.refresh to populate id and timestamps
         def refresh_case(case):
             case.id = uuid4()
-            case.created_at = datetime.utcnow()
-            case.updated_at = datetime.utcnow()
+            case.created_at = datetime.now(timezone.utc)
+            case.updated_at = datetime.now(timezone.utc)
 
         db.refresh.side_effect = refresh_case
 
@@ -343,8 +343,8 @@ class TestDeleteCase:
             db=db,
         )
 
-        assert db.delete.called_with(mock_case)
-        assert db.commit.called
+        db.delete.assert_called_with(mock_case)
+        db.commit.assert_called()
 
     def test_delete_case_not_found(self):
         """Test deleting non-existent case raises 404"""

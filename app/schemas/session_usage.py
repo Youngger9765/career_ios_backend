@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # SessionAnalysisLog Schemas
@@ -51,8 +51,7 @@ class SessionAnalysisLogResponse(BaseModel):
     token_usage: Optional[Dict[str, Any]]
     analyzed_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SessionAnalysisLogListResponse(BaseModel):
@@ -121,5 +120,4 @@ class SessionUsageResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

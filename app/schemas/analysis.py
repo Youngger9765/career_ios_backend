@@ -4,7 +4,7 @@ Supports both career and island_parents tenants with different response formats
 """
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.session import CounselingMode
 
@@ -22,8 +22,8 @@ class AnalyzePartialRequest(BaseModel):
         description="諮詢模式：practice (詳細教學) 或 emergency (快速建議)",
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "transcript_segment": "個案：我最近對未來感到很焦慮...",
@@ -31,6 +31,7 @@ class AnalyzePartialRequest(BaseModel):
                 }
             ]
         }
+    )
 
 
 class RAGDocument(BaseModel):
@@ -75,8 +76,8 @@ class DetailedScript(BaseModel):
         min_length=1,
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "situation": "當孩子拒絕寫作業時",
@@ -87,6 +88,7 @@ class DetailedScript(BaseModel):
                 }
             ]
         }
+    )
 
 
 class IslandParentAnalysisResponse(BaseModel):
@@ -145,8 +147,8 @@ class IslandParentAnalysisResponse(BaseModel):
         description="使用的教養流派標註（例如：['薩提爾模式', 'Dr. Becky Kennedy', '阿德勒正向教養']）",
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "safety_level": "yellow",
@@ -174,6 +176,7 @@ class IslandParentAnalysisResponse(BaseModel):
                 }
             ]
         }
+    )
 
 
 class CareerAnalysisResponse(BaseModel):
@@ -229,8 +232,8 @@ class CareerAnalysisResponse(BaseModel):
         description="Token usage details (prompt_tokens, completion_tokens, total_tokens)",
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "keywords": ["焦慮", "職涯"],
@@ -244,3 +247,4 @@ class CareerAnalysisResponse(BaseModel):
                 }
             ]
         }
+    )

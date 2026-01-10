@@ -2,7 +2,7 @@
 Billing Analyzer Service - GCP Cost Analysis with AI
 """
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from google.cloud import bigquery
@@ -153,7 +153,7 @@ class BillingAnalyzerService:
 
         return {
             "analysis_text": analysis,
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "data_points": len(cost_data),
         }
 
@@ -185,7 +185,7 @@ class BillingAnalyzerService:
         ai_insights = await self.analyze_with_ai(cost_data, summary)
 
         return {
-            "report_date": datetime.utcnow().isoformat(),
+            "report_date": datetime.now(timezone.utc).isoformat(),
             "summary": summary,
             "cost_data": cost_data,
             "ai_insights": ai_insights,
