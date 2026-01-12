@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **ElevenLabs Token API Documentation** (2026-01-12)
+  - Corrected endpoint path in IOS_API_GUIDE.md: `/api/v1/realtime/elevenlabs-token` → `/api/v1/transcript/elevenlabs-token`
+  - Added Section 6 in IOS_GUIDE_PARENTS.md with complete API documentation
+  - Resolved iOS team 404 error when calling the endpoint
+  - Note: Swagger documentation (`/docs`) is the authoritative source for API endpoints
+
 - **Quick Feedback Truncation Bug** (2026-01-08)
   - Root cause: `max_tokens=50` was too small, causing Gemini to truncate mid-word
   - Symptoms: Incomplete responses like "你", "能複", "願意" (1-3 chars)

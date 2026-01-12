@@ -10,6 +10,12 @@
 ## [未發布]
 
 ### 修復
+- **ElevenLabs Token API 文檔錯誤** (2026-01-12)
+  - 修正 IOS_API_GUIDE.md 中的端點路徑：`/api/v1/realtime/elevenlabs-token` → `/api/v1/transcript/elevenlabs-token`
+  - 在 IOS_GUIDE_PARENTS.md 新增 Section 6 完整 API 文檔
+  - 解決 iOS 團隊呼叫端點時的 404 錯誤
+  - 註：Swagger 文檔 (`/docs`) 為 API 端點的權威來源
+
 - **Quick Feedback 截斷 Bug** (2026-01-08)
   - 根本原因：`max_tokens=50` 太小，導致 Gemini 截斷在字詞中間
   - 症狀：不完整的回應如「你」、「能複」、「願意」（1-3 字）
