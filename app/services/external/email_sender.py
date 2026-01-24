@@ -63,7 +63,7 @@ class EmailSenderService:
             reset_path = f"/{tenant_url_path}/reset-password"
         else:
             reset_path = "/reset-password"  # Generic fallback
-        
+
         reset_url = f"{self.app_url}{reset_path}?token={reset_token}"
 
         html_body = self._generate_password_reset_html(

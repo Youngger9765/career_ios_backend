@@ -38,10 +38,10 @@ assert set(VALID_TENANTS) == set(TENANT_URL_MAP.keys()), (
 def validate_tenant(tenant_id: str) -> bool:
     """
     Validate if tenant_id is valid
-    
+
     Args:
         tenant_id: Tenant ID in database format (snake_case, e.g., "island_parents")
-        
+
     Returns:
         True if valid, False otherwise
     """
@@ -51,10 +51,10 @@ def validate_tenant(tenant_id: str) -> bool:
 def normalize_tenant_from_url(url_tenant: str) -> Optional[str]:
     """
     Convert URL tenant format (kebab-case) to database format (snake_case)
-    
+
     Args:
         url_tenant: Tenant ID from URL (e.g., "island-parents")
-        
+
     Returns:
         Normalized tenant ID (e.g., "island_parents") or None if invalid
     """
@@ -64,10 +64,10 @@ def normalize_tenant_from_url(url_tenant: str) -> Optional[str]:
 def get_tenant_url_path(tenant_id: str) -> Optional[str]:
     """
     Convert database tenant format (snake_case) to URL format (kebab-case)
-    
+
     Args:
         tenant_id: Tenant ID in database format (e.g., "island_parents")
-        
+
     Returns:
         URL path format (e.g., "island-parents") or None if invalid
     """
@@ -77,10 +77,10 @@ def get_tenant_url_path(tenant_id: str) -> Optional[str]:
 def detect_tenant_from_path(path: str) -> Optional[str]:
     """
     Extract tenant from URL path
-    
+
     Args:
         path: URL path (e.g., "/island-parents/login")
-        
+
     Returns:
         Tenant ID in database format (e.g., "island_parents") or None
     """

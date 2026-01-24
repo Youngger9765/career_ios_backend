@@ -41,6 +41,7 @@ from app.api import (
 )
 from app.api.v1 import admin_counselors, admin_credits, password_reset, session_usage
 from app.core.config import settings
+from app.core.exceptions import NotFoundError
 from app.middleware.error_handler import (
     generic_exception_handler,
     http_exception_handler,
@@ -51,7 +52,6 @@ from app.utils.tenant import (
     normalize_tenant_from_url,
     validate_tenant,
 )
-from app.core.exceptions import NotFoundError
 
 # Templates
 templates = Jinja2Templates(directory="app/templates")
@@ -169,16 +169,16 @@ async def internal_portal(
 ) -> Response:
     """
     Internal Portal - Admin entry points (hidden from public)
-    
+
     This route requires a password to access. Rate limited to prevent brute force.
     All admin pages still require authentication after accessing this portal.
-    
+
     SECURITY: In production environment, password is REQUIRED.
     Staging/Development: Password is optional (for development convenience).
     """
     is_production = settings.ENVIRONMENT.lower() == "production"
     is_staging = settings.ENVIRONMENT.lower() == "staging"
-    
+
     # Production environment: Password is REQUIRED
     if is_production:
         if not settings.INTERNAL_PORTAL_PASSWORD:
@@ -191,7 +191,7 @@ async def internal_portal(
                     "is_production": True,
                 },
             )
-        
+
         # Production with password configured - require password
         if not password or password != settings.INTERNAL_PORTAL_PASSWORD:
             error_message = "Invalid password" if password else None
@@ -231,7 +231,7 @@ async def internal_portal(
                     },
                 )
         # No password configured - allow access (development convenience)
-    
+
     # Password correct or no password required (staging/dev only) - show admin portal
     return templates.TemplateResponse(
         "index.html",
@@ -348,19 +348,19 @@ async def tenant_forgot_password(
 ) -> Response:
     """
     Forgot password page for any tenant
-    
+
     Args:
         tenant_id: Tenant ID in URL format (kebab-case, e.g., "island-parents", "career", "island")
     """
     # Convert URL format (kebab-case) to database format (snake_case)
     normalized_tenant = normalize_tenant_from_url(tenant_id)
-    
+
     if not normalized_tenant or not validate_tenant(normalized_tenant):
         raise NotFoundError(
             detail="Tenant not found",
             instance=str(request.url.path),
         )
-    
+
     return templates.TemplateResponse(
         "forgot_password.html",
         {
@@ -377,19 +377,19 @@ async def tenant_reset_password(
 ) -> Response:
     """
     Reset password page for any tenant
-    
+
     Args:
         tenant_id: Tenant ID in URL format (kebab-case, e.g., "island-parents", "career", "island")
     """
     # Convert URL format (kebab-case) to database format (snake_case)
     normalized_tenant = normalize_tenant_from_url(tenant_id)
-    
+
     if not normalized_tenant or not validate_tenant(normalized_tenant):
         raise NotFoundError(
             detail="Tenant not found",
             instance=str(request.url.path),
         )
-    
+
     return templates.TemplateResponse("reset_password.html", {"request": request})
 
 
@@ -507,8 +507,9 @@ async def forgot_password_page(
     This keeps flexibility for future multi-tenant scenarios while
     hiding the tenant selector from users.
     """
-    from app.core.config import settings
     from urllib.parse import urlparse
+
+    from app.core.config import settings
 
     # Determine tenant: URL param > Referer > Default
     detected_tenant = tenant
@@ -520,7 +521,7 @@ async def forgot_password_page(
             try:
                 parsed_url = urlparse(referer)
                 path = parsed_url.path
-                
+
                 # Use tenant utility to detect from path
                 detected_tenant = detect_tenant_from_path(path)
             except Exception:
