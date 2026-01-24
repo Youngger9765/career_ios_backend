@@ -37,6 +37,15 @@
 - [ ] 測試郵件發送功能
 - [ ] 更新相關文件
 
+## 高優先級 - 資料庫基礎設施
+
+### Production 資料庫獨立
+- [ ] Production 的 DB 要獨立（與 staging/dev 環境分離）
+- [ ] 設定獨立的 production 資料庫連線配置
+- [ ] 更新環境變數和配置管理
+- [ ] 確保資料庫備份策略
+- [ ] 更新部署文件
+
 ## Nice-to-Have (Low Priority)
 
 ### AI Output Validation 改進
