@@ -328,30 +328,26 @@ async def forgot_password_page(
 ) -> Response:
     """
     Forgot Password page - Request password reset
-    
+
     Tenant can be specified via:
     1. URL query parameter: ?tenant=island_parents
     2. Referer header (future: extract from subdomain or referer)
     3. Default from settings.DEFAULT_TENANT
-    
+
     This keeps flexibility for future multi-tenant scenarios while
     hiding the tenant selector from users.
     """
     from app.core.config import settings
-    
-    # Determine tenant: URL param > Referer detection > Default
+
+    # Determine tenant: URL param > Default
     detected_tenant = tenant
-    
+
     # Future: Extract from referer or subdomain if needed
     # For now, use URL param or default
     if not detected_tenant:
-        # Check referer for tenant hint (optional, for future use)
-        referer = request.headers.get("referer", "")
-        # Could extract tenant from referer URL here if needed
-        
         # Use default tenant
         detected_tenant = settings.DEFAULT_TENANT
-    
+
     return templates.TemplateResponse(
         "forgot_password.html",
         {
