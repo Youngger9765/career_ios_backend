@@ -20,9 +20,9 @@ class Counselor(Base, BaseModel):
     # Authentication fields
     email = Column(String, index=True, nullable=False)  # Removed unique=True
     username = Column(
-        String, index=True, nullable=False
-    )  # Removed unique=True (allow duplicates)
-    full_name = Column(String, nullable=False)
+        String, index=True, nullable=True
+    )  # Removed unique=True (allow duplicates), nullable for simplified registration
+    full_name = Column(String, nullable=True)  # Nullable for simplified registration
     hashed_password = Column(String, nullable=False)
 
     # Multi-tenant & role

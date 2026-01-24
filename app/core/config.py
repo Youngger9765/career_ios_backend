@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     APP_URL: str = "http://localhost:8000"  # Base URL for internal API calls
+    
+    # Default Tenant (for forgot password page and other public pages)
+    DEFAULT_TENANT: str = "island_parents"  # Default tenant for public pages (can be overridden by URL param)
 
     # Database
     DATABASE_URL: str = "postgresql://CHANGE_ME:CHANGE_ME@localhost:5432/career_db"

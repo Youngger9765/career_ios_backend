@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -322,9 +322,43 @@ async def island_parents_report(request: Request, session_id: str) -> Response:
 
 
 @app.get("/forgot-password", response_class=HTMLResponse)
-async def forgot_password_page(request: Request) -> Response:
-    """Forgot Password page - Request password reset"""
-    return templates.TemplateResponse("forgot_password.html", {"request": request})
+async def forgot_password_page(
+    request: Request,
+    tenant: Optional[str] = None,
+) -> Response:
+    """
+    Forgot Password page - Request password reset
+    
+    Tenant can be specified via:
+    1. URL query parameter: ?tenant=island_parents
+    2. Referer header (future: extract from subdomain or referer)
+    3. Default from settings.DEFAULT_TENANT
+    
+    This keeps flexibility for future multi-tenant scenarios while
+    hiding the tenant selector from users.
+    """
+    from app.core.config import settings
+    
+    # Determine tenant: URL param > Referer detection > Default
+    detected_tenant = tenant
+    
+    # Future: Extract from referer or subdomain if needed
+    # For now, use URL param or default
+    if not detected_tenant:
+        # Check referer for tenant hint (optional, for future use)
+        referer = request.headers.get("referer", "")
+        # Could extract tenant from referer URL here if needed
+        
+        # Use default tenant
+        detected_tenant = settings.DEFAULT_TENANT
+    
+    return templates.TemplateResponse(
+        "forgot_password.html",
+        {
+            "request": request,
+            "default_tenant": detected_tenant,
+        },
+    )
 
 
 @app.get("/reset-password", response_class=HTMLResponse)

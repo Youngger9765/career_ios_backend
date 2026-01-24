@@ -15,12 +15,12 @@
                         <input type="email" id="register_email" placeholder="user@example.com" />
                     </div>
                     <div class="form-group">
-                        <label>Username *</label>
-                        <input type="text" id="register_username" placeholder="username" />
+                        <label>Username (選填)</label>
+                        <input type="text" id="register_username" placeholder="username (optional)" />
                     </div>
                     <div class="form-group">
-                        <label>Full Name *</label>
-                        <input type="text" id="register_full_name" placeholder="Full Name" />
+                        <label>Full Name (選填)</label>
+                        <input type="text" id="register_full_name" placeholder="Full Name (optional)" />
                     </div>
                     <div class="form-group">
                         <label>Password * (至少 8 個字元)</label>
@@ -44,10 +44,11 @@
                     const password = document.getElementById('register_password').value;
                     const role = document.getElementById('register_role').value;
 
-                    if (!email || !username || !full_name || !password) {
+                    // Simplified registration: only email and password are required
+                    if (!email || !password) {
                         return {
                             response: { ok: false, status: 400 },
-                            data: { detail: '請填寫所有必填欄位' }
+                            data: { detail: '請填寫 Email 和密碼（必填欄位）' }
                         };
                     }
 
@@ -58,10 +59,20 @@
                         };
                     }
 
+                    // Build request body - username and full_name are optional
+                    const requestBody = {
+                        tenant_id,
+                        email,
+                        password,
+                    };
+                    if (username) requestBody.username = username;
+                    if (full_name) requestBody.full_name = full_name;
+                    if (role) requestBody.role = role;
+
                     const response = await fetch(`${BASE_URL}/api/auth/register`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ tenant_id, email, username, full_name, password, role })
+                        body: JSON.stringify(requestBody)
                     });
 
                     const data = await response.json();
@@ -216,7 +227,11 @@
                         <h3>👤 用戶資訊</h3>
                         <div class="info-row">
                             <span class="info-label">姓名</span>
-                            <span class="info-value">${data.full_name}</span>
+                            <span class="info-value">${data.full_name || '未填'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">用戶名</span>
+                            <span class="info-value">${data.username || '未填'}</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Email</span>
@@ -2737,26 +2752,45 @@
                 subtitle: 'PATCH /api/auth/me',
                 renderForm: () => `
                     <div class="info-card">
-                        <p style="font-size: 13px; color: #6b7280;">當前用戶: ${state.currentUser?.full_name || 'N/A'}</p>
+                        <p style="font-size: 13px; color: #6b7280;">當前用戶: ${state.currentUser?.full_name || state.currentUser?.email || 'N/A'}</p>
                     </div>
                     <div class="form-group">
-                        <label>全名</label>
-                        <input type="text" id="update-counselor-fullname" placeholder="更新全名" value="${state.currentUser?.full_name || ''}" />
+                        <label>全名 (選填)</label>
+                        <input type="text" id="update-counselor-fullname" placeholder="更新全名（留空可清除）" value="${state.currentUser?.full_name || ''}" />
                     </div>
                     <div class="form-group">
-                        <label>用戶名</label>
-                        <input type="text" id="update-counselor-username" placeholder="更新用戶名" value="${state.currentUser?.username || ''}" />
+                        <label>用戶名 (選填)</label>
+                        <input type="text" id="update-counselor-username" placeholder="更新用戶名（留空可清除）" value="${state.currentUser?.username || ''}" />
                     </div>
                     <button class="btn btn-primary" onclick="executeUpdateCounselor()" ${!state.token || !state.currentUser ? 'disabled' : ''}>更新資訊</button>
                 `,
                 execute: async () => {
                     const updateData = {};
 
-                    const fullName = document.getElementById('update-counselor-fullname').value;
-                    const username = document.getElementById('update-counselor-username').value;
+                    const fullName = document.getElementById('update-counselor-fullname').value.trim();
+                    const username = document.getElementById('update-counselor-username').value.trim();
 
-                    if (fullName) updateData.full_name = fullName;
-                    if (username) updateData.username = username;
+                    // Only include in request if value has changed
+                    // Send empty string to clear field (backend will convert to null)
+                    const currentFullName = state.currentUser?.full_name || '';
+                    const currentUsername = state.currentUser?.username || '';
+                    
+                    if (fullName !== currentFullName) {
+                        // Send empty string to clear, or the new value
+                        updateData.full_name = fullName;
+                    }
+                    if (username !== currentUsername) {
+                        // Send empty string to clear, or the new value
+                        updateData.username = username;
+                    }
+
+                    // If no fields to update, return early
+                    if (Object.keys(updateData).length === 0) {
+                        return {
+                            response: { ok: false, status: 400 },
+                            data: { detail: '沒有需要更新的欄位' }
+                        };
+                    }
 
                     const response = await fetch(`${BASE_URL}/api/auth/me`, {
                         method: 'PATCH',
@@ -2777,11 +2811,11 @@
                         <h3>✅ 諮詢師資訊更新成功</h3>
                         <div class="info-row">
                             <span class="info-label">全名</span>
-                            <span class="info-value">${data.full_name}</span>
+                            <span class="info-value">${data.full_name || '未填'}</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">用戶名</span>
-                            <span class="info-value">${data.username}</span>
+                            <span class="info-value">${data.username || '未填'}</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Email</span>

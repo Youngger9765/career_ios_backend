@@ -17,8 +17,8 @@ class CounselorDetailResponse(BaseModel):
 
     id: UUID
     email: EmailStr
-    username: str
-    full_name: str
+    username: Optional[str] = None
+    full_name: Optional[str] = None
     phone: Optional[str] = None
     tenant_id: str
     role: str
@@ -39,8 +39,8 @@ class CounselorListItem(BaseModel):
 
     id: UUID
     email: EmailStr
-    username: str
-    full_name: str
+    username: Optional[str] = None
+    full_name: Optional[str] = None
     phone: Optional[str] = None
     tenant_id: str
     role: str
