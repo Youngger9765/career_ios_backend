@@ -1,6 +1,7 @@
 """
 Sessions (逐字稿) API
 """
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Optional, Union
@@ -27,6 +28,8 @@ from app.schemas.report import ReportResponse
 from app.schemas.session import (
     AppendRecordingRequest,
     AppendRecordingResponse,
+    EmotionFeedbackRequest,
+    EmotionFeedbackResponse,
     ParentsReportResponse,
     ReflectionRequest,
     ReflectionResponse,
@@ -36,6 +39,7 @@ from app.schemas.session import (
     SessionTimelineResponse,
     SessionUpdateRequest,
 )
+from app.services.analysis.emotion_service import EmotionAnalysisService
 from app.services.core.recording_service import RecordingService
 from app.services.core.reflection_service import ReflectionService
 from app.services.core.session_service import SessionService
@@ -447,3 +451,133 @@ def get_session_report(
     }
 
     return ReportResponse(**report_dict)
+
+
+# =============================================================================
+# Emotion Analysis (Island Parents - Real-time Feedback)
+# =============================================================================
+
+
+@router.post(
+    "/{session_id}/emotion-feedback",
+    response_model=EmotionFeedbackResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def analyze_emotion_feedback(
+    session_id: UUID,
+    request: EmotionFeedbackRequest,
+    db: DBSession = Depends(get_db),
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+):
+    """
+    **[Island Parents] Real-time emotion analysis for parent-child communication**
+
+    Analyze the emotion level of parent's communication and provide instant guidance.
+
+    **Emotion Levels:**
+    - **Level 1 (綠燈/Green)**: Good communication - calm, empathetic, constructive
+    - **Level 2 (黃燈/Yellow)**: Warning - slightly impatient, but not out of control
+    - **Level 3 (紅燈/Red)**: Danger - strong negative emotion, may harm relationship
+
+    **Performance:**
+    - Response time: <3 seconds
+    - Model: Gemini Flash Lite Latest
+
+    **Request:**
+    - `context`: Conversation context (可能包含多輪對話)
+    - `target`: Target sentence to analyze
+
+    **Response:**
+    - `level`: 1/2/3 (green/yellow/red)
+    - `hint`: Guidance hint (≤17 chars)
+
+    **Example:**
+    ```json
+    {
+      "context": "小明：我考試不及格\\n媽媽：你有認真準備嗎？",
+      "target": "你就是不用功！"
+    }
+    ```
+
+    **Returns:**
+    ```json
+    {
+      "level": 3,
+      "hint": "試著同理孩子的挫折感"
+    }
+    ```
+    """
+    # 1. Verify session exists and user has access
+    try:
+        session = (
+            db.query(Session)
+            .filter(Session.id == session_id, Session.tenant_id == tenant_id)
+            .first()
+        )
+
+        if not session:
+            raise NotFoundError(
+                detail="Session not found",
+                instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+            )
+
+        # Verify case access (session belongs to case, case belongs to counselor)
+        case = db.query(Case).filter(Case.id == session.case_id).first()
+        if not case:
+            raise NotFoundError(
+                detail="Case not found",
+                instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+            )
+
+        if case.counselor_id != current_user.id:
+            raise ForbiddenError(
+                detail="Access denied to this session",
+                instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+            )
+
+    except NotFoundError:
+        raise
+    except ForbiddenError:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to verify session access: {e}")
+        raise InternalServerError(
+            detail="Failed to verify session access",
+            instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+        )
+
+    # 2. Validate request
+    if not request.context or not request.context.strip():
+        raise BadRequestError(
+            detail="Context cannot be empty",
+            instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+        )
+
+    if not request.target or not request.target.strip():
+        raise BadRequestError(
+            detail="Target cannot be empty",
+            instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+        )
+
+    # 3. Analyze emotion
+    try:
+        emotion_service = EmotionAnalysisService()
+        level, hint = await emotion_service.analyze_emotion(
+            context=request.context, target=request.target
+        )
+
+        return EmotionFeedbackResponse(level=level, hint=hint)
+
+    except asyncio.TimeoutError:
+        logger.error("Emotion analysis timeout (>3s)")
+        raise InternalServerError(
+            detail="Analysis timeout - please try again",
+            instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+        )
+    except Exception as e:
+        logger.error(f"Emotion analysis failed: {e}")
+        raise InternalServerError(
+            detail="Failed to analyze emotion",
+            instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+        )

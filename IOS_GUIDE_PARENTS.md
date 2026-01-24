@@ -39,8 +39,61 @@ Island Parents 是一款 **AI 親子教養助手**，幫助家長在與孩子互
 
 ## 2. 認證系統
 
-### 2.1 登入
+### 2.1 註冊 (Register)
+
+**⚠️ 最新版本：已簡化為只需 Email + Password**
+
+```http
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "tenant_id": "island_parents"
+}
 ```
+
+**必填欄位**：
+- `email`: 使用者 Email（唯一識別）
+- `password`: 密碼（最少 8 個字元）
+- `tenant_id`: **固定值** `"island_parents"`（浮島親子專用）
+
+**選填欄位**（已移除，不需要傳）：
+- ~~`username`~~ - 後端會自動生成
+- ~~`full_name`~~ - 可稍後更新
+- ~~`phone`~~ - 可稍後更新
+
+**Response (201):**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 7776000
+}
+```
+
+**iOS 實作建議**：
+```swift
+struct RegisterRequest: Codable {
+    let email: String
+    let password: String
+    let tenantId: String = "island_parents"  // 固定值
+
+    enum CodingKeys: String, CodingKey {
+        case email, password
+        case tenantId = "tenant_id"
+    }
+}
+```
+
+**註冊成功後自動登入**：無需再次呼叫 login API，直接使用回傳的 `access_token`。
+
+---
+
+### 2.2 登入 (Login)
+
+```http
 POST /api/auth/login
 Content-Type: application/json
 
@@ -58,33 +111,172 @@ Content-Type: application/json
 **Response (200):**
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1...",
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "bearer",
-  "expires_in": 86400,
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "username": "user123",
-    "full_name": "Test User",
-    "role": "counselor",
-    "tenant_id": "island_parents",
-    "is_active": true,
-    "available_credits": 100.0,
-    "last_login": "2025-01-05T10:00:00Z",
-    "created_at": "2025-01-01T00:00:00Z",
-    "updated_at": "2025-01-05T10:00:00Z"
-  }
+  "expires_in": 7776000
 }
 ```
 
-### 2.2 Token 使用
+**iOS 實作建議**：
+```swift
+struct LoginRequest: Codable {
+    let email: String
+    let password: String
+    let tenantId: String = "island_parents"  // 固定值
+
+    enum CodingKeys: String, CodingKey {
+        case email, password
+        case tenantId = "tenant_id"
+    }
+}
+```
+
+---
+
+### 2.3 忘記密碼（Web 流程）
+
+**⚠️ iOS 開發重點：使用 SFSafariViewController 開啟 Web 頁面處理**
+
+#### 2.3.1 忘記密碼頁面 URL
+
+**Staging 環境**：
+```
+https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/forgot-password
+```
+
+**Production 環境**：
+```
+https://[production-url]/island-parents/forgot-password
+```
+
+**iOS 實作**：
+```swift
+import SafariServices
+
+class LoginViewController: UIViewController {
+
+    @IBAction func forgotPasswordTapped(_ sender: UIButton) {
+        openForgotPasswordPage()
+    }
+
+    func openForgotPasswordPage() {
+        let baseURL = "https://career-app-api-staging-978304030758.us-central1.run.app"
+        let urlString = "\(baseURL)/island-parents/forgot-password"
+
+        guard let url = URL(string: urlString) else {
+            print("Invalid URL")
+            return
+        }
+
+        let safariVC = SFSafariViewController(url: url)
+        safariVC.preferredControlTintColor = .systemBlue
+        safariVC.dismissButtonStyle = .close
+
+        present(safariVC, animated: true)
+    }
+}
+```
+
+#### 2.3.2 完整 Web 流程（給 PM 參考）
+
+```mermaid
+sequenceDiagram
+    participant User as 使用者
+    participant iOS as iOS App
+    participant Safari as Safari ViewController
+    participant Backend as Backend API
+    participant Email as Email 服務
+
+    Note over User,Email: 第一階段：請求重設密碼
+
+    User->>iOS: 1. 點擊「忘記密碼？」
+    iOS->>Safari: 2. 開啟 /island-parents/forgot-password
+    Safari-->>User: 3. 顯示忘記密碼頁面
+    User->>Safari: 4. 輸入 Email → 點擊「發送重置郵件」
+    Safari->>Backend: 5. POST /api/v1/auth/password-reset/request
+    Backend->>Backend: 6. 生成重設 Token（6 小時有效）
+    Backend->>Email: 7. 寄送重設密碼郵件
+    Backend-->>Safari: 8. 回傳成功訊息
+    Safari-->>User: 9. 顯示「✅ 重置郵件已發送」
+    User->>Safari: 10. 關閉 Safari（返回 App）
+
+    Note over User,Email: 第二階段：重設密碼
+
+    User->>Email: 11. 打開郵件 App，收到重設郵件
+    User->>Email: 12. 點擊郵件中的重設連結
+    Email->>Safari: 13. 開啟 /island-parents/reset-password?token=xxx
+    Safari-->>User: 14. 顯示重設密碼頁面
+    User->>Safari: 15. 輸入新密碼 → 點擊「重設密碼」
+    Safari->>Backend: 16. POST /api/v1/auth/password-reset/confirm
+    Backend->>Backend: 17. 驗證 Token → 更新密碼
+    Backend-->>Safari: 18. 回傳成功訊息
+    Safari-->>User: 19. 顯示「✅ 密碼已成功重置」
+    Safari-->>User: 20. 點擊「返回登入」按鈕
+    User->>Safari: 21. 關閉 Safari（返回 App）
+
+    Note over User,iOS: 第三階段：用新密碼登入
+
+    User->>iOS: 22. 在 App 登入頁面用新密碼登入
+    iOS->>Backend: 23. POST /api/auth/login
+    Backend-->>iOS: 24. 回傳 access_token
+    iOS-->>User: 25. 登入成功 ✅
+```
+
+#### 2.3.3 Web 流程文字說明
+
+**階段一：請求重設密碼**
+1. 使用者在 App 登入頁面點擊「忘記密碼？」
+2. App 使用 `SFSafariViewController` 開啟忘記密碼頁面
+3. Web 頁面顯示 Email 輸入框
+4. 使用者輸入註冊時的 Email 並點擊「發送重置郵件」
+5. Backend 生成重設 Token（6 小時有效）
+6. Backend 寄送包含重設連結的郵件
+7. Web 頁面顯示成功訊息：「✅ 重置郵件已發送，請檢查您的電子郵件收件匣」
+8. 使用者關閉 Safari，返回 App
+
+**階段二：重設密碼**
+9. 使用者在郵件 App 收到重設郵件
+10. 點擊郵件中的重設連結（自動開啟 Safari）
+11. Web 頁面顯示新密碼輸入框
+12. 使用者輸入新密碼並確認
+13. Backend 驗證 Token 並更新密碼
+14. Web 頁面顯示成功訊息：「✅ 密碼已成功重置」
+15. 點擊「返回登入」按鈕關閉 Safari
+
+**階段三：登入**
+16. 使用者返回 App 登入頁面
+17. 使用新密碼登入
+18. 登入成功 ✅
+
+#### 2.3.4 為什麼使用 Web 方案？
+
+| 優點 | 說明 |
+|------|------|
+| **降低開發成本** | 不需要在 App 端實作重設密碼 UI |
+| **快速上線** | Backend 已實作完成，iOS 只需開啟 URL |
+| **統一體驗** | Web 頁面支援多平台（iOS, Android, Desktop） |
+| **安全性** | 重設 Token 由 Backend 管理，不經過 App |
+
+#### 2.3.5 測試方式
+
+**手動測試**：
+1. 在瀏覽器打開：`https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/forgot-password`
+2. 輸入已註冊的 Email
+3. 檢查信箱收到重設郵件
+4. 點擊郵件中的連結
+5. 設定新密碼
+6. 返回 App 用新密碼登入
+
+---
+
+### 2.4 Token 使用
 所有需認證的 API 都需要在 Header 加上：
 ```
 Authorization: Bearer <access_token>
 ```
 
-### 2.3 Token 有效期
-- **有效期**: 24 小時
+### 2.5 Token 有效期
+- **有效期**: 90 天 (7776000 秒)
 - **建議**: 儲存於 Keychain，到期前自動更新
 
 ---
@@ -367,6 +559,184 @@ Authorization: Bearer <token>
 - 短對話 (<500字): 簡潔報告
 - 中對話 (500-2000字): 標準報告
 - 長對話 (>2000字): 詳細報告
+
+### 4.4 Emotion Analysis (即時情緒分析)
+**用途**: 實時分析家長對話情緒，提供即時引導
+
+> ⚠️ **字數限制**: `hint` 欄位強制 **17 字以內**，提供簡短引導語
+
+```
+POST /api/v1/sessions/{session_id}/emotion-feedback
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "context": "小明：我今天考試不及格\n媽媽：你有認真準備嗎？",
+  "target": "你就是不用功！"
+}
+```
+
+**Request 欄位說明:**
+- `context` (string, required): 對話上下文，可能包含多輪對話
+- `target` (string, required): 要分析的目標句子（家長說的話）
+
+**Response (200):**
+```json
+{
+  "level": 3,
+  "hint": "試著同理孩子的挫折感"
+}
+```
+
+**Response 欄位說明:**
+- `level` (integer, 1-3): 情緒層級
+  - `1` (綠燈): 良好溝通 - 語氣平和、具同理心、建設性溝通
+  - `2` (黃燈): 警告 - 語氣稍顯急躁、帶有責備但未失控
+  - `3` (紅燈): 危險 - 語氣激動、攻擊性強、可能傷害親子關係
+- `hint` (string, ≤17 chars): 引導語，具體、可行、同理
+
+**效能要求:**
+- 回應時間: < 3 秒
+- 前端 timeout: 10 秒
+- Model: Gemini Flash Lite Latest (最快的 Gemini 變體)
+
+**使用時機:**
+- 對話練習模式（practice mode）
+- 家長輸入每句話後即時分析
+- 根據 level 決定 UI 反饋強度
+
+**錯誤處理:**
+```json
+// 400 Bad Request - 空白輸入
+{
+  "type": "https://api.career-counseling.app/errors/bad-request",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "Context cannot be empty",
+  "instance": "/api/v1/sessions/{session_id}/emotion-feedback"
+}
+```
+
+```json
+// 404 Not Found - Session 不存在
+{
+  "type": "https://api.career-counseling.app/errors/not-found",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "Session not found",
+  "instance": "/api/v1/sessions/{session_id}/emotion-feedback"
+}
+```
+
+```json
+// 500 Internal Server Error - 分析失敗或 timeout
+{
+  "type": "https://api.career-counseling.app/errors/internal-server-error",
+  "title": "Internal Server Error",
+  "status": 500,
+  "detail": "Failed to analyze emotion",
+  "instance": "/api/v1/sessions/{session_id}/emotion-feedback"
+}
+```
+
+**iOS 實作範例:**
+```swift
+// Request Model
+struct EmotionFeedbackRequest: Encodable {
+    let context: String
+    let target: String
+}
+
+// Response Model
+struct EmotionFeedbackResponse: Decodable {
+    let level: Int  // 1-3
+    let hint: String  // ≤17 chars
+}
+
+// API Call
+func analyzeEmotion(
+    sessionId: String,
+    context: String,
+    target: String
+) async throws -> EmotionFeedbackResponse {
+    let url = baseURL
+        .appendingPathComponent("api/v1/sessions")
+        .appendingPathComponent(sessionId)
+        .appendingPathComponent("emotion-feedback")
+
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.timeoutInterval = 10.0  // 10秒 timeout
+
+    let body = EmotionFeedbackRequest(
+        context: context,
+        target: target
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(
+        EmotionFeedbackResponse.self,
+        from: data
+    )
+}
+
+// UI 顯示
+func displayEmotionFeedback(_ response: EmotionFeedbackResponse) {
+    let (color, emoji) = switch response.level {
+        case 1: (Color.green, "✅")
+        case 2: (Color.yellow, "⚠️")
+        case 3: (Color.red, "🚨")
+        default: (Color.gray, "")
+    }
+
+    // 顯示燈號
+    emotionIndicator.tintColor = UIColor(color)
+
+    // 顯示引導語（≤17 字，直接顯示）
+    hintLabel.text = "\(emoji) \(response.hint)"
+}
+```
+
+**測試案例:**
+
+綠燈場景（良好溝通）:
+```json
+{
+  "context": "小明：我今天很開心\n媽媽：發生什麼好事了？",
+  "target": "媽媽願意聽你分享，真好"
+}
+// Expected: { "level": 1, "hint": "很好的同理心表達" }
+```
+
+黃燈場景（警告）:
+```json
+{
+  "context": "小明：作業我不會寫\n媽媽：你上課有認真聽嗎？",
+  "target": "你怎麼又不會？"
+}
+// Expected: { "level": 2, "hint": "深呼吸，用平和語氣重述" }
+```
+
+紅燈場景（危險）:
+```json
+{
+  "context": "小明：我考試不及格\n媽媽：你有認真準備嗎？",
+  "target": "你就是不用功！笨死了！"
+}
+// Expected: { "level": 3, "hint": "試著同理孩子的挫折感" }
+```
 
 ---
 
@@ -891,6 +1261,7 @@ https://career-app-api-staging-kxaznpplqq-uc.a.run.app/forgot-password?tenant=is
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v1.9 | 2026-01-25 | **重大更新**: (1) 簡化註冊 API - 只需 email + password + tenant_id；(2) 新增詳細忘記密碼 Web 流程（含流程圖給 PM）；(3) 忘記密碼使用特定 URL `/island-parents/forgot-password`；(4) 新增完整 iOS 實作範例 |
 | v1.8 | 2026-01-08 | **忘記密碼**: 新增忘記密碼 Web 頁面 URL 說明（動態路由） |
 | v1.7 | 2026-01-08 | **字數限制**: Quick Feedback `message` 和 Report `encouragement` 都強制 15 字以內，適合 UI 顯示 |
 | v1.6 | 2026-01-08 | **統一 GET/POST 回傳格式**: GET Report 現在回傳與 POST 相同的扁平結構 (ParentsReportResponse)，iOS 可用同一 Model 解析 |
@@ -908,7 +1279,8 @@ https://career-app-api-staging-kxaznpplqq-uc.a.run.app/forgot-password?tenant=is
 - **後端 Repo**: career_ios_backend
 - **API 文檔**: `/docs` (Swagger UI)
 - **問題回報**: GitHub Issues
+- **Staging 環境**: https://career-app-api-staging-978304030758.us-central1.run.app
 
 ---
 
-**最後更新**: 2026-01-08 (v1.8)
+**最後更新**: 2026-01-25 (v1.9)

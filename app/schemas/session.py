@@ -586,3 +586,74 @@ class AnalysisLogsResponse(BaseModel):
     session_id: UUID
     total_logs: int = Field(description="Total number of analysis logs")
     logs: list[AnalysisLogEntry] = Field(description="List of analysis logs")
+
+
+# =============================================================================
+# Emotion Analysis Schemas (Island Parents - Real-time Emotion Feedback)
+# =============================================================================
+
+
+class EmotionFeedbackRequest(BaseModel):
+    """
+    Request for real-time emotion analysis of parent-child interaction.
+
+    Used by Island Parents tenant to provide instant feedback on parent's
+    communication tone and suggest gentle guidance.
+    """
+
+    context: str = Field(
+        ...,
+        min_length=1,
+        description="對話上下文（可能包含多輪對話）",
+    )
+    target: str = Field(
+        ...,
+        min_length=1,
+        description="要分析的目標句子",
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "context": "小明：我今天考試不及格\n媽媽：你有認真準備嗎？",
+                    "target": "你就是不用功！",
+                }
+            ]
+        }
+    }
+
+
+class EmotionFeedbackResponse(BaseModel):
+    """
+    Response from emotion analysis with traffic light level and guidance hint.
+
+    Level:
+    - 1 (綠燈): 良好溝通，語氣平和、具同理心
+    - 2 (黃燈): 警告，語氣稍顯急躁但未失控
+    - 3 (紅燈): 危險，語氣激動、可能傷害親子關係
+
+    Hint: 簡短引導語 (≤17 字)，具體、可行、同理
+    """
+
+    level: int = Field(
+        ...,
+        ge=1,
+        le=3,
+        description="情緒層級: 1=綠燈（良好）, 2=黃燈（警告）, 3=紅燈（危險）",
+    )
+    hint: str = Field(
+        ...,
+        max_length=17,
+        description="引導語，最多 17 字",
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {"level": 3, "hint": "試著同理孩子的挫折感"},
+                {"level": 2, "hint": "深呼吸，用平和語氣重述"},
+                {"level": 1, "hint": "很好的同理心表達"},
+            ]
+        }
+    }

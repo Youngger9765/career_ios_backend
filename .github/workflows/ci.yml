@@ -68,7 +68,8 @@ jobs:
           --ignore=tests/integration/test_rwd_mobile_playwright.py \
           --ignore=tests/integration/test_enhanced_formats.py \
           --ignore=tests/integration/test_legacy_formats.py \
-          --ignore=tests/integration/test_reports_api.py
+          --ignore=tests/integration/test_reports_api.py \
+          --ignore=tests/integration/test_emotion_api.py
 
   deploy:
     name: Deploy to Cloud Run
