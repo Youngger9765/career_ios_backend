@@ -1,6 +1,6 @@
 # Island Parents iOS App 開發指南
 
-> **版本**: v1.7
+> **版本**: v1.8
 > **適用對象**: iOS 開發者
 > **後端版本**: career_ios_backend
 
@@ -797,6 +797,52 @@ if session.hasReport {
 | POST | `/api/v1/auth/password-reset/request` | 請求重設密碼 |
 | POST | `/api/v1/auth/password-reset/confirm` | 確認重設密碼 |
 
+### 12.1.1 忘記密碼 Web 頁面
+**用途**: iOS App 開啟 WebView 顯示忘記密碼頁面
+
+**推薦方式（動態路由）**:
+```
+https://career-app-api-staging-kxaznpplqq-uc.a.run.app/island-parents/forgot-password
+```
+
+**其他租戶範例**:
+- `island_parents`: `/island-parents/forgot-password` (URL 用連字號)
+- `career`: `/career/forgot-password`
+- `island`: `/island/forgot-password`
+
+**iOS 實作範例**:
+```swift
+import SafariServices
+
+func showForgotPassword() {
+    let baseURL = "https://career-app-api-staging-kxaznpplqq-uc.a.run.app"
+    let tenantURL = "island-parents"  // URL 使用連字號（kebab-case）
+    let urlString = "\(baseURL)/\(tenantURL)/forgot-password"
+    
+    guard let url = URL(string: urlString) else { return }
+    
+    let safariVC = SFSafariViewController(url: url)
+    present(safariVC, animated: true)
+}
+```
+
+**替代方式（通用路由 + 參數）**:
+```
+https://career-app-api-staging-kxaznpplqq-uc.a.run.app/forgot-password?tenant=island_parents
+```
+
+**注意事項**:
+- ✅ 推薦使用動態路由方式（`/{tenant_id}/forgot-password`），URL 更清晰
+- ✅ **URL 使用連字號**（`island-parents`），符合業界慣例
+- ✅ **API/資料庫使用底線**（`island_parents`），符合程式碼慣例
+- ✅ 重置密碼頁面會自動從 Email 連結開啟，不需要 App 手動開啟
+
+**格式對照表**:
+| 用途 | 格式 | 範例 |
+|------|------|------|
+| URL 路徑 | 連字號（kebab-case） | `island-parents` |
+| API/資料庫 | 底線（snake_case） | `island_parents` |
+
 ### 12.2 Session
 | Method | Endpoint | 說明 |
 |--------|----------|------|
@@ -845,6 +891,7 @@ if session.hasReport {
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v1.8 | 2026-01-08 | **忘記密碼**: 新增忘記密碼 Web 頁面 URL 說明（動態路由） |
 | v1.7 | 2026-01-08 | **字數限制**: Quick Feedback `message` 和 Report `encouragement` 都強制 15 字以內，適合 UI 顯示 |
 | v1.6 | 2026-01-08 | **統一 GET/POST 回傳格式**: GET Report 現在回傳與 POST 相同的扁平結構 (ParentsReportResponse)，iOS 可用同一 Model 解析 |
 | v1.5 | 2026-01-08 | **修正**: 4.3 Report API 回傳格式為扁平結構（無 `report` 包裹），欄位改為 `references` + `timestamp` |
@@ -864,4 +911,4 @@ if session.hasReport {
 
 ---
 
-**最後更新**: 2026-01-08
+**最後更新**: 2026-01-08 (v1.8)

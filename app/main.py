@@ -43,6 +43,12 @@ from app.middleware.error_handler import (
     http_exception_handler,
     validation_exception_handler,
 )
+from app.utils.tenant import (
+    detect_tenant_from_path,
+    normalize_tenant_from_url,
+    validate_tenant,
+)
+from app.core.exceptions import NotFoundError
 
 # Templates
 templates = Jinja2Templates(directory="app/templates")
@@ -209,7 +215,7 @@ async def admin_page(request: Request) -> Response:
 
 
 # =====================
-# Island Parents Routes (浮島親子)
+# Island Parents Routes (浮島親子) - 保留作為向後兼容
 # =====================
 @app.get("/island-parents", response_class=HTMLResponse)
 async def island_parents_login(request: Request) -> Response:
@@ -221,6 +227,79 @@ async def island_parents_login(request: Request) -> Response:
 async def island_parents_login_alt(request: Request) -> Response:
     """Island Parents - Login page (alt)"""
     return templates.TemplateResponse("island_parents/login.html", {"request": request})
+
+
+@app.get("/island-parents/forgot-password", response_class=HTMLResponse)
+async def island_parents_forgot_password(request: Request) -> Response:
+    """Island Parents - Forgot password page"""
+    return templates.TemplateResponse(
+        "forgot_password.html",
+        {
+            "request": request,
+            "default_tenant": "island_parents",
+        },
+    )
+
+
+@app.get("/island-parents/reset-password", response_class=HTMLResponse)
+async def island_parents_reset_password(request: Request) -> Response:
+    """Island Parents - Reset password page"""
+    return templates.TemplateResponse("reset_password.html", {"request": request})
+
+
+# =====================
+# Dynamic Tenant Routes (支援所有租戶) - 放在硬編碼路由之後
+# =====================
+@app.get("/{tenant_id}/forgot-password", response_class=HTMLResponse)
+async def tenant_forgot_password(
+    request: Request,
+    tenant_id: str,
+) -> Response:
+    """
+    Forgot password page for any tenant
+    
+    Args:
+        tenant_id: Tenant ID in URL format (kebab-case, e.g., "island-parents", "career", "island")
+    """
+    # Convert URL format (kebab-case) to database format (snake_case)
+    normalized_tenant = normalize_tenant_from_url(tenant_id)
+    
+    if not normalized_tenant or not validate_tenant(normalized_tenant):
+        raise NotFoundError(
+            detail="Tenant not found",
+            instance=str(request.url.path),
+        )
+    
+    return templates.TemplateResponse(
+        "forgot_password.html",
+        {
+            "request": request,
+            "default_tenant": normalized_tenant,
+        },
+    )
+
+
+@app.get("/{tenant_id}/reset-password", response_class=HTMLResponse)
+async def tenant_reset_password(
+    request: Request,
+    tenant_id: str,
+) -> Response:
+    """
+    Reset password page for any tenant
+    
+    Args:
+        tenant_id: Tenant ID in URL format (kebab-case, e.g., "island-parents", "career", "island")
+    """
+    # Convert URL format (kebab-case) to database format (snake_case)
+    normalized_tenant = normalize_tenant_from_url(tenant_id)
+    
+    if not normalized_tenant or not validate_tenant(normalized_tenant):
+        raise NotFoundError(
+            detail="Tenant not found",
+            instance=str(request.url.path),
+        )
+    
+    return templates.TemplateResponse("reset_password.html", {"request": request})
 
 
 @app.get("/island-parents/clients", response_class=HTMLResponse)
@@ -331,21 +410,34 @@ async def forgot_password_page(
 
     Tenant can be specified via:
     1. URL query parameter: ?tenant=island_parents
-    2. Referer header (future: extract from subdomain or referer)
+    2. Referer header (extract from referer URL path)
     3. Default from settings.DEFAULT_TENANT
 
     This keeps flexibility for future multi-tenant scenarios while
     hiding the tenant selector from users.
     """
     from app.core.config import settings
+    from urllib.parse import urlparse
 
-    # Determine tenant: URL param > Default
+    # Determine tenant: URL param > Referer > Default
     detected_tenant = tenant
 
-    # Future: Extract from referer or subdomain if needed
-    # For now, use URL param or default
+    # Extract from referer if not provided in URL
     if not detected_tenant:
-        # Use default tenant
+        referer = request.headers.get("referer")
+        if referer:
+            try:
+                parsed_url = urlparse(referer)
+                path = parsed_url.path
+                
+                # Use tenant utility to detect from path
+                detected_tenant = detect_tenant_from_path(path)
+            except Exception:
+                # If parsing fails, fall back to default
+                pass
+
+    # Fall back to default if still not detected
+    if not detected_tenant:
         detected_tenant = settings.DEFAULT_TENANT
 
     return templates.TemplateResponse(

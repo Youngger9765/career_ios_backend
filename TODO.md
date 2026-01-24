@@ -25,7 +25,24 @@
   - 點信中連結 → 導向 Web 設定新密碼頁面 (`/reset-password?token=...`)
   - 設定新密碼後 → 回 App 用新密碼登入
 - [x] 確認重設密碼 email 中的連結格式正確指向 Web 頁面：`{app_url}/reset-password?token={reset_token}`
-- [ ] 測試完整 Web 流程（需要實際測試，非程式碼問題）
+- [x] 測試完整 Web 流程（已用 Chrome 完整測試：註冊 → 忘記密碼 → 重設密碼 → 新密碼登入，全部成功）
+
+### 網域與信任感
+- [ ] 評估並選擇合適的網域（使用既有網域子網域或另買網域如 GoDaddy）
+- [ ] 設定可信賴的網域用於 Web 重設密碼/條款頁面
+- [ ] 設定 support 信箱（用於寄送密碼重設郵件）
+- [ ] 配置網域 DNS 設定
+- [ ] 確保 SSL 憑證正確配置
+- [ ] 更新 `APP_URL` 環境變數指向新網域
+
+### Landing Page 建立
+- [ ] 設計 Landing Page 內容與版型
+- [ ] 建立 Landing Page 模板（HTML/CSS）
+- [ ] 整合到後端路由（如 `/` 或 `/landing`）
+- [ ] 確保響應式設計（支援手機/桌面）
+- [ ] 加入 App 下載連結（App Store）
+- [ ] 測試 Landing Page 在不同裝置上的顯示
+- [ ] 部署並測試網域連線
 
 ## 高優先級 - 郵件服務
 
