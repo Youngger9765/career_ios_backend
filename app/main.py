@@ -374,12 +374,14 @@ async def tenant_forgot_password(
 async def tenant_reset_password(
     request: Request,
     tenant_id: str,
+    token: Optional[str] = Query(None, description="Password reset token"),
 ) -> Response:
     """
     Reset password page for any tenant
 
     Args:
         tenant_id: Tenant ID in URL format (kebab-case, e.g., "island-parents", "career", "island")
+        token: Optional password reset token from query parameter
     """
     # Convert URL format (kebab-case) to database format (snake_case)
     normalized_tenant = normalize_tenant_from_url(tenant_id)
@@ -390,7 +392,13 @@ async def tenant_reset_password(
             instance=str(request.url.path),
         )
 
-    return templates.TemplateResponse("reset_password.html", {"request": request})
+    return templates.TemplateResponse(
+        "reset_password.html",
+        {
+            "request": request,
+            "token": token,  # Pass token to template for server-side rendering
+        },
+    )
 
 
 @app.get("/island-parents/clients", response_class=HTMLResponse)
@@ -542,9 +550,18 @@ async def forgot_password_page(
 
 
 @app.get("/reset-password", response_class=HTMLResponse)
-async def reset_password_page(request: Request) -> Response:
+async def reset_password_page(
+    request: Request,
+    token: Optional[str] = Query(None, description="Password reset token"),
+) -> Response:
     """Reset Password page - Set new password with token"""
-    return templates.TemplateResponse("reset_password.html", {"request": request})
+    return templates.TemplateResponse(
+        "reset_password.html",
+        {
+            "request": request,
+            "token": token,  # Pass token to template for server-side rendering
+        },
+    )
 
 
 @app.get("/test-elevenlabs", response_class=HTMLResponse)
