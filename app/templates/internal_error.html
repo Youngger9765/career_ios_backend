@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}內部管理入口 - 設定錯誤{% endblock %}
+
+{% block nav_title %}內部管理入口{% endblock %}
+
+{% block content %}
+<div class="px-4 py-12 max-w-md mx-auto">
+    <div class="bg-white rounded-lg shadow-lg p-8">
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">設定錯誤</h1>
+            <p class="text-gray-600">內部管理入口未正確設定</p>
+        </div>
+
+        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-red-800 text-sm font-medium mb-2">錯誤訊息：</p>
+            <p class="text-red-700 text-sm">{{ error }}</p>
+        </div>
+
+        {% if is_production %}
+        <div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p class="text-yellow-800 text-sm font-medium mb-2">⚠️ Production 環境安全要求</p>
+            <p class="text-yellow-700 text-sm">
+                Production 環境必須設定 <code class="bg-yellow-100 px-1 rounded">INTERNAL_PORTAL_PASSWORD</code> 環境變數。
+            </p>
+        </div>
+        {% endif %}
+
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+            <h3 class="text-sm font-semibold text-gray-900 mb-2">解決方法：</h3>
+            <ol class="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+                <li>在環境變數中設定 <code class="bg-gray-200 px-1 rounded">INTERNAL_PORTAL_PASSWORD</code></li>
+                <li>產生安全密碼：
+                    <code class="block mt-1 bg-gray-200 px-2 py-1 rounded font-mono text-xs">
+                        python3 -c "import secrets; print(secrets.token_urlsafe(16))"
+                    </code>
+                </li>
+                <li>重啟服務以載入新的環境變數</li>
+            </ol>
+        </div>
+
+        <div class="text-center text-sm text-gray-500">
+            <p>此錯誤僅供系統管理員參考</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

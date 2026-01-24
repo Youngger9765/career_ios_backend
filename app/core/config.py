@@ -79,6 +79,9 @@ class Settings(BaseSettings):
     GCS_BUCKET: Optional[str] = None
     GCS_PROJECT: Optional[str] = None
 
+    # Internal Portal
+    INTERNAL_PORTAL_PASSWORD: Optional[str] = None  # Password for /internal route (set in .env)
+
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
 

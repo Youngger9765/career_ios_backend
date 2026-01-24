@@ -1,11 +1,14 @@
 from typing import Dict, Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # API routers
@@ -53,6 +56,9 @@ from app.core.exceptions import NotFoundError
 # Templates
 templates = Jinja2Templates(directory="app/templates")
 
+# Initialize Rate Limiter
+limiter = Limiter(key_func=get_remote_address)
+
 # Create FastAPI instance
 app = FastAPI(
     title=settings.APP_NAME,
@@ -61,6 +67,10 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Add rate limiter to app state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Configure CORS
 app.add_middleware(
@@ -141,7 +151,88 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request) -> Response:
-    """Root endpoint - Homepage with entry points"""
+    """Root endpoint - Landing Page for end users"""
+    return templates.TemplateResponse(
+        "landing.html",
+        {
+            "request": request,
+            "version": settings.APP_VERSION,
+        },
+    )
+
+
+@app.get("/internal", response_class=HTMLResponse)
+@limiter.limit("10/minute")  # Rate limit: 10 requests per minute per IP
+async def internal_portal(
+    request: Request,
+    password: Optional[str] = Query(None, description="Internal portal password"),
+) -> Response:
+    """
+    Internal Portal - Admin entry points (hidden from public)
+    
+    This route requires a password to access. Rate limited to prevent brute force.
+    All admin pages still require authentication after accessing this portal.
+    
+    SECURITY: In production environment, password is REQUIRED.
+    Staging/Development: Password is optional (for development convenience).
+    """
+    is_production = settings.ENVIRONMENT.lower() == "production"
+    is_staging = settings.ENVIRONMENT.lower() == "staging"
+    
+    # Production environment: Password is REQUIRED
+    if is_production:
+        if not settings.INTERNAL_PORTAL_PASSWORD:
+            # Production environment without password - show error
+            return templates.TemplateResponse(
+                "internal_error.html",
+                {
+                    "request": request,
+                    "error": "Internal portal password is not configured. Please set INTERNAL_PORTAL_PASSWORD in environment variables.",
+                    "is_production": True,
+                },
+            )
+        
+        # Production with password configured - require password
+        if not password or password != settings.INTERNAL_PORTAL_PASSWORD:
+            error_message = "Invalid password" if password else None
+            return templates.TemplateResponse(
+                "internal_login.html",
+                {
+                    "request": request,
+                    "error": error_message,
+                },
+            )
+    elif is_staging:
+        # Staging environment: Password is optional (for development convenience)
+        # Only require password if it's configured
+        if settings.INTERNAL_PORTAL_PASSWORD:
+            # Password configured - require it
+            if not password or password != settings.INTERNAL_PORTAL_PASSWORD:
+                error_message = "Invalid password" if password else None
+                return templates.TemplateResponse(
+                    "internal_login.html",
+                    {
+                        "request": request,
+                        "error": error_message,
+                    },
+                )
+        # No password configured in staging - allow access (development convenience)
+    else:
+        # Development environment: Password is optional
+        if settings.INTERNAL_PORTAL_PASSWORD:
+            # Password configured - require it
+            if not password or password != settings.INTERNAL_PORTAL_PASSWORD:
+                error_message = "Invalid password" if password else None
+                return templates.TemplateResponse(
+                    "internal_login.html",
+                    {
+                        "request": request,
+                        "error": error_message,
+                    },
+                )
+        # No password configured - allow access (development convenience)
+    
+    # Password correct or no password required (staging/dev only) - show admin portal
     return templates.TemplateResponse(
         "index.html",
         {
