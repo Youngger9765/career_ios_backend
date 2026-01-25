@@ -4,7 +4,7 @@ TDD RED Phase - These tests are EXPECTED TO FAIL initially
 """
 import pytest
 from uuid import uuid4
-from datetime import date
+from datetime import date, datetime
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -96,9 +96,10 @@ class TestSafetyAssessmentAI:
         session = SessionModel(
             id=uuid4(),
             case_id=test_case_obj.id,
-            counselor_id=test_case_obj.counselor_id,
             tenant_id="career",
             session_mode="practice",
+            session_number=1,
+            session_date=date.today(),
         )
         db_session.add(session)
         db_session.commit()

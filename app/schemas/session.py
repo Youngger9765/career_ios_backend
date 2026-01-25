@@ -657,3 +657,32 @@ class EmotionFeedbackResponse(BaseModel):
             ]
         }
     }
+
+
+# =============================================================================
+# Deep Analysis Response
+# =============================================================================
+
+
+class DeepAnalysisResponse(BaseModel):
+    """Deep analysis response for session safety assessment"""
+
+    safety_level: SafetyLevel = Field(..., description="Safety level (green/yellow/red)")
+    display_text: str = Field(
+        ..., min_length=4, max_length=20, description="Short status display text"
+    )
+    quick_suggestion: str = Field(
+        ..., min_length=5, max_length=20, description="Quick action suggestion"
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "safety_level": "green",
+                    "display_text": "對話安全",
+                    "quick_suggestion": "繼續保持良好互動",
+                }
+            ]
+        }
+    }

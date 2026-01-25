@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Deep Analysis API - TDD GREEN phase** (2026-01-26): Minimal implementation for safety assessment
+  - Added POST /sessions/{id}/deep-analyze endpoint (placeholder with hardcoded safe status)
+  - Added POST /sessions/{id}/messages endpoint (placeholder for testing)
+  - DeepAnalysisResponse schema with safety_level/display_text/quick_suggestion
+  - Integration test validates field constraints (4-20, 5-20 chars)
+  - Follows existing authentication/authorization patterns
+  - Ready for AI integration (SimplifiedAnalyzer) in next TDD cycle
 - **Emotion feedback API logging** (2026-01-25): DB and BigQuery logging for cost tracking and analytics
   - Track token usage (prompt/completion tokens + cost)
   - Log analysis results to SessionAnalysisLog (PostgreSQL)
