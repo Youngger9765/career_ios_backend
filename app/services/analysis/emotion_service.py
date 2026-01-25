@@ -7,6 +7,10 @@ import logging
 from typing import Tuple
 
 from app.services.external.gemini_service import GeminiService
+from app.services.utils.ai_validation import (
+    apply_fallback_if_invalid,
+    validate_finish_reason,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -90,10 +94,15 @@ class EmotionAnalysisService:
         if level not in [1, 2, 3]:
             raise ValueError(f"Invalid level: expected 1/2/3, got {level}")
 
-        # Validate hint length (17 chars max)
-        if len(hint) > 17:
-            logger.warning(f"Hint too long ({len(hint)} chars), truncating: {hint}")
-            hint = hint[:17]
+        # Validate hint length (using centralized validation)
+        # Max 17 chars per prompt requirement, min 5 chars for meaningful hint
+        hint = apply_fallback_if_invalid(
+            text=hint,
+            min_chars=5,
+            max_chars=17,
+            fallback="試著用平和語氣溝通",  # 9 chars, within limit
+            field_name="emotion_hint",
+        )
 
         return level, hint
 
@@ -127,15 +136,25 @@ class EmotionAnalysisService:
 
         try:
             # Call Gemini with timeout
-            response_text = await asyncio.wait_for(
-                self.gemini_service.chat_completion(
+            # Increased max_tokens to 500 to prevent truncation (was 50, too small)
+            response = await asyncio.wait_for(
+                self.gemini_service.generate_text(
                     prompt=full_prompt,
                     temperature=0,  # Ensure stable output
-                    max_tokens=50,  # Just enough for "number|hint"
+                    max_tokens=500,  # Sufficient for AI to complete without truncation
                 ),
                 timeout=timeout,
             )
 
+            # Check finish_reason to detect truncation
+            if not validate_finish_reason(response, provider="gemini"):
+                logger.warning(
+                    "Emotion analysis response may be truncated - "
+                    "falling back to safe default"
+                )
+                # Fall through to ValueError handler for fallback
+
+            response_text = response.text
             logger.info(f"Gemini response: {response_text}")
 
             # Parse response

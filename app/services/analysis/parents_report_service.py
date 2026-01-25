@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from sqlalchemy.orm import Session as DBSession
 
+from app.services.utils.ai_validation import validate_ai_output_length
+
 if TYPE_CHECKING:
     from app.models.session import Session
     from app.schemas.session import ParentsReportReference
@@ -265,15 +267,23 @@ class ParentsReportService:
             json_text = re.sub(r",(\s*[}\]])", r"\1", json_text)
             result = json.loads(json_text)
 
-            # Log if over 15 chars but don't truncate mid-sentence
-            # Let AI naturally generate within the limit
-            if (
-                "encouragement" in result
-                and len(result["encouragement"]) > self.MAX_ENCOURAGEMENT_CHARS
-            ):
-                logger.warning(
-                    f"Encouragement over {self.MAX_ENCOURAGEMENT_CHARS} chars: {len(result['encouragement'])} chars"
+            # Validate encouragement field using centralized helper
+            if "encouragement" in result:
+                encouragement = result["encouragement"]
+                validated = validate_ai_output_length(
+                    text=encouragement,
+                    min_chars=4,  # Minimum meaningful encouragement
+                    max_chars=self.MAX_ENCOURAGEMENT_CHARS,  # 15 chars
+                    field_name="encouragement",
                 )
+                if validated is None:
+                    # Too short - use a default
+                    result["encouragement"] = "你正在進步中"  # 6 chars
+                    logger.warning(
+                        f"Encouragement too short, using default: {result['encouragement']}"
+                    )
+                else:
+                    result["encouragement"] = validated
 
             return result
 

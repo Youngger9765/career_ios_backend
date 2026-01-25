@@ -156,7 +156,7 @@ class TestLogAndGBQIntegrity:
         ) as mock_gemini_class, patch(
             "app.services.keyword_analysis_service.OpenAIService"
         ) as mock_openai_class, patch(
-            "app.services.keyword_analysis_service.RAGRetriever"
+            "app.services.analysis.keyword_analysis.prompts.RAGRetriever"
         ) as mock_rag_class:
             mock_gemini_instance = MagicMock()
             mock_gemini_instance.generate_text = mock_generate_text

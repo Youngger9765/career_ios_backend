@@ -79,9 +79,9 @@ class TestAnalyzePartialAPI:
             mock_gemini_instance = mock_gemini.return_value
             mock_gemini_instance.generate_text = mock_generate_text
 
-            # Mock RAGRetriever
+            # Mock RAGRetriever (now imported in prompts.py)
             with patch(
-                "app.services.keyword_analysis_service.RAGRetriever"
+                "app.services.analysis.keyword_analysis.prompts.RAGRetriever"
             ) as mock_rag:
                 mock_rag_instance = mock_rag.return_value
                 mock_rag_instance.search = mock_rag_search

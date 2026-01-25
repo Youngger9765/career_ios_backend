@@ -11,6 +11,10 @@ import time
 from typing import Dict, Optional
 
 from app.services.external.gemini_service import GeminiService
+from app.services.utils.ai_validation import (
+    apply_fallback_if_invalid,
+    validate_finish_reason,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -64,26 +68,26 @@ class QuickFeedbackService:
 
         try:
             # Build prompt with strict 15-char limit
-            message, prompt_tokens, completion_tokens = await self._generate_feedback(
+            message, prompt_tokens, completion_tokens, finish_ok = await self._generate_feedback(
                 recent_transcript, full_transcript, mode, scenario_context
             )
 
-            # Validate: too short = incomplete, use fallback
-            min_chars = 7  # 至少 7 字才算完整（可含 emoji）
-            if len(message) < min_chars:
+            # Check if response was truncated
+            if not finish_ok:
                 logger.warning(
-                    f"Response too short ({len(message)} chars): '{message}', using fallback"
+                    "Quick feedback response was truncated - using fallback"
                 )
                 import random
-
                 message = random.choice(FALLBACK_MESSAGES)
 
-            # Log if over 15 chars but don't truncate mid-word
-            # Let AI handle length, just warn
-            if len(message) > self.MAX_CHARS:
-                logger.warning(
-                    f"Message over {self.MAX_CHARS} chars: {len(message)} chars"
-                )
+            # Validate using centralized helper
+            message = apply_fallback_if_invalid(
+                text=message,
+                min_chars=7,  # 至少 7 字才算完整（可含 emoji）
+                max_chars=self.MAX_CHARS,  # 15 chars
+                fallback=FALLBACK_MESSAGES,  # Will randomly choose
+                field_name="quick_feedback_message",
+            )
 
             latency_ms = int((time.time() - start_time) * 1000)
 
@@ -122,7 +126,7 @@ class QuickFeedbackService:
         使用 Gemini 生成 15 字以內的回饋
 
         Returns:
-            (message, prompt_tokens, completion_tokens)
+            (message, prompt_tokens, completion_tokens, finish_ok)
         """
         # Mode context
         mode_context = ""
@@ -166,6 +170,9 @@ class QuickFeedbackService:
             max_tokens=500,  # 增加到 500，確保不被截斷
         )
 
+        # Validate finish_reason
+        finish_ok = validate_finish_reason(response, provider="gemini")
+
         # Extract text - clean up Gemini's sometimes messy output
         text = response.text.strip()
 
@@ -191,7 +198,7 @@ class QuickFeedbackService:
             prompt_tokens = getattr(usage, "prompt_token_count", 0) or 0
             completion_tokens = getattr(usage, "candidates_token_count", 0) or 0
 
-        return text, prompt_tokens, completion_tokens
+        return text, prompt_tokens, completion_tokens, finish_ok
 
 
 # 創建全局實例
