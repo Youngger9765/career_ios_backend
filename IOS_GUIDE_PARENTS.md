@@ -330,11 +330,11 @@ Content-Type: application/json
 ```
 
 **Response 欄位說明**:
-- `client_id`: 孩子的唯一識別碼（UUID），建立 Session 時需要
+- `client_id`: 孩子的唯一識別碼（UUID），供參考使用
 - `client_code`: 孩子的編號（系統自動生成）
 - `client_name`: 孩子名稱
 - `client_email`: Email（親子版通常為 null）
-- `case_id`: 案例的唯一識別碼（UUID），建立 Session 時需要
+- `case_id`: 案例的唯一識別碼（UUID），**建立 Session 時使用此 ID**
 - `case_number`: 案例編號（系統自動生成）
 - `case_status`: 案例狀態（0=未開始, 1=進行中, 2=已完成）
 - `created_at`: 建立時間
@@ -410,8 +410,8 @@ func createClientCase(
 1. 使用者首次開啟 App 或新增孩子時
 2. 填寫孩子名稱、年級、與孩子的關係
 3. 呼叫此 API 創建 client 和 case
-4. 儲存回傳的 `client_id` 和 `case_id`
-5. 建立 Session 時使用這兩個 ID（參見 Section 3.2）
+4. 儲存回傳的 `case_id`（建立 Session 時需要）
+5. 建立 Session 時使用 `case_id`（參見 Section 3.2）
 
 **錯誤處理**:
 ```json
@@ -591,10 +591,10 @@ func listClientCases(skip: Int = 0, limit: Int = 20) async throws -> ClientCaseL
 ### 3.1 完整流程
 ```
 1. 創建孩子與案例 (POST /api/v1/ui/client-case) ← 首次使用必須
-   ↓ 取得 client_id 和 case_id
+   ↓ 取得 case_id
 2. 選擇情境 (scenario)
    ↓
-3. 建立 Session (POST /api/v1/sessions)
+3. 建立 Session (POST /api/v1/sessions) ← 使用 case_id
    ↓
 4. 取得會談 (GET /api/v1/sessions/{id}) ← 確認 Session 資料
    ↓
@@ -611,7 +611,7 @@ func listClientCases(skip: Int = 0, limit: Int = 20) async throws -> ClientCaseL
 
 ### 3.2 建立 Session
 
-> ⚠️ **前置需求**: 必須先完成 Section 2.6.1 創建孩子與案例，取得 `client_id` 和 `case_id`
+> ⚠️ **前置需求**: 必須先完成 Section 2.6.1 創建孩子與案例，取得 `case_id`
 
 ```
 POST /api/v1/sessions
@@ -619,11 +619,10 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "client_id": "uuid-of-client",      // 從 2.6.1 創建孩子時取得
-  "case_id": "uuid-of-case",          // 從 2.6.1 創建孩子時取得
-  "session_mode": "practice",
-  "scenario": "homework",
-  "scenario_description": "孩子回家後不願意寫功課，一直玩手機"
+  "case_id": "uuid-of-case",          // 從 2.6.1 創建孩子時取得 (必填)
+  "session_mode": "practice",         // 選填
+  "scenario": "homework",             // 選填
+  "scenario_description": "孩子回家後不願意寫功課，一直玩手機"  // 選填
 }
 ```
 
