@@ -1,8 +1,9 @@
 # Island Parents iOS App 開發指南
 
-> **版本**: v1.8
+> **版本**: v1.10
 > **適用對象**: iOS 開發者
 > **後端版本**: career_ios_backend
+> **最後更新**: 2026-01-25
 
 ---
 
@@ -281,36 +282,345 @@ Authorization: Bearer <access_token>
 
 ---
 
+## 2.6 Client & Case 管理 (Island Parents)
+
+### 2.6.1 創建孩子與案例
+
+**用途**: 在開始錄音前，必須先建立孩子（Client）與案例（Case）
+
+**Staging URL**:
+```
+POST https://career-app-api-staging-978304030758.us-central1.run.app/api/v1/ui/client-case
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "name": "小明",           // 孩子名稱 (必填)
+  "grade": "小五",          // 年級 (必填)
+  "relationship": "媽媽"    // 與孩子的關係 (必填)
+}
+```
+
+**必填欄位說明**:
+- `name` (string): 孩子名稱
+- `grade` (string): 年級（例如："小一"、"小五"、"國二"）
+- `relationship` (string): 與孩子的關係（例如："媽媽"、"爸爸"、"阿嬤"）
+
+**選填欄位**（親子版不需要）:
+- `email` - 孩子 Email（選填，可留空）
+- `phone` - 孩子手機（選填）
+- 其他欄位（gender, birth_date 等）會自動填入預設值
+
+**Response (201)**:
+```json
+{
+  "client_id": "fb719809-6775-41ca-99c4-abc42c9f7c86",
+  "client_code": "C0033",
+  "client_name": "小明",
+  "client_email": null,
+  "case_id": "52115919-eeec-4660-80c6-64c6f2581539",
+  "case_number": "CASE0041",
+  "case_status": 0,
+  "created_at": "2026-01-25T15:18:25.912110Z",
+  "message": "客戶與個案建立成功"
+}
+```
+
+**Response 欄位說明**:
+- `client_id`: 孩子的唯一識別碼（UUID），建立 Session 時需要
+- `client_code`: 孩子的編號（系統自動生成）
+- `client_name`: 孩子名稱
+- `client_email`: Email（親子版通常為 null）
+- `case_id`: 案例的唯一識別碼（UUID），建立 Session 時需要
+- `case_number`: 案例編號（系統自動生成）
+- `case_status`: 案例狀態（0=未開始, 1=進行中, 2=已完成）
+- `created_at`: 建立時間
+- `message`: 成功訊息
+
+**iOS 實作建議**:
+```swift
+struct ClientCaseCreateRequest: Codable {
+    let name: String
+    let grade: String
+    let relationship: String
+}
+
+struct ClientCaseCreateResponse: Codable {
+    let clientId: String
+    let clientCode: String
+    let clientName: String
+    let clientEmail: String?
+    let caseId: String
+    let caseNumber: String
+    let caseStatus: Int
+    let createdAt: String
+    let message: String
+
+    enum CodingKeys: String, CodingKey {
+        case clientId = "client_id"
+        case clientCode = "client_code"
+        case clientName = "client_name"
+        case clientEmail = "client_email"
+        case caseId = "case_id"
+        case caseNumber = "case_number"
+        case caseStatus = "case_status"
+        case createdAt = "created_at"
+        case message
+    }
+}
+
+func createClientCase(
+    name: String,
+    grade: String,
+    relationship: String
+) async throws -> ClientCaseCreateResponse {
+    let baseURL = URL(string: "https://career-app-api-staging-978304030758.us-central1.run.app")!
+    let url = baseURL.appendingPathComponent("api/v1/ui/client-case")
+
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = ClientCaseCreateRequest(
+        name: name,
+        grade: grade,
+        relationship: relationship
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 201 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(
+        ClientCaseCreateResponse.self,
+        from: data
+    )
+}
+```
+
+**使用流程**:
+1. 使用者首次開啟 App 或新增孩子時
+2. 填寫孩子名稱、年級、與孩子的關係
+3. 呼叫此 API 創建 client 和 case
+4. 儲存回傳的 `client_id` 和 `case_id`
+5. 建立 Session 時使用這兩個 ID（參見 Section 3.2）
+
+**錯誤處理**:
+```json
+// 400 Bad Request - 缺少必填欄位
+{
+  "detail": "缺少必填欄位：年級, 與孩子的關係"
+}
+```
+
+```json
+// 500 Internal Server Error - 伺服器錯誤
+{
+  "type": "https://api.career-counseling.app/errors/internal-server-error",
+  "title": "Internal Server Error",
+  "status": 500,
+  "detail": "Failed to create client and case: ...",
+  "instance": "/api/v1/ui/client-case"
+}
+```
+
+**Swift 錯誤處理範例**:
+```swift
+do {
+    let response = try await createClientCase(
+        name: "小明",
+        grade: "小五",
+        relationship: "媽媽"
+    )
+
+    // 儲存到 UserDefaults 或資料庫
+    UserDefaults.standard.set(response.clientId, forKey: "currentClientId")
+    UserDefaults.standard.set(response.caseId, forKey: "currentCaseId")
+
+    print("孩子建立成功：\(response.clientName)")
+
+} catch let error as APIError {
+    switch error {
+    case .badRequest(let message):
+        // 顯示錯誤訊息給使用者
+        showAlert(title: "建立失敗", message: message)
+    case .serverError:
+        showAlert(title: "伺服器錯誤", message: "請稍後再試")
+    default:
+        showAlert(title: "錯誤", message: "無法建立孩子資料")
+    }
+}
+```
+
+### 2.6.2 列出所有孩子
+
+**用途**: 首頁顯示所有孩子列表、切換不同孩子的對話歷史
+
+**Staging URL**:
+```
+GET https://career-app-api-staging-978304030758.us-central1.run.app/api/v1/ui/client-case-list?skip=0&limit=20
+Authorization: Bearer <token>
+```
+
+**Query Parameters**:
+- `skip` (int, optional): 分頁偏移，預設 0
+- `limit` (int, optional): 每頁筆數，預設 100，最大 500
+
+**Response (200)**:
+```json
+{
+  "total": 2,
+  "skip": 0,
+  "limit": 20,
+  "items": [
+    {
+      "client_id": "fb719809-6775-41ca-99c4-abc42c9f7c86",
+      "case_id": "52115919-eeec-4660-80c6-64c6f2581539",
+      "counselor_id": "abc-123-def-456",
+      "client_name": "小明",
+      "client_code": "C0033",
+      "client_email": null,
+      "identity_option": "其他",
+      "current_status": "親子對話",
+      "case_number": "CASE0041",
+      "case_status": 0,
+      "case_status_label": "未開始",
+      "last_session_date": "2026-01-25T10:00:00Z",
+      "last_session_date_display": "2026-01-25 10:00",
+      "total_sessions": 3,
+      "case_created_at": "2026-01-25T15:18:25.912110Z",
+      "case_updated_at": "2026-01-25T16:30:00Z"
+    },
+    {
+      "client_id": "abc-234-xyz-789",
+      "case_id": "def-567-uvw-890",
+      "counselor_id": "abc-123-def-456",
+      "client_name": "小華",
+      "client_code": "C0034",
+      "client_email": null,
+      "identity_option": "其他",
+      "current_status": "親子對話",
+      "case_number": "CASE0042",
+      "case_status": 1,
+      "case_status_label": "進行中",
+      "last_session_date": null,
+      "last_session_date_display": null,
+      "total_sessions": 0,
+      "case_created_at": "2026-01-24T10:00:00Z",
+      "case_updated_at": null
+    }
+  ]
+}
+```
+
+**iOS 實作建議**:
+```swift
+struct ClientCaseListItem: Codable {
+    let clientId: String
+    let caseId: String
+    let clientName: String
+    let clientCode: String
+    let caseNumber: String
+    let caseStatus: Int
+    let caseStatusLabel: String
+    let totalSessions: Int
+    let lastSessionDate: String?
+    let caseCreatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case clientId = "client_id"
+        case caseId = "case_id"
+        case clientName = "client_name"
+        case clientCode = "client_code"
+        case caseNumber = "case_number"
+        case caseStatus = "case_status"
+        case caseStatusLabel = "case_status_label"
+        case totalSessions = "total_sessions"
+        case lastSessionDate = "last_session_date"
+        case caseCreatedAt = "case_created_at"
+    }
+}
+
+struct ClientCaseListResponse: Codable {
+    let total: Int
+    let skip: Int
+    let limit: Int
+    let items: [ClientCaseListItem]
+}
+
+func listClientCases(skip: Int = 0, limit: Int = 20) async throws -> ClientCaseListResponse {
+    let baseURL = URL(string: "https://career-app-api-staging-978304030758.us-central1.run.app")!
+    var components = URLComponents(url: baseURL.appendingPathComponent("api/v1/ui/client-case-list"), resolvingAgainstBaseURL: true)!
+    components.queryItems = [
+        URLQueryItem(name: "skip", value: "\(skip)"),
+        URLQueryItem(name: "limit", value: "\(limit)")
+    ]
+
+    var request = URLRequest(url: components.url!)
+    request.httpMethod = "GET"
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(ClientCaseListResponse.self, from: data)
+}
+```
+
+**UI 使用場景**:
+- **首頁孩子列表**: 顯示所有孩子，點擊進入該孩子的對話歷史
+- **切換孩子**: 使用 Picker 或 Modal 讓家長選擇不同孩子
+- **孩子卡片**: 顯示孩子名稱、總會談次數、最後會談時間
+
+---
+
 ## 3. Session Workflow
 
 ### 3.1 完整流程
 ```
-1. 選擇情境 (scenario)
+1. 創建孩子與案例 (POST /api/v1/ui/client-case) ← 首次使用必須
+   ↓ 取得 client_id 和 case_id
+2. 選擇情境 (scenario)
    ↓
-2. 建立 Session (POST /api/v1/sessions)
+3. 建立 Session (POST /api/v1/sessions)
    ↓
-3. 取得會談 (GET /api/v1/sessions/{id}) ← 確認 Session 資料
+4. 取得會談 (GET /api/v1/sessions/{id}) ← 確認 Session 資料
    ↓
-4. 開始錄音 (ElevenLabs Scribe v2)
+5. 開始錄音 (ElevenLabs Scribe v2)
    ↓
-5. 即時上傳逐字稿 (append)
+6. 即時上傳逐字稿 (append)
    ↓
-6. 觸發分析 (Quick / Deep)
+7. 觸發分析 (Quick / Deep)
    ↓
-7. 結束錄音
+8. 結束錄音
    ↓
-8. 生成報告 (Report)
+9. 生成報告 (Report)
 ```
 
 ### 3.2 建立 Session
+
+> ⚠️ **前置需求**: 必須先完成 Section 2.6.1 創建孩子與案例，取得 `client_id` 和 `case_id`
+
 ```
 POST /api/v1/sessions
 Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "client_id": "uuid-of-client",
-  "case_id": "uuid-of-case",
+  "client_id": "uuid-of-client",      // 從 2.6.1 創建孩子時取得
+  "case_id": "uuid-of-case",          // 從 2.6.1 創建孩子時取得
   "session_mode": "practice",
   "scenario": "homework",
   "scenario_description": "孩子回家後不願意寫功課，一直玩手機"
@@ -1172,7 +1482,7 @@ if session.hasReport {
 
 **推薦方式（動態路由）**:
 ```
-https://career-app-api-staging-kxaznpplqq-uc.a.run.app/island-parents/forgot-password
+https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/forgot-password
 ```
 
 **其他租戶範例**:
@@ -1185,7 +1495,7 @@ https://career-app-api-staging-kxaznpplqq-uc.a.run.app/island-parents/forgot-pas
 import SafariServices
 
 func showForgotPassword() {
-    let baseURL = "https://career-app-api-staging-kxaznpplqq-uc.a.run.app"
+    let baseURL = "https://career-app-api-staging-978304030758.us-central1.run.app"
     let tenantURL = "island-parents"  // URL 使用連字號（kebab-case）
     let urlString = "\(baseURL)/\(tenantURL)/forgot-password"
     
@@ -1198,7 +1508,7 @@ func showForgotPassword() {
 
 **替代方式（通用路由 + 參數）**:
 ```
-https://career-app-api-staging-kxaznpplqq-uc.a.run.app/forgot-password?tenant=island_parents
+https://career-app-api-staging-978304030758.us-central1.run.app/forgot-password?tenant=island_parents
 ```
 
 **注意事項**:
@@ -1226,13 +1536,16 @@ https://career-app-api-staging-kxaznpplqq-uc.a.run.app/forgot-password?tenant=is
 | POST | `/api/v1/sessions/{id}/report` | 生成報告 |
 | PUT | `/api/v1/sessions/{id}/complete` | 結束 Session |
 
-### 12.3 Client & Case
+### 12.3 Client & Case (Island Parents UI APIs)
 | Method | Endpoint | 說明 |
 |--------|----------|------|
-| POST | `/api/v1/clients` | 建立 Client |
-| GET | `/api/v1/clients` | 列出 Clients |
-| POST | `/api/v1/cases` | 建立 Case |
-| GET | `/api/v1/clients/{id}/cases` | 列出 Client 的 Cases |
+| POST | `/api/v1/ui/client-case` | 創建孩子與案例 (必填: name, grade, relationship) ⭐ |
+| GET | `/api/v1/ui/client-case-list` | 列出所有孩子（含 session 統計）⭐ |
+| GET | `/api/v1/ui/client-case/{case_id}` | 取得單一孩子詳細資料 |
+| PATCH | `/api/v1/ui/client-case/{case_id}` | 更新孩子與案例資料 |
+| DELETE | `/api/v1/ui/client-case/{case_id}` | 軟刪除案例 |
+
+> ⭐ **島家長專用**: 使用 UI API（`/api/v1/ui/client-case`）而非一般 Client API，自動處理親子版必填欄位邏輯
 
 ---
 
@@ -1261,6 +1574,7 @@ https://career-app-api-staging-kxaznpplqq-uc.a.run.app/forgot-password?tenant=is
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v1.10 | 2026-01-25 | **Client-Case 管理完整版**: (1) 新增 Section 2.6 詳細說明 Client-Case 創建與列表 API；(2) 包含完整 Request/Response 範例；(3) Swift 實作範例；(4) 錯誤處理說明；(5) 更新 API 端點總覽 Section 12.3 |
 | v1.9 | 2026-01-25 | **重大更新**: (1) 簡化註冊 API - 只需 email + password + tenant_id；(2) 新增詳細忘記密碼 Web 流程（含流程圖給 PM）；(3) 忘記密碼使用特定 URL `/island-parents/forgot-password`；(4) 新增完整 iOS 實作範例 |
 | v1.8 | 2026-01-08 | **忘記密碼**: 新增忘記密碼 Web 頁面 URL 說明（動態路由） |
 | v1.7 | 2026-01-08 | **字數限制**: Quick Feedback `message` 和 Report `encouragement` 都強制 15 字以內，適合 UI 顯示 |
@@ -1283,4 +1597,4 @@ https://career-app-api-staging-kxaznpplqq-uc.a.run.app/forgot-password?tenant=is
 
 ---
 
-**最後更新**: 2026-01-25 (v1.9)
+**最後更新**: 2026-01-25 (v1.10)

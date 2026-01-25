@@ -9,7 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **IOS_GUIDE_PARENTS.md v1.10** (2026-01-25): Complete Client & Case Management documentation
+  - Added Section 2.6 with complete client-case API documentation
+  - Included Swift implementation examples with error handling
+  - Added prerequisite warnings for session creation workflow
+  - Updated API endpoint overview (Section 12.3) to highlight Island Parents UI APIs
+  - Documentation completeness increased from 92% to ~98%
+- **Island Parents Delivery Checklist** (2026-01-25): `docs/weekly/ISLAND_PARENTS_DELIVERY_CHECKLIST.md`
+  - Comprehensive delivery overview for iOS team handoff
+  - Complete API specifications with Request/Response examples
+  - Validation results with actual test data from staging environment
+  - Quick test guide for iOS team verification
+  - Contact information and pending items requiring PM decisions
+
 ### Fixed
+- **Staging URLs in IOS_GUIDE_PARENTS.md** (2026-01-25)
+  - Updated 3 outdated staging URLs to current format
+  - Old: `career-app-api-staging-kxaznpplqq-uc.a.run.app`
+  - New: `career-app-api-staging-978304030758.us-central1.run.app`
+  - Affected sections: 2.6 (Client-Case API), 11 (Forgot Password Web Flow)
+
 - **ElevenLabs Token API Documentation** (2026-01-12)
   - Corrected endpoint path in IOS_API_GUIDE.md: `/api/v1/realtime/elevenlabs-token` → `/api/v1/transcript/elevenlabs-token`
   - Added Section 6 in IOS_GUIDE_PARENTS.md with complete API documentation
