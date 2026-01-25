@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Emotion feedback API logging** (2026-01-25): DB and BigQuery logging for cost tracking and analytics
+  - Track token usage (prompt/completion tokens + cost)
+  - Log analysis results to SessionAnalysisLog (PostgreSQL)
+  - Background task uploads to BigQuery
+  - Follows same pattern as quick/deep feedback APIs
 - **IOS_GUIDE_PARENTS.md v1.10** (2026-01-25): Complete Client & Case Management documentation
   - Added Section 2.6 with complete client-case API documentation
   - Included Swift implementation examples with error handling

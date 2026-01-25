@@ -21,7 +21,9 @@ class EmotionAnalysisService:
 
     def __init__(self):
         # Use Gemini Flash Lite Latest for fast responses
-        self.gemini_service = GeminiService(model_name="models/gemini-flash-lite-latest")
+        self.gemini_service = GeminiService(
+            model_name="models/gemini-flash-lite-latest"
+        )
 
     def _build_system_prompt(self) -> str:
         """Build system prompt for emotion analysis"""
@@ -97,7 +99,7 @@ class EmotionAnalysisService:
 
     async def analyze_emotion(
         self, context: str, target: str, timeout: float = 2.5
-    ) -> Tuple[int, str]:
+    ) -> dict:
         """
         Analyze emotion level of target sentence in given context.
 
@@ -107,9 +109,10 @@ class EmotionAnalysisService:
             timeout: Timeout in seconds (default: 2.5s to allow 0.5s for processing)
 
         Returns:
-            Tuple of (level, hint)
+            Dictionary with:
             - level: 1 (green), 2 (yellow), 3 (red)
             - hint: Guidance hint (≤17 chars)
+            - token_usage: Token usage statistics
 
         Raises:
             asyncio.TimeoutError: If LLM call exceeds timeout
@@ -138,7 +141,14 @@ class EmotionAnalysisService:
             # Parse response
             level, hint = self._parse_llm_response(response_text)
 
-            return level, hint
+            # Get token usage from last call
+            token_usage = self.gemini_service.get_last_token_usage()
+
+            return {
+                "level": level,
+                "hint": hint,
+                "token_usage": token_usage,
+            }
 
         except asyncio.TimeoutError:
             logger.error(f"Emotion analysis timeout after {timeout}s")
@@ -148,7 +158,16 @@ class EmotionAnalysisService:
             logger.error(f"Failed to parse LLM response: {e}")
             # Fallback to yellow light with generic hint
             logger.warning("Using fallback: level=2, generic hint")
-            return 2, "請試著用平和語氣溝通"
+            return {
+                "level": 2,
+                "hint": "請試著用平和語氣溝通",
+                "token_usage": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "estimated_cost_usd": 0.0,
+                },
+            }
 
         except Exception as e:
             logger.error(f"Emotion analysis failed: {e}")

@@ -3,13 +3,15 @@ Sessions (逐字稿) API
 """
 import asyncio
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Optional, Union
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
 from sqlalchemy.orm import Session as DBSession
 
+from app.api.session_analysis import _log_analysis_background
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_tenant_id
 from app.core.exceptions import (
@@ -466,6 +468,7 @@ def get_session_report(
 async def analyze_emotion_feedback(
     session_id: UUID,
     request: EmotionFeedbackRequest,
+    background_tasks: BackgroundTasks,
     db: DBSession = Depends(get_db),
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
@@ -562,12 +565,37 @@ async def analyze_emotion_feedback(
 
     # 3. Analyze emotion
     try:
+        start_time = time.time()
+
         emotion_service = EmotionAnalysisService()
-        level, hint = await emotion_service.analyze_emotion(
+        result = await emotion_service.analyze_emotion(
             context=request.context, target=request.target
         )
 
-        return EmotionFeedbackResponse(level=level, hint=hint)
+        latency_ms = int((time.time() - start_time) * 1000)
+
+        # Log to DB and BigQuery in background (after response sent)
+        background_tasks.add_task(
+            _log_analysis_background,
+            session_id=session_id,
+            counselor_id=current_user.id,
+            tenant_id=tenant_id,
+            transcript_segment=request.context[:500],  # First 500 chars
+            result_data={
+                "analysis_type": "emotion_feedback",
+                "level": result["level"],
+                "hint": result["hint"],
+                "context_preview": request.context[:100],
+                "target": request.target,
+                "_metadata": {
+                    "latency_ms": latency_ms,
+                },
+            },
+            token_usage_data=result["token_usage"],
+            analysis_type="emotion_feedback",
+        )
+
+        return EmotionFeedbackResponse(level=result["level"], hint=result["hint"])
 
     except asyncio.TimeoutError:
         logger.error("Emotion analysis timeout (>3s)")
