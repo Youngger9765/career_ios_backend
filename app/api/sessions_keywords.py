@@ -165,6 +165,112 @@ def save_analysis_log_and_gbq(
 @router.post(
     "/{session_id}/analyze-partial",
     response_model=Union[CareerAnalysisResponse, IslandParentAnalysisResponse],
+    summary="即時片段分析 (Multi-Tenant)",
+    description="""
+即時分析諮詢對話片段，根據租戶自動選擇 RAG 知識庫與回應格式。
+
+### 租戶行為差異
+
+**Island Parents (親子教養)**
+- 回傳安全等級評估 (紅黃綠燈)
+- 提供危機處理建議
+- 建議下次分析間隔時間
+- 使用親子教養知識庫
+
+**Career (職涯諮詢)**
+- 回傳關鍵字與類別分類
+- 提供諮詢師洞察建議
+- 使用職涯諮詢知識庫
+
+### 功能特點
+- ✅ 非阻塞式分析 (立即回傳結果)
+- ✅ 背景任務自動儲存至 PostgreSQL + BigQuery
+- ✅ RAG 知識庫自動匹配 (依據 tenant_id)
+- ✅ Token 使用量追蹤 (prompt + completion + cached)
+- ✅ 完整分析 metadata (timing, model, cache hit)
+
+### 向後兼容
+舊版 `/analyze-keywords` 端點仍可用，但建議新開發使用本端點。
+    """,
+    responses={
+        200: {
+            "description": "分析成功",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "island_parents_green": {
+                            "summary": "Island Parents - 綠燈安全",
+                            "value": {
+                                "safety_level": "green",
+                                "severity": 1,
+                                "display_text": "狀況良好，孩子情緒穩定",
+                                "action_suggestion": "持續觀察",
+                                "suggested_interval_seconds": 30,
+                                "rag_documents": [],
+                                "keywords": ["情緒穩定", "正向對話"],
+                                "categories": ["一般對話"],
+                                "token_usage": {
+                                    "prompt_tokens": 1200,
+                                    "completion_tokens": 150,
+                                    "total_tokens": 1350,
+                                    "cached_tokens": 800,
+                                    "estimated_cost_usd": 0.0012,
+                                },
+                            },
+                        },
+                        "island_parents_red": {
+                            "summary": "Island Parents - 紅燈危機",
+                            "value": {
+                                "safety_level": "red",
+                                "severity": 3,
+                                "display_text": "檢測到高風險議題：自傷傾向",
+                                "action_suggestion": "立即介入，評估緊急處置需求",
+                                "suggested_interval_seconds": 5,
+                                "rag_documents": [
+                                    {
+                                        "content": "自傷行為處理指引...",
+                                        "source": "crisis_intervention_guide.pdf",
+                                        "score": 0.92,
+                                    }
+                                ],
+                                "keywords": ["自傷", "情緒失控"],
+                                "categories": ["危機處理"],
+                                "detailed_scripts": [
+                                    "我注意到你剛才提到想要傷害自己，這讓我很擔心..."
+                                ],
+                                "theoretical_frameworks": [
+                                    "危機介入六步驟模型 (Roberts' Seven-Stage Model)"
+                                ],
+                            },
+                        },
+                        "career_analysis": {
+                            "summary": "Career - 職涯諮詢分析",
+                            "value": {
+                                "keywords": [
+                                    "轉職",
+                                    "軟體工程",
+                                    "職涯規劃",
+                                    "技能發展",
+                                ],
+                                "categories": ["職涯轉換", "技能評估"],
+                                "confidence": 0.85,
+                                "counselor_insights": "案主展現對軟體工程的高度興趣，建議進一步探索技術學習路徑與市場需求。",
+                                "rag_documents": [],
+                                "token_usage": {
+                                    "prompt_tokens": 1500,
+                                    "completion_tokens": 200,
+                                    "total_tokens": 1700,
+                                },
+                            },
+                        },
+                    }
+                }
+            },
+        },
+        404: {"description": "Session 不存在"},
+        401: {"description": "未驗證或驗證失敗"},
+        500: {"description": "AI 分析失敗或系統錯誤"},
+    },
 )
 async def analyze_partial(
     session_id: UUID,
@@ -174,26 +280,7 @@ async def analyze_partial(
     current_user: Counselor = Depends(get_current_user),
     tenant_id: str = Depends(get_tenant_id),
 ) -> Union[CareerAnalysisResponse, IslandParentAnalysisResponse]:
-    """
-    即時片段分析（Multi-Tenant）
-
-    根據租戶（tenant_id）自動選擇：
-    - RAG 知識庫（career 職涯 vs island_parents 親子教養）
-    - Prompt template
-    - Response 格式
-
-    **Island Parents 租戶**：
-    - 回傳紅黃綠燈安全等級
-    - 建議下次分析間隔時間
-    - 親子教養相關建議
-
-    **Career 租戶**：
-    - 回傳關鍵字、分類
-    - 諮詢師洞察
-    - 職涯相關建議
-
-    **向後兼容**：舊的 /analyze-keywords 仍可用
-    """
+    """即時片段分析（Multi-Tenant）- 詳細說明請見 OpenAPI schema"""
     # Get session with context
     service = SessionService(db)
     result = service.get_session_with_context(session_id, current_user, tenant_id)

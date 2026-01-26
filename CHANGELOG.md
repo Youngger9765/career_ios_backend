@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Improved OpenAPI Documentation for analyze-partial** (2026-01-26): Enhanced Swagger UI experience
+  - Added comprehensive summary and description with multi-tenant behavior explanation
+  - Added 3 response examples (island_parents_green, island_parents_red, career_analysis)
+  - Documented all response codes (200/401/404/500) with clear descriptions
+  - Included feature highlights (non-blocking, background tasks, RAG, token tracking)
+  - Improved developer experience for iOS/frontend teams using `/docs`
 - **Deep Analysis API - TDD GREEN phase** (2026-01-26): Minimal implementation for safety assessment
   - Added POST /sessions/{id}/deep-analyze endpoint (placeholder with hardcoded safe status)
   - Added POST /sessions/{id}/messages endpoint (placeholder for testing)
