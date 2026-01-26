@@ -16,13 +16,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Documented all response codes (200/401/404/500) with clear descriptions
   - Included feature highlights (non-blocking, background tasks, RAG, token tracking)
   - Improved developer experience for iOS/frontend teams using `/docs`
-- **Deep Analysis API - TDD GREEN phase** (2026-01-26): Minimal implementation for safety assessment
-  - Added POST /sessions/{id}/deep-analyze endpoint (placeholder with hardcoded safe status)
-  - Added POST /sessions/{id}/messages endpoint (placeholder for testing)
-  - DeepAnalysisResponse schema with safety_level/display_text/quick_suggestion
-  - Integration test validates field constraints (4-20, 5-20 chars)
-  - Follows existing authentication/authorization patterns
-  - Ready for AI integration (SimplifiedAnalyzer) in next TDD cycle
+
+### Fixed
+- **Removed duplicate deep-analyze endpoint** (2026-01-26): Fixed 23 failing tests
+  - Removed obsolete TDD stub endpoint in `sessions.py` that returned hardcoded response
+  - The proper implementation in `session_analysis.py` now handles all deep-analyze requests
+  - Root cause: Duplicate endpoint was registered first, shadowing the real implementation
+  - Tests now correctly receive `RealtimeAnalyzeResponse` with full analysis results
+  - Impact: All E2E workflow, session analysis, and RAG integration tests now pass
+
+### Deprecated
+- **Deep Analysis API - TDD GREEN phase** (2026-01-26): Replaced by session_analysis.py
+  - ~~Added POST /sessions/{id}/deep-analyze endpoint (placeholder with hardcoded safe status)~~
+  - ~~DeepAnalysisResponse schema with safety_level/display_text/quick_suggestion~~
+  - This was a TDD stub that has been superseded by the full implementation
 - **Emotion feedback API logging** (2026-01-25): DB and BigQuery logging for cost tracking and analytics
   - Track token usage (prompt/completion tokens + cost)
   - Log analysis results to SessionAnalysisLog (PostgreSQL)
