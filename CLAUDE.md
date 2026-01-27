@@ -16,7 +16,7 @@
 - **Prototype Backend API**
 - Not yet in production
 - TDD for critical features
-- **Current Branch**: parents_rag_refine
+- **Current Branch**: staging
 
 ## Project-Specific Rules
 
