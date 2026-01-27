@@ -92,7 +92,16 @@ class TestSafetyAssessmentAI:
         self, db_session: Session, auth_headers, test_case_obj
     ):
         """Test safe conversation returns GREEN safety level"""
-        # Create session
+        # Create safe conversation transcript
+        safe_messages = [
+            "counselor: 你今天好嗎？",
+            "client: 我很好，謝謝。",
+            "counselor: 有什麼想分享的嗎？",
+            "client: 我今天很開心，學校很順利。",
+        ]
+        transcript_text = "\n".join(safe_messages)
+
+        # Create session with transcript
         session = SessionModel(
             id=uuid4(),
             case_id=test_case_obj.id,
@@ -100,26 +109,12 @@ class TestSafetyAssessmentAI:
             session_mode="practice",
             session_number=1,
             session_date=date.today(),
+            transcript_text=transcript_text,  # Add transcript directly
         )
         db_session.add(session)
         db_session.commit()
 
         with TestClient(app) as client:
-            # Add safe messages
-            safe_messages = [
-                {"speaker": "counselor", "text": "你今天好嗎？"},
-                {"speaker": "client", "text": "我很好，謝謝。"},
-                {"speaker": "counselor", "text": "有什麼想分享的嗎？"},
-                {"speaker": "client", "text": "我今天很開心，學校很順利。"},
-            ]
-
-            for msg in safe_messages:
-                client.post(
-                    f"/api/v1/sessions/{session.id}/messages",
-                    headers=auth_headers,
-                    json=msg
-                )
-
             # Call deep-analyze endpoint
             response = client.post(
                 f"/api/v1/sessions/{session.id}/deep-analyze",
@@ -130,12 +125,18 @@ class TestSafetyAssessmentAI:
             assert response.status_code == 200
             data = response.json()
 
-            # Check required fields
+            # Check required fields (RealtimeAnalyzeResponse schema)
             assert "safety_level" in data
-            assert "display_text" in data
-            assert "quick_suggestion" in data
+            assert "summary" in data
+            assert "alerts" in data
+            assert "suggestions" in data
 
-            # Check field constraints
+            # Check field values
             assert data["safety_level"] in ["green", "yellow", "red"]
-            assert 4 <= len(data["display_text"]) <= 20
-            assert 5 <= len(data["quick_suggestion"]) <= 20
+            assert isinstance(data["summary"], str)
+            assert len(data["summary"]) > 0
+            assert isinstance(data["alerts"], list)
+            assert isinstance(data["suggestions"], list)
+
+            # Verify GREEN level for safe conversation
+            assert data["safety_level"] == "green", f"Expected GREEN but got {data['safety_level']}"
