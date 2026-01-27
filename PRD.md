@@ -320,6 +320,47 @@
 
 **動態欄位**: 支援 10 種類型（text, number, date, select等），不同 tenant 獨立配置。詳見 [IOS_API_GUIDE.md](./IOS_API_GUIDE.md)
 
+### ✅ Terms of Service & Privacy Policy Pages (2026-01-27)
+**功能定位**: 法律合規頁面，支援 RevenueCat Paywall 配置與 App Store 審核
+
+#### 核心功能
+- ✅ **Terms of Service 頁面**
+  - Route: `/island-parents/terms`
+  - 10 個完整章節（服務說明、用戶責任、訂閱付款、退款政策、智財權、免責聲明等）
+  - 符合台灣法律與 App Store 要求
+
+- ✅ **Privacy Policy 頁面**
+  - Route: `/island-parents/privacy`
+  - 10 個完整章節（資料蒐集、資料使用、資料分享、安全措施、用戶權利等）
+  - 符合 GDPR 與台灣個資法規範
+
+#### 技術特色
+- **響應式設計**: 桌面 sidebar TOC + 手機 collapsible dropdown
+- **Sticky Table of Contents**: 快速跳轉到任意章節
+- **Smooth Scroll Navigation**: Intersection Observer API 實作活動區段高亮
+- **Multi-Tenant Support**: 動態路由 `/{tenant_id}/terms` 和 `/{tenant_id}/privacy`
+- **Easy Content Updates**: PM 可直接編輯 HTML 模板，無需重新部署
+
+#### RevenueCat 整合
+- **App Store 審核要求**: Paywall 必須提供 Terms 和 Privacy 連結
+- **配置方式**: 在 RevenueCat Dashboard 的 "Legal Links" 欄位填入以下 URL:
+  ```
+  Terms:   https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/terms
+  Privacy: https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/privacy
+  ```
+
+#### 測試覆蓋
+- ✅ 11 個整合測試（`tests/integration/test_legal_pages.py`）
+- ✅ 測試涵蓋: HTTP 200 回應、頁面標題、必要章節、TOC 存在、GDPR 合規性
+
+#### 相關文件
+- 📝 iOS 整合指南: `IOS_GUIDE_PARENTS.md` Section 12.1.2
+- 📝 交付文件: `docs/BACKEND_DELIVERY.md` Section 1.5
+- 📝 模板位置:
+  - `app/templates/island_parents/legal_base.html` (共用基底)
+  - `app/templates/island_parents/terms.html` (服務條款)
+  - `app/templates/island_parents/privacy.html` (隱私權政策)
+
 ### ✅ Universal Credit/Payment System (2025-12-20)
 **功能定位**: 跨租戶通用的點數付費系統（支援 career, island, island_parents）
 

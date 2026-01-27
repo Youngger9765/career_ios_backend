@@ -27,6 +27,22 @@
 - [x] 確認重設密碼 email 中的連結格式正確指向 Web 頁面：`{app_url}/reset-password?token={reset_token}`
 - [x] 測試完整 Web 流程（已用 Chrome 完整測試：註冊 → 忘記密碼 → 重設密碼 → 新密碼登入，全部成功）
 
+### Terms & Privacy 網頁 ✅ 已完成 (2026-01-27)
+- [x] 建立 Terms of Service 頁面 (`/island-parents/terms`)
+- [x] 建立 Privacy Policy 頁面 (`/island-parents/privacy`)
+- [x] 實作響應式設計（桌面 + 手機）
+- [x] 實作 Sticky TOC 導航（Intersection Observer）
+- [x] 符合 GDPR 與台灣個資法規範
+- [x] 提供 RevenueCat Paywall 配置用 URL
+- [x] 撰寫完整測試覆蓋（11 個整合測試）
+- [x] 更新文檔（IOS_GUIDE_PARENTS.md, PRD.md, CHANGELOG.md, BACKEND_DELIVERY.md）
+- [x] Chrome 驗證測試通過
+- [x] CI/CD 部署至 Staging 環境
+
+**URL (Staging)**:
+- Terms: https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/terms
+- Privacy: https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/privacy
+
 ### 網域與信任感
 - [ ] 評估並選擇合適的網域（使用既有網域子網域或另買網域如 GoDaddy）
   - 🔴 阻塞原因：需要商業決策（用既有網域或購買新網域）

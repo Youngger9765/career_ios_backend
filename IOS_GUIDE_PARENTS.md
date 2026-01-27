@@ -1,9 +1,9 @@
 # Island Parents iOS App 開發指南
 
-> **版本**: v1.10
+> **版本**: v1.11
 > **適用對象**: iOS 開發者
 > **後端版本**: career_ios_backend
-> **最後更新**: 2026-01-25
+> **最後更新**: 2026-01-27
 
 ---
 
@@ -1522,6 +1522,65 @@ https://career-app-api-staging-978304030758.us-central1.run.app/forgot-password?
 | URL 路徑 | 連字號（kebab-case） | `island-parents` |
 | API/資料庫 | 底線（snake_case） | `island_parents` |
 
+### 12.1.2 Terms & Privacy 網頁
+
+**用途**: iOS App 需要提供 Terms of Service 和 Privacy Policy URL 給 RevenueCat Paywall 配置，以符合 App Store 審核要求
+
+**Staging 環境 URL**:
+```
+Terms of Service: https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/terms
+Privacy Policy:   https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/privacy
+```
+
+**Production 環境 URL**（網域購買後）:
+```
+Terms of Service: https://{網域}/island-parents/terms
+Privacy Policy:   https://{網域}/island-parents/privacy
+```
+
+**頁面特色**:
+- ✅ 符合 GDPR 與台灣個資法規範
+- ✅ 響應式設計（桌面 + 手機）
+- ✅ 置頂目錄導航（快速跳轉）
+- ✅ 平滑捲動與活動區段高亮
+- ✅ 10 個完整章節涵蓋所有法律要求
+
+**RevenueCat 整合步驟**:
+1. 在 RevenueCat Dashboard 配置 Paywall
+2. 在 "Legal Links" 欄位填入以上兩個 URL
+3. App Store 審核會驗證這些頁面可存取
+
+**iOS 實作建議**:
+```swift
+// RevenueCat Paywall 配置
+struct PaywallConfig {
+    let termsURL = "https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/terms"
+    let privacyURL = "https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/privacy"
+}
+
+// 在 App 設定頁面顯示連結
+func showLegalLinks() {
+    // 選項 1: 使用 SFSafariViewController（推薦）
+    let safariVC = SFSafariViewController(url: URL(string: termsURL)!)
+    present(safariVC, animated: true)
+
+    // 選項 2: 使用 WKWebView
+    webView.load(URLRequest(url: URL(string: privacyURL)!))
+}
+```
+
+**內容更新**:
+- PM 可隨時更新文案（編輯 HTML 模板）
+- 無需重新部署即可生效
+- 模板位置: `app/templates/island_parents/terms.html` 和 `privacy.html`
+
+**測試方式**:
+1. 在瀏覽器打開以上 URL 確認頁面載入正常
+2. 測試手機/平板響應式設計
+3. 驗證目錄導航功能正常
+
+---
+
 ### 12.2 Session
 | Method | Endpoint | 說明 |
 |--------|----------|------|
@@ -1573,6 +1632,7 @@ https://career-app-api-staging-978304030758.us-central1.run.app/forgot-password?
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v1.11 | 2026-01-27 | **Terms & Privacy 頁面整合**: (1) 新增 Section 12.1.2 Terms & Privacy 網頁說明；(2) 包含 RevenueCat Paywall 配置指南；(3) 提供 Staging/Production URL；(4) Swift 實作範例；(5) App Store 審核要求說明 |
 | v1.10 | 2026-01-25 | **Client-Case 管理完整版**: (1) 新增 Section 2.6 詳細說明 Client-Case 創建與列表 API；(2) 包含完整 Request/Response 範例；(3) Swift 實作範例；(4) 錯誤處理說明；(5) 更新 API 端點總覽 Section 12.3 |
 | v1.9 | 2026-01-25 | **重大更新**: (1) 簡化註冊 API - 只需 email + password + tenant_id；(2) 新增詳細忘記密碼 Web 流程（含流程圖給 PM）；(3) 忘記密碼使用特定 URL `/island-parents/forgot-password`；(4) 新增完整 iOS 實作範例 |
 | v1.8 | 2026-01-08 | **忘記密碼**: 新增忘記密碼 Web 頁面 URL 說明（動態路由） |
@@ -1596,4 +1656,4 @@ https://career-app-api-staging-978304030758.us-central1.run.app/forgot-password?
 
 ---
 
-**最後更新**: 2026-01-25 (v1.10)
+**最後更新**: 2026-01-27 (v1.11)
