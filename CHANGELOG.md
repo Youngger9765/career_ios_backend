@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Terms of Service & Privacy Policy Pages** (2026-01-27): Legal pages for RevenueCat/App Store compliance
+  - Route: `/island-parents/terms` - Terms of Service with 10 comprehensive sections
+  - Route: `/island-parents/privacy` - Privacy Policy compliant with GDPR/Taiwan PIPA
+  - Shared template system (`legal_base.html`) with sticky table of contents
+  - Responsive design: Desktop sidebar TOC + Mobile collapsible dropdown
+  - Smooth scroll navigation with active section highlighting (Intersection Observer)
+  - Content covers: Service description, user rights, data handling, GDPR compliance, refund policy
+  - Ready for RevenueCat Paywall integration (App Store審核要求)
+  - PM可隨時更新文案（僅需編輯 HTML 模板，無需重新部署）
+
 - **Improved OpenAPI Documentation for analyze-partial** (2026-01-26): Enhanced Swagger UI experience
   - Added comprehensive summary and description with multi-tenant behavior explanation
   - Added 3 response examples (island_parents_green, island_parents_red, career_analysis)

@@ -338,6 +338,18 @@ async def island_parents_reset_password(request: Request) -> Response:
     return templates.TemplateResponse("reset_password.html", {"request": request})
 
 
+@app.get("/island-parents/terms", response_class=HTMLResponse)
+async def island_parents_terms(request: Request) -> Response:
+    """Island Parents - Terms of Service page"""
+    return templates.TemplateResponse("island_parents/terms.html", {"request": request})
+
+
+@app.get("/island-parents/privacy", response_class=HTMLResponse)
+async def island_parents_privacy(request: Request) -> Response:
+    """Island Parents - Privacy Policy page"""
+    return templates.TemplateResponse("island_parents/privacy.html", {"request": request})
+
+
 # =====================
 # Dynamic Tenant Routes (支援所有租戶) - 放在硬編碼路由之後
 # =====================
