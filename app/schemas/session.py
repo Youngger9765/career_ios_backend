@@ -602,9 +602,8 @@ class EmotionFeedbackRequest(BaseModel):
     """
 
     context: str = Field(
-        ...,
-        min_length=1,
-        description="對話上下文（可能包含多輪對話）",
+        default="",
+        description="對話上下文（第一次呼叫可為空）",
     )
     target: str = Field(
         ...,

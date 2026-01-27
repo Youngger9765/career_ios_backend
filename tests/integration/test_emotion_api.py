@@ -20,10 +20,10 @@ from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
 
-# Skip in CI due to Gemini API usage (expensive)
-pytestmark = pytest.mark.skip(
-    reason="Skipped in CI due to Gemini API usage (expensive)"
-)
+# Tests enabled - emotion API bugs fixed
+# pytestmark = pytest.mark.skip(
+#     reason="Skipped in CI due to Gemini API usage (expensive)"
+# )
 from app.main import app
 from app.models.case import Case, CaseStatus
 from app.models.client import Client

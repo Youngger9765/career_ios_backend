@@ -160,8 +160,23 @@ class EmotionAnalysisService:
             # Parse response
             level, hint = self._parse_llm_response(response_text)
 
-            # Get token usage from last call
-            token_usage = self.gemini_service.get_last_token_usage()
+            # Extract token usage from response metadata
+            token_usage = {}
+            if hasattr(response, "usage_metadata"):
+                usage = response.usage_metadata
+                token_usage = {
+                    "prompt_tokens": getattr(usage, "prompt_token_count", 0) or 0,
+                    "completion_tokens": getattr(usage, "candidates_token_count", 0) or 0,
+                    "total_tokens": getattr(usage, "total_token_count", 0) or 0,
+                    "estimated_cost_usd": 0.0,
+                }
+            else:
+                token_usage = {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "estimated_cost_usd": 0.0,
+                }
 
             return {
                 "level": level,
