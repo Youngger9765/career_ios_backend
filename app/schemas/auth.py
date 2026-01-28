@@ -19,13 +19,13 @@ class LoginRequest(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    """Registration request"""
+    """Registration request - simplified to only require email and password"""
 
     email: EmailStr
-    username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8)
-    full_name: str = Field(..., min_length=1)
     tenant_id: str
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    full_name: Optional[str] = Field(None, min_length=1)
     role: CounselorRole = CounselorRole.COUNSELOR
 
 
@@ -51,8 +51,8 @@ class CounselorInfo(BaseModel):
 
     id: UUID
     email: str
-    username: str
-    full_name: str
+    username: Optional[str] = None
+    full_name: Optional[str] = None
     role: str
     tenant_id: str
     is_active: bool

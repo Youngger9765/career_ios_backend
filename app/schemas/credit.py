@@ -90,7 +90,7 @@ class CounselorCreditInfo(BaseModel):
 
     id: UUID
     email: str
-    full_name: str
+    full_name: Optional[str] = None
     phone: Optional[str] = None
     tenant_id: str
     total_credits: int

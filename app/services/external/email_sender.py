@@ -8,6 +8,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Dict, List
 
+from app.utils.tenant import get_tenant_url_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,7 +57,14 @@ class EmailSenderService:
         subject = f"Password Reset Request - {tenant_name}"
 
         # Generate password reset URL using configured APP_URL
-        reset_url = f"{self.app_url}/reset-password?token={reset_token}"
+        # Use dynamic tenant route if tenant is valid, otherwise use generic path
+        tenant_url_path = get_tenant_url_path(tenant_id)
+        if tenant_url_path:
+            reset_path = f"/{tenant_url_path}/reset-password"
+        else:
+            reset_path = "/reset-password"  # Generic fallback
+
+        reset_url = f"{self.app_url}{reset_path}?token={reset_token}"
 
         html_body = self._generate_password_reset_html(
             counselor_name or "User", reset_url, tenant_name

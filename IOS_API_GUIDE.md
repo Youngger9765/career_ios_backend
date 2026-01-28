@@ -762,7 +762,7 @@ Content-Type: application/json
 **6.1 語音轉文字（取得 WebSocket Token）**
 
 ```http
-POST /api/v1/realtime/elevenlabs-token
+POST /api/v1/transcript/elevenlabs-token
 Authorization: Bearer {token}
 ```
 
@@ -1368,35 +1368,46 @@ Authorization: Bearer {access_token}
 
 ## 🔐 認證 APIs
 
-### 0. 註冊帳號 ⭐️ NEW
+### 0. 註冊帳號 ⭐️ NEW (已簡化)
 
 **Endpoint:** `POST /api/auth/register`
 
 **描述:** 註冊新的諮詢師帳號，註冊成功後自動登入並返回 JWT token。
 
-**Request:**
+**簡化註冊（推薦）:** 只需要 `email` + `password` + `tenant_id`，`username` 和 `full_name` 可後續透過 `/api/auth/me` 補填。
+
+**Request (簡化版):**
 ```json
 {
   "email": "newuser@example.com",
-  "username": "newuser",
   "password": "password123",
-  "full_name": "新用戶",
+  "tenant_id": "career"
+}
+```
+
+**Request (完整版，向後兼容):**
+```json
+{
+  "email": "newuser@example.com",
+  "password": "password123",
   "tenant_id": "career",
+  "username": "newuser",
+  "full_name": "新用戶",
   "role": "counselor"
 }
 ```
 
 **欄位說明:**
 - `email` (必填): 電子郵件地址，需符合 Email 格式
-- `username` (必填): 用戶名，3-50 個字元，全系統唯一
 - `password` (必填): 密碼，至少 8 個字元
-- `full_name` (必填): 全名
 - `tenant_id` (必填): 租戶 ID（如 "career" 或 "island"）
+- `username` (選填): 用戶名，3-50 個字元。如果提供，必須全系統唯一。可後續透過 `/api/auth/me` 補填
+- `full_name` (選填): 全名。可後續透過 `/api/auth/me` 補填
 - `role` (選填): 角色，預設為 "counselor"，可選值：counselor, supervisor, admin
 
 **唯一性檢查:**
 - `email + tenant_id` 組合必須唯一（同一 email 可在不同 tenant 註冊）
-- `username` 必須全系統唯一
+- 如果提供 `username`，必須全系統唯一
 
 **Response (201):**
 ```json
@@ -1416,7 +1427,7 @@ Authorization: Bearer {access_token}
 }
 ```
 
-**400 Bad Request - Username 已存在:**
+**400 Bad Request - Username 已存在 (僅當提供 username 時):**
 ```json
 {
   "detail": "Username 'newuser' already exists"
@@ -1436,22 +1447,22 @@ Authorization: Bearer {access_token}
 }
 ```
 
-**Swift 範例:**
+**Swift 範例 (簡化版):**
 ```swift
 struct RegisterRequest: Codable {
     let email: String
-    let username: String
     let password: String
-    let full_name: String
     let tenant_id: String
+    let username: String?
+    let full_name: String?
     let role: String?
 
     enum CodingKeys: String, CodingKey {
         case email
-        case username
         case password
-        case full_name
         case tenant_id
+        case username
+        case full_name
         case role
     }
 }
@@ -1462,11 +1473,10 @@ struct RegisterResponse: Codable {
     let expires_in: Int
 }
 
+// 簡化註冊（推薦）
 func register(
     email: String,
-    username: String,
     password: String,
-    fullName: String,
     tenantId: String,
     role: String? = "counselor"
 ) async throws -> String {
@@ -1477,10 +1487,10 @@ func register(
 
     let body = RegisterRequest(
         email: email,
-        username: username,
         password: password,
-        full_name: fullName,
         tenant_id: tenantId,
+        username: nil,
+        full_name: nil,
         role: role
     )
     request.httpBody = try JSONEncoder().encode(body)
@@ -1505,17 +1515,15 @@ func register(
 
 **使用範例:**
 ```swift
-// 註冊新帳號
+// 簡化註冊（只需要 email + password）
 do {
     let token = try await register(
         email: "newuser@example.com",
-        username: "newuser",
         password: "password123",
-        fullName: "新用戶",
-        tenantId: "career",
-        role: "counselor"
+        tenantId: "career"
     )
     // 註冊成功，token 已返回，可直接使用
+    // username 和 full_name 可後續透過 PATCH /api/auth/me 補填
     print("註冊成功，Token: \(token)")
 } catch {
     print("註冊失敗: \(error.localizedDescription)")

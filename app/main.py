@@ -1,11 +1,14 @@
-from typing import Dict
+from typing import Dict, Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # API routers
@@ -38,14 +41,23 @@ from app.api import (
 )
 from app.api.v1 import admin_counselors, admin_credits, password_reset, session_usage
 from app.core.config import settings
+from app.core.exceptions import NotFoundError
 from app.middleware.error_handler import (
     generic_exception_handler,
     http_exception_handler,
     validation_exception_handler,
 )
+from app.utils.tenant import (
+    detect_tenant_from_path,
+    normalize_tenant_from_url,
+    validate_tenant,
+)
 
 # Templates
 templates = Jinja2Templates(directory="app/templates")
+
+# Initialize Rate Limiter
+limiter = Limiter(key_func=get_remote_address)
 
 # Create FastAPI instance
 app = FastAPI(
@@ -55,6 +67,10 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Add rate limiter to app state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Configure CORS
 app.add_middleware(
@@ -135,7 +151,88 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request) -> Response:
-    """Root endpoint - Homepage with entry points"""
+    """Root endpoint - Landing Page for end users"""
+    return templates.TemplateResponse(
+        "landing.html",
+        {
+            "request": request,
+            "version": settings.APP_VERSION,
+        },
+    )
+
+
+@app.get("/internal", response_class=HTMLResponse)
+@limiter.limit("10/minute")  # Rate limit: 10 requests per minute per IP
+async def internal_portal(
+    request: Request,
+    password: Optional[str] = Query(None, description="Internal portal password"),
+) -> Response:
+    """
+    Internal Portal - Admin entry points (hidden from public)
+
+    This route requires a password to access. Rate limited to prevent brute force.
+    All admin pages still require authentication after accessing this portal.
+
+    SECURITY: In production environment, password is REQUIRED.
+    Staging/Development: Password is optional (for development convenience).
+    """
+    is_production = settings.ENVIRONMENT.lower() == "production"
+    is_staging = settings.ENVIRONMENT.lower() == "staging"
+
+    # Production environment: Password is REQUIRED
+    if is_production:
+        if not settings.INTERNAL_PORTAL_PASSWORD:
+            # Production environment without password - show error
+            return templates.TemplateResponse(
+                "internal_error.html",
+                {
+                    "request": request,
+                    "error": "Internal portal password is not configured. Please set INTERNAL_PORTAL_PASSWORD in environment variables.",
+                    "is_production": True,
+                },
+            )
+
+        # Production with password configured - require password
+        if not password or password != settings.INTERNAL_PORTAL_PASSWORD:
+            error_message = "Invalid password" if password else None
+            return templates.TemplateResponse(
+                "internal_login.html",
+                {
+                    "request": request,
+                    "error": error_message,
+                },
+            )
+    elif is_staging:
+        # Staging environment: Password is optional (for development convenience)
+        # Only require password if it's configured
+        if settings.INTERNAL_PORTAL_PASSWORD:
+            # Password configured - require it
+            if not password or password != settings.INTERNAL_PORTAL_PASSWORD:
+                error_message = "Invalid password" if password else None
+                return templates.TemplateResponse(
+                    "internal_login.html",
+                    {
+                        "request": request,
+                        "error": error_message,
+                    },
+                )
+        # No password configured in staging - allow access (development convenience)
+    else:
+        # Development environment: Password is optional
+        if settings.INTERNAL_PORTAL_PASSWORD:
+            # Password configured - require it
+            if not password or password != settings.INTERNAL_PORTAL_PASSWORD:
+                error_message = "Invalid password" if password else None
+                return templates.TemplateResponse(
+                    "internal_login.html",
+                    {
+                        "request": request,
+                        "error": error_message,
+                    },
+                )
+        # No password configured - allow access (development convenience)
+
+    # Password correct or no password required (staging/dev only) - show admin portal
     return templates.TemplateResponse(
         "index.html",
         {
@@ -209,7 +306,7 @@ async def admin_page(request: Request) -> Response:
 
 
 # =====================
-# Island Parents Routes (浮島親子)
+# Island Parents Routes (浮島親子) - 保留作為向後兼容
 # =====================
 @app.get("/island-parents", response_class=HTMLResponse)
 async def island_parents_login(request: Request) -> Response:
@@ -221,6 +318,99 @@ async def island_parents_login(request: Request) -> Response:
 async def island_parents_login_alt(request: Request) -> Response:
     """Island Parents - Login page (alt)"""
     return templates.TemplateResponse("island_parents/login.html", {"request": request})
+
+
+@app.get("/island-parents/forgot-password", response_class=HTMLResponse)
+async def island_parents_forgot_password(request: Request) -> Response:
+    """Island Parents - Forgot password page"""
+    return templates.TemplateResponse(
+        "forgot_password.html",
+        {
+            "request": request,
+            "default_tenant": "island_parents",
+        },
+    )
+
+
+@app.get("/island-parents/reset-password", response_class=HTMLResponse)
+async def island_parents_reset_password(request: Request) -> Response:
+    """Island Parents - Reset password page"""
+    return templates.TemplateResponse("reset_password.html", {"request": request})
+
+
+@app.get("/island-parents/terms", response_class=HTMLResponse)
+async def island_parents_terms(request: Request) -> Response:
+    """Island Parents - Terms of Service page"""
+    return templates.TemplateResponse("island_parents/terms.html", {"request": request})
+
+
+@app.get("/island-parents/privacy", response_class=HTMLResponse)
+async def island_parents_privacy(request: Request) -> Response:
+    """Island Parents - Privacy Policy page"""
+    return templates.TemplateResponse("island_parents/privacy.html", {"request": request})
+
+
+# =====================
+# Dynamic Tenant Routes (支援所有租戶) - 放在硬編碼路由之後
+# =====================
+@app.get("/{tenant_id}/forgot-password", response_class=HTMLResponse)
+async def tenant_forgot_password(
+    request: Request,
+    tenant_id: str,
+) -> Response:
+    """
+    Forgot password page for any tenant
+
+    Args:
+        tenant_id: Tenant ID in URL format (kebab-case, e.g., "island-parents", "career", "island")
+    """
+    # Convert URL format (kebab-case) to database format (snake_case)
+    normalized_tenant = normalize_tenant_from_url(tenant_id)
+
+    if not normalized_tenant or not validate_tenant(normalized_tenant):
+        raise NotFoundError(
+            detail="Tenant not found",
+            instance=str(request.url.path),
+        )
+
+    return templates.TemplateResponse(
+        "forgot_password.html",
+        {
+            "request": request,
+            "default_tenant": normalized_tenant,
+        },
+    )
+
+
+@app.get("/{tenant_id}/reset-password", response_class=HTMLResponse)
+async def tenant_reset_password(
+    request: Request,
+    tenant_id: str,
+    token: Optional[str] = Query(None, description="Password reset token"),
+) -> Response:
+    """
+    Reset password page for any tenant
+
+    Args:
+        tenant_id: Tenant ID in URL format (kebab-case, e.g., "island-parents", "career", "island")
+        token: Optional password reset token from query parameter
+    """
+    # Convert URL format (kebab-case) to database format (snake_case)
+    normalized_tenant = normalize_tenant_from_url(tenant_id)
+
+    if not normalized_tenant or not validate_tenant(normalized_tenant):
+        raise NotFoundError(
+            detail="Tenant not found",
+            instance=str(request.url.path),
+        )
+
+    return templates.TemplateResponse(
+        "reset_password.html",
+        {
+            "request": request,
+            "token": token,  # Pass token to template for server-side rendering
+        },
+    )
 
 
 @app.get("/island-parents/clients", response_class=HTMLResponse)
@@ -322,15 +512,68 @@ async def island_parents_report(request: Request, session_id: str) -> Response:
 
 
 @app.get("/forgot-password", response_class=HTMLResponse)
-async def forgot_password_page(request: Request) -> Response:
-    """Forgot Password page - Request password reset"""
-    return templates.TemplateResponse("forgot_password.html", {"request": request})
+async def forgot_password_page(
+    request: Request,
+    tenant: Optional[str] = None,
+) -> Response:
+    """
+    Forgot Password page - Request password reset
+
+    Tenant can be specified via:
+    1. URL query parameter: ?tenant=island_parents
+    2. Referer header (extract from referer URL path)
+    3. Default from settings.DEFAULT_TENANT
+
+    This keeps flexibility for future multi-tenant scenarios while
+    hiding the tenant selector from users.
+    """
+    from urllib.parse import urlparse
+
+    from app.core.config import settings
+
+    # Determine tenant: URL param > Referer > Default
+    detected_tenant = tenant
+
+    # Extract from referer if not provided in URL
+    if not detected_tenant:
+        referer = request.headers.get("referer")
+        if referer:
+            try:
+                parsed_url = urlparse(referer)
+                path = parsed_url.path
+
+                # Use tenant utility to detect from path
+                detected_tenant = detect_tenant_from_path(path)
+            except Exception:
+                # If parsing fails, fall back to default
+                pass
+
+    # Fall back to default if still not detected
+    if not detected_tenant:
+        detected_tenant = settings.DEFAULT_TENANT
+
+    return templates.TemplateResponse(
+        "forgot_password.html",
+        {
+            "request": request,
+            "default_tenant": detected_tenant,
+        },
+    )
 
 
 @app.get("/reset-password", response_class=HTMLResponse)
-async def reset_password_page(request: Request) -> Response:
+async def reset_password_page(
+    request: Request,
+    token: Optional[str] = Query(None, description="Password reset token"),
+) -> Response:
     """Reset Password page - Set new password with token"""
-    return templates.TemplateResponse("reset_password.html", {"request": request})
+    return templates.TemplateResponse(
+        "reset_password.html",
+        {
+            "request": request,
+            "token": token,  # Pass token to template for server-side rendering
+        },
+    )
 
 
 @app.get("/test-elevenlabs", response_class=HTMLResponse)

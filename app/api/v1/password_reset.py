@@ -178,7 +178,7 @@ async def request_password_reset(
             await email_sender.send_password_reset_email(
                 to_email=counselor.email,
                 reset_token=token,
-                counselor_name=counselor.full_name,
+                counselor_name=counselor.full_name or "User",  # Handle None case
                 tenant_id=counselor.tenant_id,
             )
         except Exception as e:

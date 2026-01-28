@@ -172,6 +172,49 @@ class TestAuthAPI:
             assert data["tenant_id"] == "career"
             assert data["is_active"] is True
 
+    def test_get_me_with_null_username_and_full_name(self, db_session: Session):
+        """Test GET /me with counselor that has null username and full_name"""
+        with TestClient(app) as client:
+            # Create test counselor with null username and full_name
+            counselor = Counselor(
+                id=uuid4(),
+                email="nulluser@example.com",
+                username=None,
+                full_name=None,
+                hashed_password=hash_password("password123"),
+                tenant_id="career",
+                role="counselor",
+                is_active=True,
+            )
+            db_session.add(counselor)
+            db_session.commit()
+
+            # Login to get token
+            login_response = client.post(
+                "/api/auth/login",
+                json={
+                    "email": "nulluser@example.com",
+                    "password": "password123",
+                    "tenant_id": "career",
+                },
+            )
+            token = login_response.json()["access_token"]
+
+            # Get current user info
+            response = client.get(
+                "/api/auth/me",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["email"] == "nulluser@example.com"
+            assert data["username"] is None
+            assert data["full_name"] is None
+            assert data["role"] == "counselor"
+            assert data["tenant_id"] == "career"
+            assert data["is_active"] is True
+
     def test_get_me_no_token(self):
         """Test GET /me without token returns 403"""
         with TestClient(app) as client:
@@ -254,13 +297,48 @@ class TestAuthAPI:
 
             assert response.status_code == 401
 
-    def test_register_success(self, db_session: Session):
-        """Test successful registration returns access token"""
+    def test_register_success_simplified(self, db_session: Session):
+        """Test successful simplified registration (email + password only) returns access token"""
         with TestClient(app) as client:
             response = client.post(
                 "/api/auth/register",
                 json={
                     "email": "newuser@example.com",
+                    "password": "password123",
+                    "tenant_id": "career",
+                },
+            )
+
+            assert response.status_code == 201
+            data = response.json()
+            assert "access_token" in data
+            assert data["token_type"] == "bearer"
+            assert "expires_in" in data
+            assert isinstance(data["access_token"], str)
+            assert len(data["access_token"]) > 0
+
+            # Verify counselor was created in database
+            from sqlalchemy import select
+
+            result = db_session.execute(
+                select(Counselor).where(
+                    Counselor.email == "newuser@example.com",
+                    Counselor.tenant_id == "career",
+                )
+            )
+            counselor = result.scalar_one_or_none()
+            assert counselor is not None
+            assert counselor.username is None  # Username is optional now
+            assert counselor.full_name is None  # Full name is optional now
+            assert counselor.is_active is True
+
+    def test_register_success_with_optional_fields(self, db_session: Session):
+        """Test successful registration with optional username and full_name (backward compatibility)"""
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/auth/register",
+                json={
+                    "email": "newuser2@example.com",
                     "username": "newuser",
                     "password": "password123",
                     "full_name": "New User",
@@ -282,7 +360,7 @@ class TestAuthAPI:
 
             result = db_session.execute(
                 select(Counselor).where(
-                    Counselor.email == "newuser@example.com",
+                    Counselor.email == "newuser2@example.com",
                     Counselor.tenant_id == "career",
                 )
             )
@@ -313,11 +391,8 @@ class TestAuthAPI:
                 "/api/auth/register",
                 json={
                     "email": "existing@example.com",
-                    "username": "newusername",
                     "password": "password123",
-                    "full_name": "New User",
                     "tenant_id": "career",
-                    "role": "counselor",
                 },
             )
 
@@ -328,7 +403,7 @@ class TestAuthAPI:
             assert "already exists" in response_data["detail"].lower()
 
     def test_register_duplicate_username(self, db_session: Session):
-        """Test registration with duplicate username returns 409"""
+        """Test registration with duplicate username returns 409 (when username is provided)"""
         # Create existing counselor
         counselor = Counselor(
             id=uuid4(),
@@ -385,11 +460,8 @@ class TestAuthAPI:
                 "/api/auth/register",
                 json={
                     "email": "shared@example.com",
-                    "username": "island_user",
                     "password": "password123",
-                    "full_name": "Island User",
                     "tenant_id": "island",
-                    "role": "counselor",
                 },
             )
 
@@ -404,9 +476,7 @@ class TestAuthAPI:
                 "/api/auth/register",
                 json={
                     "email": "defaultrole@example.com",
-                    "username": "defaultrole",
                     "password": "password123",
-                    "full_name": "Default Role User",
                     "tenant_id": "career",
                 },
             )
@@ -430,9 +500,7 @@ class TestAuthAPI:
                 "/api/auth/register",
                 json={
                     "email": "shortpass@example.com",
-                    "username": "shortpass",
                     "password": "short",  # Less than 8 characters
-                    "full_name": "Short Pass User",
                     "tenant_id": "career",
                 },
             )

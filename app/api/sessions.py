@@ -1,14 +1,17 @@
 """
 Sessions (逐字稿) API
 """
+import asyncio
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Optional, Union
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
 from sqlalchemy.orm import Session as DBSession
 
+from app.api.session_analysis import _log_analysis_background
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_tenant_id
 from app.core.exceptions import (
@@ -27,6 +30,8 @@ from app.schemas.report import ReportResponse
 from app.schemas.session import (
     AppendRecordingRequest,
     AppendRecordingResponse,
+    EmotionFeedbackRequest,
+    EmotionFeedbackResponse,
     ParentsReportResponse,
     ReflectionRequest,
     ReflectionResponse,
@@ -36,6 +41,7 @@ from app.schemas.session import (
     SessionTimelineResponse,
     SessionUpdateRequest,
 )
+from app.services.analysis.emotion_service import EmotionAnalysisService
 from app.services.core.recording_service import RecordingService
 from app.services.core.reflection_service import ReflectionService
 from app.services.core.session_service import SessionService
@@ -447,3 +453,192 @@ def get_session_report(
     }
 
     return ReportResponse(**report_dict)
+
+
+# =============================================================================
+# Emotion Analysis (Island Parents - Real-time Feedback)
+# =============================================================================
+
+
+@router.post(
+    "/{session_id}/emotion-feedback",
+    response_model=EmotionFeedbackResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def analyze_emotion_feedback(
+    session_id: UUID,
+    request: EmotionFeedbackRequest,
+    background_tasks: BackgroundTasks,
+    db: DBSession = Depends(get_db),
+    current_user: Counselor = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id),
+):
+    """
+    **[Island Parents] Real-time emotion analysis for parent-child communication**
+
+    Analyze the emotion level of parent's communication and provide instant guidance.
+
+    **Emotion Levels:**
+    - **Level 1 (綠燈/Green)**: Good communication - calm, empathetic, constructive
+    - **Level 2 (黃燈/Yellow)**: Warning - slightly impatient, but not out of control
+    - **Level 3 (紅燈/Red)**: Danger - strong negative emotion, may harm relationship
+
+    **Performance:**
+    - Response time: <3 seconds
+    - Model: Gemini Flash Lite Latest
+
+    **Request:**
+    - `context`: Conversation context (可能包含多輪對話)
+    - `target`: Target sentence to analyze
+
+    **Response:**
+    - `level`: 1/2/3 (green/yellow/red)
+    - `hint`: Guidance hint (≤17 chars)
+
+    **Example:**
+    ```json
+    {
+      "context": "小明：我考試不及格\\n媽媽：你有認真準備嗎？",
+      "target": "你就是不用功！"
+    }
+    ```
+
+    **Returns:**
+    ```json
+    {
+      "level": 3,
+      "hint": "試著同理孩子的挫折感"
+    }
+    ```
+    """
+    # 1. Verify session exists and user has access
+    try:
+        session = (
+            db.query(Session)
+            .filter(Session.id == session_id, Session.tenant_id == tenant_id)
+            .first()
+        )
+
+        if not session:
+            raise NotFoundError(
+                detail="Session not found",
+                instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+            )
+
+        # Verify case access (session belongs to case, case belongs to counselor)
+        case = db.query(Case).filter(Case.id == session.case_id).first()
+        if not case:
+            raise NotFoundError(
+                detail="Case not found",
+                instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+            )
+
+        if case.counselor_id != current_user.id:
+            raise ForbiddenError(
+                detail="Access denied to this session",
+                instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+            )
+
+    except NotFoundError:
+        raise
+    except ForbiddenError:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to verify session access: {e}")
+        raise InternalServerError(
+            detail="Failed to verify session access",
+            instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+        )
+
+    # 2. Validate request (context can be empty on first call)
+    if not request.target or not request.target.strip():
+        raise BadRequestError(
+            detail="Target cannot be empty",
+            instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+        )
+
+    # 3. Analyze emotion
+    try:
+        start_time = time.time()
+
+        emotion_service = EmotionAnalysisService()
+        result = await emotion_service.analyze_emotion(
+            context=request.context, target=request.target
+        )
+
+        latency_ms = int((time.time() - start_time) * 1000)
+
+        # Log to DB and BigQuery in background (after response sent)
+        background_tasks.add_task(
+            _log_analysis_background,
+            session_id=session_id,
+            counselor_id=current_user.id,
+            tenant_id=tenant_id,
+            transcript_segment=request.context[:500],  # First 500 chars
+            result_data={
+                "analysis_type": "emotion_feedback",
+                "level": result["level"],
+                "hint": result["hint"],
+                "context_preview": request.context[:100],
+                "target": request.target,
+                "_metadata": {
+                    "latency_ms": latency_ms,
+                },
+            },
+            token_usage_data=result["token_usage"],
+            analysis_type="emotion_feedback",
+        )
+
+        return EmotionFeedbackResponse(level=result["level"], hint=result["hint"])
+
+    except asyncio.TimeoutError:
+        logger.error("Emotion analysis timeout (>3s)")
+        raise InternalServerError(
+            detail="Analysis timeout - please try again",
+            instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+        )
+    except Exception as e:
+        logger.error(f"Emotion analysis failed: {e}")
+        raise InternalServerError(
+            detail="Failed to analyze emotion",
+            instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
+        )
+
+
+@router.post("/{session_id}/messages", status_code=201)
+async def add_session_message(
+    session_id: UUID,
+    message: dict,
+    db: DBSession = Depends(get_db),
+    current_user: Counselor = Depends(get_current_user),
+):
+    """
+    Add a message to session (minimal implementation for testing)
+
+    This is a placeholder endpoint for TDD testing.
+    Real implementation should use proper message model.
+    """
+    # Verify session exists
+    session = db.query(Session).filter(Session.id == session_id).first()
+    if not session:
+        raise NotFoundError(
+            detail=f"Session {session_id} not found",
+            instance=f"/api/v1/sessions/{session_id}/messages",
+        )
+
+    # Verify ownership
+    case = db.query(Case).filter(Case.id == session.case_id).first()
+    if not case or case.counselor_id != current_user.id:
+        raise ForbiddenError(
+            detail="Access denied",
+            instance=f"/api/v1/sessions/{session_id}/messages",
+        )
+
+    # Minimal implementation: just return success
+    # TODO: Actually store messages when Message model is implemented
+    return {"message": "Message received (not stored - placeholder)"}
+
+
+# REMOVED: Old deep-analyze endpoint (TDD stub)
+# The proper implementation is now in app/api/session_analysis.py
+# which returns RealtimeAnalyzeResponse with full analysis pipeline

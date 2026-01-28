@@ -65,22 +65,23 @@ def register(
             instance=str(request.url.path),
         )
 
-    # Check if username already exists
-    result = db.execute(
-        select(Counselor).where(Counselor.username == register_data.username)
-    )
-    if result.scalar_one_or_none():
-        raise ConflictError(
-            detail=f"Username '{register_data.username}' already exists",
-            instance=str(request.url.path),
+    # Check username uniqueness if provided (only if not None)
+    if register_data.username is not None:
+        result = db.execute(
+            select(Counselor).where(Counselor.username == register_data.username)
         )
+        if result.scalar_one_or_none():
+            raise ConflictError(
+                detail=f"Username '{register_data.username}' already exists",
+                instance=str(request.url.path),
+            )
 
     try:
-        # Create new counselor
+        # Create new counselor (username and full_name are optional, can be None)
         counselor = Counselor(
             email=register_data.email,
-            username=register_data.username,
-            full_name=register_data.full_name,
+            username=register_data.username,  # Can be None or provided value
+            full_name=register_data.full_name,  # Can be None or provided value
             hashed_password=hash_password(register_data.password),
             tenant_id=register_data.tenant_id,
             role=register_data.role,
@@ -225,12 +226,17 @@ def update_current_counselor(
         HTTPException: 400 if username already exists, 500 if update fails
     """
     try:
-        # Convert to dict and filter out None values
-        update_fields = {
-            k: v
-            for k, v in update_data.model_dump(exclude_unset=True).items()
-            if v is not None
-        }
+        # Convert to dict and process values
+        # Convert empty strings to None for nullable fields (username, full_name)
+        # Allow None values to clear fields
+        update_fields = {}
+        for k, v in update_data.model_dump(exclude_unset=True).items():
+            # Convert empty string to None for nullable fields
+            if k in ("username", "full_name") and v == "":
+                update_fields[k] = None
+            else:
+                # Allow None values (to clear fields) or actual values
+                update_fields[k] = v
 
         if not update_fields:
             raise BadRequestError(
@@ -238,9 +244,10 @@ def update_current_counselor(
                 instance=str(request.url.path),
             )
 
-        # Check username uniqueness if being updated (only if different from current)
+        # Check username uniqueness if being updated (only if different from current and not None)
         if (
             "username" in update_fields
+            and update_fields["username"] is not None
             and update_fields["username"] != current_user.username
         ):
             result = db.execute(

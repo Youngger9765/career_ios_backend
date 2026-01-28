@@ -78,7 +78,7 @@ class Test8SchoolsPromptIntegration:
         with patch(
             "app.services.keyword_analysis_service.GeminiService"
         ) as mock_gemini_class, patch(
-            "app.services.keyword_analysis_service.RAGRetriever"
+            "app.services.analysis.keyword_analysis.prompts.RAGRetriever"
         ) as mock_rag_class:
             mock_gemini_instance = mock_gemini_class.return_value
             mock_gemini_instance.generate_text = AsyncMock(

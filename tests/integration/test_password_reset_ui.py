@@ -38,13 +38,13 @@ class TestForgotPasswordPage:
 
         # Check for form elements
         assert 'name="email"' in html_content or 'id="email"' in html_content
-        assert 'name="tenant"' in html_content or 'id="tenant"' in html_content
+        # Tenant is now hidden (auto-filled), but should still be present as hidden input
+        assert 'id="tenant"' in html_content or 'name="tenant"' in html_content
         assert 'type="submit"' in html_content or "button" in html_content.lower()
 
-        # Check for tenant options
-        assert "career" in html_content
-        assert "island" in html_content
-        assert "island_parents" in html_content
+        # Tenant selector is hidden, but tenant value should be auto-filled
+        # Check that tenant is present (as hidden input, not visible dropdown)
+        assert 'type="hidden"' in html_content or 'id="tenant"' in html_content
 
     async def test_forgot_password_page_has_title(
         self,

@@ -92,23 +92,29 @@ class TestE2ESessionWorkflow:
         """Mock GeminiService for all endpoints"""
 
         async def mock_generate_text(prompt, *args, **kwargs):
-            # 根據 prompt 判斷是哪個 endpoint
+            # Return mock that simulates Gemini response with text attribute
+            # to match what SimplifiedAnalyzer expects (line 100: ai_response.text)
+            class MockGeminiResponse:
+                def __init__(self, text):
+                    self.text = text
+                    # Mock usage_metadata for token counting
+                    self.usage_metadata = type('obj', (object,), {
+                        'prompt_token_count': 100,
+                        'candidates_token_count': 50
+                    })()
+
             if "Practice Mode" in prompt or "單人練習" in prompt:
-                return json.dumps(
-                    {
-                        "safety_level": "green",
-                        "display_text": "練習語氣溫和，展現同理心",
-                        "quick_suggestion": "你正在聽，而不是急著回",
-                    }
-                )
+                return MockGeminiResponse(json.dumps({
+                    "safety_level": "green",
+                    "display_text": "練習語氣溫和，展現同理心",
+                    "quick_suggestion": "你正在聽，而不是急著回",
+                }))
             else:
-                return json.dumps(
-                    {
-                        "safety_level": "green",
-                        "display_text": "分析完成",
-                        "quick_suggestion": "持續保持良好溝通",
-                    }
-                )
+                return MockGeminiResponse(json.dumps({
+                    "safety_level": "green",
+                    "display_text": "分析完成",
+                    "quick_suggestion": "持續保持良好溝通",
+                }))
 
         async def mock_chat_completion(prompt, *args, **kwargs):
             # For report endpoint
@@ -123,17 +129,26 @@ class TestE2ESessionWorkflow:
                 )
             }
 
+        # Instead of mocking GeminiService, mock analyze_keywords_simplified directly
+        async def mock_analyze_simplified(*args, **kwargs):
+            return {
+                "safety_level": "green",
+                "display_text": "分析完成",
+                "quick_suggestions": ["持續保持良好溝通"],  # Note: plural, as a list
+                "_metadata": {},
+                "prompt_tokens": 100,
+                "completion_tokens": 50,
+                "total_tokens": 150,
+            }
+
         with patch(
-            "app.services.analysis.keyword_analysis_service.GeminiService"
-        ) as mock_deep, patch(
+            "app.services.analysis.keyword_analysis_service.KeywordAnalysisService.analyze_keywords_simplified",
+            side_effect=mock_analyze_simplified
+        ), patch(
             "app.services.core.quick_feedback_service.GeminiService"
         ) as mock_quick, patch(
             "app.services.external.gemini_service.GeminiService"
         ) as mock_report:
-            # Deep analyze mock
-            mock_deep_instance = mock_deep.return_value
-            mock_deep_instance.generate_text = mock_generate_text
-
             # Quick feedback mock
             from unittest.mock import AsyncMock, MagicMock
 

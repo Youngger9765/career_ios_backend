@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -198,7 +198,7 @@ async def send_password_reset_email_for_new_counselor(
         await email_sender.send_password_reset_email(
             to_email=counselor.email,
             reset_token=token,
-            counselor_name=counselor.full_name,
+            counselor_name=counselor.full_name or "User",  # Handle None case
             tenant_id=counselor.tenant_id,
         )
 
@@ -251,8 +251,8 @@ async def list_counselors(
         query = query.where(
             or_(
                 Counselor.email.ilike(search_pattern),
-                Counselor.username.ilike(search_pattern),
-                Counselor.full_name.ilike(search_pattern),
+                and_(Counselor.username.isnot(None), Counselor.username.ilike(search_pattern)),
+                and_(Counselor.full_name.isnot(None), Counselor.full_name.ilike(search_pattern)),
             )
         )
 
@@ -273,8 +273,8 @@ async def list_counselors(
         count_query = count_query.where(
             or_(
                 Counselor.email.ilike(search_pattern),
-                Counselor.username.ilike(search_pattern),
-                Counselor.full_name.ilike(search_pattern),
+                and_(Counselor.username.isnot(None), Counselor.username.ilike(search_pattern)),
+                and_(Counselor.full_name.isnot(None), Counselor.full_name.ilike(search_pattern)),
             )
         )
     total = db.execute(count_query).scalar()
