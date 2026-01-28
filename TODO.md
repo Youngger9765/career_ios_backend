@@ -2,26 +2,36 @@
 
 ## 🚨 緊急 - Bug 修復上線驗證
 
-### Emotion-Feedback API Bug 修復確認 (2026-01-28)
+### Emotion-Feedback API Bug 修復確認 ✅ 已完成 (2026-01-29)
 - [x] 修復 422 錯誤：允許空 context 欄位 (commit: c8cfe7b)
-  - **問題**: 首次呼叫 emotion-feedback 時 context 要求 min_length=1 導致失敗
-  - **修復**: 修改 `EmotionFeedbackRequest.context` 為 `default=""` 允許空字串
+  - **問題**: Pydantic schema `min_length=1` 限制
+  - **修復**: 改為 `default=""` 無 min_length
   - **檔案**: `app/schemas/session.py:604`
+
+- [x] 修復 400 錯誤：移除 route handler 多餘的 empty context 檢查 (commit: 2af6ab2)
+  - **問題**: `app/api/sessions.py:554` 有第二層 `if not request.context` 檢查
+  - **修復**: 移除該檢查，允許首次呼叫 context 為空
+  - **檔案**: `app/api/sessions.py`
 
 - [x] 修復 500 錯誤：Token usage 提取失敗 (commit: c8cfe7b)
   - **問題**: `get_last_token_usage()` 方法不存在導致內部錯誤
   - **修復**: 直接從 `response.usage_metadata` 提取 token 使用量
   - **檔案**: `app/services/analysis/emotion_service.py`
 
-- [x] CI/CD 通過：Staging 環境已部署 (2026-01-27 19:24)
-  - URL: https://career-app-api-staging-978304030758.us-central1.run.app
-  - 健康檢查: ✅ 正常
-  - 368 整合測試通過
+- [x] CI/CD 通過：Staging 環境已部署 (2026-01-29 02:26)
+- [x] **Staging 實測驗證通過** (2026-01-29) — 8/8 API 呼叫全部 200
+  - 空 context + 中文 target → 200
+  - 空 context + 溫和 target → 200
+  - 有 context + 攻擊語句 → 200
+  - 有 context + 同理心語句 → 200
+  - 長 context + 質疑語句 → 200
+  - 舊 URL（kxaznpplqq）也全部正常
+  - Level 判斷合理（溫和=1, 中性=2, 攻擊=3）
 
-- [ ] **Production 上線前驗證** 🔴 待用戶測試
-  - [ ] 使用 Island Parents 帳號測試 emotion-feedback API
-  - [ ] 確認空 context 呼叫成功（422 錯誤已解決）
-  - [ ] 確認 token usage 正確記錄（500 錯誤已解決）
+- [ ] **Production 上線前驗證** 🔴 待 Allen 測試確認
+  - [ ] Allen 使用 App 實測 emotion-feedback
+  - [ ] 確認空 context 首次呼叫成功
+  - [ ] 確認第二次呼叫（有 context）成功
   - [ ] 驗證完成後才可推送至 Production
 
 **測試帳號** (已 seed):
