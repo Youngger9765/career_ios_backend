@@ -1,5 +1,42 @@
 # TODO
 
+## 🚨 緊急 - Bug 修復上線驗證
+
+### Emotion-Feedback API Bug 修復確認 (2026-01-28)
+- [x] 修復 422 錯誤：允許空 context 欄位 (commit: c8cfe7b)
+  - **問題**: 首次呼叫 emotion-feedback 時 context 要求 min_length=1 導致失敗
+  - **修復**: 修改 `EmotionFeedbackRequest.context` 為 `default=""` 允許空字串
+  - **檔案**: `app/schemas/session.py:604`
+
+- [x] 修復 500 錯誤：Token usage 提取失敗 (commit: c8cfe7b)
+  - **問題**: `get_last_token_usage()` 方法不存在導致內部錯誤
+  - **修復**: 直接從 `response.usage_metadata` 提取 token 使用量
+  - **檔案**: `app/services/analysis/emotion_service.py`
+
+- [x] CI/CD 通過：Staging 環境已部署 (2026-01-27 19:24)
+  - URL: https://career-app-api-staging-978304030758.us-central1.run.app
+  - 健康檢查: ✅ 正常
+  - 368 整合測試通過
+
+- [ ] **Production 上線前驗證** 🔴 待用戶測試
+  - [ ] 使用 Island Parents 帳號測試 emotion-feedback API
+  - [ ] 確認空 context 呼叫成功（422 錯誤已解決）
+  - [ ] 確認 token usage 正確記錄（500 錯誤已解決）
+  - [ ] 驗證完成後才可推送至 Production
+
+**測試帳號** (已 seed):
+- Island Parents: `counselor@island.com` / `password123`
+- Career: `counselor@career.com` / `password123`
+
+**測試步驟**:
+1. 登入 console.html 或 App
+2. 建立新 session
+3. 呼叫 `/api/v1/sessions/{session_id}/emotion-feedback`
+4. 第一次呼叫使用 `context=""` (空字串) - 應成功 (不應 422)
+5. 檢查 response 包含 `level`, `hint`, `token_usage` - 應成功 (不應 500)
+
+---
+
 ## 高優先級 - 訂閱註冊與付費流程 (Paywall / IAP)
 
 ### 註冊 API 簡化 ✅ 已完成
@@ -27,6 +64,36 @@
 - [x] 確認重設密碼 email 中的連結格式正確指向 Web 頁面：`{app_url}/reset-password?token={reset_token}`
 - [x] 測試完整 Web 流程（已用 Chrome 完整測試：註冊 → 忘記密碼 → 重設密碼 → 新密碼登入，全部成功）
 
+### 忘記密碼流程優化（AllenLee 需求 2026-01-29）
+
+#### Deeplink Redirect（App 來源區分）
+- [ ] 密碼重設完成頁面區分 App vs Web 來源
+  - 方案：URL 加 `?source=app` 參數區分
+  - App 來的：重設完成後按鈕 redirect 到 `islandparent://auth/forgot-password-done`
+  - Web 來的：維持現有行為（顯示返回登入連結）
+- [ ] 修改 email 中的重設連結，App 發起的請求帶上 `source=app` 參數
+  - 例：`/island-parents/reset-password?token=xxx&source=app`
+- [ ] 修改 `reset_password.html` 重設成功後的按鈕行為
+  - 讀取 `source` 參數，若為 `app` → `window.location.href = 'islandparent://auth/forgot-password-done'`
+  - 否則 → 維持現有返回登入頁面連結
+- [ ] 修改 forgot-password 請求 API / email 發送邏輯，傳遞 `source` 參數
+
+#### Email 自動帶入
+- [ ] forgot-password 頁面支援 `?mail=` query parameter 預填 email
+  - 例：`/island-parents/forgot-password?mail=allen@gmail.com`
+  - 修改 `forgot_password.html`，讀取 URL `mail` 參數自動填入 email 欄位
+- [ ] App 端開啟 forgot-password 頁面時帶上使用者 email
+
+### Base URL 統一（AllenLee 回報 2026-01-29）
+- [ ] iOS 端 base URL 需更新（Allen 負責）
+  - 舊：`https://career-app-api-staging-kxaznpplqq-uc.a.run.app`
+  - 新：`https://career-app-api-staging-978304030758.us-central1.run.app`
+  - Production 也要確認：`career-app-api-prod-kxaznpplqq-uc.a.run.app` → 待確認新 URL
+- [ ] 後端文件 base URL 更新（IOS_GUIDE_PARENTS.md 等）
+  - `IOS_GUIDE_PARENTS.md` 中多處引用需確認一致
+  - 舊 weekly reports 仍引用舊 URL（已過期，不需改）
+- [ ] 確認兩個 URL 是否都還能用（Cloud Run 可能兩個都有效）
+
 ### Terms & Privacy 網頁 ✅ 已完成 (2026-01-27)
 - [x] 建立 Terms of Service 頁面 (`/island-parents/terms`)
 - [x] 建立 Privacy Policy 頁面 (`/island-parents/privacy`)
@@ -44,15 +111,21 @@
 - Privacy: https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/privacy
 
 ### 網域與信任感
-- [ ] 評估並選擇合適的網域（使用既有網域子網域或另買網域如 GoDaddy）
-  - 🔴 阻塞原因：需要商業決策（用既有網域或購買新網域）
-  - 建議：先決定網域策略
+- [x] ~~評估並選擇合適的網域~~ → **決定掛在逗點教室網域下**（KM 確認 2026-01-29）
+  - 明天 Young 與逗點一起確認具體子網域
 - [ ] 設定可信賴的網域用於 Web 重設密碼/條款頁面
-  - 🔴 依賴：網域選擇完成
-- [ ] 設定 support 信箱（用於寄送密碼重設郵件）
-  - 🔴 阻塞原因：需要建立或指定 support email
+  - 🟡 半阻塞：等逗點確認子網域後可執行
+- [x] ~~設定 support 信箱~~ → **`CC_BDS@careercreator.tw`**（KM 確認 2026-01-29）
+- [ ] 設定 Gmail SMTP 應用程式密碼（KM 負責）
+  - 步驟：登入 CC_BDS@careercreator.tw → 開啟兩步驟驗證 → 產生應用程式密碼
+  - 🔴 阻塞：等 KM 完成後提供 16 碼密碼
+- [ ] 後端更新 SMTP 環境變數（拿到密碼後）
+  - `SMTP_USER=CC_BDS@careercreator.tw`
+  - `FROM_EMAIL=CC_BDS@careercreator.tw`
+  - `SMTP_PASSWORD=<KM 提供的 16 碼>`
+  - 🔴 依賴：KM 產生應用程式密碼
 - [ ] 配置網域 DNS 設定
-  - 🔴 依賴：網域購買/選擇完成
+  - 🟡 半阻塞：等逗點確認後可執行
 - [ ] 確保 SSL 憑證正確配置
   - 🔴 依賴：網域設定完成
 - [ ] 更新 `APP_URL` 環境變數指向新網域
