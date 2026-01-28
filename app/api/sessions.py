@@ -550,13 +550,7 @@ async def analyze_emotion_feedback(
             instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
         )
 
-    # 2. Validate request
-    if not request.context or not request.context.strip():
-        raise BadRequestError(
-            detail="Context cannot be empty",
-            instance=f"/api/v1/sessions/{session_id}/emotion-feedback",
-        )
-
+    # 2. Validate request (context can be empty on first call)
     if not request.target or not request.target.strip():
         raise BadRequestError(
             detail="Target cannot be empty",

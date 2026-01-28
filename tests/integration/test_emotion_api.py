@@ -200,24 +200,26 @@ class TestEmotionAnalysisAPI:
             # Verify hint constraints
             assert len(data["hint"]) <= 17, f"Hint too long: {len(data['hint'])} chars"
 
-    def test_invalid_format_empty_context(
+    def test_empty_context_allowed(
         self, db_session: Session, auth_headers, test_session_obj
     ):
         """
-        Scenario 4: Invalid format - empty context
-        Expected: 422 Unprocessable Entity (Pydantic validation)
+        Scenario 4: Empty context is allowed (first call has no context)
+        Expected: NOT 400/422 - validation should pass
         """
         with TestClient(app) as client:
             response = client.post(
                 f"/api/v1/sessions/{test_session_obj.id}/emotion-feedback",
                 headers=auth_headers,
                 json={
-                    "context": "",  # Empty context
+                    "context": "",  # Empty context allowed on first call
                     "target": "測試",
                 },
             )
 
-            assert response.status_code == 422, f"Expected 422, got {response.status_code}"
+            assert response.status_code not in [400, 422], (
+                f"Empty context should be allowed, got {response.status_code}: {response.json()}"
+            )
 
     def test_invalid_format_empty_target(
         self, db_session: Session, auth_headers, test_session_obj
