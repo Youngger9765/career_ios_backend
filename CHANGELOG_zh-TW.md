@@ -9,7 +9,72 @@
 
 ## [未發布]
 
+### 新增
+- **服務條款與隱私權政策頁面** (2026-01-27)：符合 RevenueCat/App Store 審核要求的法律頁面
+  - 路由：`/island-parents/terms` - 包含 10 個完整章節的服務條款
+  - 路由：`/island-parents/privacy` - 符合 GDPR/台灣個資法的隱私權政策
+  - 共用模板系統（`legal_base.html`）搭配固定目錄導航
+  - 響應式設計：桌面版側邊欄目錄 + 手機版可折疊下拉選單
+  - 平滑捲動導航與當前章節高亮（Intersection Observer）
+  - 內容涵蓋：服務說明、使用者權利、資料處理、GDPR 合規、退款政策
+  - 已準備好整合 RevenueCat Paywall（App Store 審核要求）
+  - PM 可隨時更新文案（僅需編輯 HTML 模板，無需重新部署）
+
+- **改進 analyze-partial 的 OpenAPI 文檔** (2026-01-26)：增強 Swagger UI 體驗
+  - 新增詳盡的摘要與說明，解釋多租戶行為差異
+  - 新增 3 個回應範例（island_parents_green、island_parents_red、career_analysis）
+  - 記載所有回應代碼（200/401/404/500）並附上清楚說明
+  - 包含功能亮點（非阻塞、背景任務、RAG、token 追蹤）
+  - 改善 iOS/前端團隊使用 `/docs` 的開發體驗
+
 ### 修復
+- **安全評估測試失敗** (2026-01-27)：修復 `test_safe_conversation_returns_green_level`
+  - 根本原因：佔位的 `/messages` 端點未儲存逐字稿資料
+  - 解決方案：測試現在直接設定 session 物件的 `transcript_text`
+  - 更新測試斷言以符合 `RealtimeAnalyzeResponse` schema（summary/alerts/suggestions）
+  - 測試在 CI/CD pipeline 中穩定通過（修復前連續失敗 5 次）
+  - 記錄限制：`/api/v1/sessions/{id}/messages` 端點為佔位（訊息儲存尚未實作）
+
+- **移除重複的 deep-analyze 端點** (2026-01-26)：修復 23 個失敗測試
+  - 移除 `sessions.py` 中過時的 TDD stub 端點（回傳硬編碼回應）
+  - `session_analysis.py` 中的正式實作現在處理所有 deep-analyze 請求
+  - 根本原因：重複端點優先註冊，遮蔽了真正的實作
+  - 測試現在正確接收完整分析結果的 `RealtimeAnalyzeResponse`
+  - 影響：所有 E2E workflow、session analysis 和 RAG 整合測試現已通過
+
+### 已棄用
+- **Deep Analysis API - TDD GREEN 階段** (2026-01-26)：已被 session_analysis.py 取代
+  - ~~新增 POST /sessions/{id}/deep-analyze 端點（佔位，硬編碼安全狀態）~~
+  - ~~DeepAnalysisResponse schema 包含 safety_level/display_text/quick_suggestion~~
+  - 此為 TDD stub，已被完整實作取代
+
+- **Emotion feedback API 日誌記錄** (2026-01-25)：資料庫與 BigQuery 日誌，用於成本追蹤與分析
+  - 追蹤 token 使用量（prompt/completion tokens + 成本）
+  - 記錄分析結果至 SessionAnalysisLog（PostgreSQL）
+  - 背景任務上傳至 BigQuery
+  - 遵循與 quick/deep feedback APIs 相同模式
+
+- **IOS_GUIDE_PARENTS.md v1.10** (2026-01-25)：完整的 Client & Case 管理文檔
+  - 新增 Section 2.6 完整 client-case API 文檔
+  - 包含 Swift 實作範例與錯誤處理
+  - 新增 session 建立流程的前置條件警告
+  - 更新 API 端點總覽（Section 12.3）強調 Island Parents UI APIs
+  - 文檔完整度從 92% 提升至 ~98%
+
+- **Island Parents 交付檢查清單** (2026-01-25)：`docs/weekly/ISLAND_PARENTS_DELIVERY_CHECKLIST.md`
+  - iOS 團隊交接的全面交付總覽
+  - 完整 API 規格與 Request/Response 範例
+  - 使用 staging 環境實際測試資料的驗證結果
+  - iOS 團隊驗證的快速測試指南
+  - 聯絡資訊與需要 PM 決策的待辦事項
+
+### 修復
+- **IOS_GUIDE_PARENTS.md 中的 Staging URLs** (2026-01-25)
+  - 更新 3 個過時的 staging URLs 為當前格式
+  - 舊：`career-app-api-staging-kxaznpplqq-uc.a.run.app`
+  - 新：`career-app-api-staging-978304030758.us-central1.run.app`
+  - 影響章節：2.6（Client-Case API）、11（忘記密碼 Web 流程）
+
 - **ElevenLabs Token API 文檔錯誤** (2026-01-12)
   - 修正 IOS_API_GUIDE.md 中的端點路徑：`/api/v1/realtime/elevenlabs-token` → `/api/v1/transcript/elevenlabs-token`
   - 在 IOS_GUIDE_PARENTS.md 新增 Section 6 完整 API 文檔
