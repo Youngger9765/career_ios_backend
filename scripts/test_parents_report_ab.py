@@ -3,11 +3,16 @@
 A/B Testing script for Parents Report Prompt Refinement
 
 Compares OLD (academic) vs NEW (accessible) prompt outputs.
+
+Usage:
+    python scripts/test_parents_report_ab.py           # Use mock data (fast)
+    python scripts/test_parents_report_ab.py --real    # Use real service (requires API)
 """
 
 import asyncio
 import json
 import re
+import sys
 from typing import Dict, List
 
 # Sample transcript (10-minute parent-child dialogue)
@@ -81,17 +86,62 @@ def calculate_readability_score(text: str) -> Dict[str, any]:
 
 async def generate_report_with_prompt(
     transcript: str,
-    use_new_prompt: bool = False
+    use_new_prompt: bool = False,
+    use_real_service: bool = False
 ) -> Dict:
     """
     Generate report using OLD or NEW prompt.
 
-    NOTE: This is a MOCK for now. In real implementation, this would:
-    1. Set USE_VERNACULAR_PROMPT env var
-    2. Call the actual ParentsReportService
-    3. Return the generated report
+    Args:
+        transcript: Parent-child dialogue transcript
+        use_new_prompt: If True, use NEW accessible prompt; otherwise use OLD academic prompt
+        use_real_service: If True, call real ParentsReportService; otherwise use mock data
+
+    Returns:
+        Dict with keys: encouragement, issue, analyze, suggestion
     """
-    # TODO: Replace with actual service call
+    # Real service call (requires API and DB)
+    if use_real_service and use_new_prompt:
+        try:
+            import os
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+            from app.services.analysis.parents_report_service import ParentsReportService
+            from app.models.session import Session
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+
+            # Create in-memory DB session
+            engine = create_engine("sqlite:///:memory:")
+            SessionLocal = sessionmaker(bind=engine)
+            db = SessionLocal()
+
+            # Create mock session object
+            mock_session = Session(
+                id="test-session",
+                tenant_id="island_parents",
+                counselor_id="test-counselor",
+                client_id="test-client",
+                scenario="孩子不願意寫功課",
+                scenario_description="8歲小孩每天晚上都不想寫功課，家長用了各種方法都沒效，覺得很挫折。"
+            )
+
+            service = ParentsReportService(db)
+
+            # Generate report with RAG
+            analysis, rag_refs, rag_sources, latency, tokens = await service.generate_report(
+                session=mock_session,
+                transcript=transcript,
+                use_rag=True
+            )
+
+            db.close()
+            return analysis
+        except Exception as e:
+            print(f"⚠️  Real service call failed: {e}")
+            print("   Falling back to mock data...")
+
+    # Mock data for fast testing
     if use_new_prompt:
         # Simulated NEW prompt output (more accessible)
         return {
@@ -170,17 +220,35 @@ async def generate_report_with_prompt(
         }
 
 
-async def run_ab_test():
-    """Run A/B test comparing OLD vs NEW prompt"""
+async def run_ab_test(use_real_service: bool = False):
+    """Run A/B test comparing OLD vs NEW prompt
+
+    Args:
+        use_real_service: If True, call real ParentsReportService for NEW prompt
+    """
     print("=" * 80)
     print("🧪 Parents Report Prompt A/B Testing")
     print("=" * 80)
     print()
 
+    if use_real_service:
+        print("📡 Mode: Using REAL ParentsReportService (may be slow, requires API)")
+    else:
+        print("🚀 Mode: Using MOCK data (fast baseline testing)")
+    print()
+
     # Generate reports
     print("📝 Generating reports...")
-    report_old = await generate_report_with_prompt(SAMPLE_TRANSCRIPT, use_new_prompt=False)
-    report_new = await generate_report_with_prompt(SAMPLE_TRANSCRIPT, use_new_prompt=True)
+    report_old = await generate_report_with_prompt(
+        SAMPLE_TRANSCRIPT,
+        use_new_prompt=False,
+        use_real_service=False  # Always use mock for OLD (baseline)
+    )
+    report_new = await generate_report_with_prompt(
+        SAMPLE_TRANSCRIPT,
+        use_new_prompt=True,
+        use_real_service=use_real_service
+    )
 
     # Analyze both
     print("\n" + "=" * 80)
@@ -279,4 +347,6 @@ async def run_ab_test():
 
 
 if __name__ == "__main__":
-    asyncio.run(run_ab_test())
+    # Check for --real flag
+    use_real_service = "--real" in sys.argv
+    asyncio.run(run_ab_test(use_real_service=use_real_service))
