@@ -27,6 +27,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Included feature highlights (non-blocking, background tasks, RAG, token tracking)
   - Improved developer experience for iOS/frontend teams using `/docs`
 
+### Changed
+- **Parents Report Prompt Refinement** (2026-01-29): Balanced professional authority with accessibility
+  - Modified prompt in `parents_report_service.py` to use life-like language while maintaining credibility
+  - **Strategy**: Moderate use of simple professional terms, avoid excessive academic jargon
+  - **Preserved terms**: 同理, 界限, 情緒, 歸屬感, 價值感 (simple, understandable)
+  - **Removed**: Expert name-dropping (Gottman, 阿德勒, 薩提爾, Dan Siegel, Ross Greene, Dr. Becky Kennedy)
+  - **Translated concepts**:
+    - '冰山理論' → '表面行為背後的真正需求'
+    - '情緒教練時刻' → '陪伴孩子面對情緒'
+    - '黃金時刻' → '很難得的時刻'
+    - '權力鬥爭' → '親子之間的拉扯'
+  - **Neutral phrasing**: 'Gottman理論' → '研究發現...', '專家建議...'
+  - **RAG integration**: Remains active, only presentation style changed
+  - **A/B testing validation**: Academic density reduced 100% (19.1 → 0.0 terms/1000 chars)
+  - **Impact**: No API changes, no schema changes, no iOS changes required
+  - **Testing**: Created automated A/B testing script (`scripts/test_parents_report_ab.py`)
+  - **Verification**: All 9 integration tests pass
+
 ### Fixed
 - **Safety Assessment Test Failure** (2026-01-27): Fixed `test_safe_conversation_returns_green_level`
   - Root cause: Placeholder `/messages` endpoint doesn't store transcript data
