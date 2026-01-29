@@ -44,6 +44,50 @@
   - 修改 `forgot_password.html`，讀取 URL `mail` 參數自動填入 email 欄位
 - [ ] App 端開啟 forgot-password 頁面時帶上使用者 email
 
+### 註冊安全性增強（2026-01-30）⏳ 待 PM 確認
+
+**背景**：
+- 目前註冊流程無郵件驗證、無 Rate Limiting、無 CAPTCHA
+- 存在高風險：假帳號氾濫、自動化攻擊、資源濫用
+
+**需求**（待 PM 確認優先順序）：
+- [ ] **郵件驗證功能**（可開關設計）
+  - 環境變數：`ENABLE_EMAIL_VERIFICATION=true/false`
+  - 註冊流程：註冊 → 發送驗證信 → 點擊連結 → 啟用帳號
+  - 未驗證帳號：`is_active=False`，無法登入
+  - 驗證連結：24 小時有效期
+  - 重發驗證信：API endpoint for resending
+
+- [ ] **Rate Limiting**（可開關設計）
+  - 環境變數：`ENABLE_RATE_LIMITING=true/false`
+  - 註冊限制：同 IP 每小時最多 3 次
+  - 登入限制：同 IP 每分鐘最多 5 次
+  - 忘記密碼限制：同 IP 每小時最多 3 次
+  - 使用 Redis 或 slowapi 實作
+
+- [ ] **CAPTCHA 驗證**（可開關設計）
+  - 環境變數：`ENABLE_CAPTCHA=true/false`
+  - Google reCAPTCHA v3 或 hCaptcha
+  - 註冊/登入時驗證
+
+- [ ] **密碼強度驗證增強**
+  - 至少 12 字元（目前 8 字元）
+  - 必須包含大小寫 + 數字 + 特殊字元
+  - 檢查常見密碼清單
+
+**實作原則**：
+- 所有功能都可透過環境變數開關
+- 預設 disabled（避免影響現有流程）
+- PM 確認後再啟用
+- 完整測試覆蓋（開啟/關閉兩種情境）
+
+**影響範圍**：
+- Files: `app/api/auth.py`, `app/core/config.py`, `app/services/external/email_sender.py`
+- Tests: 15-20 integration tests
+- Complexity: High (2-3 days)
+
+---
+
 ### Base URL 統一（AllenLee 回報 2026-01-29）
 - [ ] iOS 端 base URL 需更新（Allen 負責）
   - 舊：`https://career-app-api-staging-kxaznpplqq-uc.a.run.app`
