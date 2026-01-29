@@ -44,30 +44,30 @@
   - 修改 `forgot_password.html`，讀取 URL `mail` 參數自動填入 email 欄位
 - [ ] App 端開啟 forgot-password 頁面時帶上使用者 email
 
-### 註冊安全性增強（2026-01-30）⏳ 待 PM 確認
+### 註冊安全性增強（2026-01-30）🔄 實作中
 
 **背景**：
 - 目前註冊流程無郵件驗證、無 Rate Limiting
 - 存在高風險：假帳號氾濫、自動化攻擊、資源濫用
 
 **需求**：
-- [ ] **郵件驗證功能**（可開關設計）⏳ 待 PM 確認
-  - 環境變數：`ENABLE_EMAIL_VERIFICATION=true/false`
+- [ ] **郵件驗證功能**（可開關設計）✅ 確認實作，預設啟用
+  - 環境變數：`ENABLE_EMAIL_VERIFICATION=true/false`（預設 true）
   - 註冊流程：註冊 → 發送驗證信 → 點擊連結 → 啟用帳號
   - 未驗證帳號：`is_active=False`，無法登入
   - 驗證連結：24 小時有效期
-  - 重發驗證信：API endpoint for resending
+  - 重發驗證信：API endpoint `/api/v1/auth/resend-verification`
 
-- [ ] **Rate Limiting**（永久啟用）✅ 確認實作
+- [ ] **Rate Limiting**（永久啟用）🔄 實作中（agent-manager 執行中）
   - **設計決策**：不提供開關，作為安全基線永久啟用
   - 註冊限制：同 IP 每小時最多 3 次
   - 登入限制：同 IP 每分鐘最多 5 次
   - 忘記密碼限制：同 IP 每小時最多 3 次
-  - 使用 slowapi 或 memory-based 實作（可選 Redis 加速）
-  - 開發環境：寬鬆限制（不干擾開發）
-  - Production：嚴格限制
+  - 使用 slowapi memory-based 實作
+  - 開發環境：寬鬆限制（100/20/20）
+  - Production：嚴格限制（3/5/3）
 
-- [ ] **密碼強度驗證增強**（永久啟用）✅ 確認實作
+- [ ] **密碼強度驗證增強**（永久啟用）🔄 實作中（agent-manager 執行中）
   - **設計決策**：作為安全基線，不提供開關
   - 至少 12 字元（目前 8 字元）
   - 必須包含大小寫 + 數字 + 特殊字元
@@ -75,14 +75,14 @@
 
 **實作原則**：
 - **Rate Limiting & 密碼強度**：永久啟用（安全基線）
-- **郵件驗證**：可透過環境變數開關（產品策略決策）
-- 預設郵件驗證 disabled（避免影響現有流程）
+- **郵件驗證**：可透過環境變數開關，**預設 enabled**
+- 所有功能都要實作並啟用（「通通 enable」）
 - 完整測試覆蓋
 
 **影響範圍**：
-- Files: `app/api/auth.py`, `app/core/config.py`, `app/services/external/email_sender.py`
-- Tests: 12-15 integration tests
-- Complexity: Medium-High (2 days)
+- Files: `app/api/auth.py`, `app/core/config.py`, `app/services/external/email_sender.py`, `app/middleware/rate_limit.py`
+- Tests: 18-20 integration tests
+- Complexity: High (3 days)
 
 ---
 
