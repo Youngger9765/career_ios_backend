@@ -26,7 +26,7 @@ class TestCasesAPI:
             email="counselor-cases@test.com",
             username="casescounselor",
             full_name="Cases Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -39,7 +39,7 @@ class TestCasesAPI:
                 "/api/auth/login",
                 json={
                     "email": "counselor-cases@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )

@@ -23,7 +23,7 @@ class TestAuthAPI:
             email="test@example.com",
             username="testuser",
             full_name="Test User",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -38,7 +38,7 @@ class TestAuthAPI:
                 "/api/auth/login",
                 json={
                     "email": "test@example.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -59,7 +59,7 @@ class TestAuthAPI:
             email="test@example.com",
             username="testuser",
             full_name="Test User",
-            hashed_password=hash_password("correct_password"),
+            hashed_password=hash_password("C0rrect!P@ssw0rd"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -73,7 +73,7 @@ class TestAuthAPI:
                 "/api/auth/login",
                 json={
                     "email": "test@example.com",
-                    "password": "wrong_password",
+                    "password": "Wr0ng!P@ssw0rd",
                     "tenant_id": "career",
                 },
             )
@@ -90,7 +90,7 @@ class TestAuthAPI:
                 "/api/auth/login",
                 json={
                     "email": "nonexistent@example.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -109,7 +109,7 @@ class TestAuthAPI:
                 email="inactive@example.com",
                 username="inactive",
                 full_name="Inactive User",
-                hashed_password=hash_password("password123"),
+                hashed_password=hash_password("ValidP@ssw0rd123"),
                 tenant_id="career",
                 role="counselor",
                 is_active=False,
@@ -121,7 +121,7 @@ class TestAuthAPI:
                 "/api/auth/login",
                 json={
                     "email": "inactive@example.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -138,7 +138,7 @@ class TestAuthAPI:
                 email="me@example.com",
                 username="meuser",
                 full_name="Me User",
-                hashed_password=hash_password("password123"),
+                hashed_password=hash_password("ValidP@ssw0rd123"),
                 tenant_id="career",
                 role="counselor",
                 is_active=True,
@@ -151,7 +151,7 @@ class TestAuthAPI:
                 "/api/auth/login",
                 json={
                     "email": "me@example.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -181,7 +181,7 @@ class TestAuthAPI:
                 email="nulluser@example.com",
                 username=None,
                 full_name=None,
-                hashed_password=hash_password("password123"),
+                hashed_password=hash_password("ValidP@ssw0rd123"),
                 tenant_id="career",
                 role="counselor",
                 is_active=True,
@@ -194,7 +194,7 @@ class TestAuthAPI:
                 "/api/auth/login",
                 json={
                     "email": "nulluser@example.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -241,7 +241,7 @@ class TestAuthAPI:
                 email="update@example.com",
                 username="updateuser",
                 full_name="Update User",
-                hashed_password=hash_password("password123"),
+                hashed_password=hash_password("ValidP@ssw0rd123"),
                 tenant_id="career",
                 role="counselor",
                 is_active=True,
@@ -254,7 +254,7 @@ class TestAuthAPI:
                 "/api/auth/login",
                 json={
                     "email": "update@example.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -304,7 +304,7 @@ class TestAuthAPI:
                 "/api/auth/register",
                 json={
                     "email": "newuser@example.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -340,7 +340,7 @@ class TestAuthAPI:
                 json={
                     "email": "newuser2@example.com",
                     "username": "newuser",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "full_name": "New User",
                     "tenant_id": "career",
                     "role": "counselor",
@@ -378,7 +378,7 @@ class TestAuthAPI:
             email="existing@example.com",
             username="existing",
             full_name="Existing User",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -391,7 +391,7 @@ class TestAuthAPI:
                 "/api/auth/register",
                 json={
                     "email": "existing@example.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -410,7 +410,7 @@ class TestAuthAPI:
             email="user1@example.com",
             username="taken_username",
             full_name="User One",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -424,7 +424,7 @@ class TestAuthAPI:
                 json={
                     "email": "user2@example.com",
                     "username": "taken_username",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "full_name": "User Two",
                     "tenant_id": "career",
                     "role": "counselor",
@@ -446,7 +446,7 @@ class TestAuthAPI:
             email="shared@example.com",
             username="career_user",
             full_name="Career User",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -460,7 +460,7 @@ class TestAuthAPI:
                 "/api/auth/register",
                 json={
                     "email": "shared@example.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island",
                 },
             )
@@ -476,7 +476,7 @@ class TestAuthAPI:
                 "/api/auth/register",
                 json={
                     "email": "defaultrole@example.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )

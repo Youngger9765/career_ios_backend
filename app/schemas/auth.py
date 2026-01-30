@@ -5,8 +5,9 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+from app.core.password_validator import validate_password_strength
 from app.models.counselor import CounselorRole
 
 
@@ -22,11 +23,18 @@ class RegisterRequest(BaseModel):
     """Registration request - simplified to only require email and password"""
 
     email: EmailStr
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=12, description="Password must be at least 12 characters with uppercase, lowercase, digit, and special character")
     tenant_id: str
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     full_name: Optional[str] = Field(None, min_length=1)
     role: CounselorRole = CounselorRole.COUNSELOR
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        """Validate password strength requirements"""
+        validate_password_strength(v)
+        return v
 
 
 class TokenResponse(BaseModel):
@@ -111,6 +119,32 @@ class PasswordResetConfirm(BaseModel):
 
 class PasswordResetConfirmResponse(BaseModel):
     """Password reset confirmation response"""
+
+    message: str
+
+
+class VerifyEmailRequest(BaseModel):
+    """Email verification request"""
+
+    token: str = Field(..., description="JWT verification token from email")
+
+
+class VerifyEmailResponse(BaseModel):
+    """Email verification response"""
+
+    message: str
+    email: str
+
+
+class ResendVerificationRequest(BaseModel):
+    """Resend verification email request"""
+
+    email: EmailStr
+    tenant_id: str
+
+
+class ResendVerificationResponse(BaseModel):
+    """Resend verification email response"""
 
     message: str
 

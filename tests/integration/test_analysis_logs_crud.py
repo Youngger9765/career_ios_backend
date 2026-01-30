@@ -48,7 +48,7 @@ class TestAnalysisLogsCRUD:
             email="counselor-logs@test.com",
             username="logscounselor",
             full_name="Logs Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -62,7 +62,7 @@ class TestAnalysisLogsCRUD:
                 "/api/auth/login",
                 json={
                     "email": "counselor-logs@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -286,7 +286,7 @@ class TestAnalysisLogsCRUD:
             email="other@test.com",
             username="other",
             full_name="Other Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -300,7 +300,7 @@ class TestAnalysisLogsCRUD:
                 "/api/auth/login",
                 json={
                     "email": "other@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )

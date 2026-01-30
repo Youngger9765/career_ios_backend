@@ -40,7 +40,7 @@ class TestIncrementalBilling:
             email="billing-test@test.com",
             username="billingcounselor",
             full_name="Billing Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -54,7 +54,7 @@ class TestIncrementalBilling:
                 "/api/auth/login",
                 json={
                     "email": "billing-test@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -672,7 +672,7 @@ class TestIncrementalBilling:
             email="billing-test-2@test.com",
             username="billingcounselor2",
             full_name="Billing Test Counselor 2",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -688,7 +688,7 @@ class TestIncrementalBilling:
                 "/api/auth/login",
                 json={
                     "email": "billing-test-2@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )

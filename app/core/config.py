@@ -35,6 +35,15 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 90  # 90 days (3 months)
     REFRESH_TOKEN_EXPIRE_DAYS: int = 90  # 90 days (3 months, match access token)
 
+    # Email Verification
+    ENABLE_EMAIL_VERIFICATION: bool = True  # Toggle email verification requirement
+    VERIFICATION_TOKEN_EXPIRE_HOURS: int = 24  # Email verification token validity
+
+    # Rate Limiting (always enabled for security)
+    RATE_LIMIT_REGISTER_PER_HOUR: int = 100 if DEBUG else 3  # Registration attempts per IP per hour
+    RATE_LIMIT_LOGIN_PER_MINUTE: int = 20 if DEBUG else 5  # Login attempts per IP per minute
+    RATE_LIMIT_PASSWORD_RESET_PER_HOUR: int = 20 if DEBUG else 3  # Password reset requests per IP per hour
+
     # OpenAI (用於 Embeddings, Whisper STT, RAG Chat)
     OPENAI_API_KEY: Optional[str] = "sk-test-key-for-ci"  # Override in .env
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"

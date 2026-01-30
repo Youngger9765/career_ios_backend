@@ -63,7 +63,7 @@ class TestTokenUsageInResponse:
             email=f"token-test-{uuid4().hex[:8]}@test.com",
             username=f"tokentest{uuid4().hex[:6]}",
             full_name="Token Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -132,7 +132,7 @@ class TestTokenUsageInResponse:
                 "/api/auth/login",
                 json={
                     "email": counselor.email,
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -218,7 +218,7 @@ class TestTokenUsageInResponse:
             email=f"parent-token-test-{uuid4().hex[:8]}@test.com",
             username=f"parenttoken{uuid4().hex[:6]}",
             full_name="Parent Token Test",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -272,7 +272,7 @@ class TestTokenUsageInResponse:
                 "/api/auth/login",
                 json={
                     "email": counselor.email,
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )

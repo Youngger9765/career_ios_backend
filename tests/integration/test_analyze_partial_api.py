@@ -101,7 +101,7 @@ class TestAnalyzePartialAPI:
             email=unique_email,
             username=f"careercounselor{uuid4().hex[:6]}",
             full_name="Career Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -114,7 +114,7 @@ class TestAnalyzePartialAPI:
                 "/api/auth/login",
                 json={
                     "email": unique_email,
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -132,7 +132,7 @@ class TestAnalyzePartialAPI:
             email=unique_email,
             username=f"parentcounselor{uuid4().hex[:6]}",
             full_name="Parent Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -145,7 +145,7 @@ class TestAnalyzePartialAPI:
                 "/api/auth/login",
                 json={
                     "email": unique_email,
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )

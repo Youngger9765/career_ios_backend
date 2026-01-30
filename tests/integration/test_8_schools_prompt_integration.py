@@ -99,7 +99,7 @@ class Test8SchoolsPromptIntegration:
             email=unique_email,
             username=f"parent8schools{uuid4().hex[:6]}",
             full_name="8 Schools Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -112,7 +112,7 @@ class Test8SchoolsPromptIntegration:
                 "/api/auth/login",
                 json={
                     "email": unique_email,
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )

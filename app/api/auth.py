@@ -4,12 +4,17 @@ Authentication API endpoints
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request, status
+from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.config import Settings
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import get_current_user
+from app.core.email_verification import (
+    create_verification_token,
+    verify_verification_token,
+)
 from app.core.exceptions import (
     BadRequestError,
     ConflictError,
@@ -18,23 +23,29 @@ from app.core.exceptions import (
     UnauthorizedError,
 )
 from app.core.security import create_access_token, hash_password, verify_password
+from app.middleware.rate_limit import limiter
 from app.models.counselor import Counselor
 from app.schemas.auth import (
     CounselorInfo,
     CounselorUpdate,
     LoginRequest,
     RegisterRequest,
+    ResendVerificationRequest,
+    ResendVerificationResponse,
     TokenResponse,
+    VerifyEmailRequest,
+    VerifyEmailResponse,
 )
+from app.services.external.email_sender import EmailSenderService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-settings = Settings()
 
 
 @router.post(
     "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
 )
-def register(
+@limiter.limit(f"{settings.RATE_LIMIT_REGISTER_PER_HOUR}/hour")
+async def register(
     register_data: RegisterRequest,
     request: Request,
     db: Session = Depends(get_db),
@@ -77,6 +88,9 @@ def register(
             )
 
     try:
+        # Set is_active based on email verification setting
+        is_active_value = not settings.ENABLE_EMAIL_VERIFICATION
+
         # Create new counselor (username and full_name are optional, can be None)
         counselor = Counselor(
             email=register_data.email,
@@ -85,12 +99,24 @@ def register(
             hashed_password=hash_password(register_data.password),
             tenant_id=register_data.tenant_id,
             role=register_data.role,
-            is_active=True,
+            is_active=is_active_value,  # False if verification enabled
         )
 
         db.add(counselor)
         db.commit()
         db.refresh(counselor)
+
+        # Send verification email if enabled
+        if settings.ENABLE_EMAIL_VERIFICATION:
+            verification_token = create_verification_token(
+                counselor.email, counselor.tenant_id
+            )
+            email_service = EmailSenderService()
+            await email_service.send_verification_email(
+                to_email=counselor.email,
+                verification_token=verification_token,
+                tenant_id=counselor.tenant_id,
+            )
 
         # Auto-login: Create access token
         token_data = {
@@ -117,6 +143,7 @@ def register(
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit(f"{settings.RATE_LIMIT_LOGIN_PER_MINUTE}/minute")
 def login(
     credentials: LoginRequest,
     request: Request,
@@ -153,10 +180,10 @@ def login(
             instance=str(request.url.path),
         )
 
-    # Check if account is active
+    # Check if account is active (email verified)
     if not counselor.is_active:
         raise ForbiddenError(
-            detail="Account is inactive",
+            detail="Email not verified. Please check your email for verification link.",
             instance=str(request.url.path),
         )
 
@@ -279,3 +306,95 @@ def update_current_counselor(
             detail=f"Failed to update counselor info: {str(e)}",
             instance=str(request.url.path),
         )
+
+
+@router.post("/verify-email", response_model=VerifyEmailResponse)
+def verify_email(
+    data: VerifyEmailRequest,
+    db: Session = Depends(get_db),
+) -> VerifyEmailResponse:
+    """
+    Verify email address using token from verification email
+
+    Args:
+        data: Verification token
+        db: Database session
+
+    Returns:
+        VerifyEmailResponse with success message
+
+    Raises:
+        HTTPException: 401 if token is invalid or expired
+    """
+    try:
+        payload = verify_verification_token(data.token)
+        email = payload["email"]
+        tenant_id = payload["tenant_id"]
+
+        counselor = db.execute(
+            select(Counselor).where(
+                Counselor.email == email, Counselor.tenant_id == tenant_id
+            )
+        ).scalar_one_or_none()
+
+        if not counselor:
+            raise UnauthorizedError("Invalid verification token")
+
+        if counselor.is_active:
+            return VerifyEmailResponse(
+                message="Email already verified", email=email
+            )
+
+        counselor.is_active = True
+        db.commit()
+
+        return VerifyEmailResponse(message="Email verified successfully", email=email)
+    except JWTError:
+        raise UnauthorizedError("Invalid or expired verification token")
+
+
+@router.post("/resend-verification", response_model=ResendVerificationResponse)
+@limiter.limit(f"{settings.RATE_LIMIT_PASSWORD_RESET_PER_HOUR}/hour")
+async def resend_verification(
+    data: ResendVerificationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> ResendVerificationResponse:
+    """
+    Resend email verification link
+
+    Args:
+        data: Email and tenant_id
+        request: FastAPI request
+        db: Database session
+
+    Returns:
+        ResendVerificationResponse with success message
+
+    Raises:
+        HTTPException: 400 if email already verified
+    """
+    counselor = db.execute(
+        select(Counselor).where(
+            Counselor.email == data.email, Counselor.tenant_id == data.tenant_id
+        )
+    ).scalar_one_or_none()
+
+    # Don't reveal if email exists (security)
+    if not counselor:
+        return ResendVerificationResponse(
+            message="If the email exists, a verification email has been sent"
+        )
+
+    if counselor.is_active:
+        raise BadRequestError("Email already verified")
+
+    verification_token = create_verification_token(counselor.email, counselor.tenant_id)
+    email_service = EmailSenderService()
+    await email_service.send_verification_email(
+        to_email=counselor.email,
+        verification_token=verification_token,
+        tenant_id=counselor.tenant_id,
+    )
+
+    return ResendVerificationResponse(message="Verification email sent")

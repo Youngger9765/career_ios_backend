@@ -13,8 +13,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import hash_password
+from app.middleware.rate_limit import limiter
 from app.models.counselor import Counselor
 from app.models.password_reset import PasswordResetToken
 from app.schemas.auth import (
@@ -28,10 +30,6 @@ from app.services.external.email_sender import email_sender
 
 router = APIRouter(prefix="/auth/password-reset", tags=["Password Reset"])
 
-# Rate limiting: Track request timestamps per email (3 requests per minute)
-_rate_limit_cache: dict[str, list[datetime]] = {}
-MAX_REQUESTS_PER_MINUTE = 3
-RATE_LIMIT_WINDOW_SECONDS = 60
 TOKEN_EXPIRY_HOURS = 6
 
 # Weak password blacklist
@@ -50,30 +48,6 @@ WEAK_PASSWORDS = {
 def generate_secure_token() -> str:
     """Generate a cryptographically secure random token"""
     return secrets.token_urlsafe(32)
-
-
-def is_rate_limited(email: str, tenant_id: str) -> bool:
-    """Check if email is rate limited for password reset requests (3 requests per minute)"""
-    cache_key = f"{email}:{tenant_id}"
-    now = datetime.now(timezone.utc)
-    window_start = now - timedelta(seconds=RATE_LIMIT_WINDOW_SECONDS)
-
-    # Get or initialize request timestamps for this user
-    if cache_key not in _rate_limit_cache:
-        _rate_limit_cache[cache_key] = []
-
-    # Remove timestamps outside the current window
-    _rate_limit_cache[cache_key] = [
-        ts for ts in _rate_limit_cache[cache_key] if ts > window_start
-    ]
-
-    # Check if limit exceeded
-    if len(_rate_limit_cache[cache_key]) >= MAX_REQUESTS_PER_MINUTE:
-        return True
-
-    # Add current request timestamp
-    _rate_limit_cache[cache_key].append(now)
-    return False
 
 
 def is_password_weak(password: str) -> tuple[bool, str | None]:
@@ -103,6 +77,7 @@ def is_password_weak(password: str) -> tuple[bool, str | None]:
 
 
 @router.post("/request", response_model=PasswordResetResponse)
+@limiter.limit(f"{settings.RATE_LIMIT_PASSWORD_RESET_PER_HOUR}/hour")
 async def request_password_reset(
     request_data: PasswordResetRequest,
     request: Request,
@@ -121,7 +96,7 @@ async def request_password_reset(
 
     Notes:
         - Always returns success to prevent user enumeration
-        - Rate limited to 3 requests per minute
+        - Rate limited to prevent abuse
         - Token expires in 6 hours
     """
     # Validate input
@@ -129,16 +104,6 @@ async def request_password_reset(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Either email or phone must be provided",
-        )
-
-    # Use email as primary identifier
-    identifier = request_data.email or request_data.phone
-
-    # Check rate limiting
-    if is_rate_limited(identifier, request_data.tenant_id):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Rate limit exceeded. Maximum {MAX_REQUESTS_PER_MINUTE} requests per minute allowed",
         )
 
     # Query counselor by email/phone and tenant_id

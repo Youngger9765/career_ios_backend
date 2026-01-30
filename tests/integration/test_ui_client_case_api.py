@@ -34,7 +34,7 @@ class TestUIClientCaseAPI:
             email="counselor-ui@test.com",
             username="uicounselor",
             full_name="UI Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -51,7 +51,7 @@ class TestUIClientCaseAPI:
             "/api/auth/login",
             json={
                 "email": counselor.email,
-                "password": "password123",
+                "password": "ValidP@ssw0rd123",
                 "tenant_id": counselor.tenant_id,
             },
         )
@@ -635,7 +635,7 @@ class TestUIClientCaseAPI:
             email="other-counselor@test.com",
             username="othercounselor",
             full_name="Other Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -690,7 +690,7 @@ class TestUIClientCaseAPI:
             email="admin@test.com",
             username="admin",
             full_name="Admin User",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="admin",
             is_active=True,
@@ -704,7 +704,7 @@ class TestUIClientCaseAPI:
             email="other-counselor2@test.com",
             username="othercounselor2",
             full_name="Other Counselor 2",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -745,7 +745,7 @@ class TestUIClientCaseAPI:
             "/api/auth/login",
             json={
                 "email": "admin@test.com",
-                "password": "password123",
+                "password": "ValidP@ssw0rd123",
                 "tenant_id": "career",
             },
         )
@@ -780,7 +780,7 @@ class TestUIClientCaseAPI:
             email="career@test.com",
             username="careercounselor",
             full_name="Career Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -794,7 +794,7 @@ class TestUIClientCaseAPI:
             email="island@test.com",
             username="islandcounselor",
             full_name="Island Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island",
             role="counselor",
             is_active=True,
@@ -863,7 +863,7 @@ class TestUIClientCaseAPI:
             "/api/auth/login",
             json={
                 "email": "career@test.com",
-                "password": "password123",
+                "password": "ValidP@ssw0rd123",
                 "tenant_id": "career",
             },
         )
@@ -876,7 +876,7 @@ class TestUIClientCaseAPI:
             "/api/auth/login",
             json={
                 "email": "island@test.com",
-                "password": "password123",
+                "password": "ValidP@ssw0rd123",
                 "tenant_id": "island",
             },
         )
@@ -937,7 +937,7 @@ class TestUIClientCaseAPI:
             email="career-sessions@test.com",
             username="careersessions",
             full_name="Career Sessions Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -947,7 +947,7 @@ class TestUIClientCaseAPI:
             email="island-sessions@test.com",
             username="islandsessions",
             full_name="Island Sessions Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island",
             role="counselor",
             is_active=True,
@@ -1031,7 +1031,7 @@ class TestUIClientCaseAPI:
             "/api/auth/login",
             json={
                 "email": "career-sessions@test.com",
-                "password": "password123",
+                "password": "ValidP@ssw0rd123",
                 "tenant_id": "career",
             },
         )
@@ -1043,7 +1043,7 @@ class TestUIClientCaseAPI:
             "/api/auth/login",
             json={
                 "email": "island-sessions@test.com",
-                "password": "password123",
+                "password": "ValidP@ssw0rd123",
                 "tenant_id": "island",
             },
         )
@@ -1098,7 +1098,7 @@ class TestUIClientCaseAPI:
             email="career-crud@test.com",
             username="careercrud",
             full_name="Career CRUD Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -1108,7 +1108,7 @@ class TestUIClientCaseAPI:
             email="island-crud@test.com",
             username="islandcrud",
             full_name="Island CRUD Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island",
             role="counselor",
             is_active=True,
@@ -1171,7 +1171,7 @@ class TestUIClientCaseAPI:
             "/api/auth/login",
             json={
                 "email": "career-crud@test.com",
-                "password": "password123",
+                "password": "ValidP@ssw0rd123",
                 "tenant_id": "career",
             },
         )
@@ -1183,7 +1183,7 @@ class TestUIClientCaseAPI:
             "/api/auth/login",
             json={
                 "email": "island-crud@test.com",
-                "password": "password123",
+                "password": "ValidP@ssw0rd123",
                 "tenant_id": "island",
             },
         )
@@ -1242,7 +1242,7 @@ class TestUIClientCaseAPI:
             email="counselor-a@test.com",
             username="counselora",
             full_name="Counselor A",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -1252,7 +1252,7 @@ class TestUIClientCaseAPI:
             email="counselor-b@test.com",
             username="counselorb",
             full_name="Counselor B",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -1315,7 +1315,7 @@ class TestUIClientCaseAPI:
             "/api/auth/login",
             json={
                 "email": "counselor-a@test.com",
-                "password": "password123",
+                "password": "ValidP@ssw0rd123",
                 "tenant_id": "career",
             },
         )
@@ -1326,7 +1326,7 @@ class TestUIClientCaseAPI:
             "/api/auth/login",
             json={
                 "email": "counselor-b@test.com",
-                "password": "password123",
+                "password": "ValidP@ssw0rd123",
                 "tenant_id": "career",
             },
         )

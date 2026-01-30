@@ -28,7 +28,7 @@ class TestSessionsAPI:
             email="counselor-sessions@test.com",
             username="sessionscounselor",
             full_name="Sessions Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -41,7 +41,7 @@ class TestSessionsAPI:
                 "/api/auth/login",
                 json={
                     "email": "counselor-sessions@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -496,7 +496,7 @@ class TestSessionNameField:
             email="counselor-name-test@test.com",
             username="namecounselor",
             full_name="Name Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -509,7 +509,7 @@ class TestSessionNameField:
                 "/api/auth/login",
                 json={
                     "email": "counselor-name-test@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )

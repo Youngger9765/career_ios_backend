@@ -42,7 +42,7 @@ class TestUIClientCaseListNPlusOne:
             email="counselor-ui-n1@test.com",
             username="uicounselor",
             full_name="UI N+1 Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -55,7 +55,7 @@ class TestUIClientCaseListNPlusOne:
                 "/api/auth/login",
                 json={
                     "email": "counselor-ui-n1@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )

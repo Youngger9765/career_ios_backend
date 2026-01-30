@@ -76,6 +76,50 @@ class EmailSenderService:
             logger.error(f"Failed to send password reset email: {e}")
             raise
 
+    async def send_verification_email(
+        self,
+        to_email: str,
+        verification_token: str,
+        tenant_id: str = "career",
+    ) -> bool:
+        """
+        Send email verification email
+
+        Args:
+            to_email: Recipient email
+            verification_token: Email verification token
+            tenant_id: Tenant ID for customizing email content
+
+        Returns:
+            True if sent successfully
+        """
+        # Tenant name mapping
+        tenant_names = {
+            "career": "Career",
+            "island": "浮島",
+            "island_parents": "浮島親子",
+        }
+        tenant_name = tenant_names.get(tenant_id, "Career")
+
+        subject = f"Verify Your Email - {tenant_name}"
+
+        # Generate verification URL
+        tenant_url_path = get_tenant_url_path(tenant_id)
+        if tenant_url_path:
+            verify_path = f"/{tenant_url_path}/verify-email"
+        else:
+            verify_path = "/verify-email"
+
+        verify_url = f"{self.app_url}{verify_path}?token={verification_token}"
+
+        html_body = self._generate_verification_html(to_email, verify_url, tenant_name)
+
+        try:
+            return await self._send_email(to_email, subject, html_body)
+        except Exception as e:
+            logger.error(f"Failed to send verification email: {e}")
+            raise
+
     async def send_billing_report(
         self,
         report_data: Dict[str, Any],
@@ -197,6 +241,116 @@ class EmailSenderService:
                 <li>Never share this link with anyone.</li>
                 <li>This link will expire in 1 hour for your security.</li>
             </ul>
+        </div>
+
+        <div class="footer">
+            <p>{tenant_name} Platform</p>
+            <p>This is an automated email. Please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+        return html
+
+    def _generate_verification_html(
+        self, email: str, verify_url: str, tenant_name: str = "Career"
+    ) -> str:
+        """Generate email verification HTML"""
+        html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }}
+        .container {{
+            background-color: white;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        h1 {{
+            color: #1a73e8;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }}
+        .content {{
+            margin: 20px 0;
+            font-size: 16px;
+        }}
+        .button-container {{
+            text-align: center;
+            margin: 30px 0;
+        }}
+        .verify-button {{
+            display: inline-block;
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+        }}
+        .verify-button:hover {{
+            background-color: #333333 !important;
+        }}
+        .info {{
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #e8f4fd;
+            border-left: 4px solid: #1a73e8;
+            border-radius: 4px;
+            font-size: 14px;
+        }}
+        .footer {{
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Verify Your Email Address</h1>
+
+        <div class="content">
+            <p>Welcome to <strong>{tenant_name}</strong>!</p>
+
+            <p>Thank you for registering with us. To complete your registration and activate your account, please verify your email address.</p>
+
+            <p>Click the button below to verify your email. This link will expire in 24 hours.</p>
+        </div>
+
+        <div class="button-container">
+            <a href="{verify_url}" class="verify-button">Verify Email</a>
+        </div>
+
+        <div class="info">
+            <p><strong>What happens next?</strong></p>
+            <ul style="margin: 10px 0 0 20px;">
+                <li>Click the verification button above</li>
+                <li>Your account will be activated immediately</li>
+                <li>You can then log in and start using our services</li>
+            </ul>
+        </div>
+
+        <div class="content" style="margin-top: 30px; font-size: 14px; color: #666;">
+            <p>If you didn't create an account with {tenant_name}, you can safely ignore this email.</p>
         </div>
 
         <div class="footer">

@@ -2,18 +2,19 @@
 
 TDD RED Phase - These tests are EXPECTED TO FAIL initially
 """
-import pytest
+from datetime import date
 from uuid import uuid4
-from datetime import date, datetime
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.main import app
-from app.models.counselor import Counselor
-from app.models.client import Client
-from app.models.case import Case, CaseStatus
-from app.models.session import Session as SessionModel
 from app.core.security import hash_password
+from app.main import app
+from app.models.case import Case, CaseStatus
+from app.models.client import Client
+from app.models.counselor import Counselor
+from app.models.session import Session as SessionModel
 
 
 class TestSafetyAssessmentAI:
@@ -27,7 +28,7 @@ class TestSafetyAssessmentAI:
             email="ai-safety-test@test.com",
             username="aisafetytester",
             full_name="AI Safety Tester",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -40,7 +41,7 @@ class TestSafetyAssessmentAI:
                 "/api/auth/login",
                 json={
                     "email": "ai-safety-test@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
