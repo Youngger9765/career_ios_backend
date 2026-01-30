@@ -5,7 +5,7 @@ Provides token generation and verification for email confirmation workflow.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Any
+from typing import Any, Dict
 
 from jose import JWTError, jwt
 

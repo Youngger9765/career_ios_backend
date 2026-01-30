@@ -12,7 +12,6 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy import select
