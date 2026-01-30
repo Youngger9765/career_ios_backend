@@ -26,23 +26,29 @@
 
 ### 忘記密碼流程優化（AllenLee 需求 2026-01-29）
 
-#### Deeplink Redirect（App 來源區分）
-- [ ] 密碼重設完成頁面區分 App vs Web 來源
+#### Deeplink Redirect（App 來源區分）✅ 完成 (2026-01-30)
+- [x] 密碼重設完成頁面區分 App vs Web 來源
   - 方案：URL 加 `?source=app` 參數區分
-  - App 來的：重設完成後按鈕 redirect 到 `islandparent://auth/forgot-password-done`
+  - App 來的：重設完成後 redirect 到 `islandparent://auth/forgot-password-done`
   - Web 來的：維持現有行為（顯示返回登入連結）
-- [ ] 修改 email 中的重設連結，App 發起的請求帶上 `source=app` 參數
+  - **Fallback 機制**：3 秒後檢測 `document.visibilityState`，App 未開啟則自動跳轉網頁
+- [x] 修改 email 中的重設連結，App 發起的請求帶上 `source=app` 參數
   - 例：`/island-parents/reset-password?token=xxx&source=app`
-- [ ] 修改 `reset_password.html` 重設成功後的按鈕行為
-  - 讀取 `source` 參數，若為 `app` → `window.location.href = 'islandparent://auth/forgot-password-done'`
-  - 否則 → 維持現有返回登入頁面連結
-- [ ] 修改 forgot-password 請求 API / email 發送邏輯，傳遞 `source` 參數
+  - 實作於 `email_sender.py:send_password_reset_email`
+- [x] 修改 `reset_password.html` 重設成功後的 redirect 行為
+  - 新增 `handleSuccessRedirect()` 函數處理 deeplink + fallback
+  - 讀取 `source` 參數，若為 `app` → 嘗試 deeplink，3 秒後檢查失敗則跳轉網頁
+  - 否則 → 直接返回登入頁面
+- [x] 修改 forgot-password 請求 API / email 發送邏輯，傳遞 `source` 參數
+  - Schema: `PasswordResetRequest.source` (Optional, backward compatible)
+  - API: `password_reset.py` 傳遞 source 給 email sender
 
-#### Email 自動帶入
-- [ ] forgot-password 頁面支援 `?mail=` query parameter 預填 email
+#### Email 自動帶入 ✅ 完成 (2026-01-30)
+- [x] forgot-password 頁面支援 `?mail=` query parameter 預填 email
   - 例：`/island-parents/forgot-password?mail=allen@gmail.com`
   - 修改 `forgot_password.html`，讀取 URL `mail` 參數自動填入 email 欄位
-- [ ] App 端開啟 forgot-password 頁面時帶上使用者 email
+  - 自動 focus 到提交按鈕提升 UX
+- [x] App 端開啟 forgot-password 頁面時帶上使用者 email（iOS 端實作）
 
 ### 註冊安全性增強（2026-01-30）🔄 實作中
 

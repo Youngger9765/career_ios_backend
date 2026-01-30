@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Deeplink Redirect & Email Autofill for Password Reset** (2026-01-30): iOS App integration improvements
+  - Added `source` parameter to `PasswordResetRequest` schema (Optional, backward compatible)
+  - Password reset emails include `&source=app` in reset link when requested from iOS
+  - Reset password page (`reset_password.html`) detects source and redirects accordingly:
+    - From App: Attempts deeplink `islandparent://auth/forgot-password-done`
+    - Fallback mechanism: 3-second timeout checks `document.visibilityState`
+    - If App not installed/opened: Auto-redirects to web login page
+  - Forgot password page (`forgot_password.html`) supports `?mail=xxx` parameter
+  - Email autofill: iOS can pass user email via URL parameter for seamless UX
+  - All changes backward compatible (Optional parameters, graceful fallback)
+  - Testing: All 14 password reset integration tests pass
 - **Terms of Service & Privacy Policy Pages** (2026-01-27): Legal pages for RevenueCat/App Store compliance
   - Route: `/island-parents/terms` - Terms of Service with 10 comprehensive sections
   - Route: `/island-parents/privacy` - Privacy Policy compliant with GDPR/Taiwan PIPA

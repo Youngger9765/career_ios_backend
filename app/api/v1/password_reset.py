@@ -145,6 +145,7 @@ async def request_password_reset(
                 reset_token=token,
                 counselor_name=counselor.full_name or "User",  # Handle None case
                 tenant_id=counselor.tenant_id,
+                source=request_data.source,  # Pass source parameter for deeplink
             )
         except Exception as e:
             # Log error but don't expose to user

@@ -33,6 +33,7 @@ class EmailSenderService:
         reset_token: str,
         counselor_name: str = None,
         tenant_id: str = "career",
+        source: str | None = None,
     ) -> bool:
         """
         Send password reset email
@@ -42,6 +43,7 @@ class EmailSenderService:
             reset_token: Password reset token
             counselor_name: Optional counselor name for personalization
             tenant_id: Tenant ID for customizing email content
+            source: Request source ('app' or 'web') for deeplink handling
 
         Returns:
             True if sent successfully
@@ -64,7 +66,12 @@ class EmailSenderService:
         else:
             reset_path = "/reset-password"  # Generic fallback
 
+        # Build reset URL with token
         reset_url = f"{self.app_url}{reset_path}?token={reset_token}"
+
+        # Add source parameter if provided (for deeplink handling)
+        if source:
+            reset_url += f"&source={source}"
 
         html_body = self._generate_password_reset_html(
             counselor_name or "User", reset_url, tenant_name

@@ -87,10 +87,18 @@ class PasswordResetRequest(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     tenant_id: str
+    source: Optional[str] = Field(
+        None,
+        description="Request source: 'app' (from iOS) or 'web' (from browser)",
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
-            "example": {"email": "user@example.com", "tenant_id": "test_tenant"}
+            "example": {
+                "email": "user@example.com",
+                "tenant_id": "test_tenant",
+                "source": "app",
+            }
         }
     )
 
