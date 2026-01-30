@@ -13,6 +13,7 @@ from starlette.testclient import TestClient
 
 from app.core.database import Base, get_db
 from app.main import app
+from app.middleware.rate_limit import limiter
 from app.models.agent import Agent, AgentVersion  # noqa: F401
 from app.models.case import Case  # noqa: F401
 from app.models.chat import ChatLog  # noqa: F401
@@ -38,6 +39,21 @@ from app.models.refresh_token import RefreshToken  # noqa: F401
 from app.models.reminder import Reminder  # noqa: F401
 from app.models.report import Report  # noqa: F401
 from app.models.session import Session as SessionModel  # noqa: F401
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Reset rate limiter state between tests to prevent test pollution.
+
+    The rate limiter uses in-memory storage that persists across tests.
+    This fixture clears the limiter state before each test to ensure
+    proper test isolation.
+    """
+    # Reset the limiter's storage before each test
+    limiter.reset()
+    yield
+    # Clean up after test
+    limiter.reset()
 
 
 @pytest.fixture

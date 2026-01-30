@@ -28,21 +28,9 @@ from app.models.counselor import Counselor
 class TestEmailVerification:
     """Test email verification system"""
 
-    @pytest.fixture(autouse=True)
-    def reset_settings(self):
-        """Reset settings to default values after each test to ensure isolation.
-
-        This fixture automatically runs before/after each test to prevent
-        test pollution when using monkeypatch to modify settings.
-        """
-        # Store original value
-        original_email_verification = settings.ENABLE_EMAIL_VERIFICATION
-
-        yield
-
-        # Restore original value after test
-        # Note: monkeypatch already handles cleanup, but this provides extra safety
-        settings.ENABLE_EMAIL_VERIFICATION = original_email_verification
+    # Note: monkeypatch automatically handles cleanup of settings modifications
+    # No need for explicit reset_settings fixture as pytest's monkeypatch
+    # restores original values after each test
 
     @patch("app.api.auth.EmailSenderService")
     def test_register_creates_inactive_user_when_verification_enabled(
