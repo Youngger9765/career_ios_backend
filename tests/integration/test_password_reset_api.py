@@ -33,14 +33,8 @@ def mock_email_sender():
         yield mock
 
 
-@pytest.fixture(autouse=True)
-def clear_rate_limit_cache():
-    """Clear rate limit cache before each test"""
-    from app.api.v1.password_reset import _rate_limit_cache
-
-    _rate_limit_cache.clear()
-    yield
-    _rate_limit_cache.clear()
+# Note: Rate limiting is now handled by slowapi (see conftest.py reset_rate_limiter fixture)
+# The _rate_limit_cache fixture is no longer needed
 
 
 @pytest.fixture
