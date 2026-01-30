@@ -298,8 +298,13 @@ class TestAuthAPI:
 
             assert response.status_code == 401
 
-    def test_register_success_simplified(self, db_session: Session):
+    def test_register_success_simplified(self, db_session: Session, monkeypatch):
         """Test successful simplified registration (email + password only) returns access token"""
+        # Disable email verification for this legacy test
+        from app.core.config import settings
+
+        monkeypatch.setattr(settings, "ENABLE_EMAIL_VERIFICATION", False)
+
         with TestClient(app) as client:
             response = client.post(
                 "/api/auth/register",
@@ -333,8 +338,13 @@ class TestAuthAPI:
             assert counselor.full_name is None  # Full name is optional now
             assert counselor.is_active is True
 
-    def test_register_success_with_optional_fields(self, db_session: Session):
+    def test_register_success_with_optional_fields(self, db_session: Session, monkeypatch):
         """Test successful registration with optional username and full_name (backward compatibility)"""
+        # Disable email verification for this legacy test
+        from app.core.config import settings
+
+        monkeypatch.setattr(settings, "ENABLE_EMAIL_VERIFICATION", False)
+
         with TestClient(app) as client:
             response = client.post(
                 "/api/auth/register",
