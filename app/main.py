@@ -601,6 +601,63 @@ async def health_check() -> Dict[str, str]:
     return {"status": "healthy", "timestamp": "2024-01-01T00:00:00Z"}
 
 
+@app.get("/internal/db-diagnostic")
+async def db_diagnostic():
+    """TEMP: Diagnostic endpoint to check database migration state"""
+    from sqlalchemy import text
+    from sqlalchemy.orm import Session
+    from app.core.database import get_db
+
+    db: Session = next(get_db())
+    results = {}
+
+    try:
+        # Check 1: Alembic version
+        result = db.execute(text("SELECT version_num FROM alembic_version"))
+        results["alembic_version"] = result.scalar()
+
+        # Check 2: billingmode enum exists?
+        result = db.execute(text("""
+            SELECT typname, typcategory
+            FROM pg_type
+            WHERE typname = 'billingmode'
+        """))
+        enum_info = result.fetchone()
+        results["billingmode_enum_exists"] = enum_info is not None
+        if enum_info:
+            results["billingmode_enum_info"] = dict(enum_info._mapping)
+
+        # Check 3: Enum values
+        if enum_info:
+            result = db.execute(text("""
+                SELECT e.enumlabel
+                FROM pg_enum e
+                JOIN pg_type t ON e.enumtypid = t.oid
+                WHERE t.typname = 'billingmode'
+                ORDER BY e.enumsortorder
+            """))
+            results["billingmode_values"] = [row[0] for row in result.fetchall()]
+
+        # Check 4: Counselors table columns
+        result = db.execute(text("""
+            SELECT column_name, data_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_name = 'counselors'
+            AND column_name IN ('billing_mode', 'email_verified', 'monthly_usage_limit_minutes')
+            ORDER BY column_name
+        """))
+        results["counselors_columns"] = [dict(row._mapping) for row in result.fetchall()]
+
+    except Exception as e:
+        results["error"] = str(e)
+        import traceback
+        results["traceback"] = traceback.format_exc()
+    finally:
+        db.close()
+
+    return results
+
+
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     """Return empty response for favicon to avoid 404"""
