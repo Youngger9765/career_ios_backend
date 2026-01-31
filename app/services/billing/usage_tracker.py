@@ -87,10 +87,11 @@ class UsageTracker:
 
         return {
             "billing_mode": "subscription",
-            "limit": limit,
-            "used": used,
-            "remaining": remaining,
-            "percentage": round(percentage, 2),
-            "period_start": period_start,
-            "period_end": period_end,
+            "monthly_limit_minutes": limit,
+            "monthly_used_minutes": used,
+            "monthly_remaining_minutes": remaining,
+            "usage_percentage": round(percentage, 2),
+            "is_limit_reached": used >= limit,
+            "usage_period_start": period_start,
+            "usage_period_end": period_end,
         }

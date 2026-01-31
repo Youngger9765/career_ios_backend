@@ -115,14 +115,15 @@ class TestUsageTracker:
 
         # Assert
         assert stats["billing_mode"] == "subscription"
-        assert stats["limit"] == 360
-        assert stats["used"] == 300
-        assert stats["remaining"] == 60
-        assert stats["percentage"] == pytest.approx(83.33, rel=0.01)
-        assert stats["period_start"] == period_start
-        # period_end should be 30 days after period_start
+        assert stats["monthly_limit_minutes"] == 360
+        assert stats["monthly_used_minutes"] == 300
+        assert stats["monthly_remaining_minutes"] == 60
+        assert stats["usage_percentage"] == pytest.approx(83.33, rel=0.01)
+        assert stats["is_limit_reached"] is False
+        assert stats["usage_period_start"] == period_start
+        # usage_period_end should be 30 days after usage_period_start
         expected_end = period_start + timedelta(days=30)
-        assert stats["period_end"] == expected_end
+        assert stats["usage_period_end"] == expected_end
 
     def test_get_usage_stats_prepaid(self, tracker, counselor_prepaid):
         """Test usage stats for prepaid mode."""
@@ -135,12 +136,13 @@ class TestUsageTracker:
         # Assert
         assert stats["billing_mode"] == "prepaid"
         assert stats["available_credits"] == 100
-        assert "limit" not in stats
-        assert "used" not in stats
-        assert "remaining" not in stats
-        assert "percentage" not in stats
-        assert "period_start" not in stats
-        assert "period_end" not in stats
+        assert "monthly_limit_minutes" not in stats
+        assert "monthly_used_minutes" not in stats
+        assert "monthly_remaining_minutes" not in stats
+        assert "usage_percentage" not in stats
+        assert "is_limit_reached" not in stats
+        assert "usage_period_start" not in stats
+        assert "usage_period_end" not in stats
 
     def test_get_usage_stats_subscription_zero_limit(self, tracker, counselor_subscription):
         """Test usage stats with zero limit (edge case)."""
@@ -153,10 +155,11 @@ class TestUsageTracker:
         stats = tracker.get_usage_stats(counselor_subscription)
 
         # Assert
-        assert stats["limit"] == 0
-        assert stats["used"] == 0
-        assert stats["remaining"] == 0
-        assert stats["percentage"] == 100.0  # 0/0 should be treated as 100%
+        assert stats["monthly_limit_minutes"] == 0
+        assert stats["monthly_used_minutes"] == 0
+        assert stats["monthly_remaining_minutes"] == 0
+        assert stats["usage_percentage"] == 100.0  # 0/0 should be treated as 100%
+        assert stats["is_limit_reached"] is True  # 0 >= 0
 
     def test_prepaid_mode_not_checked_for_limits(self, tracker, counselor_prepaid):
         """Test prepaid counselors are not subject to limit checks."""
