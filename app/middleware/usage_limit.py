@@ -1,5 +1,5 @@
 """Middleware for enforcing usage limits before session creation."""
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
 
@@ -38,7 +38,7 @@ def check_usage_limit(counselor: Counselor) -> None:
     # Subscription Mode: Check expiry, period, and limit
     if counselor.billing_mode == BillingMode.SUBSCRIPTION:
         # Check if subscription expired
-        if counselor.subscription_expires_at is None or counselor.subscription_expires_at < datetime.utcnow():
+        if counselor.subscription_expires_at is None or counselor.subscription_expires_at < datetime.now(timezone.utc):
             raise HTTPException(
                 status_code=402,
                 detail={

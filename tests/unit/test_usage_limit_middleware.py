@@ -1,5 +1,5 @@
 """Unit tests for usage limit enforcement middleware."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 
 import pytest
@@ -33,10 +33,10 @@ class TestUsageLimitMiddleware:
         """Create subscription counselor under monthly limit."""
         counselor = Mock()
         counselor.billing_mode = BillingMode.SUBSCRIPTION
-        counselor.subscription_expires_at = datetime.utcnow() + timedelta(days=15)
+        counselor.subscription_expires_at = datetime.now(timezone.utc) + timedelta(days=15)
         counselor.monthly_usage_limit_minutes = 360
         counselor.monthly_minutes_used = 300
-        counselor.usage_period_start = datetime.utcnow() - timedelta(days=15)
+        counselor.usage_period_start = datetime.now(timezone.utc) - timedelta(days=15)
         return counselor
 
     @pytest.fixture
@@ -44,10 +44,10 @@ class TestUsageLimitMiddleware:
         """Create subscription counselor at monthly limit."""
         counselor = Mock()
         counselor.billing_mode = BillingMode.SUBSCRIPTION
-        counselor.subscription_expires_at = datetime.utcnow() + timedelta(days=15)
+        counselor.subscription_expires_at = datetime.now(timezone.utc) + timedelta(days=15)
         counselor.monthly_usage_limit_minutes = 360
         counselor.monthly_minutes_used = 360  # At limit
-        counselor.usage_period_start = datetime.utcnow() - timedelta(days=15)
+        counselor.usage_period_start = datetime.now(timezone.utc) - timedelta(days=15)
         return counselor
 
     @pytest.fixture
@@ -55,10 +55,10 @@ class TestUsageLimitMiddleware:
         """Create subscription counselor with expired subscription."""
         counselor = Mock()
         counselor.billing_mode = BillingMode.SUBSCRIPTION
-        counselor.subscription_expires_at = datetime.utcnow() - timedelta(days=1)  # Expired
+        counselor.subscription_expires_at = datetime.now(timezone.utc) - timedelta(days=1)  # Expired
         counselor.monthly_usage_limit_minutes = 360
         counselor.monthly_minutes_used = 0
-        counselor.usage_period_start = datetime.utcnow() - timedelta(days=15)
+        counselor.usage_period_start = datetime.now(timezone.utc) - timedelta(days=15)
         return counselor
 
     @pytest.fixture
@@ -66,10 +66,10 @@ class TestUsageLimitMiddleware:
         """Create subscription counselor with expired usage period."""
         counselor = Mock()
         counselor.billing_mode = BillingMode.SUBSCRIPTION
-        counselor.subscription_expires_at = datetime.utcnow() + timedelta(days=15)
+        counselor.subscription_expires_at = datetime.now(timezone.utc) + timedelta(days=15)
         counselor.monthly_usage_limit_minutes = 360
         counselor.monthly_minutes_used = 350  # High usage
-        counselor.usage_period_start = datetime.utcnow() - timedelta(days=31)  # Period expired
+        counselor.usage_period_start = datetime.now(timezone.utc) - timedelta(days=31)  # Period expired
         return counselor
 
     def test_prepaid_with_credits_allowed(self, prepaid_counselor_with_credits):
