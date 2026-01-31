@@ -20,6 +20,7 @@ from app.core.exceptions import (
     InternalServerError,
     NotFoundError,
 )
+from app.middleware.usage_limit import check_usage_limit
 from app.models.case import Case
 from app.models.client import Client
 from app.models.counselor import Counselor
@@ -105,6 +106,9 @@ def create_session(
     db: DBSession = Depends(get_db),
 ) -> SessionResponse:
     """創建逐字稿記錄（不生成報告）"""
+    # Check usage limits before creating session
+    check_usage_limit(current_user)
+
     service = SessionService(db)
     repo = SessionRepository(db)
     instance = str(request.url.path)

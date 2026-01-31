@@ -76,6 +76,10 @@
   - [ ] 建立獨立 Production 資料庫
   - [ ] 設定備份策略
   - [ ] 更新環境變數配置
+  - [ ] **調整 PROD DB 參數** 🔴 Young
+    - 檢查當前 DB 配置（連線池、timeout、max_connections）
+    - 根據實際負載調整參數優化效能
+    - 更新環境變數（DATABASE_URL, DB_POOL_SIZE 等）
   - 參考：Line 150-161 (Production 資料庫獨立)
 
 ### iOS 整合

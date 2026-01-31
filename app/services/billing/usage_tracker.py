@@ -24,16 +24,30 @@ class UsageTracker:
         # Check if period has expired
         if counselor.usage_period_start is None:
             # First time - initialize period
-            counselor.usage_period_start = datetime.utcnow()
+            from datetime import timezone
+
+            counselor.usage_period_start = datetime.now(timezone.utc)
             counselor.monthly_minutes_used = 0
             return
 
-        days_elapsed = (datetime.utcnow() - counselor.usage_period_start).days
+        from datetime import timezone
+
+        now_utc = datetime.now(timezone.utc)
+        # Handle both timezone-aware and naive datetimes
+        if counselor.usage_period_start.tzinfo is None:
+            # Convert naive to aware
+            from datetime import timezone as tz
+
+            period_start = counselor.usage_period_start.replace(tzinfo=tz.utc)
+        else:
+            period_start = counselor.usage_period_start
+
+        days_elapsed = (now_utc - period_start).days
 
         if days_elapsed >= self.PERIOD_DAYS:
             # Reset usage and start new period
             counselor.monthly_minutes_used = 0
-            counselor.usage_period_start = datetime.utcnow()
+            counselor.usage_period_start = now_utc
 
     def is_limit_exceeded(self, counselor: Counselor) -> bool:
         """

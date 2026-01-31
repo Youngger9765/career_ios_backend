@@ -38,7 +38,16 @@ def check_usage_limit(counselor: Counselor) -> None:
     # Subscription Mode: Check expiry, period, and limit
     if counselor.billing_mode == BillingMode.SUBSCRIPTION:
         # Check if subscription expired
-        if counselor.subscription_expires_at is None or counselor.subscription_expires_at < datetime.now(timezone.utc):
+        now_utc = datetime.now(timezone.utc)
+
+        # Handle both timezone-aware and naive datetimes (SQLite compatibility)
+        if counselor.subscription_expires_at and counselor.subscription_expires_at.tzinfo is None:
+            # Assume naive datetimes are UTC
+            expires_at = counselor.subscription_expires_at.replace(tzinfo=timezone.utc)
+        else:
+            expires_at = counselor.subscription_expires_at
+
+        if expires_at is None or expires_at < now_utc:
             raise HTTPException(
                 status_code=402,
                 detail={
@@ -61,6 +70,8 @@ def check_usage_limit(counselor: Counselor) -> None:
                     "message": "本月使用額度已用盡，請等待下個計費週期或升級方案",
                     "monthly_limit": counselor.monthly_usage_limit_minutes,
                     "monthly_used": counselor.monthly_minutes_used,
-                    "period_start": counselor.usage_period_start,
+                    "period_start": counselor.usage_period_start.isoformat()
+                    if counselor.usage_period_start
+                    else None,
                 },
             )
