@@ -183,9 +183,9 @@ class EmailSenderService:
             border-radius: 8px;
         }}
         .verification-code {{
-            font-size: 36px;
+            font-size: 20px;
             font-weight: bold;
-            letter-spacing: 8px;
+            letter-spacing: 4px;
             color: #1a73e8;
             font-family: 'Courier New', monospace;
         }}
