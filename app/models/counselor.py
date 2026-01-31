@@ -1,6 +1,14 @@
 import enum
 
-from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 

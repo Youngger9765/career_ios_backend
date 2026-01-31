@@ -40,7 +40,13 @@ from app.api import (
     transcript,
     ui_client_case_list,
 )
-from app.api.v1 import admin_counselors, admin_credits, password_reset, session_usage, usage
+from app.api.v1 import (
+    admin_counselors,
+    admin_credits,
+    password_reset,
+    session_usage,
+    usage,
+)
 from app.core.config import settings
 from app.core.exceptions import NotFoundError
 from app.middleware.error_handler import (
