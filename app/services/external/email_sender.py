@@ -306,7 +306,7 @@ class EmailSenderService:
             margin-top: 30px;
             padding: 15px;
             background-color: #e8f4fd;
-            border-left: 4px solid: #1a73e8;
+            border-left: 4px solid #1a73e8;
             border-radius: 4px;
             font-size: 14px;
         }}

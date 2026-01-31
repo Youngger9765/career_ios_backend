@@ -238,33 +238,44 @@ def confirm_password_reset(
     Raises:
         HTTPException: 400 if token invalid or password weak
     """
-    # Query token
+    # Query token by verification_code, email, and tenant_id
     result = db.execute(
-        select(PasswordResetToken).where(PasswordResetToken.token == confirm_data.token)
+        select(PasswordResetToken).where(
+            PasswordResetToken.verification_code == confirm_data.verification_code,
+            PasswordResetToken.email == confirm_data.email,
+            PasswordResetToken.tenant_id == confirm_data.tenant_id,
+            PasswordResetToken.deleted_at.is_(None),
+        )
     )
     reset_token = result.scalar_one_or_none()
 
     if not reset_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid reset token",
+            detail="Invalid verification code",
         )
 
     if reset_token.used:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has already been used",
+            detail="Verification code has already been used",
         )
 
-    # Ensure expires_at is timezone-aware for comparison
-    expires_at = reset_token.expires_at
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-
-    if expires_at < datetime.now(timezone.utc):
+    # Check verification code expiry (10 minutes)
+    code_expires_at = reset_token.code_expires_at
+    if code_expires_at is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has expired",
+            detail="Invalid verification code",
+        )
+
+    if code_expires_at.tzinfo is None:
+        code_expires_at = code_expires_at.replace(tzinfo=timezone.utc)
+
+    if code_expires_at < datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification code has expired",
         )
 
     # Validate password strength
