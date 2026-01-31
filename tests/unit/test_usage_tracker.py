@@ -1,5 +1,5 @@
 """Unit tests for UsageTracker service."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -22,7 +22,7 @@ class TestUsageTracker:
         counselor.billing_mode = "subscription"
         counselor.monthly_usage_limit_minutes = 360
         counselor.monthly_minutes_used = 300
-        counselor.usage_period_start = datetime.utcnow() - timedelta(days=15)
+        counselor.usage_period_start = datetime.now(timezone.utc) - timedelta(days=15)
         return counselor
 
     @pytest.fixture
@@ -39,7 +39,7 @@ class TestUsageTracker:
     def test_reset_usage_period_if_expired(self, tracker, counselor_subscription):
         """Test usage resets after 30 days."""
         # Arrange: Set period start to 31 days ago
-        counselor_subscription.usage_period_start = datetime.utcnow() - timedelta(days=31)
+        counselor_subscription.usage_period_start = datetime.now(timezone.utc) - timedelta(days=31)
         counselor_subscription.monthly_minutes_used = 300
 
         # Act
@@ -48,14 +48,14 @@ class TestUsageTracker:
         # Assert
         assert counselor_subscription.monthly_minutes_used == 0
         # usage_period_start should be updated (within 1 second of now)
-        time_diff = abs((datetime.utcnow() - counselor_subscription.usage_period_start).total_seconds())
+        time_diff = abs((datetime.now(timezone.utc) - counselor_subscription.usage_period_start).total_seconds())
         assert time_diff < 1
 
     def test_no_reset_if_period_active(self, tracker, counselor_subscription):
         """Test usage does NOT reset if period still active."""
         # Arrange: Set period start to 15 days ago
         original_usage = 300
-        original_start = datetime.utcnow() - timedelta(days=15)
+        original_start = datetime.now(timezone.utc) - timedelta(days=15)
         counselor_subscription.usage_period_start = original_start
         counselor_subscription.monthly_minutes_used = original_usage
 
@@ -107,7 +107,7 @@ class TestUsageTracker:
         # Arrange
         counselor_subscription.monthly_minutes_used = 300
         counselor_subscription.monthly_usage_limit_minutes = 360
-        period_start = datetime.utcnow() - timedelta(days=15)
+        period_start = datetime.now(timezone.utc) - timedelta(days=15)
         counselor_subscription.usage_period_start = period_start
 
         # Act
@@ -149,7 +149,7 @@ class TestUsageTracker:
         # Arrange
         counselor_subscription.monthly_minutes_used = 0
         counselor_subscription.monthly_usage_limit_minutes = 0
-        counselor_subscription.usage_period_start = datetime.utcnow()
+        counselor_subscription.usage_period_start = datetime.now(timezone.utc)
 
         # Act
         stats = tracker.get_usage_stats(counselor_subscription)
