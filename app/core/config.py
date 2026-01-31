@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     ENABLE_EMAIL_VERIFICATION: bool = True  # Toggle email verification requirement
     VERIFICATION_TOKEN_EXPIRE_HOURS: int = 24  # Email verification token validity
 
+    # Verification Code Settings
+    VERIFICATION_CODE_LENGTH: int = 6
+    VERIFICATION_CODE_EXPIRY_MINUTES: int = 15
+    VERIFICATION_CODE_MAX_ATTEMPTS: int = 5
+    VERIFICATION_CODE_LOCKOUT_MINUTES: int = 15
+    VERIFICATION_CODE_RESEND_COOLDOWN_SECONDS: int = 60
+
     # Rate Limiting (always enabled for security)
     RATE_LIMIT_REGISTER_PER_HOUR: int = 100 if DEBUG else 3  # Registration attempts per IP per hour
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 20 if DEBUG else 5  # Login attempts per IP per minute
