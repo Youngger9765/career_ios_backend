@@ -99,7 +99,7 @@ class Counselor(Base, BaseModel):
         """Initialize counselor with proper defaults"""
         # Set Python-level defaults for fields that need them
         if 'billing_mode' not in kwargs:
-            kwargs['billing_mode'] = BillingMode.PREPAID
+            kwargs['billing_mode'] = BillingMode.PREPAID.value  # Use .value for SQLAlchemy
         if 'monthly_usage_limit_minutes' not in kwargs:
             kwargs['monthly_usage_limit_minutes'] = 360
         if 'monthly_minutes_used' not in kwargs:
