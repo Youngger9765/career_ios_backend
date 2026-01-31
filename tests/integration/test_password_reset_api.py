@@ -251,11 +251,21 @@ class TestPasswordResetVerify:
         )
         token = response1.json()["token"]
 
-        # Confirm password reset (uses the token)
+        # Get verification code from database
+        from app.models.password_reset import PasswordResetToken
+
+        reset_record = db_session.query(PasswordResetToken).filter(
+            PasswordResetToken.email == test_counselor.email
+        ).first()
+        verification_code = reset_record.verification_code
+
+        # Confirm password reset (uses the verification code)
         await async_client.post(
             "/api/v1/auth/password-reset/confirm",
             json={
-                "token": token,
+                "verification_code": verification_code,
+                "email": test_counselor.email,
+                "tenant_id": test_counselor.tenant_id,
                 "new_password": "NewSecurePassword123!",
             },
         )
@@ -291,14 +301,23 @@ class TestPasswordResetConfirm:
                 "tenant_id": test_counselor.tenant_id,
             },
         )
-        token = response1.json()["token"]
+
+        # Get verification code from database
+        from app.models.password_reset import PasswordResetToken
+
+        reset_record = db_session.query(PasswordResetToken).filter(
+            PasswordResetToken.email == test_counselor.email
+        ).first()
+        verification_code = reset_record.verification_code
 
         # Confirm password reset
         new_password = "NewSecurePassword123!"
         response2 = await async_client.post(
             "/api/v1/auth/password-reset/confirm",
             json={
-                "token": token,
+                "verification_code": verification_code,
+                "email": test_counselor.email,
+                "tenant_id": test_counselor.tenant_id,
                 "new_password": new_password,
             },
         )
@@ -317,11 +336,13 @@ class TestPasswordResetConfirm:
         async_client: AsyncClient,
         db_session: Session,
     ):
-        """Test password reset confirmation with invalid token"""
+        """Test password reset confirmation with invalid verification code"""
         response = await async_client.post(
             "/api/v1/auth/password-reset/confirm",
             json={
-                "token": "invalid_token_12345",
+                "verification_code": "999999",  # Valid format but doesn't exist
+                "email": "test@example.com",
+                "tenant_id": "test_tenant",
                 "new_password": "NewSecurePassword123!",
             },
         )
@@ -372,9 +393,10 @@ class TestPasswordResetConfirm:
     async def test_confirm_password_reset_token_reuse_prevention(
         self,
         async_client: AsyncClient,
+        db_session: Session,
         test_counselor: Counselor,
     ):
-        """Test that reset token can only be used once"""
+        """Test that reset verification code can only be used once"""
         # Request password reset
         response1 = await async_client.post(
             "/api/v1/auth/password-reset/request",
@@ -383,23 +405,34 @@ class TestPasswordResetConfirm:
                 "tenant_id": test_counselor.tenant_id,
             },
         )
-        token = response1.json()["token"]
+
+        # Get verification code from database
+        from app.models.password_reset import PasswordResetToken
+
+        reset_record = db_session.query(PasswordResetToken).filter(
+            PasswordResetToken.email == test_counselor.email
+        ).first()
+        verification_code = reset_record.verification_code
 
         # First confirmation should succeed
         response2 = await async_client.post(
             "/api/v1/auth/password-reset/confirm",
             json={
-                "token": token,
+                "verification_code": verification_code,
+                "email": test_counselor.email,
+                "tenant_id": test_counselor.tenant_id,
                 "new_password": "NewSecurePassword123!",
             },
         )
         assert response2.status_code == status.HTTP_200_OK
 
-        # Second confirmation with same token should fail
+        # Second confirmation with same verification code should fail
         response3 = await async_client.post(
             "/api/v1/auth/password-reset/confirm",
             json={
-                "token": token,
+                "verification_code": verification_code,
+                "email": test_counselor.email,
+                "tenant_id": test_counselor.tenant_id,
                 "new_password": "AnotherPassword456!",
             },
         )
@@ -413,7 +446,7 @@ class TestPasswordResetConfirm:
         db_session: Session,
         test_counselor: Counselor,
     ):
-        """Test password reset confirmation with expired token"""
+        """Test password reset confirmation with expired verification code"""
         # Request password reset
         response1 = await async_client.post(
             "/api/v1/auth/password-reset/request",
@@ -422,20 +455,27 @@ class TestPasswordResetConfirm:
                 "tenant_id": test_counselor.tenant_id,
             },
         )
-        token = response1.json()["token"]
 
-        # Manually expire the token
+        # Get verification code from database
         from app.models.password_reset import PasswordResetToken
 
-        db_token = db_session.query(PasswordResetToken).filter_by(token=token).first()
-        db_token.expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
+        reset_record = db_session.query(PasswordResetToken).filter(
+            PasswordResetToken.email == test_counselor.email
+        ).first()
+        verification_code = reset_record.verification_code
+
+        # Manually expire the verification code (code_expires_at is for verification code)
+        reset_record.code_expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
+        db_session.add(reset_record)
         db_session.commit()
 
-        # Try to confirm with expired token
+        # Try to confirm with expired verification code
         response2 = await async_client.post(
             "/api/v1/auth/password-reset/confirm",
             json={
-                "token": token,
+                "verification_code": verification_code,
+                "email": test_counselor.email,
+                "tenant_id": test_counselor.tenant_id,
                 "new_password": "NewSecurePassword123!",
             },
         )
@@ -477,11 +517,21 @@ class TestPasswordResetEndToEnd:
         assert response2.status_code == status.HTTP_200_OK
         assert response2.json()["valid"] is True
 
+        # Get verification code from database
+        from app.models.password_reset import PasswordResetToken
+
+        reset_record = db_session.query(PasswordResetToken).filter(
+            PasswordResetToken.email == test_counselor.email
+        ).first()
+        verification_code = reset_record.verification_code
+
         # Step 3: Confirm password reset
         response3 = await async_client.post(
             "/api/v1/auth/password-reset/confirm",
             json={
-                "token": token,
+                "verification_code": verification_code,
+                "email": test_counselor.email,
+                "tenant_id": test_counselor.tenant_id,
                 "new_password": new_password,
             },
         )
