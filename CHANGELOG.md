@@ -10,6 +10,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **App Config API** (2026-01-31): Dynamic URL management for iOS client
+  - Multi-tenant support (`island_parents`, `career`)
+  - Public endpoint `GET /api/v1/app/config/{tenant}`
+  - Returns dynamic URLs: terms, privacy, landing page, help, forgot password
+  - Environment-aware base_url configuration
+  - Version tracking and maintenance mode support
+  - No authentication required (public endpoint)
+  - 404 response for invalid tenants
+  - **Implementation**: `app/api/app_config.py`, `app/schemas/app_config.py`
+  - **Testing**: Complete unit and integration test coverage
+  - **Documentation**: Added to `IOS_API_GUIDE.md` and `IOS_GUIDE_PARENTS.md`
+  - **Benefits**: No app release needed to update URLs, supports A/B testing, instant maintenance mode toggle
+
+- **WordPress Legal Pages** (2026-01-31): Elementor-ready HTML pages for Island Parents
+  - **Landing Page**: Product introduction and features showcase
+    - Deployed to: https://www.comma.study/island_parents_landing/
+    - Highlights: Real-time AI feedback, safety assessment, parenting guidance
+  - **Privacy Policy**: GDPR/Taiwan PIPA compliant privacy policy
+    - Deployed to: https://www.comma.study/island_parents_privacy_policy/
+    - 7 sections: Data collection, usage, third-party services, security, children's privacy
+  - **Terms of Service**: Comprehensive terms of service
+    - Deployed to: https://www.comma.study/island_parents_terms_of_service/
+    - 10 sections: Service description, usage rules, refund policy, disclaimers
+  - **Technical Features**:
+    - Responsive design (desktop/tablet/mobile)
+    - Direct paste into WordPress Elementor HTML blocks
+    - PM can update content without API redeployment
+    - Clean, professional styling matching Island Parents branding
+  - **Location**: `wordpress-legal-pages/` directory
+  - **Documentation**: `wordpress-legal-pages/README.md`
+
 - **Billing Mode Support and Monthly Usage Limits** (2026-01-31): Flexible payment models for prepaid and subscription users
   - Billing mode support (prepaid/subscription) for flexible payment models
   - Monthly usage limits for subscription users (360 minutes/month)

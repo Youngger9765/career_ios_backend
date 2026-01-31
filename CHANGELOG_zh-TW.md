@@ -10,6 +10,37 @@
 ## [未發布]
 
 ### 新增
+- **App 配置 API** (2026-01-31)：為 iOS 客戶端提供動態 URL 管理
+  - 多租戶支援（`island_parents`、`career`）
+  - 公開端點 `GET /api/v1/app/config/{tenant}`
+  - 返回動態 URLs：服務條款、隱私權政策、Landing Page、幫助、忘記密碼
+  - 環境感知的 base_url 配置
+  - 版本追蹤與維護模式支援
+  - 無需認證（公開端點）
+  - 無效租戶返回 404 回應
+  - **實作內容**：`app/api/app_config.py`、`app/schemas/app_config.py`
+  - **測試**：完整的單元測試與整合測試覆蓋
+  - **文檔**：已加入 `IOS_API_GUIDE.md` 和 `IOS_GUIDE_PARENTS.md`
+  - **優點**：無需發版即可更新 URL、支援 A/B 測試、即時切換維護模式
+
+- **WordPress 法律頁面** (2026-01-31)：為 Island Parents 提供 Elementor 可編輯的 HTML 頁面
+  - **Landing Page**：產品介紹與功能展示
+    - 部署網址：https://www.comma.study/island_parents_landing/
+    - 重點：即時 AI 回饋、安全評估、教養指導
+  - **隱私權政策**：符合 GDPR/台灣個資法的隱私權政策
+    - 部署網址：https://www.comma.study/island_parents_privacy_policy/
+    - 7 個章節：資料收集、使用、第三方服務、安全、兒童隱私
+  - **服務條款**：完整的服務條款
+    - 部署網址：https://www.comma.study/island_parents_terms_of_service/
+    - 10 個章節：服務說明、使用規範、退款政策、免責聲明
+  - **技術特色**：
+    - 響應式設計（桌面/平板/手機）
+    - 可直接貼上 WordPress Elementor HTML 區塊
+    - PM 可更新內容無需重新部署 API
+    - 乾淨專業的樣式，符合 Island Parents 品牌形象
+  - **位置**：`wordpress-legal-pages/` 目錄
+  - **文檔**：`wordpress-legal-pages/README.md`
+
 - **計費模式支援與每月使用量限制** (2026-01-31)：為儲值與訂閱用戶提供彈性付費模式
   - 計費模式支援（儲值/訂閱）提供彈性付費模式
   - 訂閱用戶每月使用上限（360 分鐘/月）

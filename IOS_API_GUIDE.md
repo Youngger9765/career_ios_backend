@@ -12,6 +12,7 @@
 
 ## 📋 目錄
 
+0. [App Config API (動態配置)](#app-config-api-動態配置) ⭐️ NEW
 1. [island_parents (親子版) 完整操作指南](#island_parents-親子版-完整操作指南-new) ⭐️ NEW
 2. [認證 APIs](#認證-apis) (0-3)
 3. [個案管理 APIs](#個案管理-apis) (4-9)
@@ -20,6 +21,87 @@
 6. [報告 APIs](#報告-apis) (20-24)
 7. [完整使用流程](#完整使用流程)
 8. [錯誤處理](#錯誤處理)
+
+---
+
+## App Config API (動態配置)
+
+**端點:** `GET /api/v1/app/config/{tenant}`
+
+**認證:** 🔓 無需認證（公開端點）
+
+**用途:** 讓 iOS 端動態獲取各種 URL 連結，無需硬編碼
+
+**支援的租戶（tenants）:**
+- `island_parents` - 浮島親子版
+- `career` - 職涯諮詢版（未來）
+
+### Request
+
+```http
+GET /api/v1/app/config/island_parents
+```
+
+### Response 200 OK
+
+```json
+{
+  "terms_url": "https://www.comma.study/island_parents_terms_of_service/",
+  "privacy_url": "https://www.comma.study/island_parents_privacy_policy/",
+  "landing_page_url": "https://www.comma.study/island_parents_landing/",
+  "help_url": "https://duodian.com/career/help",
+  "forgot_password_url": "https://duodian.com/career/forgot-password",
+  "base_url": "https://career-app-api-staging-xxxx.run.app",
+  "version": "1.0.0",
+  "maintenance_mode": false
+}
+```
+
+### Response 404 Not Found (無效租戶)
+
+```json
+{
+  "detail": "Tenant 'invalid_tenant' not found"
+}
+```
+
+### 欄位說明
+
+| 欄位 | 類型 | 說明 |
+|------|------|------|
+| `terms_url` | string | 服務條款頁面 URL |
+| `privacy_url` | string | 隱私權政策頁面 URL |
+| `landing_page_url` | string | Landing Page URL |
+| `help_url` | string | 幫助頁面 URL |
+| `forgot_password_url` | string | 忘記密碼頁面 URL |
+| `base_url` | string | API Base URL（當前環境） |
+| `version` | string | App 配置版本號 |
+| `maintenance_mode` | boolean | 維護模式開關 |
+
+### 使用場景
+
+1. **App 啟動時**
+   - 呼叫此 API 獲取最新 URLs
+   - 儲存在本地，供後續使用
+
+2. **顯示法律頁面**
+   - 使用 `terms_url` 和 `privacy_url` 在 WebView 中顯示
+
+3. **導向 Landing Page**
+   - 使用 `landing_page_url` 導向官網
+
+4. **版本檢查**
+   - 檢查 `version` 欄位判斷是否需要更新
+
+5. **維護模式**
+   - 根據 `maintenance_mode` 顯示維護畫面
+
+### 優點
+
+- ✅ **無需發版更新 URL** - 後端動態配置即可
+- ✅ **支援多租戶** - 不同版本（島嶼親子/職涯諮詢）使用不同配置
+- ✅ **支援 A/B Testing** - 可測試不同 URL
+- ✅ **維護模式切換** - 緊急維護時快速開啟
 
 ---
 

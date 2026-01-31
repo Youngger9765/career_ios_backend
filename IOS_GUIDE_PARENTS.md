@@ -38,6 +38,101 @@ Island Parents 是一款 **AI 親子教養助手**，幫助家長在與孩子互
 
 ---
 
+## 1.5. App 配置 API (動態 URL 管理)
+
+### 1.5.1 取得 App 配置
+
+**端點:** `GET /api/v1/app/config/island_parents`
+
+**認證:** 🔓 無需認證（公開端點）
+
+**用途:** App 啟動時獲取最新的 URLs，無需硬編碼
+
+### Request
+
+```http
+GET /api/v1/app/config/island_parents
+```
+
+### Response 200 OK
+
+```json
+{
+  "terms_url": "https://www.comma.study/island_parents_terms_of_service/",
+  "privacy_url": "https://www.comma.study/island_parents_privacy_policy/",
+  "landing_page_url": "https://www.comma.study/island_parents_landing/",
+  "help_url": "https://duodian.com/career/help",
+  "forgot_password_url": "https://duodian.com/career/forgot-password",
+  "base_url": "https://career-app-api-staging-xxxx.run.app",
+  "version": "1.0.0",
+  "maintenance_mode": false
+}
+```
+
+### 欄位說明
+
+| 欄位 | 說明 | 使用時機 |
+|------|------|---------|
+| `terms_url` | 服務條款頁面 | 顯示在 WebView |
+| `privacy_url` | 隱私權政策頁面 | 顯示在 WebView |
+| `landing_page_url` | Landing Page | 官網導向 |
+| `help_url` | 幫助頁面 | 顯示在 WebView |
+| `forgot_password_url` | 忘記密碼頁面 | 顯示在 WebView |
+| `base_url` | API Base URL | API 請求根路徑 |
+| `version` | 配置版本號 | 版本檢查 |
+| `maintenance_mode` | 維護模式開關 | 顯示維護畫面 |
+
+### Swift 實作範例
+
+```swift
+struct AppConfig: Codable {
+    let termsUrl: String
+    let privacyUrl: String
+    let landingPageUrl: String
+    let helpUrl: String
+    let forgotPasswordUrl: String
+    let baseUrl: String
+    let version: String
+    let maintenanceMode: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case termsUrl = "terms_url"
+        case privacyUrl = "privacy_url"
+        case landingPageUrl = "landing_page_url"
+        case helpUrl = "help_url"
+        case forgotPasswordUrl = "forgot_password_url"
+        case baseUrl = "base_url"
+        case version, maintenanceMode = "maintenance_mode"
+    }
+}
+
+// App 啟動時呼叫
+func fetchAppConfig() async throws -> AppConfig {
+    let url = URL(string: "https://your-api.com/api/v1/app/config/island_parents")!
+    let (data, _) = try await URLSession.shared.data(from: url)
+    return try JSONDecoder().decode(AppConfig.self, from: data)
+}
+
+// 儲存在本地
+UserDefaults.standard.set(config.termsUrl, forKey: "termsUrl")
+UserDefaults.standard.set(config.privacyUrl, forKey: "privacyUrl")
+```
+
+### 使用時機
+
+1. **App 啟動時** - 獲取最新配置並儲存
+2. **法律頁面** - 使用 `terms_url`/`privacy_url` 顯示在 WebView
+3. **維護模式** - 檢查 `maintenance_mode` 決定是否顯示維護畫面
+4. **版本檢查** - 比對 `version` 判斷是否需要更新配置
+
+### 優點
+
+- ✅ **無需發版更新** - URL 變更只需修改後端配置
+- ✅ **支援 A/B Testing** - 可測試不同 URL
+- ✅ **快速維護切換** - 緊急維護時可即時開啟
+
+---
+
 ## 2. 認證系統
 
 ### 2.1 註冊 (Register)

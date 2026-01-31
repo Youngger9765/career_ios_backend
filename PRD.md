@@ -24,6 +24,48 @@
 
 ## [Unreleased] - 開發中功能
 
+### ✅ Issue #5: Multi-tenant App Config API (2026-01-31) - COMPLETED
+**Status**: ✅ Complete | **PR**: Merged to staging
+
+**功能說明**: 動態 URL 配置 API，讓 iOS 端無需硬編碼各種連結
+
+**實作內容**:
+- ✅ API 端點：`GET /api/v1/app/config/{tenant}`
+- ✅ Multi-tenant 支援（island_parents, career）
+- ✅ 動態返回：terms_url, privacy_url, landing_page_url, help_url, forgot_password_url
+- ✅ 支援維護模式切換（maintenance_mode）
+- ✅ 版本號管理（version）
+- ✅ 公開端點（無需認證）
+- ✅ 完整測試覆蓋（單元測試 + 整合測試）
+- ✅ 文檔更新（IOS_API_GUIDE.md, IOS_GUIDE_PARENTS.md）
+
+**技術細節**:
+- 404 for invalid tenants
+- Environment-aware base_url
+- All tests passing ✅
+
+### ✅ Issue #6: WordPress Legal Pages (2026-01-31) - COMPLETED (3/5)
+**Status**: ✅ Pages Created & Deployed | ⏳ App Integration Pending
+
+**已完成**:
+- ✅ Step 1-3: HTML 頁面創建（Landing Page, Privacy Policy, Terms of Service）
+- ✅ 部署至 https://www.comma.study/
+  - Landing: https://www.comma.study/island_parents_landing/
+  - Privacy: https://www.comma.study/island_parents_privacy_policy/
+  - Terms: https://www.comma.study/island_parents_terms_of_service/
+- ✅ Elementor 可編輯格式（WordPress HTML 區塊）
+- ✅ 響應式設計（桌面/平板/手機）
+
+**待完成**:
+- ⏳ Step 4: App Config API 整合（需 iOS 串接）
+- ⏳ Step 5: iOS App 實作（WebView 顯示法律頁面）
+
+**相關文件**:
+- 📁 `wordpress-legal-pages/` - 所有 HTML 檔案與使用說明
+- 📝 `wordpress-legal-pages/README.md` - 部署指南
+
+---
+
 ### 🚀 Web Session Workflow 模組化完成 (2026-01-01)
 **功能定位**: Web 即時諮詢統一使用 Session API workflow（與 iOS 一致）
 
@@ -60,6 +102,46 @@
 ---
 
 ## 當前可用功能 (2025-12-31)
+
+### ✅ App Config API (2026-01-31)
+**功能定位**: 多租戶動態 URL 配置管理
+
+- **端點**: `GET /api/v1/app/config/{tenant}`
+- **認證**: 🔓 無需認證（公開端點）
+- **支援租戶**: `island_parents`, `career`（未來）
+- **核心功能**:
+  - 動態返回 terms_url, privacy_url, landing_page_url
+  - 支援維護模式切換（maintenance_mode）
+  - 版本號管理（version）
+  - 基於環境返回正確的 base_url
+- **用途**:
+  - iOS App 啟動時獲取最新 URLs
+  - 無需發版即可更新法律頁面連結
+  - 支援 A/B Testing 不同 URL 配置
+- **測試覆蓋**: 完整單元測試與整合測試
+- **相關文件**:
+  - 📝 API 文檔: `IOS_API_GUIDE.md` (Section 0)
+  - 📝 iOS 指南: `IOS_GUIDE_PARENTS.md` (Section 1.5)
+
+### ✅ WordPress Legal Pages (2026-01-31)
+**功能定位**: RevenueCat/App Store 審核要求的法律頁面
+
+- **Landing Page**: `wordpress-legal-pages/landing-page.html`
+  - Island Parents 產品介紹
+  - Elementor 可編輯格式
+  - 已部署至 https://www.comma.study/island_parents_landing/
+- **Privacy Policy**: `wordpress-legal-pages/privacy-policy.html`
+  - GDPR/台灣個資法合規
+  - 7 個完整章節（資料收集、使用、第三方、安全、兒童隱私等）
+  - 已部署至 https://www.comma.study/island_parents_privacy_policy/
+- **Terms of Service**: `wordpress-legal-pages/terms-of-service.html`
+  - 10 個完整章節（服務說明、使用規範、退款政策、免責聲明等）
+  - 已部署至 https://www.comma.study/island_parents_terms_of_service/
+- **技術特色**:
+  - 響應式設計（桌面/平板/手機）
+  - 可直接貼上 WordPress Elementor HTML 區塊
+  - PM 可自行更新文案（無需重新部署 API）
+- **相關文件**: 📝 部署指南: `wordpress-legal-pages/README.md`
 
 ### ✅ AI Provider 架構 (Updated 2025-12-31)
 - **統一使用 Gemini** - 簡化為單一 AI provider
