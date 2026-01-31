@@ -348,6 +348,10 @@ def confirm_password_reset(
         # Update password
         counselor.hashed_password = hash_password(confirm_data.new_password)
 
+        # Mark email as verified (since they received and confirmed the verification code)
+        if not counselor.email_verified:
+            counselor.email_verified = True
+
         # Mark token as used
         reset_token.mark_as_used(ip=request.client.host if request.client else None)
 

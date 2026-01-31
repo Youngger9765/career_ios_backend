@@ -365,6 +365,52 @@ class TestPasswordResetConfirm:
         data = response2.json()
         assert "expired" in data["detail"].lower()
 
+    async def test_confirm_password_reset_sets_email_verified(
+        self,
+        async_client: AsyncClient,
+        db_session: Session,
+        test_counselor: Counselor,
+    ):
+        """Test that password reset confirmation also verifies the email"""
+        # Ensure email is not verified initially
+        test_counselor.email_verified = False
+        db_session.commit()
+
+        # Request password reset
+        response1 = await async_client.post(
+            "/api/v1/auth/password-reset/request",
+            json={
+                "email": test_counselor.email,
+                "tenant_id": test_counselor.tenant_id,
+            },
+        )
+        assert response1.status_code == status.HTTP_200_OK
+
+        # Get verification code from database
+        from app.models.password_reset import PasswordResetToken
+
+        reset_record = db_session.query(PasswordResetToken).filter(
+            PasswordResetToken.email == test_counselor.email
+        ).first()
+        verification_code = reset_record.verification_code
+
+        # Confirm password reset
+        new_password = "NewSecurePassword123!"
+        response2 = await async_client.post(
+            "/api/v1/auth/password-reset/confirm",
+            json={
+                "verification_code": verification_code,
+                "email": test_counselor.email,
+                "tenant_id": test_counselor.tenant_id,
+                "new_password": new_password,
+            },
+        )
+        assert response2.status_code == status.HTTP_200_OK
+
+        # Verify email is now verified
+        db_session.refresh(test_counselor)
+        assert test_counselor.email_verified is True
+
 
 @pytest.mark.asyncio
 class TestPasswordResetEndToEnd:
