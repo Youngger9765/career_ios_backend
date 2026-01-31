@@ -1220,39 +1220,40 @@ A: island_parents 目前主要使用即時分析，報告生成功能暫未啟�
 1. POST /api/auth/login - 登入
 2. GET /api/auth/me - 取得諮詢師資訊
 3. PATCH /api/auth/me - 更新諮詢師資訊
+4. GET /api/v1/usage/stats - 取得使用量統計 ⭐️ NEW
 
 ### 👥 個案管理 APIs
-4. POST /api/v1/clients - 建立個案
-5. GET /api/v1/clients - 列出個案
-6. GET /api/v1/clients/{id} - 取得單一個案
-7. PATCH /api/v1/clients/{id} - 更新個案
-8. DELETE /api/v1/clients/{id} - 刪除個案
-9. GET /api/v1/sessions/timeline - 取得個案會談歷程時間線 ⭐️ NEW
+5. POST /api/v1/clients - 建立個案
+6. GET /api/v1/clients - 列出個案
+7. GET /api/v1/clients/{id} - 取得單一個案
+8. PATCH /api/v1/clients/{id} - 更新個案
+9. DELETE /api/v1/clients/{id} - 刪除個案
+10. GET /api/v1/sessions/timeline - 取得個案會談歷程時間線 ⭐️ NEW
 
 ### 📝 會談記錄管理 APIs
-10. POST /api/v1/sessions - 建立會談記錄
-11. GET /api/v1/sessions - 列出會談記錄
-12. GET /api/v1/sessions/{id} - 查看會談記錄
-13. PATCH /api/v1/sessions/{id} - 更新會談記錄
-14. DELETE /api/v1/sessions/{id} - 刪除會談記錄
-15. POST /api/v1/sessions/{id}/recordings/append - 🎙️ Append 錄音片段 (iOS 友善) ⭐️ NEW
+11. POST /api/v1/sessions - 建立會談記錄
+12. GET /api/v1/sessions - 列出會談記錄
+13. GET /api/v1/sessions/{id} - 查看會談記錄
+14. PATCH /api/v1/sessions/{id} - 更新會談記錄
+15. DELETE /api/v1/sessions/{id} - 刪除會談記錄
+16. POST /api/v1/sessions/{id}/recordings/append - 🎙️ Append 錄音片段 (iOS 友善) ⭐️ NEW
 
 ### 🧠 諮詢師反思 APIs
-16. GET /api/v1/sessions/{id}/reflection - 取得反思內容
-17. PUT /api/v1/sessions/{id}/reflection - 更新反思內容
+17. GET /api/v1/sessions/{id}/reflection - 取得反思內容
+18. PUT /api/v1/sessions/{id}/reflection - 更新反思內容
 
 ### 🔍 片段分析 APIs（Multi-Tenant）⭐️ NEW
-18. POST /api/v1/sessions/{id}/analyze-partial - 即時片段分析（推薦使用）
-18b. POST /api/v1/sessions/{id}/analyze-keywords - 舊版 API（向後兼容）
-19. GET /api/v1/sessions/{id}/analysis-logs - 取得分析歷程記錄
-20. DELETE /api/v1/sessions/{id}/analysis-logs/{log_index} - 刪除特定分析記錄
+19. POST /api/v1/sessions/{id}/analyze-partial - 即時片段分析（推薦使用）
+19b. POST /api/v1/sessions/{id}/analyze-keywords - 舊版 API（向後兼容）
+20. GET /api/v1/sessions/{id}/analysis-logs - 取得分析歷程記錄
+21. DELETE /api/v1/sessions/{id}/analysis-logs/{log_index} - 刪除特定分析記錄
 
 ### 📄 報告 APIs
-21. POST /api/v1/reports/generate - 生成報告 (從已儲存的會談記錄生成，需提供 session_id)
-22. GET /api/v1/reports - 列出報告
-23. GET /api/v1/reports/{id} - 取得單一報告
-24. PATCH /api/v1/reports/{id} - 更新報告 (編輯)
-25. GET /api/v1/reports/{id}/formatted - 取得格式化報告 (Markdown/HTML)
+22. POST /api/v1/reports/generate - 生成報告 (從已儲存的會談記錄生成，需提供 session_id)
+23. GET /api/v1/reports - 列出報告
+24. GET /api/v1/reports/{id} - 取得單一報告
+25. PATCH /api/v1/reports/{id} - 更新報告 (編輯)
+26. GET /api/v1/reports/{id}/formatted - 取得格式化報告 (Markdown/HTML)
 
 ---
 
@@ -1496,9 +1497,18 @@ Authorization: Bearer {access_token}
 {
   "access_token": "eyJhbGc...",
   "token_type": "bearer",
-  "expires_in": 7776000
+  "expires_in": 7776000,
+  "email_verified": false,
+  "verification_email_sent": true,
+  "message": "Registration successful. Please check your email to verify your account."
 }
 ```
+
+**📧 Email Verification:**
+- 註冊成功後，系統會自動發送驗證郵件到註冊的 email
+- `email_verified`: Email 是否已驗證（註冊時預設為 `false`）
+- `verification_email_sent`: 是否已成功發送驗證郵件
+- **重要**: Email 未驗證前無法登入（登入會返回 403 錯誤）
 
 **錯誤回應:**
 
@@ -1553,6 +1563,9 @@ struct RegisterResponse: Codable {
     let access_token: String
     let token_type: String
     let expires_in: Int
+    let email_verified: Bool
+    let verification_email_sent: Bool
+    let message: String
 }
 
 // 簡化註冊（推薦）
@@ -1637,6 +1650,23 @@ do {
   "expires_in": 7776000
 }
 ```
+
+**錯誤回應:**
+
+**403 Forbidden - Email 未驗證:**
+```json
+{
+  "detail": {
+    "code": "EMAIL_NOT_VERIFIED",
+    "message": "Please verify your email before logging in"
+  }
+}
+```
+
+**📧 Email Verification 檢查:**
+- 登入前必須先完成 email 驗證
+- 若 email 未驗證，系統會返回 `403 Forbidden` 錯誤
+- iOS 端應引導用戶檢查郵件並完成驗證後再登入
 
 **Swift 範例:**
 ```swift
@@ -1779,9 +1809,123 @@ func updateCounselor(token: String, fullName: String?, username: String?) async 
 
 ---
 
+### 4. 取得使用量統計 ⭐️ NEW
+
+**Endpoint:** `GET /api/v1/usage/stats`
+
+**描述:** 取得當前諮詢師的使用量統計資訊，支援兩種計費模式：Prepaid（預付）和 Subscription（訂閱制）。
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200) - Subscription Mode:**
+```json
+{
+  "billing_mode": "subscription",
+  "monthly_limit_minutes": 360,
+  "monthly_used_minutes": 120,
+  "monthly_remaining_minutes": 240,
+  "usage_percentage": 33.33,
+  "is_limit_reached": false,
+  "usage_period_start": "2026-01-01T00:00:00Z",
+  "usage_period_end": "2026-01-31T23:59:59Z"
+}
+```
+
+**Response (200) - Prepaid Mode:**
+```json
+{
+  "billing_mode": "prepaid",
+  "available_credits": 1000.50
+}
+```
+
+**欄位說明:**
+
+**共通欄位:**
+- `billing_mode`: 計費模式，"prepaid"（預付）或 "subscription"（訂閱制）
+
+**Prepaid Mode 專屬欄位:**
+- `available_credits`: 可用額度（金額或點數）
+
+**Subscription Mode 專屬欄位:**
+- `monthly_limit_minutes`: 每月使用額度上限（分鐘數）
+- `monthly_used_minutes`: 本月已使用分鐘數
+- `monthly_remaining_minutes`: 本月剩餘分鐘數
+- `usage_percentage`: 使用率百分比（0-100）
+- `is_limit_reached`: 是否已達使用上限
+- `usage_period_start`: 計費週期開始時間（ISO 8601 格式）
+- `usage_period_end`: 計費週期結束時間（ISO 8601 格式）
+
+**⚠️ 超限行為:**
+- 當 `is_limit_reached = true` 時，所有 AI 相關 API（片段分析、報告生成等）將返回 `HTTP 429 Too Many Requests`
+- iOS 端應監控 `usage_percentage`，在接近 100% 時提前警告用戶
+
+**Swift 範例:**
+```swift
+struct UsageStatsResponse: Codable {
+    let billing_mode: String
+
+    // Prepaid mode fields
+    let available_credits: Double?
+
+    // Subscription mode fields
+    let monthly_limit_minutes: Int?
+    let monthly_used_minutes: Int?
+    let monthly_remaining_minutes: Int?
+    let usage_percentage: Double?
+    let is_limit_reached: Bool?
+    let usage_period_start: Date?
+    let usage_period_end: Date?
+}
+
+func getUsageStats(token: String) async throws -> UsageStatsResponse {
+    let url = URL(string: "\(baseURL)/api/v1/usage/stats")!
+    var request = URLRequest(url: url)
+    request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    return try decoder.decode(UsageStatsResponse.self, from: data)
+}
+
+// 使用範例
+do {
+    let stats = try await getUsageStats(token: userToken)
+
+    if stats.billing_mode == "subscription" {
+        if let isLimitReached = stats.is_limit_reached, isLimitReached {
+            print("⚠️ 已達本月使用上限")
+        } else if let percentage = stats.usage_percentage {
+            print("本月使用率: \(percentage)%")
+            if percentage >= 80 {
+                print("⚠️ 警告：使用量接近上限")
+            }
+        }
+    } else if stats.billing_mode == "prepaid" {
+        if let credits = stats.available_credits {
+            print("可用額度: \(credits)")
+        }
+    }
+} catch {
+    print("無法取得使用量統計: \(error)")
+}
+```
+
+**UI 建議:**
+- **進度條顯示**: 使用 `usage_percentage` 顯示使用率進度條
+- **剩餘時間提示**: 顯示 `monthly_remaining_minutes`（例如："剩餘 4 小時"）
+- **超限警告**: 當 `usage_percentage >= 80%` 時顯示橘色警告，`>= 95%` 時顯示紅色警告
+- **計費週期顯示**: 顯示 `usage_period_start` 至 `usage_period_end`（例如："2026/01/01 - 2026/01/31"）
+
+---
+
 ## 👥 個案管理 APIs
 
-### 4. 建立個案
+### 5. 建立個案
 
 **Endpoint:** `POST /api/v1/clients`
 
@@ -1890,7 +2034,7 @@ func createClient(token: String, request: CreateClientRequest) async throws -> C
 
 ---
 
-### 5. 列出個案
+### 6. 列出個案
 
 **Endpoint:** `GET /api/v1/clients`
 
@@ -1951,7 +2095,7 @@ func listClients(token: String, skip: Int = 0, limit: Int = 20, search: String? 
 
 ---
 
-### 6. 取得單一個案
+### 7. 取得單一個案
 
 **Endpoint:** `GET /api/v1/clients/{client_id}`
 
@@ -1964,7 +2108,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 7. 更新個案
+### 8. 更新個案
 
 **Endpoint:** `PATCH /api/v1/clients/{client_id}`
 
@@ -1987,7 +2131,7 @@ Content-Type: application/json
 
 ---
 
-### 8. 刪除個案
+### 9. 刪除個案
 
 **Endpoint:** `DELETE /api/v1/clients/{client_id}`
 
@@ -2000,7 +2144,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 9. 取得個案會談歷程時間線 ⭐️ NEW
+### 10. 取得個案會談歷程時間線 ⭐️ NEW
 
 **Endpoint:** `GET /api/v1/sessions/timeline`
 
@@ -2098,7 +2242,7 @@ func getClientTimeline(token: String, clientId: UUID) async throws -> ClientTime
 
 ## 📝 會談記錄管理 APIs
 
-### 10. 建立會談記錄
+### 11. 建立會談記錄
 
 **Endpoint:** `POST /api/v1/sessions`
 
@@ -2289,7 +2433,7 @@ func createSession(token: String, request: SessionCreateRequest) async throws ->
 
 ---
 
-### 10. 列出逐字稿
+### 12. 列出逐字稿
 
 **Endpoint:** `GET /api/v1/sessions`
 
@@ -2355,7 +2499,7 @@ func listSessions(
 
 ---
 
-### 11. 查看逐字稿
+### 13. 查看逐字稿
 
 **Endpoint:** `GET /api/v1/sessions/{session_id}`
 
@@ -2370,7 +2514,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 12. 更新逐字稿
+### 14. 更新逐字稿
 
 **Endpoint:** `PATCH /api/v1/sessions/{session_id}`
 
@@ -2395,7 +2539,7 @@ Content-Type: application/json
 
 ---
 
-### 13. 刪除逐字稿
+### 15. 刪除逐字稿
 
 **Endpoint:** `DELETE /api/v1/sessions/{session_id}`
 
@@ -2418,7 +2562,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 15. 🎙️ Append 錄音片段 (iOS 友善) ⭐️ NEW
+### 16. 🎙️ Append 錄音片段 (iOS 友善) ⭐️ NEW
 
 **Endpoint:** `POST /api/v1/sessions/{session_id}/recordings/append`
 
@@ -2544,7 +2688,7 @@ func appendRecording(
 
 ## 🧠 諮詢師反思 APIs
 
-### 16. 取得反思內容
+### 17. 取得反思內容
 
 **Endpoint:** `GET /api/v1/sessions/{session_id}/reflection`
 
@@ -2605,7 +2749,7 @@ func getReflection(token: String, sessionId: UUID) async throws -> ReflectionRes
 
 ---
 
-### 16. 更新反思內容 ⭐️ NEW
+### 18. 更新反思內容 ⭐️ NEW
 
 **Endpoint:** `PUT /api/v1/sessions/{session_id}/reflection`
 
@@ -2679,7 +2823,7 @@ func updateReflection(token: String, sessionId: UUID, reflection: ReflectionUpda
 
 ## 🔍 片段分析 APIs (Multi-Tenant) ⭐️ NEW
 
-### 18. 即時片段分析（推薦使用）
+### 19. 即時片段分析（推薦使用）
 
 **Endpoint:** `POST /api/v1/sessions/{session_id}/analyze-partial`
 
@@ -2883,7 +3027,7 @@ func onTimerTick() {
 
 ---
 
-### 19. 取得分析歷程記錄
+### 20. 取得分析歷程記錄
 
 **Endpoint:** `GET /api/v1/sessions/{session_id}/analysis-logs`
 
@@ -3051,7 +3195,7 @@ struct AnalysisLogsView: View {
 
 ---
 
-### 20. 刪除分析記錄
+### 21. 刪除分析記錄
 
 **Endpoint:** `DELETE /api/v1/sessions/{session_id}/analysis-logs/{log_index}`
 
@@ -3183,7 +3327,7 @@ struct AnalysisLogsManagementView: View {
 
 ## 📄 報告 APIs
 
-### 17. 生成報告（異步 API ⚡️）
+### 22. 生成報告（異步 API ⚡️）
 
 **Endpoint:** `POST /api/v1/reports/generate`
 
@@ -3483,7 +3627,7 @@ func generateAndWaitForReport(
 
 ---
 
-### 18. 列出報告
+### 23. 列出報告
 
 **Endpoint:** `GET /api/v1/reports`
 
@@ -3517,7 +3661,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 19. 取得單一報告
+### 24. 取得單一報告
 
 **Endpoint:** `GET /api/v1/reports/{report_id}`
 
@@ -3530,7 +3674,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 20. 更新報告 (諮詢師編輯)
+### 25. 更新報告 (諮詢師編輯)
 
 **Endpoint:** `PATCH /api/v1/reports/{report_id}`
 
@@ -3708,7 +3852,7 @@ func getReportMarkdown(report: ReportDetail) -> String {
 
 ---
 
-### 21. 取得格式化報告
+### 26. 取得格式化報告
 
 **Endpoint:** `GET /api/v1/reports/{report_id}/formatted`
 
