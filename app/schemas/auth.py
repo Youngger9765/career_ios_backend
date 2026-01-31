@@ -130,11 +130,50 @@ class PasswordResetVerifyResponse(BaseModel):
     message: Optional[str] = None
 
 
+class VerifyCodeRequest(BaseModel):
+    """Verification code verification request"""
+
+    email: EmailStr
+    verification_code: str = Field(..., min_length=6, max_length=6, pattern="^[0-9]{6}$")
+    tenant_id: str
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "email": "user@example.com",
+                "verification_code": "123456",
+                "tenant_id": "test_tenant",
+            }
+        }
+    )
+
+
+class VerifyCodeResponse(BaseModel):
+    """Verification code verification response"""
+
+    valid: bool
+    message: str
+    token: Optional[str] = None  # JWT token for password reset (only if valid)
+
+
 class PasswordResetConfirm(BaseModel):
     """Password reset confirmation"""
 
-    token: str
+    verification_code: str = Field(..., min_length=6, max_length=6, pattern="^[0-9]{6}$")
     new_password: str = Field(..., min_length=8)
+    email: EmailStr
+    tenant_id: str
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "verification_code": "123456",
+                "new_password": "SecurePassword123!",
+                "email": "user@example.com",
+                "tenant_id": "test_tenant",
+            }
+        }
+    )
 
 
 class PasswordResetConfirmResponse(BaseModel):
