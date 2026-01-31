@@ -649,6 +649,19 @@ async def db_diagnostic():
         """))
         results["counselors_columns"] = [dict(row._mapping) for row in result.fetchall()]
 
+        # Check 5: Sample counselor data (test@example.com)
+        result = db.execute(text("""
+            SELECT billing_mode, email_verified, monthly_usage_limit_minutes, available_credits
+            FROM counselors
+            WHERE email = 'test@example.com' AND tenant_id = 'career'
+            LIMIT 1
+        """))
+        row = result.fetchone()
+        if row:
+            results["test_user_data"] = dict(row._mapping)
+        else:
+            results["test_user_data"] = None
+
     except Exception as e:
         results["error"] = str(e)
         import traceback
