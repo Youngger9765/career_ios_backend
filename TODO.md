@@ -1,5 +1,91 @@
 # TODO
 
+**Last Updated**: 2026-01-31
+
+---
+
+## 👤 Young 負責項目（2026-01-31）
+
+### App 配置 API（動態連結管理）
+- [ ] **建立 App Config API，回傳動態連結給 iOS** 🔴 Young
+  - **目的**：iOS 端不需硬編碼 URL，從後端動態獲取
+  - **端點**：`GET /api/v1/app/config`
+  - **Response 包含**：
+    ```json
+    {
+      "terms_url": "https://duodian.com/career/terms",
+      "privacy_url": "https://duodian.com/career/privacy",
+      "landing_page_url": "https://duodian.com/career",
+      "help_url": "https://duodian.com/career/help",
+      "forgot_password_url": "https://duodian.com/career/forgot-password",
+      "base_url": "https://career-app-api-prod-xxx.run.app",
+      "version": "1.0.0",
+      "maintenance_mode": false
+    }
+    ```
+  - **優點**：
+    - iOS 不需每次更新 URL 都發版
+    - 支援 A/B testing（不同環境不同 URL）
+    - 支援維護模式切換
+  - **實作**：
+    - Schema: `AppConfigResponse`
+    - Router: `app/api/app_config.py`
+    - Config: 從環境變數讀取 URL（`.env`）
+
+### 註冊/登入 API 修改
+- [ ] **註冊/登入 API Response 調整** 🔴 Young
+  - **需求**：加入郵件驗證狀態欄位
+  - **Response 包含**：
+    - 註冊：`email_verified: false`, `verification_email_sent: true`
+    - 登入成功：`user.email_verified: true`
+    - 登入失敗（未驗證）：HTTP 403 + `EMAIL_NOT_VERIFIED` error code
+  - **錯誤訊息設計**：
+    - 未驗證：`"Please verify your email before logging in"`
+    - Rate limit：`"Too many attempts. Try again in 60 seconds"`
+  - 參考上方詳細設計（Line 10-13 above）
+  - 相關：目前「註冊安全性增強」已在進行中（郵件驗證、Rate Limiting、密碼強度）
+
+### 忘記密碼調整
+- [x] **Deeplink Redirect** ✅ 已完成 (2026-01-30)
+  - App vs Web 來源區分
+  - Deeplink + Fallback 機制
+  - Email 自動帶入功能
+  - 參考：Line 27-51
+
+### 網域與部署
+- [ ] **Landing page, Terms & Privacy 頁面部署到逗點網域** 🔴 Young 協助
+  - [ ] KM 先準備文案內容
+  - [ ] 設計 Landing Page（可用 frontend-design-workflow）
+  - [ ] 建立 Terms & Privacy 頁面
+  - [ ] 部署到逗點子網域
+  - [ ] 請 Allen 更新 iOS App 中的連結
+  - 參考：Line 118-146 (網域與信任感 + Landing Page 建立)
+
+### 使用量限制
+- [ ] **每個月使用量隱藏上限設定** 🔴 待規格確認
+  - [ ] 確認上限數值（例：每月 1000 次？）
+  - [ ] 確認計數範圍（所有 API？僅 AI？）
+  - [ ] 確認超限行為（HTTP 429？友善提示？）
+  - [ ] 確認重置週期（每月 1 號？註冊日起算？）
+  - 實作：Middleware / User model
+  - 參考：Line 105-116 (使用量軟性上限)
+
+### 基礎設施
+- [ ] **Production DB、GCP 持久化建立** 🔴 待決策與資源配置
+  - [ ] 評估 PostgreSQL 託管服務（Supabase 或其他）
+  - [ ] 建立獨立 Production 資料庫
+  - [ ] 設定備份策略
+  - [ ] 更新環境變數配置
+  - 參考：Line 150-161 (Production 資料庫獨立)
+
+### iOS 整合
+- [x] **Deeplink to iOS** ✅ 已完成 (2026-01-30)
+  - 忘記密碼完成後 deeplink 回 App
+  - Fallback 機制（3 秒後檢測）
+  - 參考：Line 29-44
+
+---
+
 ## 🚨 緊急 - Production 上線驗證
 
 ### Emotion-Feedback API Production 驗證

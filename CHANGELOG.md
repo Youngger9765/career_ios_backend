@@ -10,6 +10,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Registration Security Enhancements** (2026-01-30): Comprehensive security layer for user authentication
+  - **Rate Limiting**: SlowAPI-based protection against abuse
+    - Registration: 3 requests per hour per IP
+    - Login: 5 requests per minute per IP
+    - Password reset: 3 requests per hour per IP
+    - Development environment: Relaxed limits (100/20/20) for testing
+  - **Password Strength Validation**: Enhanced from 8 to 12 character minimum
+    - Must contain uppercase, lowercase, numbers, and special characters
+    - Checks against 10,000+ common password blacklist
+    - Clear error messages guide users to create strong passwords
+  - **Email Verification System**: JWT-based verification workflow
+    - Configurable via `ENABLE_EMAIL_VERIFICATION` env variable (default: enabled)
+    - 24-hour token expiry for verification links
+    - New endpoints: `/api/v1/auth/verify-email` and `/api/v1/auth/resend-verification`
+    - Unverified accounts cannot login (HTTP 403 with clear message)
+  - **Implementation**:
+    - New modules: `app/middleware/rate_limit.py`, `app/core/password_validator.py`, `app/core/email_verification.py`
+    - Modified: `app/api/auth.py`, `app/schemas/auth.py`, `app/services/external/email_sender.py`
+  - **Testing**: 32 new integration tests (100% pass rate)
+    - `test_rate_limiting.py` (3 tests)
+    - `test_password_validation.py` (14 tests)
+    - `test_email_verification.py` (15 tests)
+    - Updated 37 existing test files with strong passwords (161 instances)
+  - **Security**: All features follow OWASP best practices and production-ready
+
 - **Deeplink Redirect & Email Autofill for Password Reset** (2026-01-30): iOS App integration improvements
   - Added `source` parameter to `PasswordResetRequest` schema (Optional, backward compatible)
   - Password reset emails include `&source=app` in reset link when requested from iOS
@@ -21,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Email autofill: iOS can pass user email via URL parameter for seamless UX
   - All changes backward compatible (Optional parameters, graceful fallback)
   - Testing: All 14 password reset integration tests pass
+
 - **Terms of Service & Privacy Policy Pages** (2026-01-27): Legal pages for RevenueCat/App Store compliance
   - Route: `/island-parents/terms` - Terms of Service with 10 comprehensive sections
   - Route: `/island-parents/privacy` - Privacy Policy compliant with GDPR/Taiwan PIPA
@@ -57,6 +83,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Verification**: All 9 integration tests pass
 
 ### Fixed
+- **Emotion-Feedback API Production Bugs** (2026-01-28 to 2026-01-29): Resolved 422 and 500 errors
+  - **422 Error Fix** (Commit c8cfe7b): Empty context validation
+    - Modified `EmotionFeedbackRequest.context` to allow empty string (default="")
+    - First emotion-feedback call can now send `context=""` without validation error
+    - Changed schema from `min_length=1` to optional empty string
+  - **500 Error Fix** (Commit c8cfe7b): Token usage extraction
+    - Fixed `get_last_token_usage()` method not found error in `emotion_service.py`
+    - Extract token usage directly from `response.usage_metadata`
+    - Pattern matches `quick_feedback_service.py` implementation
+  - **Redundant Validation Removal** (Commit 2af6ab2): Route handler cleanup
+    - Removed duplicate empty context check in `/api/sessions.py` endpoint
+    - Route handler had second validation layer (400 error) blocking empty context
+    - Now relies solely on Pydantic schema validation
+  - **Test Enablement**: Removed `pytest.mark.skip` decorator from emotion API tests
+  - **Impact**: All emotion-feedback API calls now work correctly in staging/production
+  - **Testing**: `test_emotion_api.py` tests enabled and passing
+
 - **Safety Assessment Test Failure** (2026-01-27): Fixed `test_safe_conversation_returns_green_level`
   - Root cause: Placeholder `/messages` endpoint doesn't store transcript data
   - Solution: Test now directly sets `transcript_text` on session object
