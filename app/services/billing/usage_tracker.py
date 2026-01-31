@@ -22,18 +22,18 @@ class UsageTracker:
             return
 
         # Check if period has expired
-        if counselor.period_start_date is None:
+        if counselor.usage_period_start is None:
             # First time - initialize period
-            counselor.period_start_date = datetime.utcnow()
-            counselor.monthly_usage = 0
+            counselor.usage_period_start = datetime.utcnow()
+            counselor.monthly_minutes_used = 0
             return
 
-        days_elapsed = (datetime.utcnow() - counselor.period_start_date).days
+        days_elapsed = (datetime.utcnow() - counselor.usage_period_start).days
 
         if days_elapsed >= self.PERIOD_DAYS:
             # Reset usage and start new period
-            counselor.monthly_usage = 0
-            counselor.period_start_date = datetime.utcnow()
+            counselor.monthly_minutes_used = 0
+            counselor.usage_period_start = datetime.utcnow()
 
     def is_limit_exceeded(self, counselor: Counselor) -> bool:
         """
@@ -50,10 +50,10 @@ class UsageTracker:
             return False
 
         # Check if usage >= limit
-        if counselor.monthly_limit is None:
+        if counselor.monthly_usage_limit_minutes is None:
             return False
 
-        return counselor.monthly_usage >= counselor.monthly_limit
+        return counselor.monthly_minutes_used >= counselor.monthly_usage_limit_minutes
 
     def get_usage_stats(self, counselor: Counselor) -> Dict[str, Any]:
         """
@@ -72,8 +72,8 @@ class UsageTracker:
             }
 
         # Subscription mode
-        limit = counselor.monthly_limit or 0
-        used = counselor.monthly_usage or 0
+        limit = counselor.monthly_usage_limit_minutes or 0
+        used = counselor.monthly_minutes_used or 0
         remaining = max(0, limit - used)
 
         # Calculate percentage (handle division by zero)
@@ -85,7 +85,7 @@ class UsageTracker:
             percentage = 100.0
 
         # Calculate period dates
-        period_start = counselor.period_start_date
+        period_start = counselor.usage_period_start
         period_end = None
         if period_start:
             period_end = period_start + timedelta(days=self.PERIOD_DAYS)

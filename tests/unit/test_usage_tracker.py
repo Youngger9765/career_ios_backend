@@ -20,9 +20,9 @@ class TestUsageTracker:
         """Create mock counselor with subscription billing."""
         counselor = Mock()
         counselor.billing_mode = "subscription"
-        counselor.monthly_limit = 360
-        counselor.monthly_usage = 300
-        counselor.period_start_date = datetime.utcnow() - timedelta(days=15)
+        counselor.monthly_usage_limit_minutes = 360
+        counselor.monthly_minutes_used = 300
+        counselor.usage_period_start = datetime.utcnow() - timedelta(days=15)
         return counselor
 
     @pytest.fixture
@@ -31,24 +31,24 @@ class TestUsageTracker:
         counselor = Mock()
         counselor.billing_mode = "prepaid"
         counselor.available_credits = 100
-        counselor.monthly_limit = None
-        counselor.monthly_usage = None
-        counselor.period_start_date = None
+        counselor.monthly_usage_limit_minutes = None
+        counselor.monthly_minutes_used = None
+        counselor.usage_period_start = None
         return counselor
 
     def test_reset_usage_period_if_expired(self, tracker, counselor_subscription):
         """Test usage resets after 30 days."""
         # Arrange: Set period start to 31 days ago
-        counselor_subscription.period_start_date = datetime.utcnow() - timedelta(days=31)
-        counselor_subscription.monthly_usage = 300
+        counselor_subscription.usage_period_start = datetime.utcnow() - timedelta(days=31)
+        counselor_subscription.monthly_minutes_used = 300
 
         # Act
         tracker.reset_if_period_expired(counselor_subscription)
 
         # Assert
-        assert counselor_subscription.monthly_usage == 0
-        # period_start_date should be updated (within 1 second of now)
-        time_diff = abs((datetime.utcnow() - counselor_subscription.period_start_date).total_seconds())
+        assert counselor_subscription.monthly_minutes_used == 0
+        # usage_period_start should be updated (within 1 second of now)
+        time_diff = abs((datetime.utcnow() - counselor_subscription.usage_period_start).total_seconds())
         assert time_diff < 1
 
     def test_no_reset_if_period_active(self, tracker, counselor_subscription):
@@ -56,21 +56,21 @@ class TestUsageTracker:
         # Arrange: Set period start to 15 days ago
         original_usage = 300
         original_start = datetime.utcnow() - timedelta(days=15)
-        counselor_subscription.period_start_date = original_start
-        counselor_subscription.monthly_usage = original_usage
+        counselor_subscription.usage_period_start = original_start
+        counselor_subscription.monthly_minutes_used = original_usage
 
         # Act
         tracker.reset_if_period_expired(counselor_subscription)
 
         # Assert
-        assert counselor_subscription.monthly_usage == original_usage
-        assert counselor_subscription.period_start_date == original_start
+        assert counselor_subscription.monthly_minutes_used == original_usage
+        assert counselor_subscription.usage_period_start == original_start
 
     def test_check_limit_not_exceeded(self, tracker, counselor_subscription):
         """Test limit check returns False when not exceeded."""
         # Arrange: 300/360 used
-        counselor_subscription.monthly_usage = 300
-        counselor_subscription.monthly_limit = 360
+        counselor_subscription.monthly_minutes_used = 300
+        counselor_subscription.monthly_usage_limit_minutes = 360
 
         # Act
         exceeded = tracker.is_limit_exceeded(counselor_subscription)
@@ -81,8 +81,8 @@ class TestUsageTracker:
     def test_check_limit_exceeded(self, tracker, counselor_subscription):
         """Test limit check returns True when at limit."""
         # Arrange: 360/360 used
-        counselor_subscription.monthly_usage = 360
-        counselor_subscription.monthly_limit = 360
+        counselor_subscription.monthly_minutes_used = 360
+        counselor_subscription.monthly_usage_limit_minutes = 360
 
         # Act
         exceeded = tracker.is_limit_exceeded(counselor_subscription)
@@ -93,8 +93,8 @@ class TestUsageTracker:
     def test_check_limit_exceeded_over_limit(self, tracker, counselor_subscription):
         """Test limit check returns True when over limit."""
         # Arrange: 380/360 used (edge case)
-        counselor_subscription.monthly_usage = 380
-        counselor_subscription.monthly_limit = 360
+        counselor_subscription.monthly_minutes_used = 380
+        counselor_subscription.monthly_usage_limit_minutes = 360
 
         # Act
         exceeded = tracker.is_limit_exceeded(counselor_subscription)
@@ -105,10 +105,10 @@ class TestUsageTracker:
     def test_get_usage_stats_subscription(self, tracker, counselor_subscription):
         """Test usage stats for subscription mode."""
         # Arrange
-        counselor_subscription.monthly_usage = 300
-        counselor_subscription.monthly_limit = 360
+        counselor_subscription.monthly_minutes_used = 300
+        counselor_subscription.monthly_usage_limit_minutes = 360
         period_start = datetime.utcnow() - timedelta(days=15)
-        counselor_subscription.period_start_date = period_start
+        counselor_subscription.usage_period_start = period_start
 
         # Act
         stats = tracker.get_usage_stats(counselor_subscription)
@@ -147,9 +147,9 @@ class TestUsageTracker:
     def test_get_usage_stats_subscription_zero_limit(self, tracker, counselor_subscription):
         """Test usage stats with zero limit (edge case)."""
         # Arrange
-        counselor_subscription.monthly_usage = 0
-        counselor_subscription.monthly_limit = 0
-        counselor_subscription.period_start_date = datetime.utcnow()
+        counselor_subscription.monthly_minutes_used = 0
+        counselor_subscription.monthly_usage_limit_minutes = 0
+        counselor_subscription.usage_period_start = datetime.utcnow()
 
         # Act
         stats = tracker.get_usage_stats(counselor_subscription)
@@ -162,16 +162,16 @@ class TestUsageTracker:
         assert stats["is_limit_reached"] is True  # 0 >= 0
 
     def test_reset_initializes_first_time(self, tracker, counselor_subscription):
-        """Should initialize period_start on first reset."""
+        """Should initialize usage_period_start on first reset."""
         # Arrange
-        counselor_subscription.period_start_date = None
+        counselor_subscription.usage_period_start = None
 
         # Act
         tracker.reset_if_period_expired(counselor_subscription)
 
         # Assert
-        assert counselor_subscription.period_start_date is not None
-        assert counselor_subscription.monthly_usage == 0
+        assert counselor_subscription.usage_period_start is not None
+        assert counselor_subscription.monthly_minutes_used == 0
 
     def test_prepaid_mode_not_checked_for_limits(self, tracker, counselor_prepaid):
         """Test prepaid counselors are not subject to limit checks."""
