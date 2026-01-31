@@ -40,7 +40,7 @@ def upgrade() -> None:
         sa.Integer(),
         nullable=True,
         server_default='360',
-        comment='Monthly usage limit in minutes (subscription mode only)'
+        comment='Monthly usage limit in minutes (subscription mode only), 6 hours = 360 min'
     ))
     op.add_column('counselors', sa.Column(
         'monthly_minutes_used',
