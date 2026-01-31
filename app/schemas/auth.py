@@ -45,6 +45,17 @@ class TokenResponse(BaseModel):
     expires_in: int  # seconds
 
 
+class RegisterResponse(BaseModel):
+    """Registration response with token and email verification status"""
+
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int  # seconds
+    email_verified: bool = False
+    verification_email_sent: bool = False
+    message: str
+
+
 class LoginResponse(BaseModel):
     """Login response with token and user info"""
 
@@ -64,6 +75,7 @@ class CounselorInfo(BaseModel):
     role: str
     tenant_id: str
     is_active: bool
+    email_verified: bool = False  # Email verification status
     last_login: Optional[datetime]
     created_at: datetime
     updated_at: Optional[datetime]

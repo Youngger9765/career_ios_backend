@@ -56,6 +56,20 @@ def reset_rate_limiter():
     limiter.reset()
 
 
+@pytest.fixture(autouse=True)
+def disable_email_verification(monkeypatch):
+    """Disable email verification by default in tests.
+
+    This allows existing tests to pass without setting email_verified=True.
+    Tests specifically for email verification can override this by using
+    monkeypatch to set ENABLE_EMAIL_VERIFICATION=True.
+    """
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "ENABLE_EMAIL_VERIFICATION", False)
+    yield
+
+
 @pytest.fixture
 def client():
     """Create a test client for integration tests"""

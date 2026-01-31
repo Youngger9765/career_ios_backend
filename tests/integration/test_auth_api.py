@@ -127,8 +127,8 @@ class TestAuthAPI:
             )
 
             assert response.status_code == 403
-            # Updated message for email verification feature
-            assert "Email not verified" in response.json()["detail"]
+            # Check for inactive account message
+            assert "not active" in response.json()["detail"]
 
     def test_get_me_success(self, db_session: Session):
         """Test GET /me with valid token returns counselor info"""

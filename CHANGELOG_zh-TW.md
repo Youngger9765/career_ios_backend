@@ -10,6 +10,19 @@
 ## [未發布]
 
 ### 新增
+- **API 回應加入郵件驗證狀態** (2026-01-31)：強化認證端點以包含郵件驗證狀態資訊
+  - **註冊回應**：新增 `email_verified`、`verification_email_sent` 和 `message` 欄位
+  - **登入回應**：現在回傳包含 `email_verified` 欄位的 `user` 物件
+  - **郵件驗證檢查**：啟用郵件驗證時，未驗證用戶無法登入（HTTP 403）
+  - **資料庫結構**：Counselor 模型新增 `email_verified` 布林欄位
+  - **驗證郵件端點**：同時設定 `is_active` 和 `email_verified` 為 true
+  - **測試環境**：測試環境預設停用郵件驗證（透過 autouse fixture）
+  - **實作內容**：
+    - 修改：`app/api/auth.py`、`app/schemas/auth.py`、`app/models/counselor.py`
+    - 修改：`tests/integration/conftest.py`、`tests/integration/test_auth_api.py`、`tests/integration/test_email_verification.py`
+    - 新增：`tests/integration/test_issue_4_email_verification_status.py`（4 個完整測試）
+    - 測試覆蓋：37/37 認證測試通過
+
 - **服務條款與隱私權政策頁面** (2026-01-27)：符合 RevenueCat/App Store 審核要求的法律頁面
   - 路由：`/island-parents/terms` - 包含 10 個完整章節的服務條款
   - 路由：`/island-parents/privacy` - 符合 GDPR/台灣個資法的隱私權政策

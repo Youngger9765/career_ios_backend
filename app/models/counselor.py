@@ -38,6 +38,7 @@ class Counselor(Base, BaseModel):
 
     # Status & metadata
     is_active = Column(Boolean, default=True)
+    email_verified = Column(Boolean, default=False, nullable=False, comment="Email verification status")
     last_login = Column(DateTime(timezone=True))
 
     # Credit system fields (universal payment mechanism)

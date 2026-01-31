@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Email Verification Status in API Responses** (2026-01-31): Enhanced auth endpoints to include email verification status
+  - **Register Response**: Added `email_verified`, `verification_email_sent`, and `message` fields
+  - **Login Response**: Now returns `user` object with `email_verified` field
+  - **Email Verification Check**: Login blocked for unverified users when email verification enabled (HTTP 403)
+  - **Database Schema**: Added `email_verified` boolean column to Counselor model
+  - **Verify Email Endpoint**: Sets both `is_active` and `email_verified` to true
+  - **Test Environment**: Email verification disabled by default in tests via autouse fixture
+  - **Implementation**:
+    - Modified: `app/api/auth.py`, `app/schemas/auth.py`, `app/models/counselor.py`
+    - Modified: `tests/integration/conftest.py`, `tests/integration/test_auth_api.py`, `tests/integration/test_email_verification.py`
+    - Added: `tests/integration/test_issue_4_email_verification_status.py` (4 comprehensive tests)
+    - Test Coverage: 37/37 auth tests passing
+
 - **Registration Security Enhancements** (2026-01-30): Comprehensive security layer for user authentication
   - **Rate Limiting**: SlowAPI-based protection against abuse
     - Registration: 3 requests per hour per IP

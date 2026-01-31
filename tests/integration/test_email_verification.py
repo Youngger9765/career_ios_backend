@@ -105,9 +105,12 @@ class TestEmailVerification:
             # Verify email was NOT sent
             mock_email_service.return_value.send_verification_email.assert_not_called()
 
-    def test_login_blocked_for_unverified_user(self, db_session: Session):
+    def test_login_blocked_for_unverified_user(self, db_session: Session, monkeypatch):
         """Test unverified users cannot login"""
-        # Create inactive user (unverified)
+        # Enable email verification for this test
+        monkeypatch.setattr(settings, "ENABLE_EMAIL_VERIFICATION", True)
+
+        # Create user with unverified email
         counselor = Counselor(
             id=uuid4(),
             email="unverified@example.com",
@@ -116,7 +119,8 @@ class TestEmailVerification:
             hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
-            is_active=False,  # Unverified
+            is_active=True,  # Account is active
+            email_verified=False,  # But email is not verified
         )
         db_session.add(counselor)
         db_session.commit()
@@ -273,6 +277,7 @@ class TestEmailVerification:
             tenant_id="career",
             role="counselor",
             is_active=True,  # Already verified
+            email_verified=True,  # Email already verified
         )
         db_session.add(counselor)
         db_session.commit()

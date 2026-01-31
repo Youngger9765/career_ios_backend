@@ -29,10 +29,11 @@ from app.schemas.auth import (
     CounselorInfo,
     CounselorUpdate,
     LoginRequest,
+    LoginResponse,
     RegisterRequest,
+    RegisterResponse,
     ResendVerificationRequest,
     ResendVerificationResponse,
-    TokenResponse,
     VerifyEmailRequest,
     VerifyEmailResponse,
 )
@@ -42,14 +43,14 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post(
-    "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
+    "/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED
 )
 @limiter.limit(f"{settings.RATE_LIMIT_REGISTER_PER_HOUR}/hour")
 async def register(
     register_data: RegisterRequest,
     request: Request,
     db: Session = Depends(get_db),
-) -> TokenResponse:
+) -> RegisterResponse:
     """
     Register a new counselor account
 
@@ -58,7 +59,7 @@ async def register(
         db: Database session
 
     Returns:
-        TokenResponse with access_token (auto-login after registration)
+        RegisterResponse with access_token and email verification status
 
     Raises:
         HTTPException: 400 if email+tenant_id or username already exists
@@ -88,8 +89,9 @@ async def register(
             )
 
     try:
-        # Set is_active based on email verification setting
+        # Set is_active and email_verified based on email verification setting
         is_active_value = not settings.ENABLE_EMAIL_VERIFICATION
+        email_verified_value = not settings.ENABLE_EMAIL_VERIFICATION
 
         # Create new counselor (username and full_name are optional, can be None)
         counselor = Counselor(
@@ -100,6 +102,7 @@ async def register(
             tenant_id=register_data.tenant_id,
             role=register_data.role,
             is_active=is_active_value,  # False if verification enabled
+            email_verified=email_verified_value,  # True if verification disabled
         )
 
         db.add(counselor)
@@ -107,6 +110,7 @@ async def register(
         db.refresh(counselor)
 
         # Send verification email if enabled
+        verification_email_sent = False
         if settings.ENABLE_EMAIL_VERIFICATION:
             verification_token = create_verification_token(
                 counselor.email, counselor.tenant_id
@@ -117,6 +121,7 @@ async def register(
                 verification_token=verification_token,
                 tenant_id=counselor.tenant_id,
             )
+            verification_email_sent = True
 
         # Auto-login: Create access token
         token_data = {
@@ -126,10 +131,19 @@ async def register(
         }
         access_token = create_access_token(token_data)
 
-        return TokenResponse(
+        # Prepare message based on verification status
+        if settings.ENABLE_EMAIL_VERIFICATION:
+            message = f"Registration successful. Please check your email at {counselor.email} to verify your account."
+        else:
+            message = "Registration successful. You can now use your account."
+
+        return RegisterResponse(
             access_token=access_token,
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
+            email_verified=counselor.email_verified,
+            verification_email_sent=verification_email_sent,
+            message=message,
         )
 
     except (ConflictError, BadRequestError):
@@ -142,22 +156,22 @@ async def register(
         )
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=LoginResponse)
 @limiter.limit(f"{settings.RATE_LIMIT_LOGIN_PER_MINUTE}/minute")
 def login(
     credentials: LoginRequest,
     request: Request,
     db: Session = Depends(get_db),
-) -> TokenResponse:
+) -> LoginResponse:
     """
-    Login endpoint - authenticate counselor and return JWT token
+    Login endpoint - authenticate counselor and return JWT token with user info
 
     Args:
         credentials: Email, password, and tenant_id
         db: Database session
 
     Returns:
-        TokenResponse with access_token
+        LoginResponse with access_token and user info including email_verified
 
     Raises:
         HTTPException: 401 if credentials are invalid, 403 if account inactive
@@ -180,8 +194,15 @@ def login(
             instance=str(request.url.path),
         )
 
-    # Check if account is active (email verified)
+    # Check if account is active
     if not counselor.is_active:
+        raise ForbiddenError(
+            detail="Account is not active. Please contact support.",
+            instance=str(request.url.path),
+        )
+
+    # Check if email is verified when email verification is enabled
+    if settings.ENABLE_EMAIL_VERIFICATION and not counselor.email_verified:
         raise ForbiddenError(
             detail="Email not verified. Please check your email for verification link.",
             instance=str(request.url.path),
@@ -200,10 +221,11 @@ def login(
         }
         access_token = create_access_token(token_data)
 
-        return TokenResponse(
+        return LoginResponse(
             access_token=access_token,
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
+            user=CounselorInfo.model_validate(counselor),
         )
 
     except Exception:
@@ -340,12 +362,13 @@ def verify_email(
         if not counselor:
             raise UnauthorizedError("Invalid verification token")
 
-        if counselor.is_active:
+        if counselor.is_active and counselor.email_verified:
             return VerifyEmailResponse(
                 message="Email already verified", email=email
             )
 
         counselor.is_active = True
+        counselor.email_verified = True
         db.commit()
 
         return VerifyEmailResponse(message="Email verified successfully", email=email)
