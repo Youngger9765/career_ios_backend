@@ -111,6 +111,16 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = 100 * 1024 * 1024  # 100MB
     ALLOWED_AUDIO_TYPES: List[str] = [".mp3", ".wav", ".m4a", ".aac"]
 
+    # App Config (for iOS client)
+    APP_TERMS_URL: str = "https://duodian.com/career/terms"
+    APP_PRIVACY_URL: str = "https://duodian.com/career/privacy"
+    APP_LANDING_PAGE_URL: str = "https://duodian.com/career"
+    APP_HELP_URL: str = "https://duodian.com/career/help"
+    APP_FORGOT_PASSWORD_URL: str = "https://duodian.com/career/forgot-password"
+    APP_BASE_URL: str = "https://career-app-api-prod.run.app"
+    APP_CONFIG_VERSION: str = "1.0.0"
+    APP_MAINTENANCE_MODE: bool = False
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,

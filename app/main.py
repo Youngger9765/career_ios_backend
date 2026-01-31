@@ -14,6 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 # API routers
 from app.api import (
     analyze,
+    app_config,
     auth,
     billing_reports,
     cases,
@@ -91,6 +92,9 @@ app.include_router(auth.router, prefix="/api")
 
 # Include password reset routes (v1 API)
 app.include_router(password_reset.router, prefix="/api/v1")
+
+# Include app config routes (public - no auth required)
+app.include_router(app_config.router, prefix="/api/v1/app", tags=["app-config"])
 
 # Include admin credit management routes
 app.include_router(admin_credits.router, prefix="/api/v1")
