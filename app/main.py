@@ -649,18 +649,32 @@ async def db_diagnostic():
         """))
         results["counselors_columns"] = [dict(row._mapping) for row in result.fetchall()]
 
-        # Check 5: Sample counselor data (test@example.com)
+        # Check 5: Sample counselor data (billing-test@example.com)
         result = db.execute(text("""
-            SELECT billing_mode, email_verified, monthly_usage_limit_minutes, available_credits
+            SELECT billing_mode, email_verified, monthly_usage_limit_minutes, available_credits, email
             FROM counselors
-            WHERE email = 'test@example.com' AND tenant_id = 'career'
+            WHERE email = 'billing-test@example.com' AND tenant_id = 'career'
             LIMIT 1
         """))
         row = result.fetchone()
         if row:
-            results["test_user_data"] = dict(row._mapping)
+            results["billing_test_user"] = dict(row._mapping)
         else:
-            results["test_user_data"] = None
+            results["billing_test_user"] = None
+
+        # Check 6: Latest counselor (any user)
+        result = db.execute(text("""
+            SELECT billing_mode, email_verified, monthly_usage_limit_minutes, available_credits, email, created_at
+            FROM counselors
+            WHERE tenant_id = 'career'
+            ORDER BY created_at DESC
+            LIMIT 1
+        """))
+        row = result.fetchone()
+        if row:
+            results["latest_counselor"] = dict(row._mapping)
+        else:
+            results["latest_counselor"] = None
 
     except Exception as e:
         results["error"] = str(e)
