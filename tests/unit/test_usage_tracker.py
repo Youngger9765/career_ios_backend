@@ -161,6 +161,18 @@ class TestUsageTracker:
         assert stats["usage_percentage"] == 100.0  # 0/0 should be treated as 100%
         assert stats["is_limit_reached"] is True  # 0 >= 0
 
+    def test_reset_initializes_first_time(self, tracker, counselor_subscription):
+        """Should initialize period_start on first reset."""
+        # Arrange
+        counselor_subscription.period_start_date = None
+
+        # Act
+        tracker.reset_if_period_expired(counselor_subscription)
+
+        # Assert
+        assert counselor_subscription.period_start_date is not None
+        assert counselor_subscription.monthly_usage == 0
+
     def test_prepaid_mode_not_checked_for_limits(self, tracker, counselor_prepaid):
         """Test prepaid counselors are not subject to limit checks."""
         # Act

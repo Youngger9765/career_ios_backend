@@ -1,5 +1,8 @@
 """Usage tracking service for counselor billing."""
 from datetime import datetime, timedelta
+from typing import Any, Dict
+
+from app.models.counselor import Counselor
 
 
 class UsageTracker:
@@ -7,7 +10,7 @@ class UsageTracker:
 
     PERIOD_DAYS = 30
 
-    def reset_if_period_expired(self, counselor) -> None:
+    def reset_if_period_expired(self, counselor: Counselor) -> None:
         """
         Reset usage period if 30 days have elapsed.
 
@@ -32,7 +35,7 @@ class UsageTracker:
             counselor.monthly_usage = 0
             counselor.period_start_date = datetime.utcnow()
 
-    def is_limit_exceeded(self, counselor) -> bool:
+    def is_limit_exceeded(self, counselor: Counselor) -> bool:
         """
         Check if counselor has exceeded monthly limit.
 
@@ -52,7 +55,7 @@ class UsageTracker:
 
         return counselor.monthly_usage >= counselor.monthly_limit
 
-    def get_usage_stats(self, counselor) -> dict:
+    def get_usage_stats(self, counselor: Counselor) -> Dict[str, Any]:
         """
         Get usage statistics for counselor.
 
@@ -77,7 +80,9 @@ class UsageTracker:
         if limit > 0:
             percentage = (used / limit) * 100
         else:
-            percentage = 100.0 if used > 0 else 100.0  # 0/0 treated as 100%
+            # When limit is 0, always return 100% to indicate "no quota available"
+            # This applies both when used > 0 (over quota) and used = 0 (no quota)
+            percentage = 100.0
 
         # Calculate period dates
         period_start = counselor.period_start_date
