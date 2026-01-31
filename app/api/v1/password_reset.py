@@ -2,9 +2,9 @@
 Password Reset API endpoints (v1)
 
 Provides secure password reset functionality:
-1. Request password reset - Send reset email
+1. Request password reset - Send reset email with verification code
 2. Verify reset token - Check if token is valid
-3. Confirm password reset - Update password with token
+3. Confirm password reset - Update password with verification code
 """
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -27,6 +27,7 @@ from app.schemas.auth import (
     PasswordResetVerifyResponse,
 )
 from app.services.external.email_sender import email_sender
+from app.utils.verification_code import generate_verification_code
 
 router = APIRouter(prefix="/auth/password-reset", tags=["Password Reset"])
 
@@ -122,8 +123,11 @@ async def request_password_reset(
 
     # Only create token if counselor exists
     if counselor:
-        # Generate secure token
+        # Generate secure token (for backward compatibility)
         token = generate_secure_token()
+
+        # Generate 6-digit verification code
+        verification_code = generate_verification_code()
 
         # Create password reset token
         reset_token = PasswordResetToken(
@@ -131,6 +135,8 @@ async def request_password_reset(
             email=counselor.email,
             tenant_id=counselor.tenant_id,
             expires_at=datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRY_HOURS),
+            verification_code=verification_code,
+            code_expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
             used=False,
             request_ip=request.client.host if request.client else None,
         )
@@ -138,14 +144,14 @@ async def request_password_reset(
         db.add(reset_token)
         db.commit()
 
-        # Send email (async)
+        # Send email with verification code (async)
         try:
             await email_sender.send_password_reset_email(
                 to_email=counselor.email,
-                reset_token=token,
+                verification_code=verification_code,
                 counselor_name=counselor.full_name or "User",  # Handle None case
                 tenant_id=counselor.tenant_id,
-                source=request_data.source,  # Pass source parameter for deeplink
+                source=request_data.source,  # Pass source parameter for compatibility
             )
         except Exception as e:
             # Log error but don't expose to user
