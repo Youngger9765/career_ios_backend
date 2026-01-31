@@ -30,20 +30,20 @@ class EmailSenderService:
     async def send_password_reset_email(
         self,
         to_email: str,
-        reset_token: str,
+        verification_code: str,
         counselor_name: str = None,
         tenant_id: str = "career",
         source: str | None = None,
     ) -> bool:
         """
-        Send password reset email
+        Send password reset email with 6-digit verification code
 
         Args:
             to_email: Recipient email
-            reset_token: Password reset token
+            verification_code: 6-digit verification code
             counselor_name: Optional counselor name for personalization
             tenant_id: Tenant ID for customizing email content
-            source: Request source ('app' or 'web') for deeplink handling
+            source: Request source ('app' or 'web') - kept for compatibility
 
         Returns:
             True if sent successfully
@@ -56,25 +56,10 @@ class EmailSenderService:
         }
         tenant_name = tenant_names.get(tenant_id, "Career")
 
-        subject = f"Password Reset Request - {tenant_name}"
-
-        # Generate password reset URL using configured APP_URL
-        # Use dynamic tenant route if tenant is valid, otherwise use generic path
-        tenant_url_path = get_tenant_url_path(tenant_id)
-        if tenant_url_path:
-            reset_path = f"/{tenant_url_path}/reset-password"
-        else:
-            reset_path = "/reset-password"  # Generic fallback
-
-        # Build reset URL with token
-        reset_url = f"{self.app_url}{reset_path}?token={reset_token}"
-
-        # Add source parameter if provided (for deeplink handling)
-        if source:
-            reset_url += f"&source={source}"
+        subject = f"Password Reset Verification Code - {tenant_name}"
 
         html_body = self._generate_password_reset_html(
-            counselor_name or "User", reset_url, tenant_name
+            counselor_name or "User", verification_code, tenant_name
         )
 
         try:
@@ -155,16 +140,16 @@ class EmailSenderService:
             raise
 
     def _generate_password_reset_html(
-        self, counselor_name: str, reset_url: str, tenant_name: str = "Career"
+        self, counselor_name: str, verification_code: str, tenant_name: str = "Career"
     ) -> str:
-        """Generate password reset email HTML"""
+        """Generate password reset email HTML with verification code"""
         html = f"""
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Reset Request</title>
+    <title>Password Reset Verification Code</title>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -190,22 +175,24 @@ class EmailSenderService:
             margin: 20px 0;
             font-size: 16px;
         }}
-        .button-container {{
+        .code-container {{
             text-align: center;
             margin: 30px 0;
+            padding: 30px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
         }}
-        .reset-button {{
-            display: inline-block;
-            background-color: #000000 !important;
-            color: #ffffff !important;
-            text-decoration: none;
-            padding: 14px 32px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 16px;
+        .verification-code {{
+            font-size: 36px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #1a73e8;
+            font-family: 'Courier New', monospace;
         }}
-        .reset-button:hover {{
-            background-color: #333333 !important;
+        .code-label {{
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
         }}
         .warning {{
             margin-top: 30px;
@@ -227,26 +214,28 @@ class EmailSenderService:
 </head>
 <body>
     <div class="container">
-        <h1>Password Reset Request</h1>
+        <h1>Password Reset Verification Code</h1>
 
         <div class="content">
             <p>Hi {counselor_name},</p>
 
             <p>We received a request to reset your password for your <strong>{tenant_name}</strong> account.</p>
 
-            <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
+            <p>Use the verification code below to reset your password. This code will expire in 10 minutes.</p>
         </div>
 
-        <div class="button-container">
-            <a href="{reset_url}" class="reset-button">Reset Password</a>
+        <div class="code-container">
+            <div class="verification-code">{verification_code}</div>
+            <div class="code-label">Enter this code in the app</div>
         </div>
 
         <div class="warning">
             <p><strong>Security Notice:</strong></p>
             <ul style="margin: 10px 0 0 20px;">
                 <li>If you didn't request this password reset, please ignore this email.</li>
-                <li>Never share this link with anyone.</li>
-                <li>This link will expire in 1 hour for your security.</li>
+                <li>Never share this code with anyone.</li>
+                <li>This code will expire in 10 minutes for your security.</li>
+                <li>The code can only be used once.</li>
             </ul>
         </div>
 
