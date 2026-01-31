@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Billing Mode Support and Monthly Usage Limits** (2026-01-31): Flexible payment models for prepaid and subscription users
+  - Billing mode support (prepaid/subscription) for flexible payment models
+  - Monthly usage limits for subscription users (360 minutes/month)
+  - Usage statistics API endpoint (`GET /api/v1/usage/stats`)
+  - Rolling 30-day usage period with auto-reset
+  - HTTP 429 error when subscription limit exceeded
+  - Backward compatible: All existing users default to prepaid mode
+
 - **Email Verification Status in API Responses** (2026-01-31): Enhanced auth endpoints to include email verification status
   - **Register Response**: Added `email_verified`, `verification_email_sent`, and `message` fields
   - **Login Response**: Now returns `user` object with `email_verified` field
@@ -78,6 +86,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved developer experience for iOS/frontend teams using `/docs`
 
 ### Changed
+- **Session Creation with Usage Limits** (2026-01-31): Session creation now checks usage limits based on billing mode
+  - Counselor model extended with billing mode and usage tracking fields
+  - Prepaid users: Blocked if credits <= 0
+  - Subscription users: Blocked if monthly limit exceeded or subscription expired
+  - Auto-resets usage period after 30 days
+
 - **Parents Report Prompt Refinement** (2026-01-29): Balanced professional authority with accessibility
   - Modified prompt in `parents_report_service.py` to use life-like language while maintaining credibility
   - **Strategy**: Moderate use of simple professional terms, avoid excessive academic jargon
@@ -94,6 +108,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact**: No API changes, no schema changes, no iOS changes required
   - **Testing**: Created automated A/B testing script (`scripts/test_parents_report_ab.py`)
   - **Verification**: All 9 integration tests pass
+
+### Database
+- **Billing Mode and Usage Tracking Schema** (2026-01-31): Extended counselors table for flexible billing
+  - Added `billing_mode` enum column to counselors table (prepaid/subscription)
+  - Added subscription usage tracking columns:
+    - `monthly_usage_limit_minutes` (default: 360)
+    - `monthly_minutes_used` (default: 0)
+    - `usage_period_start` (rolling 30-day period)
+  - Migration: All existing users default to prepaid mode (backward compatible)
 
 ### Fixed
 - **Emotion-Feedback API Production Bugs** (2026-01-28 to 2026-01-29): Resolved 422 and 500 errors

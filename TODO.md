@@ -62,13 +62,15 @@
   - 參考：Line 118-146 (網域與信任感 + Landing Page 建立)
 
 ### 使用量限制
-- [ ] **每個月使用量隱藏上限設定** 🔴 待規格確認
-  - [ ] 確認上限數值（例：每月 1000 次？）
-  - [ ] 確認計數範圍（所有 API？僅 AI？）
-  - [ ] 確認超限行為（HTTP 429？友善提示？）
-  - [ ] 確認重置週期（每月 1 號？註冊日起算？）
-  - 實作：Middleware / User model
-  - 參考：Line 105-116 (使用量軟性上限)
+- [x] **每個月使用量隱藏上限設定** ✅ 已完成 (2026-01-31)
+  - [x] 上限設定：6 小時/月 (360 分鐘)
+  - [x] 計費模式：prepaid / subscription
+  - [x] 重置週期：Rolling 30 天
+  - [x] 超限行為：HTTP 429 + 詳細訊息
+  - [x] API 端點：GET /api/v1/usage/stats
+  - 實作：Middleware + UsageTracker service
+  - 完成時間：2026-01-31
+  - 對應 Issue：#8
 
 ### 基礎設施
 - [ ] **Production DB、GCP 持久化建立** 🔴 待決策與資源配置
