@@ -606,6 +606,7 @@ async def db_diagnostic():
     """TEMP: Diagnostic endpoint to check database migration state"""
     from sqlalchemy import text
     from sqlalchemy.orm import Session
+
     from app.core.database import get_db
 
     db: Session = next(get_db())
