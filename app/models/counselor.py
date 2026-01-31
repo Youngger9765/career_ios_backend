@@ -69,8 +69,8 @@ class Counselor(Base, BaseModel):
 
     # Billing mode (prepaid vs subscription)
     billing_mode: Column[BillingMode] = Column(
-        SQLEnum(BillingMode),
-        default=BillingMode.PREPAID,
+        SQLEnum(BillingMode, values_callable=lambda x: [e.value for e in x]),
+        server_default="prepaid",
         nullable=False,
         index=True,
         comment="Billing mode: prepaid (credit-based) or subscription (time-limited)"
