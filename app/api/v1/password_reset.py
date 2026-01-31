@@ -3,7 +3,7 @@ Password Reset API endpoints (v1)
 
 Provides secure password reset functionality:
 1. Request password reset - Send reset email with verification code
-2. Verify reset token - Check if token is valid
+2. Verify verification code - Check if code is valid
 3. Confirm password reset - Update password with verification code
 """
 import secrets
@@ -24,7 +24,6 @@ from app.schemas.auth import (
     PasswordResetConfirmResponse,
     PasswordResetRequest,
     PasswordResetResponse,
-    PasswordResetVerifyResponse,
     VerifyCodeRequest,
     VerifyCodeResponse,
 )
@@ -165,59 +164,6 @@ async def request_password_reset(
         response.token = token
 
     return response
-
-
-@router.get("/verify", response_model=PasswordResetVerifyResponse)
-def verify_reset_token(
-    token: str,
-    db: Session = Depends(get_db),
-) -> PasswordResetVerifyResponse:
-    """
-    Verify if password reset token is valid
-
-    Args:
-        token: Reset token to verify
-        db: Database session
-
-    Returns:
-        PasswordResetVerifyResponse with validation result
-
-    Raises:
-        HTTPException: 400 if token is invalid, expired, or used
-    """
-    # Query token
-    result = db.execute(
-        select(PasswordResetToken).where(PasswordResetToken.token == token)
-    )
-    reset_token = result.scalar_one_or_none()
-
-    if not reset_token:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid reset token",
-        )
-
-    if reset_token.used:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has already been used",
-        )
-
-    # Ensure expires_at is timezone-aware for comparison
-    expires_at = reset_token.expires_at
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-
-    if expires_at < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has expired",
-        )
-
-    return PasswordResetVerifyResponse(
-        valid=True,
-        email=reset_token.email,
-    )
 
 
 @router.post("/verify-code", response_model=VerifyCodeResponse)
