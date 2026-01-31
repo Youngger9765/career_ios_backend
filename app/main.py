@@ -40,7 +40,7 @@ from app.api import (
     transcript,
     ui_client_case_list,
 )
-from app.api.v1 import admin_counselors, admin_credits, password_reset, session_usage
+from app.api.v1 import admin_counselors, admin_credits, password_reset, session_usage, usage
 from app.core.config import settings
 from app.core.exceptions import NotFoundError
 from app.middleware.error_handler import (
@@ -104,6 +104,9 @@ app.include_router(admin_counselors.router, prefix="/api/v1")
 
 # Include session usage routes
 app.include_router(session_usage.router)
+
+# Include usage stats routes
+app.include_router(usage.router, prefix="/api/v1")
 
 # Include client routes
 app.include_router(clients.router)

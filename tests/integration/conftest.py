@@ -39,6 +39,8 @@ from app.models.refresh_token import RefreshToken  # noqa: F401
 from app.models.reminder import Reminder  # noqa: F401
 from app.models.report import Report  # noqa: F401
 from app.models.session import Session as SessionModel  # noqa: F401
+from app.core.security import create_access_token, hash_password
+from app.models.counselor import BillingMode
 
 
 @pytest.fixture(autouse=True)
@@ -162,3 +164,72 @@ def db_session() -> Generator[Session, None, None]:
         # Clear dependency overrides
         app.dependency_overrides.clear()
         engine.dispose()
+
+
+@pytest.fixture
+def test_counselor_subscription(db_session: Session) -> Counselor:
+    """Create a test counselor with subscription billing mode."""
+    from datetime import datetime, timedelta, timezone
+
+    counselor = Counselor(
+        email="subscription@test.com",
+        username="subscription_user",
+        full_name="Subscription User",
+        hashed_password=hash_password("password123"),
+        tenant_id="test_tenant",
+        role="counselor",
+        is_active=True,
+        email_verified=True,
+        billing_mode=BillingMode.SUBSCRIPTION,
+        subscription_expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+        monthly_usage_limit_minutes=60,
+        monthly_minutes_used=0,
+        usage_period_start=datetime.now(timezone.utc),
+    )
+    db_session.add(counselor)
+    db_session.commit()
+    db_session.refresh(counselor)
+    return counselor
+
+
+@pytest.fixture
+def test_counselor_prepaid(db_session: Session) -> Counselor:
+    """Create a test counselor with prepaid billing mode."""
+    counselor = Counselor(
+        email="prepaid@test.com",
+        username="prepaid_user",
+        full_name="Prepaid User",
+        hashed_password=hash_password("password123"),
+        tenant_id="test_tenant",
+        role="counselor",
+        is_active=True,
+        email_verified=True,
+        billing_mode=BillingMode.PREPAID,
+        available_credits=100.0,
+    )
+    db_session.add(counselor)
+    db_session.commit()
+    db_session.refresh(counselor)
+    return counselor
+
+
+@pytest.fixture
+def auth_headers_subscription(test_counselor_subscription: Counselor) -> dict:
+    """Create authentication headers for subscription counselor."""
+    token = create_access_token({
+        "sub": test_counselor_subscription.email,
+        "tenant_id": test_counselor_subscription.tenant_id,
+        "role": test_counselor_subscription.role.value,
+    })
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth_headers_prepaid(test_counselor_prepaid: Counselor) -> dict:
+    """Create authentication headers for prepaid counselor."""
+    token = create_access_token({
+        "sub": test_counselor_prepaid.email,
+        "tenant_id": test_counselor_prepaid.tenant_id,
+        "role": test_counselor_prepaid.role.value,
+    })
+    return {"Authorization": f"Bearer {token}"}
