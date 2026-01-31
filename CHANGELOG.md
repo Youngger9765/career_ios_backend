@@ -9,7 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Password Reset API - BREAKING CHANGE** (2026-02-01): Migrated from URL-based tokens to 6-digit verification codes
+  - **Previous**: `GET /api/v1/auth/password-reset/verify?token=xxx` (removed)
+  - **New**: `POST /api/v1/auth/password-reset/verify-code` (added)
+  - **Reason**: Better mobile UX, easier for users to type codes from email
+  - **Client Impact**: iOS app must update to use new verification code flow
+  - **Migration Guide**: See `docs/api/password-reset-verification-code.md`
+
 ### Added
+- **Password Reset Verification Code System** (2026-02-01): Enhanced security with user-friendly 6-digit codes
+  - 6-digit verification codes (instead of 64-character URL tokens)
+  - 10-minute code expiration (vs 6-hour token expiration)
+  - Account lockout after 5 failed verification attempts (15-minute lockout)
+  - Optional pre-validation endpoint to check code before password form
+  - Email delivery with customizable templates per tenant
+  - Full end-to-end test coverage (request → verify → confirm → login)
+  - **API Endpoints**:
+    - `POST /api/v1/auth/password-reset/request` (updated to generate codes)
+    - `POST /api/v1/auth/password-reset/verify-code` (new)
+    - `POST /api/v1/auth/password-reset/confirm` (updated to accept codes)
+  - **Implementation**: `app/api/v1/password_reset.py`, `app/models/password_reset.py`
+  - **Testing**: 7 integration tests in `tests/integration/test_password_reset_verification.py`
+  - **Documentation**: Complete API guide at `docs/api/password-reset-verification-code.md`
+  - **Benefits**: Mobile-friendly, reduced friction, improved security with lockout mechanism
+
 - **App Config API** (2026-01-31): Dynamic URL management for iOS client
   - Multi-tenant support (`island_parents`, `career`)
   - Public endpoint `GET /api/v1/app/config/{tenant}`
@@ -115,6 +139,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Documented all response codes (200/401/404/500) with clear descriptions
   - Included feature highlights (non-blocking, background tasks, RAG, token tracking)
   - Improved developer experience for iOS/frontend teams using `/docs`
+
+### Removed
+- **Old Token-based Password Reset Verification** (2026-02-01): Deprecated endpoint removed
+  - `GET /api/v1/auth/password-reset/verify?token=xxx` endpoint removed
+  - `PasswordResetVerifyResponse` schema no longer exported (internal use only)
+  - **Reason**: Replaced by more secure verification code flow
+  - **Migration**: Update clients to use `POST /api/v1/auth/password-reset/verify-code`
+
+### Security
+- **Password Reset Brute Force Protection** (2026-02-01): Multi-layer security enhancements
+  - Rate limiting: 5 password reset requests per hour per IP
+  - Verification lockout: 15-minute account lock after 5 failed code verification attempts
+  - Failed attempt tracking: `verify_attempts` counter and `locked_until` timestamp
+  - IP audit trail: Request IP and usage IP logged to database
+  - User enumeration prevention: Always return success message regardless of email existence
+  - One-time code usage: Tokens marked as `used` with timestamp after successful password reset
+  - **Risk Mitigation**: Prevents automated attacks, credential stuffing, and verification code guessing
 
 ### Changed
 - **Session Creation with Usage Limits** (2026-01-31): Session creation now checks usage limits based on billing mode
