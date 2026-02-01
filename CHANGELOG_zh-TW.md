@@ -107,6 +107,14 @@
   - 改善 iOS/前端團隊使用 `/docs` 的開發體驗
 
 ### 變更
+- **CI/CD Pipeline - Staging 環境自動執行資料庫 Migration** (2026-02-01)：Staging 部署現在會自動執行資料庫 migration
+  - Pipeline 在部署到 Cloud Run 之前執行 `alembic upgrade head`
+  - 使用 `DATABASE_URL_DIRECT` 直接連接 Cloud SQL
+  - 確保資料庫 schema 與部署的程式碼版本相符
+  - Production migrations 仍需手動執行以確保安全（需要人工審核）
+  - **影響**：加快部署週期，防止 schema/程式碼不匹配錯誤
+  - **位置**：`.github/workflows/ci.yml`（僅 staging job）
+
 - **Session 創建時檢查使用限制** (2026-01-31)：Session 創建時根據計費模式檢查使用限制
   - Counselor 模型擴充計費模式與使用追踪欄位
   - 儲值用戶：credits <= 0 時阻擋

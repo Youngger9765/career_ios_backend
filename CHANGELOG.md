@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **CI/CD Pipeline - Automatic Database Migrations for Staging** (2026-02-01): Staging deployments now automatically execute database migrations
+  - Pipeline runs `alembic upgrade head` before deploying to Cloud Run
+  - Uses `DATABASE_URL_DIRECT` for direct Cloud SQL connection
+  - Ensures database schema matches deployed code version
+  - Production migrations remain manual for safety (requires human approval)
+  - **Impact**: Faster deployment cycle, prevents schema/code mismatch errors
+  - **Location**: `.github/workflows/ci.yml` (staging job only)
+
 - **Password Reset API - BREAKING CHANGE** (2026-02-01): Migrated from URL-based tokens to 6-digit verification codes
   - **Previous**: `GET /api/v1/auth/password-reset/verify?token=xxx` (removed)
   - **New**: `POST /api/v1/auth/password-reset/verify-code` (added)
