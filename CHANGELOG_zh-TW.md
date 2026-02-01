@@ -109,7 +109,7 @@
 ### 變更
 - **CI/CD Pipeline - Staging 環境自動執行資料庫 Migration** (2026-02-01)：Staging 部署現在會自動執行資料庫 migration
   - Pipeline 在部署到 Cloud Run 之前執行 `alembic upgrade head`
-  - 使用 `DATABASE_URL_DIRECT` 直接連接 Cloud SQL
+  - 使用 `DATABASE_URL`（連線池）以確保與 GitHub Actions 的 IPv4 相容性
   - 確保資料庫 schema 與部署的程式碼版本相符
   - Production migrations 仍需手動執行以確保安全（需要人工審核）
   - **影響**：加快部署週期，防止 schema/程式碼不匹配錯誤

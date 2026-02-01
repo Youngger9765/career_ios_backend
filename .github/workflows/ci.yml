@@ -126,7 +126,7 @@ jobs:
 
     - name: Run Database Migrations (Staging)
       env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
         echo "🔄 Running database migrations for staging environment..."
         poetry install --only main

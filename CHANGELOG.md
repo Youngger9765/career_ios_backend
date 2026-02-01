@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **CI/CD Pipeline - Automatic Database Migrations for Staging** (2026-02-01): Staging deployments now automatically execute database migrations
   - Pipeline runs `alembic upgrade head` before deploying to Cloud Run
-  - Uses `DATABASE_URL_DIRECT` for direct Cloud SQL connection
+  - Uses `DATABASE_URL` (connection pooler) for IPv4 compatibility with GitHub Actions
   - Ensures database schema matches deployed code version
   - Production migrations remain manual for safety (requires human approval)
   - **Impact**: Faster deployment cycle, prevents schema/code mismatch errors
