@@ -10,6 +10,33 @@
 ## [未發布]
 
 ### 新增
+- **多步驟密碼重設頁面與 Deeplink 支援** (2026-02-01)：為 iOS in-app browser 優化的忘記密碼頁面
+  - 4 步驟單頁流程：輸入 Email → 驗證碼 → 新密碼 → 成功
+  - 進度指示器（1/4、2/4、3/4、4/4）
+  - 偵測到 `source=app` 參數時自動 deeplink 跳轉回 App
+  - 失敗機制：App 未開啟時返回網頁登入
+  - Deeplink 協定：`careerapp://login`
+  - 同時支援 iOS in-app browser 和網頁瀏覽器使用
+  - **實作內容**：`app/templates/forgot_password.html`（完全重寫）
+  - **測試**：3 個新增整合測試於 `tests/integration/test_password_reset_flows.py`
+  - **優點**：無縫 iOS App 整合、提升使用者體驗、單頁便利性
+
+- **密碼重設驗證碼系統** (2026-02-01)：增強安全性的 6 位數驗證碼
+  - 6 位數驗證碼（取代 64 字元 URL token）
+  - 10 分鐘驗證碼過期（相較於 6 小時 token 過期）
+  - 5 次失敗驗證後鎖定帳戶（15 分鐘鎖定）
+  - 選用的預驗證端點，可在密碼表單前先檢查驗證碼
+  - 依租戶客製化 Email 樣板
+  - 完整的端對端測試覆蓋（請求 → 驗證 → 確認 → 登入）
+  - **API 端點**：
+    - `POST /api/v1/auth/password-reset/request`（更新為生成驗證碼）
+    - `POST /api/v1/auth/password-reset/verify-code`（新增）
+    - `POST /api/v1/auth/password-reset/confirm`（更新為接受驗證碼）
+  - **實作內容**：`app/api/v1/password_reset.py`、`app/models/password_reset.py`
+  - **測試**：7 個整合測試於 `tests/integration/test_password_reset_verification.py`
+  - **文檔**：完整 API 指南於 `docs/api/password-reset-verification-code.md`
+  - **優點**：行動友善、減少摩擦、透過鎖定機制提升安全性
+
 - **App 配置 API** (2026-01-31)：為 iOS 客戶端提供動態 URL 管理
   - 多租戶支援（`island_parents`、`career`）
   - 公開端點 `GET /api/v1/app/config/{tenant}`

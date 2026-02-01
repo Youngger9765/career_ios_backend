@@ -18,6 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Migration Guide**: See `docs/api/password-reset-verification-code.md`
 
 ### Added
+- **Multi-Step Password Reset Template with Deeplink Support** (2026-02-01): Enhanced forgot password page for iOS in-app browser
+  - 4-step single-page flow: Email → Verification Code → New Password → Success
+  - Progress indicator (1/4, 2/4, 3/4, 4/4)
+  - Auto-deeplink redirect to App when `source=app` parameter detected
+  - Fallback mechanism: Returns to web login if App fails to open
+  - Deeplink scheme: `careerapp://login`
+  - Support for both iOS in-app browser and web browser usage
+  - **Implementation**: `app/templates/forgot_password.html` (complete rewrite)
+  - **Testing**: 3 new integration tests in `tests/integration/test_password_reset_flows.py`
+  - **Benefits**: Seamless iOS App integration, improved user experience, single-page convenience
+
 - **Password Reset Verification Code System** (2026-02-01): Enhanced security with user-friendly 6-digit codes
   - 6-digit verification codes (instead of 64-character URL tokens)
   - 10-minute code expiration (vs 6-hour token expiration)
