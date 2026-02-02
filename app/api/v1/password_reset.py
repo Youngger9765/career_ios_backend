@@ -195,7 +195,7 @@ def verify_password_reset_code(
             )
             .order_by(PasswordResetToken.created_at.desc())
         )
-        reset_token = result.scalar_one_or_none()
+        reset_token = result.scalars().first()
 
         if not reset_token:
             raise HTTPException(
