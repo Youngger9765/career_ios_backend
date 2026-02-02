@@ -229,21 +229,25 @@ struct LoginRequest: Codable {
 
 ---
 
-### 2.3 忘記密碼（Web 流程）
+### 2.3 忘記密碼（4 步驟驗證碼流程）
 
-**⚠️ iOS 開發重點：使用 SFSafariViewController 開啟 Web 頁面處理**
+**⚠️ iOS 開發重點：使用 SFSafariViewController 開啟 Web 頁面處理，成功後自動 Deeplink 返回 App**
 
 #### 2.3.1 忘記密碼頁面 URL
 
 **Staging 環境**：
 ```
-https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/forgot-password
+https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/forgot-password?source=app&mail={user_email}
 ```
 
 **Production 環境**：
 ```
-https://[production-url]/island-parents/forgot-password
+https://[production-url]/island-parents/forgot-password?source=app&mail={user_email}
 ```
+
+**URL 參數說明**：
+- `source=app` - 必須，觸發自動 Deeplink 返回 App
+- `mail={email}` - 選填，預填使用者 Email
 
 **iOS 實作**：
 ```swift
@@ -252,12 +256,17 @@ import SafariServices
 class LoginViewController: UIViewController {
 
     @IBAction func forgotPasswordTapped(_ sender: UIButton) {
-        openForgotPasswordPage()
+        guard let email = emailTextField.text, !email.isEmpty else {
+            showError("請輸入 Email")
+            return
+        }
+        openForgotPasswordPage(email: email)
     }
 
-    func openForgotPasswordPage() {
+    func openForgotPasswordPage(email: String) {
         let baseURL = "https://career-app-api-staging-978304030758.us-central1.run.app"
-        let urlString = "\(baseURL)/island-parents/forgot-password"
+        let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let urlString = "\(baseURL)/island-parents/forgot-password?source=app&mail=\(encodedEmail)"
 
         guard let url = URL(string: urlString) else {
             print("Invalid URL")
@@ -273,7 +282,7 @@ class LoginViewController: UIViewController {
 }
 ```
 
-#### 2.3.2 完整 Web 流程（給 PM 參考）
+#### 2.3.2 完整 4 步驟驗證碼流程（給 PM 參考）
 
 ```mermaid
 sequenceDiagram
@@ -283,85 +292,227 @@ sequenceDiagram
     participant Backend as Backend API
     participant Email as Email 服務
 
-    Note over User,Email: 第一階段：請求重設密碼
+    Note over User,Email: Step 1: 輸入 Email
 
-    User->>iOS: 1. 點擊「忘記密碼？」
-    iOS->>Safari: 2. 開啟 /island-parents/forgot-password
-    Safari-->>User: 3. 顯示忘記密碼頁面
-    User->>Safari: 4. 輸入 Email → 點擊「發送重置郵件」
+    User->>iOS: 1. 點擊「忘記密碼？」並輸入 Email
+    iOS->>Safari: 2. 開啟 /island-parents/forgot-password?source=app&mail=xxx
+    Safari-->>User: 3. 顯示 Step 1 頁面（Email 已預填）
+
+    Note over User,Email: Step 2: 發送驗證碼
+
+    User->>Safari: 4. 點擊「發送驗證碼」
     Safari->>Backend: 5. POST /api/v1/auth/password-reset/request
-    Backend->>Backend: 6. 生成重設 Token（6 小時有效）
-    Backend->>Email: 7. 寄送重設密碼郵件
+    Backend->>Backend: 6. 生成 6 位數驗證碼（15 分鐘有效）
+    Backend->>Email: 7. 寄送驗證碼郵件
     Backend-->>Safari: 8. 回傳成功訊息
-    Safari-->>User: 9. 顯示「✅ 重置郵件已發送」
-    User->>Safari: 10. 關閉 Safari（返回 App）
+    Safari-->>User: 9. 自動跳轉到 Step 2（輸入驗證碼）
 
-    Note over User,Email: 第二階段：重設密碼
+    Note over User,Email: Step 3: 驗證碼輸入
 
-    User->>Email: 11. 打開郵件 App，收到重設郵件
-    User->>Email: 12. 點擊郵件中的重設連結
-    Email->>Safari: 13. 開啟 /island-parents/reset-password?token=xxx
-    Safari-->>User: 14. 顯示重設密碼頁面
-    User->>Safari: 15. 輸入新密碼 → 點擊「重設密碼」
-    Safari->>Backend: 16. POST /api/v1/auth/password-reset/confirm
-    Backend->>Backend: 17. 驗證 Token → 更新密碼
-    Backend-->>Safari: 18. 回傳成功訊息
-    Safari-->>User: 19. 顯示「✅ 密碼已成功重置」
-    Safari-->>User: 20. 點擊「返回登入」按鈕
-    User->>Safari: 21. 關閉 Safari（返回 App）
+    User->>Email: 10. 查看郵件，複製 6 位數驗證碼
+    User->>Safari: 11. 回到 Safari，輸入驗證碼
+    Safari->>Backend: 12. POST /api/v1/auth/password-reset/verify-code
+    Backend->>Backend: 13. 驗證碼檢查
+    Backend-->>Safari: 14. 驗證成功
+    Safari-->>User: 15. 自動跳轉到 Step 3（設定新密碼）
 
-    Note over User,iOS: 第三階段：用新密碼登入
+    Note over User,Email: Step 4: 設定新密碼
 
-    User->>iOS: 22. 在 App 登入頁面用新密碼登入
-    iOS->>Backend: 23. POST /api/auth/login
-    Backend-->>iOS: 24. 回傳 access_token
-    iOS-->>User: 25. 登入成功 ✅
+    User->>Safari: 16. 輸入新密碼並確認
+    Safari->>Backend: 17. POST /api/v1/auth/password-reset/confirm
+    Backend->>Backend: 18. 更新密碼
+    Backend-->>Safari: 19. 回傳成功訊息
+    Safari-->>User: 20. 顯示 Step 4 成功頁面
+
+    Note over User,iOS: 自動 Deeplink 返回 App
+
+    Safari->>Safari: 21. 偵測到 source=app，觸發 Deeplink
+    Safari->>iOS: 22. window.location.href = 'islandparent://auth/forgot-password-done'
+    iOS->>iOS: 23. 接收 Deeplink，關閉 Safari
+    iOS-->>User: 24. 顯示「密碼重設成功」提示
+    User->>iOS: 25. 用新密碼登入 ✅
 ```
 
-#### 2.3.3 Web 流程文字說明
+#### 2.3.3 4 步驟流程說明
 
-**階段一：請求重設密碼**
-1. 使用者在 App 登入頁面點擊「忘記密碼？」
-2. App 使用 `SFSafariViewController` 開啟忘記密碼頁面
-3. Web 頁面顯示 Email 輸入框
-4. 使用者輸入註冊時的 Email 並點擊「發送重置郵件」
-5. Backend 生成重設 Token（6 小時有效）
-6. Backend 寄送包含重設連結的郵件
-7. Web 頁面顯示成功訊息：「✅ 重置郵件已發送，請檢查您的電子郵件收件匣」
-8. 使用者關閉 Safari，返回 App
+**新版密碼重設流程使用驗證碼而非 Token，提供更安全且即時的體驗：**
 
-**階段二：重設密碼**
-9. 使用者在郵件 App 收到重設郵件
-10. 點擊郵件中的重設連結（自動開啟 Safari）
-11. Web 頁面顯示新密碼輸入框
-12. 使用者輸入新密碼並確認
-13. Backend 驗證 Token 並更新密碼
-14. Web 頁面顯示成功訊息：「✅ 密碼已成功重置」
-15. 點擊「返回登入」按鈕關閉 Safari
+**Step 1: 輸入 Email**
+- 使用者在 App 點擊「忘記密碼」
+- App 開啟 SFSafariViewController，URL 包含 `?source=app&mail={email}`
+- Web 頁面顯示 Email 輸入框（已預填）
+- 使用者點擊「發送驗證碼」
 
-**階段三：登入**
-16. 使用者返回 App 登入頁面
-17. 使用新密碼登入
-18. 登入成功 ✅
+**Step 2: 輸入驗證碼**
+- Backend 生成 6 位數驗證碼（15 分鐘有效）
+- 驗證碼郵件發送到使用者信箱
+- 頁面自動跳轉到驗證碼輸入頁
+- 使用者查看郵件，複製驗證碼
+- 使用者回到 Safari，輸入驗證碼
+- 點擊「驗證」
 
-#### 2.3.4 為什麼使用 Web 方案？
+**Step 3: 設定新密碼**
+- 驗證成功後自動跳轉到密碼設定頁
+- 使用者輸入新密碼並確認
+- 點擊「確認重設密碼」
 
-| 優點 | 說明 |
-|------|------|
-| **降低開發成本** | 不需要在 App 端實作重設密碼 UI |
-| **快速上線** | Backend 已實作完成，iOS 只需開啟 URL |
-| **統一體驗** | Web 頁面支援多平台（iOS, Android, Desktop） |
-| **安全性** | 重設 Token 由 Backend 管理，不經過 App |
+**Step 4: 成功頁面與自動 Deeplink**
+- 密碼重設成功，顯示成功頁面
+- **自動觸發 Deeplink**：`islandparent://auth/forgot-password-done`
+- Safari 自動關閉，返回 App
+- App 顯示成功提示
+- 使用者可立即使用新密碼登入
 
-#### 2.3.5 測試方式
+**Fallback 機制**：
+- 如果 3 秒內 App 未接收 Deeplink（如 App 被關閉）
+- 頁面自動跳轉到網頁登入頁面 `/island-parents`
+
+#### 2.3.4 iOS Deeplink 整合
+
+**1. 註冊 URL Scheme (Info.plist)**
+
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string>islandparent</string>
+        </array>
+        <key>CFBundleURLName</key>
+        <string>com.yourcompany.islandparents</string>
+    </dict>
+</array>
+```
+
+**2. 處理 Deeplink (AppDelegate/SceneDelegate)**
+
+```swift
+// AppDelegate.swift
+func application(_ app: UIApplication,
+                open url: URL,
+                options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+
+    guard url.scheme == "islandparent",
+          url.host == "auth" else {
+        return false
+    }
+
+    // 處理忘記密碼完成 Deeplink
+    if url.path == "/forgot-password-done" {
+        // 關閉 SFSafariViewController
+        if let presented = UIApplication.shared.windows.first?.rootViewController?.presentedViewController {
+            presented.dismiss(animated: true) {
+                // 顯示成功訊息
+                self.showPasswordResetSuccess()
+            }
+        }
+        return true
+    }
+
+    return false
+}
+
+func showPasswordResetSuccess() {
+    DispatchQueue.main.async {
+        let alert = UIAlertController(
+            title: "密碼重設成功",
+            message: "請使用新密碼登入",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "確定", style: .default))
+
+        UIApplication.shared.windows.first?.rootViewController?
+            .present(alert, animated: true)
+    }
+}
+```
+
+**3. 完整流程範例**
+
+```swift
+class ForgotPasswordViewController: UIViewController {
+
+    @IBOutlet weak var emailTextField: UITextField!
+
+    @IBAction func resetPasswordTapped(_ sender: UIButton) {
+        guard let email = emailTextField.text, !email.isEmpty else {
+            showError("請輸入 Email")
+            return
+        }
+
+        // 開啟 Safari ViewController
+        openForgotPasswordPage(email: email)
+    }
+
+    func openForgotPasswordPage(email: String) {
+        let baseURL = "https://career-app-api-staging-978304030758.us-central1.run.app"
+        let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+
+        // 重要：必須包含 source=app 參數才會觸發 Deeplink
+        let urlString = "\(baseURL)/island-parents/forgot-password?source=app&mail=\(encodedEmail)"
+
+        guard let url = URL(string: urlString) else {
+            showError("無效的 URL")
+            return
+        }
+
+        let safariVC = SFSafariViewController(url: url)
+        safariVC.preferredControlTintColor = .systemBlue
+        safariVC.dismissButtonStyle = .close
+
+        present(safariVC, animated: true)
+    }
+
+    func showError(_ message: String) {
+        let alert = UIAlertController(
+            title: "錯誤",
+            message: message,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "確定", style: .default))
+        present(alert, animated: true)
+    }
+}
+```
+
+#### 2.3.5 新舊版本差異
+
+| 項目 | 舊版（Token-based） | 新版（Verification Code） |
+|------|------------------|-------------------------|
+| **重設方式** | 郵件連結 + Token | 6 位數驗證碼 |
+| **有效期限** | 6 小時 | 15 分鐘 |
+| **使用者體驗** | 需要點擊郵件連結 | 複製驗證碼即可 |
+| **安全性** | Token 在 URL 中 | 驗證碼不在 URL |
+| **自動返回** | 手動點擊按鈕 | 自動 Deeplink |
+| **步驟數** | 2 個頁面 | 4 個步驟（單頁） |
+
+**新版優勢**：
+- ✅ **更安全**：驗證碼不會出現在 URL 或瀏覽器歷史記錄
+- ✅ **更快速**：15 分鐘內完成，減少等待時間
+- ✅ **更流暢**：自動 Deeplink 返回 App，無需手動操作
+- ✅ **更直觀**：4 步驟進度條，清楚知道目前進度
+
+#### 2.3.6 測試方式
 
 **手動測試**：
-1. 在瀏覽器打開：`https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/forgot-password`
-2. 輸入已註冊的 Email
-3. 檢查信箱收到重設郵件
-4. 點擊郵件中的連結
-5. 設定新密碼
-6. 返回 App 用新密碼登入
+1. 在 iOS 模擬器或實機開啟 App
+2. 點擊「忘記密碼」，輸入 Email
+3. Safari 開啟，確認 URL 包含 `?source=app&mail=xxx`
+4. 點擊「發送驗證碼」
+5. 檢查信箱收到 6 位數驗證碼郵件
+6. 在 Safari 輸入驗證碼，點擊「驗證」
+7. 輸入新密碼並確認
+8. 點擊「確認重設密碼」
+9. ✅ Safari 應自動關閉並返回 App
+10. ✅ App 顯示「密碼重設成功」提示
+11. 使用新密碼登入
+
+**Fallback 測試**：
+1. 在 Safari 瀏覽器（非 App）打開：`https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/forgot-password?source=app&mail=test@example.com`
+2. 完成 4 步驟流程
+3. ✅ 3 秒後應顯示「App 未開啟，返回登入頁面...」
+4. ✅ 自動跳轉到網頁登入頁面
 
 ---
 

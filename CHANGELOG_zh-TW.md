@@ -15,7 +15,7 @@
   - 進度指示器（1/4、2/4、3/4、4/4）
   - 偵測到 `source=app` 參數時自動 deeplink 跳轉回 App
   - 失敗機制：App 未開啟時返回網頁登入
-  - Deeplink 協定：`careerapp://login`
+  - Deeplink 協定：`islandparent://auth/forgot-password-done`
   - 同時支援 iOS in-app browser 和網頁瀏覽器使用
   - **實作內容**：`app/templates/forgot_password.html`（完全重寫）
   - **測試**：3 個新增整合測試於 `tests/integration/test_password_reset_flows.py`

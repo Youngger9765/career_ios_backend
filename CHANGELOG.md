@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Progress indicator (1/4, 2/4, 3/4, 4/4)
   - Auto-deeplink redirect to App when `source=app` parameter detected
   - Fallback mechanism: Returns to web login if App fails to open
-  - Deeplink scheme: `careerapp://login`
+  - Deeplink scheme: `islandparent://auth/forgot-password-done`
   - Support for both iOS in-app browser and web browser usage
   - **Implementation**: `app/templates/forgot_password.html` (complete rewrite)
   - **Testing**: 3 new integration tests in `tests/integration/test_password_reset_flows.py`
