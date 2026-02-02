@@ -184,81 +184,91 @@ def verify_password_reset_code(
     Raises:
         HTTPException: 400 if code is invalid, expired, or account is locked
     """
-    # First, try to find any token for this email/tenant (to check lockout)
-    result = db.execute(
-        select(PasswordResetToken)
-        .where(
-            PasswordResetToken.email == request.email,
-            PasswordResetToken.tenant_id == request.tenant_id,
-            PasswordResetToken.deleted_at.is_(None),
+    try:
+        # First, try to find any token for this email/tenant (to check lockout)
+        result = db.execute(
+            select(PasswordResetToken)
+            .where(
+                PasswordResetToken.email == request.email,
+                PasswordResetToken.tenant_id == request.tenant_id,
+                PasswordResetToken.deleted_at.is_(None),
+            )
+            .order_by(PasswordResetToken.created_at.desc())
         )
-        .order_by(PasswordResetToken.created_at.desc())
-    )
-    reset_token = result.scalar_one_or_none()
+        reset_token = result.scalar_one_or_none()
 
-    if not reset_token:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid verification code",
-        )
-
-    # Check if account is locked
-    if reset_token.locked_until is not None:
-        locked_until = reset_token.locked_until
-        if locked_until.tzinfo is None:
-            locked_until = locked_until.replace(tzinfo=timezone.utc)
-
-        if locked_until > datetime.now(timezone.utc):
+        if not reset_token:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Too many failed attempts. Account is temporarily locked.",
+                detail="Invalid verification code",
             )
 
-    # Check if verification code matches
-    if reset_token.verification_code != request.verification_code:
-        # Increment verify_attempts
-        reset_token.verify_attempts += 1
+        # Check if account is locked
+        if reset_token.locked_until is not None:
+            locked_until = reset_token.locked_until
+            if locked_until.tzinfo is None:
+                locked_until = locked_until.replace(tzinfo=timezone.utc)
 
-        # Lock account if 5 or more failed attempts
-        if reset_token.verify_attempts >= 5:
-            reset_token.locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+            if locked_until > datetime.now(timezone.utc):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Too many failed attempts. Account is temporarily locked.",
+                )
 
-        db.commit()
+        # Check if verification code matches
+        if reset_token.verification_code != request.verification_code:
+            # Increment verify_attempts
+            reset_token.verify_attempts += 1
 
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid verification code",
+            # Lock account if 5 or more failed attempts
+            if reset_token.verify_attempts >= 5:
+                reset_token.locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+            db.commit()
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid verification code",
+            )
+
+        # Check if code has expired
+        code_expires_at = reset_token.code_expires_at
+        if code_expires_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification code has expired",
+            )
+
+        if code_expires_at.tzinfo is None:
+            code_expires_at = code_expires_at.replace(tzinfo=timezone.utc)
+
+        if code_expires_at < datetime.now(timezone.utc):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification code has expired",
+            )
+
+        # Check if code has already been used
+        if reset_token.used:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification code has already been used",
+            )
+
+        # Code is valid
+        return VerifyCodeResponse(
+            valid=True,
+            message="Verification code is valid",
         )
 
-    # Check if code has expired
-    code_expires_at = reset_token.code_expires_at
-    if code_expires_at is None:
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid verification code",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to verify code: {str(e)}",
         )
-
-    if code_expires_at.tzinfo is None:
-        code_expires_at = code_expires_at.replace(tzinfo=timezone.utc)
-
-    if code_expires_at < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification code has expired",
-        )
-
-    # Check if code has already been used
-    if reset_token.used:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification code has already been used",
-        )
-
-    # Code is valid
-    return VerifyCodeResponse(
-        valid=True,
-        message="Verification code is valid",
-    )
 
 
 @router.post("/confirm", response_model=PasswordResetConfirmResponse)
