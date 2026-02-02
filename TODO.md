@@ -90,6 +90,15 @@
   - Fallback 機制（3 秒後檢測）
   - 參考：Line 29-44
 
+- [ ] **iOS 團隊確認 Deeplink 整合** 🔴 待 iOS 團隊測試
+  - [ ] 在 Info.plist 註冊 `islandparent://` URL scheme
+  - [ ] 實作 AppDelegate deeplink handler (`islandparent://auth/forgot-password-done`)
+  - [ ] 使用 SFSafariViewController 開啟忘記密碼頁面
+  - [ ] 傳入 email 參數：`?source=app&mail={email}`
+  - [ ] 測試完整流程：App → 忘記密碼網頁 → 重設密碼 → Deeplink 返回 App
+  - **後端已完成**：deeplink URL、網頁邏輯、文件更新
+  - **參考文件**：`IOS_GUIDE_PARENTS.md` (已更新 313 行)
+
 ---
 
 ## 🚨 緊急 - Production 上線驗證
