@@ -1,5 +1,8 @@
 # 職涯諮詢平台 PRD
 
+**Version**: 0.8.0
+**Last Updated**: 2026-02-03
+
 ## 系統概述
 
 ### 核心架構
@@ -169,6 +172,142 @@
   - 可直接貼上 WordPress Elementor HTML 區塊
   - PM 可自行更新文案（無需重新部署 API）
 - **相關文件**: 📝 部署指南: `wordpress-legal-pages/README.md`
+
+---
+
+## ✅ 近期完成功能 (2026-01-30 ~ 2026-02-03)
+
+### 認證與安全性增強
+
+#### Email 驗證系統 (2026-02-03)
+- **環境變數控制**: `ENABLE_EMAIL_VERIFICATION=true` (預設啟用)
+- **流程**: 註冊 → 發驗證信 → 點連結 → 啟用帳號
+- **API 端點**:
+  - `POST /api/v1/auth/verify-email` - 驗證 email
+  - `POST /api/v1/auth/resend-verification` - 重發驗證信
+- **未驗證帳號**: `is_active=false`, 無法登入 (HTTP 403)
+- **驗證連結**: 24 小時有效期
+- **實作檔案**: `app/core/email_verification.py`, `app/api/auth.py`
+- **測試覆蓋**: `tests/integration/test_email_verification.py`
+
+#### Rate Limiting (2026-02-03)
+- **技術**: slowapi memory-based limiter
+- **限制規則**:
+  - 註冊: 同 IP 每小時 3 次
+  - 登入: 同 IP 每分鐘 5 次
+  - 忘記密碼: 同 IP 每小時 3 次
+- **永久啟用**: 作為安全基線，無開關
+- **環境自適應**: 開發環境寬鬆限制 (100/20/20)
+- **實作檔案**: `app/middleware/rate_limit.py`
+- **測試覆蓋**: `tests/integration/test_rate_limiting.py`
+
+#### 密碼強度驗證 (2026-02-03)
+- **要求**:
+  - 最少 12 字元（從 8 字元提升）
+  - 必須包含: 大寫 + 小寫 + 數字 + 特殊字元
+  - 阻擋常見密碼（20 個常見密碼清單）
+- **永久啟用**: 作為安全基線，無開關
+- **實作檔案**: `app/core/password_validator.py`
+- **測試覆蓋**: `tests/integration/test_password_validation.py`
+
+#### 註冊/登入 API 郵件驗證欄位 (2026-02-03)
+- **RegisterResponse 新增**:
+  - `email_verified: bool` (註冊時為 false)
+  - `verification_email_sent: bool` (發送成功為 true)
+- **LoginResponse 新增**:
+  - `user.email_verified: bool` (在 CounselorInfo 中)
+- **登入失敗處理**:
+  - HTTP 403 + 錯誤訊息: "Email not verified. Please check your email for verification link."
+- **實作檔案**: `app/schemas/auth.py`, `app/api/auth.py`
+
+### 忘記密碼流程優化
+
+#### Multi-Step Forgot Password with Deeplink (2026-01-30)
+- **4 步驟單頁流程**:
+  1. 輸入 Email
+  2. 輸入驗證碼（6 位數）
+  3. 設定新密碼
+  4. 完成頁面
+- **Deeplink 支援**:
+  - 來源區分: `?source=app` 參數
+  - Deeplink: `islandparent://auth/forgot-password-done`
+  - Fallback: 3 秒後檢測，失敗則跳轉網頁登入
+- **Email 自動帶入**: `?mail=xxx` 參數預填 email
+- **實作檔案**: `app/templates/forgot_password.html`
+- **測試覆蓋**: `tests/integration/test_password_reset_flows.py`
+
+#### Password Reset Verification Code (2026-01-30)
+- **6 位數驗證碼**: 取代 64 字元 URL token
+- **10 分鐘有效期**: 較 URL token 的 6 小時更安全
+- **帳號鎖定**: 5 次失敗後鎖定 15 分鐘
+- **API 端點**:
+  - `POST /api/v1/auth/password-reset/request` (生成驗證碼)
+  - `POST /api/v1/auth/password-reset/verify-code` (驗證碼檢查)
+  - `POST /api/v1/auth/password-reset/confirm` (確認重設)
+- **實作檔案**: `app/api/v1/password_reset.py`
+- **測試覆蓋**: 7 個整合測試
+
+### 使用量管理
+
+#### 訂閱使用量限制 (2026-01-31)
+- **月使用量上限**: 360 分鐘（6 小時）
+- **重置週期**: Rolling 30 天
+- **計費模式**: prepaid / subscription
+- **超限處理**:
+  - HTTP 429
+  - 詳細訊息: 上限、已用、剩餘、週期開始時間
+- **API 端點**: `GET /api/v1/usage/stats`
+- **實作檔案**:
+  - `app/middleware/usage_limit.py`
+  - `app/services/billing/usage_tracker.py`
+  - `app/api/v1/usage.py`
+- **測試覆蓋**: 432 個整合測試通過
+
+#### 使用量追蹤 Bug 修復 (2026-02-03)
+- **問題**: Session 創建時不更新 `monthly_minutes_used`
+- **根因**: `app/api/sessions.py` 只檢查限制，未遞增使用量
+- **修復**: 在 session 創建前遞增使用量（同一交易）
+- **Edge Case 處理**: `duration_minutes` 為 None 時不追蹤
+- **實作檔案**:
+  - `app/api/sessions.py:100-128`
+  - `app/services/core/session_service.py` (timezone bug 修復)
+- **回歸測試**: `tests/integration/test_usage_tracking_verification.py`
+
+### iOS 整合
+
+#### App Config API (2026-01-31)
+- **端點**: `GET /api/v1/app/config/{tenant}`
+- **Multi-tenant**: island_parents, career
+- **Response** (簡化版):
+  ```json
+  {
+    "terms_url": "https://...",
+    "privacy_url": "https://...",
+    "landing_page_url": "https://..."
+  }
+  ```
+- **BREAKING CHANGE** (2026-02-03): 從 8 欄位簡化為 3 欄位
+- **實作檔案**: `app/api/app_config.py`, `app/schemas/app_config.py`
+- **測試覆蓋**: 5 個整合測試
+
+### 法律頁面
+
+#### WordPress Legal Pages (2026-01-31)
+- **Landing Page**: https://www.comma.study/island_parents_landing/
+  - 產品介紹 + 3 大特色
+  - 響應式設計
+- **Privacy Policy**: https://www.comma.study/island_parents_privacy_policy/
+  - 7 章節（GDPR/PIPA 合規）
+- **Terms of Service**: https://www.comma.study/island_parents_terms_of_service/
+  - 10 章節（服務說明、退款政策等）
+- **技術特色**:
+  - WordPress Elementor 格式
+  - PM 可自行編輯文案
+  - 無需重新部署 API
+- **實作檔案**: `wordpress-legal-pages/` 目錄
+- **部署指南**: `wordpress-legal-pages/README.md`
+
+---
 
 ### ✅ AI Provider 架構 (Updated 2025-12-31)
 - **統一使用 Gemini** - 簡化為單一 AI provider
