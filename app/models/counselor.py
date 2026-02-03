@@ -70,7 +70,7 @@ class Counselor(Base, BaseModel):
     # Billing mode (prepaid vs subscription)
     billing_mode: Column[BillingMode] = Column(
         SQLEnum(BillingMode, values_callable=lambda x: [e.value for e in x]),
-        server_default="prepaid",
+        server_default="subscription",
         nullable=False,
         index=True,
         comment="Billing mode: prepaid (credit-based) or subscription (time-limited)"
@@ -99,7 +99,7 @@ class Counselor(Base, BaseModel):
         """Initialize counselor with proper defaults"""
         # Set Python-level defaults for fields that need them
         if 'billing_mode' not in kwargs:
-            kwargs['billing_mode'] = BillingMode.PREPAID.value  # Use .value for SQLAlchemy
+            kwargs['billing_mode'] = BillingMode.SUBSCRIPTION.value  # Use .value for SQLAlchemy
         if 'monthly_usage_limit_minutes' not in kwargs:
             kwargs['monthly_usage_limit_minutes'] = 360
         if 'monthly_minutes_used' not in kwargs:

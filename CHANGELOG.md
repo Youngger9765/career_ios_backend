@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Subscription Billing as Default** (2026-02-03): Changed default billing mode from prepaid to subscription for RevenueCat integration
+  - **Model Update**: `Counselor.billing_mode` now defaults to `subscription` (was `prepaid`)
+  - **Business Context**: Frontend uses RevenueCat for iOS subscription management
+  - **New Accounts**: All registrations via `/api/auth/register` default to subscription mode
+  - **Default Limits**: New accounts get 360 minutes (6 hours) monthly limit
+  - **Migration Scripts**: Added scripts to migrate existing accounts to subscription
+  - **Test Coverage**: 8 new tests covering both subscription and prepaid modes
+  - **Backward Compatible**: Existing prepaid accounts remain unaffected, prepaid mode still functional
+  - **Impact**: Aligns new user onboarding with iOS App Store subscription model
+
 - **Usage Stats API Documentation - Complete** (2026-02-03): Added usage statistics query endpoint to console and iOS guide
   - **Console Update**: Added "使用量統計 Usage" section with usage stats endpoint
   - **iOS Guide Update**: Added IOS_GUIDE_PARENTS.md Section 2.7 "使用量統計 API" with full Swift implementation

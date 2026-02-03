@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from app.models.counselor import Counselor, BillingMode
 
 
-def test_counselor_default_billing_mode_is_prepaid():
-    """New counselors should default to prepaid mode"""
+def test_counselor_default_billing_mode_is_subscription():
+    """New counselors should default to subscription mode"""
     counselor = Counselor(
         email="test@example.com",
         username="testuser",
@@ -13,7 +13,7 @@ def test_counselor_default_billing_mode_is_prepaid():
         tenant_id="test",
         role="counselor"
     )
-    assert counselor.billing_mode == BillingMode.PREPAID
+    assert counselor.billing_mode == BillingMode.SUBSCRIPTION
 
 
 def test_counselor_subscription_fields_exist():
