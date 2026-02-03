@@ -115,7 +115,7 @@ def create_session(
     try:
         # Track usage for subscription mode BEFORE creating session
         # This ensures the usage update is part of the same transaction
-        if current_user.billing_mode == BillingMode.SUBSCRIPTION:
+        if current_user.billing_mode == BillingMode.SUBSCRIPTION and session_data.duration_minutes is not None:
             # Increment monthly usage by session duration
             current_user.monthly_minutes_used = (
                 current_user.monthly_minutes_used or 0
