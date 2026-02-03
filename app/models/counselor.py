@@ -97,6 +97,8 @@ class Counselor(Base, BaseModel):
 
     def __init__(self, **kwargs):
         """Initialize counselor with proper defaults"""
+        from datetime import datetime, timezone, timedelta
+
         # Set Python-level defaults for fields that need them
         if 'billing_mode' not in kwargs:
             kwargs['billing_mode'] = BillingMode.SUBSCRIPTION.value  # Use .value for SQLAlchemy
@@ -104,6 +106,11 @@ class Counselor(Base, BaseModel):
             kwargs['monthly_usage_limit_minutes'] = 360
         if 'monthly_minutes_used' not in kwargs:
             kwargs['monthly_minutes_used'] = 0
+        if 'usage_period_start' not in kwargs:
+            kwargs['usage_period_start'] = datetime.now(timezone.utc)
+        if 'subscription_expires_at' not in kwargs:
+            # New subscription accounts get 1 year validity
+            kwargs['subscription_expires_at'] = datetime.now(timezone.utc) + timedelta(days=365)
 
         super().__init__(**kwargs)
 

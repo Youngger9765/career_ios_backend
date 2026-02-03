@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Subscription Initialization Bug** (2026-02-03): Fixed new subscription accounts being rejected with "subscription expired" error
+  - **Root Cause**: `usage_period_start` and `subscription_expires_at` were not initialized in `Counselor.__init__`
+  - **Fix**: Added automatic initialization of both fields for new accounts
+  - **Values**: `usage_period_start` = account creation time, `subscription_expires_at` = creation time + 365 days
+  - **Impact**: New accounts can now create sessions immediately after registration
+  - **Test Results**: All 8 billing tests pass, session creation tests pass
+  - **Deprecated Warning Fixed**: Replaced `datetime.utcnow()` with `datetime.now(timezone.utc)`
+
 ### Added
 - **Subscription Billing as Default** (2026-02-03): Changed default billing mode from prepaid to subscription for RevenueCat integration
   - **Model Update**: `Counselor.billing_mode` now defaults to `subscription` (was `prepaid`)
