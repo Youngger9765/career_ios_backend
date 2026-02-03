@@ -10,12 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Usage Stats API Documentation** (2026-02-03): Added usage statistics query endpoint to console and docs
+- **Usage Stats API Documentation - Complete** (2026-02-03): Added usage statistics query endpoint to console and iOS guide
   - **Console Update**: Added "使用量統計 Usage" section with usage stats endpoint
+  - **iOS Guide Update**: Added IOS_GUIDE_PARENTS.md Section 2.7 "使用量統計 API" with full Swift implementation
   - **Endpoint**: `GET /api/v1/usage/stats` (requires auth)
   - **Features**: Monthly limit, used minutes, remaining quota, usage percentage, billing period
-  - **Console Location**: New section between authentication and client management
-  - **Impact**: Developers can now test usage statistics API in console
+  - **Swift Examples**: Complete UsageStats Codable struct, async fetch function, SwiftUI usage view
+  - **UI Components**: Progress bar, warning alerts, remaining quota display
+  - **Impact**: iOS developers have complete reference for implementing usage tracking UI
 
 - **Email Verification Documentation** (2026-02-03): Added comprehensive email verification guide to iOS documentation
   - **New Section**: IOS_GUIDE_PARENTS.md Section 2.2.1 "Email 驗證機制"

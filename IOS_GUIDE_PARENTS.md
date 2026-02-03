@@ -1021,6 +1021,170 @@ func listClientCases(skip: Int = 0, limit: Int = 20) async throws -> ClientCaseL
 
 ---
 
+## 2.7 使用量統計 API
+
+### 2.7.1 取得使用量統計
+
+**端點:** `GET /api/v1/usage/stats`
+
+**認證:** 🔒 需要 Bearer Token
+
+**用途:** 查詢當前用戶的月度使用量統計，包括已用分鐘數、剩餘配額、使用百分比等
+
+### Request
+
+```http
+GET /api/v1/usage/stats
+Authorization: Bearer {access_token}
+```
+
+### Response 200 OK
+
+```json
+{
+  "billing_mode": "subscription",
+  "monthly_limit_minutes": 360,
+  "monthly_used_minutes": 45,
+  "monthly_remaining_minutes": 315,
+  "usage_percentage": 12.5,
+  "is_limit_reached": false,
+  "usage_period_start": "2026-02-01T00:00:00Z",
+  "usage_period_end": "2026-03-01T00:00:00Z"
+}
+```
+
+### 欄位說明
+
+| 欄位 | 類型 | 說明 | 範例 |
+|------|------|------|------|
+| `billing_mode` | string | 計費模式 (`prepaid` 或 `subscription`) | `"subscription"` |
+| `monthly_limit_minutes` | int | 每月使用限制（分鐘），僅 subscription 模式 | `360` (6 小時) |
+| `monthly_used_minutes` | int | 本月已使用分鐘數，僅 subscription 模式 | `45` |
+| `monthly_remaining_minutes` | int | 本月剩餘分鐘數，僅 subscription 模式 | `315` |
+| `usage_percentage` | float | 使用百分比 (0-100) | `12.5` |
+| `is_limit_reached` | bool | 是否已達使用上限 | `false` |
+| `usage_period_start` | datetime | 計費週期開始時間 (UTC) | `"2026-02-01T00:00:00Z"` |
+| `usage_period_end` | datetime | 計費週期結束時間 (UTC) | `"2026-03-01T00:00:00Z"` |
+
+### Swift 實作範例
+
+```swift
+struct UsageStats: Codable {
+    let billingMode: String
+    let monthlyLimitMinutes: Int?
+    let monthlyUsedMinutes: Int?
+    let monthlyRemainingMinutes: Int?
+    let usagePercentage: Double?
+    let isLimitReached: Bool?
+    let usagePeriodStart: Date?
+    let usagePeriodEnd: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case billingMode = "billing_mode"
+        case monthlyLimitMinutes = "monthly_limit_minutes"
+        case monthlyUsedMinutes = "monthly_used_minutes"
+        case monthlyRemainingMinutes = "monthly_remaining_minutes"
+        case usagePercentage = "usage_percentage"
+        case isLimitReached = "is_limit_reached"
+        case usagePeriodStart = "usage_period_start"
+        case usagePeriodEnd = "usage_period_end"
+    }
+}
+
+func fetchUsageStats(token: String) async throws -> UsageStats {
+    let url = URL(string: "https://your-api.com/api/v1/usage/stats")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    return try decoder.decode(UsageStats.self, from: data)
+}
+```
+
+### UI 使用場景
+
+- **設定頁面**: 顯示本月已用時數和剩餘配額
+- **進度條**: 使用 `usage_percentage` 顯示使用進度
+- **警告提示**: 當 `is_limit_reached == true` 時顯示「已達使用上限」
+- **週期顯示**: 顯示計費週期 (例如：「2/1 - 3/1」)
+
+### UI 示例代碼
+
+```swift
+struct UsageView: View {
+    @State private var stats: UsageStats?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if let stats = stats {
+                // 標題
+                Text("本月使用量")
+                    .font(.headline)
+
+                // 進度條
+                ProgressView(value: (stats.usagePercentage ?? 0) / 100)
+                    .tint(stats.isLimitReached == true ? .red : .blue)
+
+                // 數據顯示
+                HStack {
+                    Text("\(stats.monthlyUsedMinutes ?? 0) 分鐘")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    Text("/ \(stats.monthlyLimitMinutes ?? 0) 分鐘")
+                        .foregroundColor(.secondary)
+                }
+
+                // 剩餘配額
+                if let remaining = stats.monthlyRemainingMinutes {
+                    Text("剩餘 \(remaining) 分鐘")
+                        .font(.subheadline)
+                        .foregroundColor(remaining < 60 ? .red : .green)
+                }
+
+                // 警告
+                if stats.isLimitReached == true {
+                    Label("已達本月使用上限", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundColor(.red)
+                }
+            }
+        }
+        .padding()
+        .task {
+            do {
+                stats = try await fetchUsageStats(token: getToken())
+            } catch {
+                print("Failed to fetch usage stats: \(error)")
+            }
+        }
+    }
+}
+```
+
+### 錯誤處理
+
+| 錯誤碼 | 說明 | 處理方式 |
+|--------|------|---------|
+| `401` | Token 無效或過期 | 導向登入頁面 |
+| `500` | 伺服器錯誤 | 顯示錯誤訊息，稍後重試 |
+
+### 注意事項
+
+1. **自動重置**: 每月 1 日 UTC 00:00 自動重置使用量
+2. **即時更新**: 每次 Session 結束後會更新使用量
+3. **Prepaid 模式**: `monthly_limit_minutes` 等欄位為 `null`
+4. **快取策略**: 建議快取 5-10 分鐘，避免頻繁請求
+
+---
+
 ## 3. Session Workflow
 
 ### 3.1 完整流程
