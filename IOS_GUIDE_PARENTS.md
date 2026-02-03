@@ -120,6 +120,12 @@ UserDefaults.standard.set(config.landingPageUrl, forKey: "landingPageUrl")
 
 **⚠️ 最新版本：已簡化為只需 Email + Password**
 
+**🔔 重要提醒**：
+- 註冊後會自動發送 **Email 驗證信**
+- 使用者必須點擊郵件中的驗證連結
+- **未驗證的帳號無法登入**（會回傳 403 錯誤）
+- 詳見 [Section 2.2.1 Email 驗證機制](#221-email-驗證機制-)
+
 ```http
 POST /api/auth/register
 Content-Type: application/json
@@ -132,7 +138,7 @@ Content-Type: application/json
 ```
 
 **必填欄位**：
-- `email`: 使用者 Email（唯一識別）
+- `email`: 使用者 Email（唯一識別，**必須是有效信箱**）
 - `password`: 密碼（最少 8 個字元）
 - `tenant_id`: **固定值** `"island_parents"`（浮島親子專用）
 
@@ -170,6 +176,11 @@ struct RegisterRequest: Codable {
 
 ### 2.2 登入 (Login)
 
+**🔔 重要提醒**：
+- 如果 Email 尚未驗證，登入會失敗（HTTP 403）
+- 請引導使用者重新發送驗證信
+- 詳見 [Section 2.2.1 Email 驗證機制](#221-email-驗證機制-)
+
 ```http
 POST /api/auth/login
 Content-Type: application/json
@@ -184,6 +195,7 @@ Content-Type: application/json
 **⚠️ 注意**：
 - 使用 `email` 而非 `username`
 - 必須傳入 `tenant_id: "island_parents"`
+- **Email 必須已驗證**才能登入成功
 
 **Response (200):**
 ```json
@@ -206,6 +218,202 @@ struct LoginRequest: Codable {
         case tenantId = "tenant_id"
     }
 }
+```
+
+---
+
+### 2.2.1 Email 驗證機制 ⚠️
+
+**重要**: 註冊後必須驗證 Email 才能登入！
+
+#### 註冊流程說明
+
+1. **使用者註冊**
+   ```swift
+   POST /api/auth/register
+   // 回傳 access_token，但帳號狀態為「未驗證」
+   ```
+
+2. **系統自動發送驗證信**
+   - Email 包含驗證連結
+   - 連結格式：`https://.../api/auth/verify-email?token=xxx`
+   - 有效期限：24 小時
+
+3. **使用者點擊驗證連結**
+   - 瀏覽器開啟驗證頁面
+   - 後端標記帳號為「已驗證」
+
+4. **帳號啟用完成**
+   - 使用者可以正常登入
+
+#### 登入時的驗證檢查
+
+**如果 Email 未驗證，登入會失敗**：
+
+```http
+POST /api/auth/login
+// 回傳 403 Forbidden
+```
+
+**Error Response (403)**:
+```json
+{
+  "detail": "Email not verified. Please check your inbox."
+}
+```
+
+**iOS 錯誤處理範例**:
+```swift
+func login(email: String, password: String) async throws {
+    do {
+        let response = try await apiClient.login(email: email, password: password)
+        // 登入成功，儲存 token
+        saveToken(response.accessToken)
+    } catch APIError.forbidden(let message) {
+        // Email 未驗證
+        if message.contains("Email not verified") {
+            showEmailVerificationAlert(email: email)
+        }
+    }
+}
+
+func showEmailVerificationAlert(email: String) {
+    let alert = UIAlertController(
+        title: "Email 尚未驗證",
+        message: "請至信箱 \(email) 點擊驗證連結，或重新發送驗證信。",
+        preferredStyle: .alert
+    )
+
+    alert.addAction(UIAlertAction(title: "重新發送", style: .default) { _ in
+        Task {
+            try? await self.resendVerificationEmail(email: email)
+        }
+    })
+
+    alert.addAction(UIAlertAction(title: "確定", style: .cancel))
+
+    present(alert, animated: true)
+}
+```
+
+#### 重新發送驗證信 API
+
+**端點**: `POST /api/auth/resend-verification`
+
+**Request**:
+```http
+POST /api/auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+**Response (200)**:
+```json
+{
+  "message": "Verification email sent successfully"
+}
+```
+
+**Swift 實作**:
+```swift
+func resendVerificationEmail(email: String) async throws {
+    let url = URL(string: "\(baseURL)/api/auth/resend-verification")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = ["email": email]
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    // 顯示成功訊息
+    showAlert(title: "驗證信已發送", message: "請檢查信箱 \(email)")
+}
+```
+
+#### Rate Limiting
+
+**重要**: 重新發送驗證信有速率限制
+
+- **限制**: 每小時最多 3 次
+- **超過限制**: HTTP 429 Too Many Requests
+
+**錯誤處理**:
+```swift
+catch APIError.tooManyRequests {
+    showAlert(
+        title: "發送次數過多",
+        message: "請稍後再試（1 小時內最多 3 次）"
+    )
+}
+```
+
+#### 如何檢查使用者是否已驗證？
+
+**方法 1: 登入時檢查（推薦）**
+```swift
+// 登入失敗時檢查錯誤訊息
+if error.message.contains("Email not verified") {
+    // 顯示重發驗證信選項
+}
+```
+
+**方法 2: 從 Token 解析（進階）**
+
+JWT Token 中包含使用者資訊，可以解析檢查：
+
+```swift
+// 解析 JWT Token (需要第三方庫如 JWTDecode)
+import JWTDecode
+
+func isEmailVerified(token: String) -> Bool {
+    do {
+        let jwt = try decode(jwt: token)
+        return jwt["email_verified"].boolean ?? false
+    } catch {
+        return false
+    }
+}
+```
+
+**注意**: JWT 解析為進階功能，一般情況下依賴登入 API 的錯誤回應即可。
+
+#### 完整註冊登入流程
+
+```
+1. 使用者註冊
+   ↓
+2. 後端發送驗證信
+   ↓
+3. App 顯示提示：「請至 {email} 驗證」
+   ↓
+4. 使用者點擊郵件連結 (在瀏覽器開啟)
+   ↓
+5. 瀏覽器顯示「驗證成功」
+   ↓
+6. 使用者回到 App，輸入帳密登入
+   ↓
+7. 登入成功 ✅
+```
+
+**如果使用者沒有收到信**:
+```
+1. 使用者點擊「重新發送驗證信」
+   ↓
+2. App 呼叫 POST /api/auth/resend-verification
+   ↓
+3. 顯示「驗證信已發送」
+   ↓
+4. 使用者檢查信箱（包含垃圾信件夾）
 ```
 
 ---

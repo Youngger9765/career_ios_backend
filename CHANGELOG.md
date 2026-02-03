@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Email Verification Documentation** (2026-02-03): Added comprehensive email verification guide to iOS documentation
+  - **New Section**: IOS_GUIDE_PARENTS.md Section 2.2.1 "Email 驗證機制"
+  - **Content**: Complete email verification flow, error handling (403), resend mechanism
+  - **API Reference**: Section 16.3.3 (verify-email), Section 16.3.4 (resend-verification)
+  - **Swift Examples**: Full implementation examples for error handling and resend
+  - **Console Page**: Added email verification and resend endpoints to test console
+  - **Impact**: iOS developers now have complete guide for handling email verification
+
 ### Changed
 - **App Config API - BREAKING CHANGE** (2026-02-03): Simplified from 8 fields to 3 essential URL fields
   - **Removed fields**: `help_url`, `forgot_password_url`, `base_url`, `version`, `maintenance_mode`
