@@ -131,6 +131,18 @@
   - Migration：所有現有用戶預設為儲值模式（向後兼容）
 
 ### 修復
+- **使用量追蹤錯誤修復** (2026-02-03)：修復 session 創建時未更新訂閱帳號的 monthly_minutes_used
+  - **根本原因**：Session 創建端點 (`POST /api/v1/sessions`) 有檢查使用量限制，但沒有累加使用量計數器
+  - **位置**：`app/api/sessions.py:116-122` - 在創建 session 前新增使用量追蹤
+  - **修復**：訂閱模式創建 session 時增加 `monthly_minutes_used`
+  - **邊界情況**：處理沒有 `duration_minutes` 的 session（選填欄位）- 只有提供時才追蹤
+  - **影響**：訂閱帳號現在正確追蹤 session 使用量；每月限制正常執行
+  - **測試覆蓋**：在 `tests/integration/test_usage_tracking_verification.py` 新增 2 個完整回歸測試
+    - `test_usage_tracking_complete_flow`：驗證累積追蹤（0 → 20 → 80 分鐘）
+    - `test_usage_limit_enforcement`：驗證 360 分鐘限制阻擋 session 創建（HTTP 429）
+  - **時區錯誤修復**：修復 session 編號的 naive/aware datetime 比較問題 (`app/services/core/session_service.py`)
+  - **測試結果**：全部 432 個整合測試通過，CI/CD 成功
+
 - **安全評估測試失敗** (2026-01-27)：修復 `test_safe_conversation_returns_green_level`
   - 根本原因：佔位的 `/messages` 端點未儲存逐字稿資料
   - 解決方案：測試現在直接設定 session 物件的 `transcript_text`

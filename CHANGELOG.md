@@ -20,6 +20,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Reason**: Eliminates redundant validation logic; prevents sync issues between backend and RevenueCat state
 
 ### Fixed
+- **Usage Tracking Bug Fix** (2026-02-03): Fixed session creation not updating monthly_minutes_used for subscription accounts
+  - **Root Cause**: Session creation endpoint (`POST /api/v1/sessions`) was checking usage limits but not incrementing the usage counter
+  - **Location**: `app/api/sessions.py:116-122` - Added usage tracking before creating session
+  - **Fix**: Increment `monthly_minutes_used` when creating sessions with subscription mode
+  - **Edge Case**: Handle sessions without `duration_minutes` (optional field) - only track when provided
+  - **Impact**: Subscription accounts now correctly track session usage; monthly limits properly enforced
+  - **Test Coverage**: Added 2 comprehensive regression tests in `tests/integration/test_usage_tracking_verification.py`
+    - `test_usage_tracking_complete_flow`: Verifies cumulative tracking (0 → 20 → 80 minutes)
+    - `test_usage_limit_enforcement`: Verifies 360-minute limit blocks session creation (HTTP 429)
+  - **Timezone Bug Fix**: Fixed naive/aware datetime comparison in session numbering (`app/services/core/session_service.py`)
+  - **Test Results**: All 432 integration tests pass, CI/CD successful
+
 - **Subscription Initialization Bug** (2026-02-03): Fixed new subscription accounts being rejected with "subscription expired" error
   - **Root Cause**: `usage_period_start` and `subscription_expires_at` were not initialized in `Counselor.__init__`
   - **Fix**: Added automatic initialization of both fields for new accounts

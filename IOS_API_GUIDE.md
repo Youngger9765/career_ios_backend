@@ -1863,6 +1863,13 @@ Authorization: Bearer {access_token}
 - 當 `is_limit_reached = true` 時，所有 AI 相關 API（片段分析、報告生成等）將返回 `HTTP 429 Too Many Requests`
 - iOS 端應監控 `usage_percentage`，在接近 100% 時提前警告用戶
 
+**📊 使用量追蹤說明:**
+- **追蹤時機**: 只有創建 session 時提供 `duration_minutes` 欄位，才會計入使用量
+- **累積計算**: 每次創建 session 時，`monthly_used_minutes` 會增加對應的 `duration_minutes`
+- **限制檢查**: 創建 session 前會檢查是否超過 `monthly_limit_minutes`（預設 360 分鐘）
+- **自動重置**: 使用週期（30 天）結束後，`monthly_used_minutes` 自動歸零
+- **注意事項**: 如果創建 session 時未提供 `duration_minutes`，該 session 不會計入使用量（適用於僅記錄逐字稿的情況）
+
 **Swift 範例:**
 ```swift
 struct UsageStatsResponse: Codable {
