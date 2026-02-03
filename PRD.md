@@ -24,6 +24,33 @@
 
 ## [Unreleased] - 開發中功能
 
+### 🔄 RevenueCat Integration: Backend Subscription Delegation (2026-02-03)
+**Status**: ✅ Complete | **Type**: Architecture Change
+
+**功能說明**: 移除後端訂閱到期檢查，將訂閱狀態管理完全委託給 RevenueCat
+
+**實作內容**:
+- ✅ 移除 `subscription_expires_at` 驗證邏輯（app/middleware/usage_limit.py）
+- ✅ 移除新帳號自動設定訂閱到期時間（app/models/counselor.py）
+- ✅ 保留 `subscription_expires_at` 欄位（向後相容）
+- ✅ 更新測試：`test_subscription_expired_allowed_by_revenuecat`
+- ✅ 所有 15 個 billing/usage 測試通過
+
+**架構變更**:
+- **Before**: Backend checks `subscription_expires_at` → 402 error if expired
+- **After**: Backend only checks monthly usage limit → RevenueCat manages validity on iOS
+- **Backend Role**: 僅管理使用量配額（monthly_limit_minutes = 360 分鐘）
+- **iOS Role**: RevenueCat SDK 驗證訂閱有效性，防止過期用戶使用
+
+**好處**:
+- 消除後端與 RevenueCat 狀態同步問題
+- 簡化訂閱邏輯，單一真實來源
+- 保持使用量追蹤功能
+
+**相關文件**:
+- 📝 CHANGELOG.md - 完整變更記錄
+- 🧪 tests/unit/test_usage_limit_middleware.py - 更新後的測試
+
 ### ✅ Issue #5: Multi-tenant App Config API (2026-01-31) - COMPLETED
 **Status**: ✅ Complete | **PR**: Merged to staging
 

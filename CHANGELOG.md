@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Subscription Management Delegation to RevenueCat** (2026-02-03): Removed backend subscription expiry validation to let RevenueCat handle subscription state
+  - **Removed**: `subscription_expires_at` validation in `app/middleware/usage_limit.py` (lines 40-58)
+  - **Removed**: `subscription_expires_at` initialization in `Counselor.__init__` (lines 111-113)
+  - **Kept**: `subscription_expires_at` field in model for backward compatibility
+  - **Architecture**: RevenueCat is now the single source of truth for subscription validity on iOS
+  - **Backend Role**: Only manages usage quotas (monthly_limit_minutes = 360 minutes)
+  - **Impact**: Subscription users can create sessions without backend expiry check; iOS client validates subscription via RevenueCat SDK
+  - **Reason**: Eliminates redundant validation logic; prevents sync issues between backend and RevenueCat state
+
 ### Fixed
 - **Subscription Initialization Bug** (2026-02-03): Fixed new subscription accounts being rejected with "subscription expired" error
   - **Root Cause**: `usage_period_start` and `subscription_expires_at` were not initialized in `Counselor.__init__`

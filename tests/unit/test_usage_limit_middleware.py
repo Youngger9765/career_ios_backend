@@ -119,16 +119,23 @@ class TestUsageLimitMiddleware:
             assert exc_info.value.detail["code"] == "MONTHLY_USAGE_LIMIT_EXCEEDED"
             assert "本月使用額度已用盡" in exc_info.value.detail["message"]
 
-    def test_subscription_expired_blocked(self, subscription_counselor_expired):
-        """Test subscription counselor with expired subscription is blocked."""
-        # Act & Assert
-        with pytest.raises(HTTPException) as exc_info:
+    def test_subscription_expired_allowed_by_revenuecat(self, subscription_counselor_expired):
+        """Test subscription counselor with expired subscription is allowed (RevenueCat manages validity).
+
+        Backend no longer checks subscription_expires_at. RevenueCat is the single source of truth
+        for subscription validity on iOS client side. Backend only enforces monthly usage limits.
+        """
+        # Mock UsageTracker
+        with patch("app.middleware.usage_limit.UsageTracker") as mock_tracker:
+            tracker_instance = mock_tracker.return_value
+            tracker_instance.is_limit_exceeded.return_value = False
+
+            # Act - should not raise (RevenueCat handles expiry)
             check_usage_limit(subscription_counselor_expired)
 
-        # Verify HTTP 402 Payment Required
-        assert exc_info.value.status_code == 402
-        assert exc_info.value.detail["code"] == "SUBSCRIPTION_EXPIRED"
-        assert "訂閱已過期" in exc_info.value.detail["message"]
+            # Assert tracker methods were called normally
+            tracker_instance.reset_if_period_expired.assert_called_once()
+            tracker_instance.is_limit_exceeded.assert_called_once()
 
     def test_subscription_auto_reset_period(self, subscription_counselor_period_expired):
         """Test subscription auto-resets usage when period expires."""

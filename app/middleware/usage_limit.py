@@ -1,6 +1,4 @@
 """Middleware for enforcing usage limits before session creation."""
-from datetime import datetime, timezone
-
 from fastapi import HTTPException
 
 from app.models.counselor import BillingMode, Counselor
@@ -15,12 +13,13 @@ def check_usage_limit(counselor: Counselor) -> None:
         counselor: Counselor model instance
 
     Raises:
-        HTTPException: 402 if insufficient credits or expired subscription
-        HTTPException: 429 if monthly usage limit exceeded
+        HTTPException: 402 if insufficient credits (prepaid mode)
+        HTTPException: 429 if monthly usage limit exceeded (subscription mode)
 
     Notes:
         - Prepaid mode: Check available_credits > 0
-        - Subscription mode: Check expiry, auto-reset period, check limit
+        - Subscription mode: Auto-reset period, check monthly limit
+          (RevenueCat manages subscription validity on iOS client side)
     """
     # Prepaid Mode: Check credits
     if counselor.billing_mode == BillingMode.PREPAID:
@@ -35,28 +34,8 @@ def check_usage_limit(counselor: Counselor) -> None:
             )
         return  # Allow if credits available
 
-    # Subscription Mode: Check expiry, period, and limit
+    # Subscription Mode: Check monthly limit only (RevenueCat manages subscription validity)
     if counselor.billing_mode == BillingMode.SUBSCRIPTION:
-        # Check if subscription expired
-        now_utc = datetime.now(timezone.utc)
-
-        # Handle both timezone-aware and naive datetimes (SQLite compatibility)
-        if counselor.subscription_expires_at and counselor.subscription_expires_at.tzinfo is None:
-            # Assume naive datetimes are UTC
-            expires_at = counselor.subscription_expires_at.replace(tzinfo=timezone.utc)
-        else:
-            expires_at = counselor.subscription_expires_at
-
-        if expires_at is None or expires_at < now_utc:
-            raise HTTPException(
-                status_code=402,
-                detail={
-                    "code": "SUBSCRIPTION_EXPIRED",
-                    "message": "訂閱已過期，請續訂後再試",
-                    "subscription_expires_at": counselor.subscription_expires_at,
-                },
-            )
-
         # Auto-reset usage period if expired
         tracker = UsageTracker()
         tracker.reset_if_period_expired(counselor)
