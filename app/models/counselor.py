@@ -97,7 +97,7 @@ class Counselor(Base, BaseModel):
 
     def __init__(self, **kwargs):
         """Initialize counselor with proper defaults"""
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta, timezone
 
         # Set Python-level defaults for fields that need them
         if 'billing_mode' not in kwargs:
