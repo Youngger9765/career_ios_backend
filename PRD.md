@@ -1,7 +1,7 @@
 # 職涯諮詢平台 PRD
 
-**Version**: 0.8.0
-**Last Updated**: 2026-02-03
+**Version**: 0.8.1
+**Last Updated**: 2026-02-04
 
 ## 系統概述
 
@@ -74,25 +74,23 @@
 - Environment-aware base_url
 - All tests passing ✅
 
-### ✅ Issue #6: WordPress Legal Pages (2026-01-31) - COMPLETED (3/5)
-**Status**: ✅ Pages Created & Deployed | ⏳ App Integration Pending
+### ✅ Issue #6: WordPress Legal Pages & Domain Setup - COMPLETED
+**Status**: ✅ Complete | **Date**: 2026-02-04
 
 **已完成**:
-- ✅ Step 1-3: HTML 頁面創建（Landing Page, Privacy Policy, Terms of Service）
-- ✅ 部署至 https://www.comma.study/
-  - Landing: https://www.comma.study/island_parents_landing/
-  - Privacy: https://www.comma.study/island_parents_privacy_policy/
-  - Terms: https://www.comma.study/island_parents_terms_of_service/
-- ✅ Elementor 可編輯格式（WordPress HTML 區塊）
-- ✅ 響應式設計（桌面/平板/手機）
+- ✅ Landing Page 部署至 comma.study (WordPress Elementor)
+- ✅ Privacy Policy & Terms of Service 頁面
+- ✅ 後端 Web 頁面 DNS/SSL 設定完成
+- ✅ `APP_URL` 環境變數已更新
+- ✅ App Config API 整合完成
 
-**待完成**:
-- ⏳ Step 4: App Config API 整合（需 iOS 串接）
-- ⏳ Step 5: iOS App 實作（WebView 顯示法律頁面）
+**URLs**:
+- Landing: https://www.comma.study/island_parents_landing/
+- Privacy: https://www.comma.study/island_parents_privacy_policy/
+- Terms: https://www.comma.study/island_parents_terms_of_service/
 
 **相關文件**:
-- 📁 `wordpress-legal-pages/` - 所有 HTML 檔案與使用說明
-- 📝 `wordpress-legal-pages/README.md` - 部署指南
+- 📁 `wordpress-legal-pages/` - HTML 檔案與使用說明
 
 ---
 

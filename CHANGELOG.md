@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Completed
+- **Domain & Deployment** (2026-02-04): All domain-related tasks completed
+  - Landing Page deployed to comma.study (WordPress)
+  - Backend Web pages DNS/SSL configured (forgot-password, reset-password, etc.)
+  - `APP_URL` environment variable updated to comma subdomain
+
 ### Changed
 - **Subscription Management Delegation to RevenueCat** (2026-02-03): Removed backend subscription expiry validation to let RevenueCat handle subscription state
   - **Removed**: `subscription_expires_at` validation in `app/middleware/usage_limit.py` (lines 40-58)
