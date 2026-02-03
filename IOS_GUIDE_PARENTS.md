@@ -60,12 +60,7 @@ GET /api/v1/app/config/island_parents
 {
   "terms_url": "https://www.comma.study/island_parents_terms_of_service/",
   "privacy_url": "https://www.comma.study/island_parents_privacy_policy/",
-  "landing_page_url": "https://www.comma.study/island_parents_landing/",
-  "help_url": "https://duodian.com/career/help",
-  "forgot_password_url": "https://duodian.com/career/forgot-password",
-  "base_url": "https://career-app-api-staging-xxxx.run.app",
-  "version": "1.0.0",
-  "maintenance_mode": false
+  "landing_page_url": "https://www.comma.study/island_parents_landing/"
 }
 ```
 
@@ -76,11 +71,6 @@ GET /api/v1/app/config/island_parents
 | `terms_url` | 服務條款頁面 | 顯示在 WebView |
 | `privacy_url` | 隱私權政策頁面 | 顯示在 WebView |
 | `landing_page_url` | Landing Page | 官網導向 |
-| `help_url` | 幫助頁面 | 顯示在 WebView |
-| `forgot_password_url` | 忘記密碼頁面 | 顯示在 WebView |
-| `base_url` | API Base URL | API 請求根路徑 |
-| `version` | 配置版本號 | 版本檢查 |
-| `maintenance_mode` | 維護模式開關 | 顯示維護畫面 |
 
 ### Swift 實作範例
 
@@ -89,20 +79,11 @@ struct AppConfig: Codable {
     let termsUrl: String
     let privacyUrl: String
     let landingPageUrl: String
-    let helpUrl: String
-    let forgotPasswordUrl: String
-    let baseUrl: String
-    let version: String
-    let maintenanceMode: Bool
 
     enum CodingKeys: String, CodingKey {
         case termsUrl = "terms_url"
         case privacyUrl = "privacy_url"
         case landingPageUrl = "landing_page_url"
-        case helpUrl = "help_url"
-        case forgotPasswordUrl = "forgot_password_url"
-        case baseUrl = "base_url"
-        case version, maintenanceMode = "maintenance_mode"
     }
 }
 
@@ -116,20 +97,20 @@ func fetchAppConfig() async throws -> AppConfig {
 // 儲存在本地
 UserDefaults.standard.set(config.termsUrl, forKey: "termsUrl")
 UserDefaults.standard.set(config.privacyUrl, forKey: "privacyUrl")
+UserDefaults.standard.set(config.landingPageUrl, forKey: "landingPageUrl")
 ```
 
 ### 使用時機
 
 1. **App 啟動時** - 獲取最新配置並儲存
 2. **法律頁面** - 使用 `terms_url`/`privacy_url` 顯示在 WebView
-3. **維護模式** - 檢查 `maintenance_mode` 決定是否顯示維護畫面
-4. **版本檢查** - 比對 `version` 判斷是否需要更新配置
+3. **行銷頁面** - 使用 `landing_page_url` 顯示產品介紹
 
 ### 優點
 
 - ✅ **無需發版更新** - URL 變更只需修改後端配置
 - ✅ **支援 A/B Testing** - 可測試不同 URL
-- ✅ **快速維護切換** - 緊急維護時可即時開啟
+- ✅ **簡潔高效** - 只返回必要的 3 個 URL 欄位
 
 ---
 
@@ -1899,6 +1880,1105 @@ func showLegalLinks() {
 - **API 文檔**: `/docs` (Swagger UI)
 - **問題回報**: GitHub Issues
 - **Staging 環境**: https://career-app-api-staging-978304030758.us-central1.run.app
+
+---
+
+## 16. 完整 iOS API 參考
+
+### 16.1 Base URL 配置
+
+```swift
+struct APIConfig {
+    // Staging 環境
+    static let stagingBaseURL = "https://career-app-api-staging-978304030758.us-central1.run.app"
+
+    // Production 環境（待確認）
+    static let productionBaseURL = "https://career-app-api-prod-kxaznpplqq-uc.a.run.app"
+
+    // 當前環境
+    static let baseURL = stagingBaseURL
+}
+```
+
+---
+
+### 16.2 認證 Header 設定
+
+所有需要認證的 API 都必須在 Header 加上 JWT Token：
+
+```swift
+func createAuthRequest(url: URL) -> URLRequest {
+    var request = URLRequest(url: url)
+    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    return request
+}
+```
+
+---
+
+### 16.3 認證 APIs
+
+#### 16.3.1 註冊 (POST)
+
+```swift
+// Endpoint
+POST /api/auth/register
+
+// Request Model
+struct RegisterRequest: Codable {
+    let email: String
+    let password: String
+    let tenantId: String = "island_parents"
+
+    enum CodingKeys: String, CodingKey {
+        case email, password
+        case tenantId = "tenant_id"
+    }
+}
+
+// Response Model
+struct AuthResponse: Codable {
+    let accessToken: String
+    let tokenType: String
+    let expiresIn: Int
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case tokenType = "token_type"
+        case expiresIn = "expires_in"
+    }
+}
+
+// API Call
+func register(email: String, password: String) async throws -> AuthResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/auth/register")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = RegisterRequest(
+        email: email,
+        password: password,
+        tenantId: "island_parents"
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 201 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(AuthResponse.self, from: data)
+}
+```
+
+#### 16.3.2 登入 (POST)
+
+```swift
+// Endpoint
+POST /api/auth/login
+
+// Request Model (與註冊相同)
+struct LoginRequest: Codable {
+    let email: String
+    let password: String
+    let tenantId: String = "island_parents"
+
+    enum CodingKeys: String, CodingKey {
+        case email, password
+        case tenantId = "tenant_id"
+    }
+}
+
+// Response Model (與註冊相同)
+// 使用 AuthResponse
+
+// API Call
+func login(email: String, password: String) async throws -> AuthResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/auth/login")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = LoginRequest(
+        email: email,
+        password: password,
+        tenantId: "island_parents"
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(AuthResponse.self, from: data)
+}
+```
+
+#### 16.3.3 Email 驗證 (POST)
+
+```swift
+// Endpoint
+POST /api/auth/verify-email
+
+// Request Model
+struct VerifyEmailRequest: Codable {
+    let token: String
+}
+
+// Response Model
+struct VerifyEmailResponse: Codable {
+    let message: String
+}
+
+// API Call
+func verifyEmail(token: String) async throws -> VerifyEmailResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/auth/verify-email")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = VerifyEmailRequest(token: token)
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(VerifyEmailResponse.self, from: data)
+}
+```
+
+#### 16.3.4 重發驗證信 (POST)
+
+```swift
+// Endpoint
+POST /api/auth/resend-verification
+
+// Request Model
+struct ResendVerificationRequest: Codable {
+    let email: String
+}
+
+// Response Model
+struct ResendVerificationResponse: Codable {
+    let message: String
+}
+
+// API Call
+func resendVerificationEmail(email: String) async throws -> ResendVerificationResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/auth/resend-verification")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = ResendVerificationRequest(email: email)
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(ResendVerificationResponse.self, from: data)
+}
+```
+
+---
+
+### 16.4 App 配置 APIs
+
+#### 16.4.1 取得 App 配置 (GET)
+
+```swift
+// Endpoint
+GET /api/v1/app/config/island_parents
+
+// Response Model
+struct AppConfig: Codable {
+    let termsUrl: String
+    let privacyUrl: String
+    let landingPageUrl: String
+
+    enum CodingKeys: String, CodingKey {
+        case termsUrl = "terms_url"
+        case privacyUrl = "privacy_url"
+        case landingPageUrl = "landing_page_url"
+    }
+}
+
+// API Call (無需認證)
+func fetchAppConfig() async throws -> AppConfig {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/app/config/island_parents")!
+    let (data, _) = try await URLSession.shared.data(from: url)
+    return try JSONDecoder().decode(AppConfig.self, from: data)
+}
+```
+
+---
+
+### 16.5 孩子與案例 APIs
+
+#### 16.5.1 創建孩子與案例 (POST)
+
+```swift
+// Endpoint
+POST /api/v1/ui/client-case
+
+// Request Model
+struct ClientCaseCreateRequest: Codable {
+    let name: String
+    let grade: String
+    let relationship: String
+}
+
+// Response Model
+struct ClientCaseCreateResponse: Codable {
+    let clientId: String
+    let clientCode: String
+    let clientName: String
+    let clientEmail: String?
+    let caseId: String
+    let caseNumber: String
+    let caseStatus: Int
+    let createdAt: String
+    let message: String
+
+    enum CodingKeys: String, CodingKey {
+        case clientId = "client_id"
+        case clientCode = "client_code"
+        case clientName = "client_name"
+        case clientEmail = "client_email"
+        case caseId = "case_id"
+        case caseNumber = "case_number"
+        case caseStatus = "case_status"
+        case createdAt = "created_at"
+        case message
+    }
+}
+
+// API Call
+func createClientCase(
+    name: String,
+    grade: String,
+    relationship: String
+) async throws -> ClientCaseCreateResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/ui/client-case")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "POST"
+
+    let body = ClientCaseCreateRequest(
+        name: name,
+        grade: grade,
+        relationship: relationship
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 201 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(ClientCaseCreateResponse.self, from: data)
+}
+```
+
+#### 16.5.2 列出所有孩子 (GET)
+
+```swift
+// Endpoint
+GET /api/v1/ui/client-case-list?skip=0&limit=20
+
+// Response Model
+struct ClientCaseListItem: Codable {
+    let clientId: String
+    let caseId: String
+    let clientName: String
+    let clientCode: String
+    let caseNumber: String
+    let caseStatus: Int
+    let caseStatusLabel: String
+    let totalSessions: Int
+    let lastSessionDate: String?
+    let caseCreatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case clientId = "client_id"
+        case caseId = "case_id"
+        case clientName = "client_name"
+        case clientCode = "client_code"
+        case caseNumber = "case_number"
+        case caseStatus = "case_status"
+        case caseStatusLabel = "case_status_label"
+        case totalSessions = "total_sessions"
+        case lastSessionDate = "last_session_date"
+        case caseCreatedAt = "case_created_at"
+    }
+}
+
+struct ClientCaseListResponse: Codable {
+    let total: Int
+    let skip: Int
+    let limit: Int
+    let items: [ClientCaseListItem]
+}
+
+// API Call
+func listClientCases(skip: Int = 0, limit: Int = 20) async throws -> ClientCaseListResponse {
+    var components = URLComponents(string: "\(APIConfig.baseURL)/api/v1/ui/client-case-list")!
+    components.queryItems = [
+        URLQueryItem(name: "skip", value: "\(skip)"),
+        URLQueryItem(name: "limit", value: "\(limit)")
+    ]
+
+    var request = createAuthRequest(url: components.url!)
+    request.httpMethod = "GET"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(ClientCaseListResponse.self, from: data)
+}
+```
+
+---
+
+### 16.6 Session APIs
+
+#### 16.6.1 建立 Session (POST)
+
+```swift
+// Endpoint
+POST /api/v1/sessions
+
+// Request Model
+struct CreateSessionRequest: Codable {
+    let caseId: String
+    let sessionMode: String?
+    let scenario: String?
+    let scenarioDescription: String?
+
+    enum CodingKeys: String, CodingKey {
+        case caseId = "case_id"
+        case sessionMode = "session_mode"
+        case scenario
+        case scenarioDescription = "scenario_description"
+    }
+}
+
+// Response Model
+struct SessionResponse: Codable {
+    let id: String
+    let clientId: String
+    let caseId: String
+    let sessionMode: String?
+    let scenario: String?
+    let scenarioDescription: String?
+    let status: String
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case clientId = "client_id"
+        case caseId = "case_id"
+        case sessionMode = "session_mode"
+        case scenario
+        case scenarioDescription = "scenario_description"
+        case status
+        case createdAt = "created_at"
+    }
+}
+
+// API Call
+func createSession(
+    caseId: String,
+    sessionMode: String? = "practice",
+    scenario: String? = nil,
+    scenarioDescription: String? = nil
+) async throws -> SessionResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "POST"
+
+    let body = CreateSessionRequest(
+        caseId: caseId,
+        sessionMode: sessionMode,
+        scenario: scenario,
+        scenarioDescription: scenarioDescription
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 201 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(SessionResponse.self, from: data)
+}
+```
+
+#### 16.6.2 取得 Session (GET)
+
+```swift
+// Endpoint
+GET /api/v1/sessions/{session_id}
+
+// Response Model (與 POST 建立 Session 相同)
+// 使用 SessionResponse
+
+// API Call
+func getSession(sessionId: String) async throws -> SessionResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "GET"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(SessionResponse.self, from: data)
+}
+```
+
+#### 16.6.3 列出 Sessions (GET)
+
+```swift
+// Endpoint
+GET /api/v1/sessions?client_id={id}&session_mode={mode}&skip=0&limit=20
+
+// Response Model
+struct SessionListResponse: Codable {
+    let total: Int
+    let items: [SessionListItem]
+}
+
+struct SessionListItem: Codable {
+    let id: String
+    let clientId: String
+    let clientName: String
+    let caseId: String
+    let sessionNumber: Int
+    let sessionMode: String?
+    let scenario: String?
+    let scenarioDescription: String?
+    let hasReport: Bool
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case clientId = "client_id"
+        case clientName = "client_name"
+        case caseId = "case_id"
+        case sessionNumber = "session_number"
+        case sessionMode = "session_mode"
+        case scenario
+        case scenarioDescription = "scenario_description"
+        case hasReport = "has_report"
+        case createdAt = "created_at"
+    }
+}
+
+// API Call
+func listSessions(
+    clientId: String? = nil,
+    sessionMode: String? = nil,
+    skip: Int = 0,
+    limit: Int = 20
+) async throws -> SessionListResponse {
+    var components = URLComponents(string: "\(APIConfig.baseURL)/api/v1/sessions")!
+    var queryItems: [URLQueryItem] = [
+        URLQueryItem(name: "skip", value: "\(skip)"),
+        URLQueryItem(name: "limit", value: "\(limit)")
+    ]
+
+    if let clientId = clientId {
+        queryItems.append(URLQueryItem(name: "client_id", value: clientId))
+    }
+
+    if let sessionMode = sessionMode {
+        queryItems.append(URLQueryItem(name: "session_mode", value: sessionMode))
+    }
+
+    components.queryItems = queryItems
+
+    var request = createAuthRequest(url: components.url!)
+    request.httpMethod = "GET"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(SessionListResponse.self, from: data)
+}
+```
+
+#### 16.6.4 上傳逐字稿片段 (POST)
+
+```swift
+// Endpoint
+POST /api/v1/sessions/{session_id}/recordings/append
+
+// Request Model
+struct AppendRecordingRequest: Codable {
+    let transcriptSegment: String
+    let startTime: String  // ISO 8601 格式
+    let endTime: String    // ISO 8601 格式
+
+    enum CodingKeys: String, CodingKey {
+        case transcriptSegment = "transcript_segment"
+        case startTime = "start_time"
+        case endTime = "end_time"
+    }
+}
+
+// Response Model
+struct AppendRecordingResponse: Codable {
+    let success: Bool
+    let sessionId: String
+    let totalDurationSeconds: Double
+    let transcriptLength: Int
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case sessionId = "session_id"
+        case totalDurationSeconds = "total_duration_seconds"
+        case transcriptLength = "transcript_length"
+    }
+}
+
+// API Call
+func appendRecording(
+    sessionId: String,
+    transcript: String,
+    startTime: Date,
+    endTime: Date
+) async throws -> AppendRecordingResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)/recordings/append")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "POST"
+
+    let body = AppendRecordingRequest(
+        transcriptSegment: transcript,
+        startTime: startTime.ISO8601Format(),
+        endTime: endTime.ISO8601Format()
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(AppendRecordingResponse.self, from: data)
+}
+```
+
+---
+
+### 16.7 AI 分析 APIs
+
+#### 16.7.1 Quick Feedback (POST)
+
+```swift
+// Endpoint
+POST /api/v1/sessions/{session_id}/quick-feedback?session_mode=practice
+
+// 無需 Request Body
+
+// Response Model
+struct QuickFeedbackResponse: Codable {
+    let message: String      // 強制 ≤15 字
+    let type: String
+    let timestamp: String
+    let latencyMs: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case message, type, timestamp
+        case latencyMs = "latency_ms"
+    }
+}
+
+// API Call
+func getQuickFeedback(
+    sessionId: String,
+    sessionMode: String = "practice"
+) async throws -> QuickFeedbackResponse {
+    var components = URLComponents(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)/quick-feedback")!
+    components.queryItems = [
+        URLQueryItem(name: "session_mode", value: sessionMode)
+    ]
+
+    var request = createAuthRequest(url: components.url!)
+    request.httpMethod = "POST"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(QuickFeedbackResponse.self, from: data)
+}
+```
+
+#### 16.7.2 Deep Analyze (POST)
+
+```swift
+// Endpoint
+POST /api/v1/sessions/{session_id}/deep-analyze
+
+// 無需 Request Body
+
+// Response Model
+struct DeepAnalyzeResponse: Codable {
+    let safetyLevel: String  // "green", "yellow", "red"
+    let summary: String
+    let alerts: [String]     // 注意：是字串陣列
+    let suggestions: [String] // 注意：是字串陣列
+    let timeRange: String
+    let timestamp: String
+
+    enum CodingKeys: String, CodingKey {
+        case safetyLevel = "safety_level"
+        case summary, alerts, suggestions
+        case timeRange = "time_range"
+        case timestamp
+    }
+}
+
+// API Call
+func deepAnalyze(sessionId: String) async throws -> DeepAnalyzeResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)/deep-analyze")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "POST"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(DeepAnalyzeResponse.self, from: data)
+}
+```
+
+#### 16.7.3 Emotion Analysis (POST)
+
+```swift
+// Endpoint
+POST /api/v1/sessions/{session_id}/emotion-feedback
+
+// Request Model
+struct EmotionFeedbackRequest: Codable {
+    let context: String
+    let target: String
+}
+
+// Response Model
+struct EmotionFeedbackResponse: Codable {
+    let level: Int    // 1-3
+    let hint: String  // 強制 ≤17 字
+}
+
+// API Call
+func analyzeEmotion(
+    sessionId: String,
+    context: String,
+    target: String
+) async throws -> EmotionFeedbackResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)/emotion-feedback")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "POST"
+    request.timeoutInterval = 10.0  // 10 秒 timeout
+
+    let body = EmotionFeedbackRequest(
+        context: context,
+        target: target
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(EmotionFeedbackResponse.self, from: data)
+}
+```
+
+#### 16.7.4 生成報告 (POST)
+
+```swift
+// Endpoint
+POST /api/v1/sessions/{session_id}/report
+
+// 無需 Request Body
+
+// Response Model
+struct ReportResponse: Codable {
+    let encouragement: String  // 強制 ≤15 字
+    let issue: String
+    let analyze: String
+    let suggestion: String
+    let references: [ReportReference]
+    let timestamp: String
+}
+
+struct ReportReference: Codable {
+    let title: String
+    let content: String
+    let source: String?
+    let theory: String?
+}
+
+// API Call
+func generateReport(sessionId: String) async throws -> ReportResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)/report")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "POST"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(ReportResponse.self, from: data)
+}
+```
+
+#### 16.7.5 取得報告 (GET)
+
+```swift
+// Endpoint
+GET /api/v1/sessions/{session_id}/report
+
+// Response Model (與 POST 生成報告相同)
+// 使用 ReportResponse
+
+// API Call
+func getReport(sessionId: String) async throws -> ReportResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)/report")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "GET"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(ReportResponse.self, from: data)
+}
+```
+
+---
+
+### 16.8 錯誤處理
+
+#### 16.8.1 通用錯誤 Model
+
+```swift
+enum APIError: Error {
+    case invalidResponse
+    case httpError(statusCode: Int, message: String)
+    case decodingError(Error)
+    case networkError(Error)
+    case unauthorized
+    case notFound
+    case serverError
+}
+
+struct ErrorResponse: Codable {
+    let type: String?
+    let title: String?
+    let status: Int?
+    let detail: String
+    let instance: String?
+}
+
+// 通用錯誤處理
+func handleAPIError(data: Data?, response: URLResponse?, error: Error?) throws {
+    if let error = error {
+        throw APIError.networkError(error)
+    }
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw APIError.invalidResponse
+    }
+
+    switch httpResponse.statusCode {
+    case 200...299:
+        return  // 成功
+    case 401:
+        throw APIError.unauthorized
+    case 404:
+        throw APIError.notFound
+    case 500...599:
+        throw APIError.serverError
+    default:
+        if let data = data,
+           let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+            throw APIError.httpError(
+                statusCode: httpResponse.statusCode,
+                message: errorResponse.detail
+            )
+        } else {
+            throw APIError.invalidResponse
+        }
+    }
+}
+```
+
+#### 16.8.2 錯誤顯示範例
+
+```swift
+func displayError(_ error: Error) {
+    var message = "發生錯誤"
+
+    if let apiError = error as? APIError {
+        switch apiError {
+        case .unauthorized:
+            message = "登入已過期，請重新登入"
+            // 跳轉到登入頁面
+        case .notFound:
+            message = "找不到資源"
+        case .serverError:
+            message = "伺服器錯誤，請稍後再試"
+        case .httpError(_, let detail):
+            message = detail
+        case .networkError:
+            message = "網路連線錯誤"
+        case .decodingError:
+            message = "資料格式錯誤"
+        case .invalidResponse:
+            message = "無效的回應"
+        }
+    }
+
+    // 顯示錯誤訊息
+    let alert = UIAlertController(
+        title: "錯誤",
+        message: message,
+        preferredStyle: .alert
+    )
+    alert.addAction(UIAlertAction(title: "確定", style: .default))
+    present(alert, animated: true)
+}
+```
+
+---
+
+### 16.9 完整使用範例
+
+#### 16.9.1 完整註冊登入流程
+
+```swift
+class AuthService {
+    private let baseURL = APIConfig.baseURL
+    private var accessToken: String?
+
+    // 註冊
+    func register(email: String, password: String) async throws {
+        let response = try await register(email: email, password: password)
+
+        // 儲存 Token
+        saveToken(response.accessToken)
+        self.accessToken = response.accessToken
+    }
+
+    // 登入
+    func login(email: String, password: String) async throws {
+        let response = try await login(email: email, password: password)
+
+        // 儲存 Token
+        saveToken(response.accessToken)
+        self.accessToken = response.accessToken
+    }
+
+    // 儲存 Token 到 Keychain
+    private func saveToken(_ token: String) {
+        let data = token.data(using: .utf8)!
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "accessToken",
+            kSecValueData as String: data
+        ]
+
+        SecItemDelete(query as CFDictionary)
+        SecItemAdd(query as CFDictionary, nil)
+    }
+
+    // 讀取 Token
+    func loadToken() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "accessToken",
+            kSecReturnData as String: true
+        ]
+
+        var result: AnyObject?
+        SecItemCopyMatching(query as CFDictionary, &result)
+
+        if let data = result as? Data {
+            return String(data: data, encoding: .utf8)
+        }
+        return nil
+    }
+}
+```
+
+#### 16.9.2 完整 Session 流程
+
+```swift
+class SessionService {
+    private let baseURL = APIConfig.baseURL
+    private var currentSessionId: String?
+
+    // 1. 創建孩子與案例
+    func setupClient(
+        name: String,
+        grade: String,
+        relationship: String
+    ) async throws -> String {
+        let response = try await createClientCase(
+            name: name,
+            grade: grade,
+            relationship: relationship
+        )
+
+        // 儲存 case_id
+        UserDefaults.standard.set(response.caseId, forKey: "currentCaseId")
+
+        return response.caseId
+    }
+
+    // 2. 開始新的會談
+    func startSession(
+        caseId: String,
+        scenario: String,
+        description: String
+    ) async throws -> String {
+        let response = try await createSession(
+            caseId: caseId,
+            sessionMode: "practice",
+            scenario: scenario,
+            scenarioDescription: description
+        )
+
+        currentSessionId = response.id
+        return response.id
+    }
+
+    // 3. 上傳逐字稿（每 10-15 秒呼叫）
+    func uploadTranscript(_ text: String) async throws {
+        guard let sessionId = currentSessionId else {
+            throw APIError.invalidResponse
+        }
+
+        _ = try await appendRecording(
+            sessionId: sessionId,
+            transcript: text,
+            startTime: Date(),
+            endTime: Date()
+        )
+    }
+
+    // 4. 取得即時回饋（每 15 秒呼叫）
+    func getRealtimeFeedback() async throws -> String {
+        guard let sessionId = currentSessionId else {
+            throw APIError.invalidResponse
+        }
+
+        let response = try await getQuickFeedback(
+            sessionId: sessionId,
+            sessionMode: "practice"
+        )
+
+        return response.message  // ≤15 字
+    }
+
+    // 5. 深度分析（動態間隔）
+    func performDeepAnalysis() async throws -> DeepAnalyzeResponse {
+        guard let sessionId = currentSessionId else {
+            throw APIError.invalidResponse
+        }
+
+        return try await deepAnalyze(sessionId: sessionId)
+    }
+
+    // 6. 結束會談並生成報告
+    func finishSession() async throws -> ReportResponse {
+        guard let sessionId = currentSessionId else {
+            throw APIError.invalidResponse
+        }
+
+        let report = try await generateReport(sessionId: sessionId)
+
+        currentSessionId = nil
+        return report
+    }
+}
+```
+
+---
+
+### 16.10 測試用帳號
+
+Staging 環境測試帳號：
+
+```swift
+// Island Parents 測試帳號
+let testEmail = "counselor@island.com"
+let testPassword = "password123"
+
+// 登入測試
+Task {
+    do {
+        let authService = AuthService()
+        try await authService.login(
+            email: testEmail,
+            password: testPassword
+        )
+        print("登入成功")
+    } catch {
+        print("登入失敗: \(error)")
+    }
+}
+```
 
 ---
 

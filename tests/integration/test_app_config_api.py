@@ -12,15 +12,20 @@ def test_get_app_config_island_parents_success():
     assert response.status_code == 200
     data = response.json()
 
-    # Verify all required fields exist
+    # Verify ONLY 3 required fields exist
     assert "terms_url" in data
     assert "privacy_url" in data
     assert "landing_page_url" in data
-    assert "help_url" in data
-    assert "forgot_password_url" in data
-    assert "base_url" in data
-    assert "version" in data
-    assert "maintenance_mode" in data
+
+    # Verify removed fields are NOT present
+    assert "help_url" not in data
+    assert "forgot_password_url" not in data
+    assert "base_url" not in data
+    assert "version" not in data
+    assert "maintenance_mode" not in data
+
+    # Verify exactly 3 fields returned
+    assert len(data) == 3
 
     # Verify Island Parents URLs
     assert "comma.study/island_parents" in data["terms_url"]
@@ -46,7 +51,7 @@ def test_app_config_no_auth_required():
 
     assert response.status_code == 200
     data = response.json()
-    assert "version" in data
+    assert "terms_url" in data
 
 
 def test_get_app_config_returns_env_values():
@@ -57,19 +62,15 @@ def test_get_app_config_returns_env_values():
     assert response.status_code == 200
     data = response.json()
 
-    # Should have default values from settings
-    assert data["version"] == "1.0.0"
-    assert data["maintenance_mode"] is False
-
-    # Verify field types
+    # Verify field types (only 3 fields now)
     assert isinstance(data["terms_url"], str)
     assert isinstance(data["privacy_url"], str)
     assert isinstance(data["landing_page_url"], str)
-    assert isinstance(data["help_url"], str)
-    assert isinstance(data["forgot_password_url"], str)
-    assert isinstance(data["base_url"], str)
-    assert isinstance(data["version"], str)
-    assert isinstance(data["maintenance_mode"], bool)
+
+    # Verify all fields are non-empty
+    assert len(data["terms_url"]) > 0
+    assert len(data["privacy_url"]) > 0
+    assert len(data["landing_page_url"]) > 0
 
 
 def test_get_app_config_career_tenant_success():
@@ -80,15 +81,20 @@ def test_get_app_config_career_tenant_success():
     assert response.status_code == 200
     data = response.json()
 
-    # Verify all required fields exist
+    # Verify ONLY 3 required fields exist
     assert "terms_url" in data
     assert "privacy_url" in data
     assert "landing_page_url" in data
-    assert "help_url" in data
-    assert "forgot_password_url" in data
-    assert "base_url" in data
-    assert "version" in data
-    assert "maintenance_mode" in data
+
+    # Verify removed fields are NOT present
+    assert "help_url" not in data
+    assert "forgot_password_url" not in data
+    assert "base_url" not in data
+    assert "version" not in data
+    assert "maintenance_mode" not in data
+
+    # Verify exactly 3 fields returned
+    assert len(data) == 3
 
     # Verify Career tenant has proper URLs
     assert isinstance(data["terms_url"], str)

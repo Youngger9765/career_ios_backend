@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **App Config API - BREAKING CHANGE** (2026-02-03): Simplified from 8 fields to 3 essential URL fields
+  - **Removed fields**: `help_url`, `forgot_password_url`, `base_url`, `version`, `maintenance_mode`
+  - **Kept fields**: `terms_url`, `privacy_url`, `landing_page_url`
+  - **Reason**: iOS client only needs these 3 URLs; other fields unused
+  - **Impact**: iOS client MUST update `AppConfig` struct before consuming this API
+  - **Migration**: Remove 5 fields from Swift model, keep only 3 fields
+  - **Endpoint**: `GET /api/v1/app/config/{tenant}` (island_parents, career)
+  - **Tests**: All 5 integration tests pass, explicitly verify removed fields absent
+
 - **CI/CD Pipeline - Automatic Database Migrations for Staging** (2026-02-01): Staging deployments now automatically execute database migrations
   - Pipeline runs `alembic upgrade head` before deploying to Cloud Run
   - Uses `DATABASE_URL` (connection pooler) for IPv4 compatibility with GitHub Actions
