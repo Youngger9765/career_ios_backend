@@ -23,7 +23,7 @@ from app.core.exceptions import (
 from app.middleware.usage_limit import check_usage_limit
 from app.models.case import Case
 from app.models.client import Client
-from app.models.counselor import Counselor, BillingMode
+from app.models.counselor import BillingMode, Counselor
 from app.models.report import Report
 from app.models.session import Session
 from app.repositories.session_repository import SessionRepository
