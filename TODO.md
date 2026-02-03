@@ -12,7 +12,6 @@
   - [ ] 設計 Landing Page（可用 frontend-design-workflow）
   - [ ] 建立 Terms & Privacy 頁面
   - [ ] 部署到逗點子網域
-  - [ ] 請 Allen 更新 iOS App 中的連結
   - 參考：Line 118-146 (網域與信任感 + Landing Page 建立)
 
 ### 基礎設施
@@ -27,38 +26,6 @@
     - 更新環境變數（DATABASE_URL, DB_POOL_SIZE 等）
   - 參考：Line 150-161 (Production 資料庫獨立)
 
-### iOS 整合
-- [ ] **iOS 團隊確認 Deeplink 整合** 🔴 待 iOS 團隊測試
-  - [ ] 在 Info.plist 註冊 `islandparent://` URL scheme
-  - [ ] 實作 AppDelegate deeplink handler (`islandparent://auth/forgot-password-done`)
-  - [ ] 使用 SFSafariViewController 開啟忘記密碼頁面
-  - [ ] 傳入 email 參數：`?source=app&mail={email}`
-  - [ ] 測試完整流程：App → 忘記密碼網頁 → 重設密碼 → Deeplink 返回 App
-  - **後端已完成**：deeplink URL、網頁邏輯、文件更新
-  - **參考文件**：`IOS_GUIDE_PARENTS.md` (已更新 313 行)
-
----
-
-## 🚨 緊急 - Production 上線驗證
-
-### Emotion-Feedback API Production 驗證
-- [ ] **Production 上線前驗證** 🔴 待 Allen 測試確認
-  - [ ] Allen 使用 App 實測 emotion-feedback
-  - [ ] 確認空 context 首次呼叫成功
-  - [ ] 確認第二次呼叫（有 context）成功
-  - [ ] 驗證完成後才可推送至 Production
-
-**測試帳號** (已 seed):
-- Island Parents: `counselor@island.com` / `password123`
-- Career: `counselor@career.com` / `password123`
-
-**測試步驟**:
-1. 登入 console.html 或 App
-2. 建立新 session
-3. 呼叫 `/api/v1/sessions/{session_id}/emotion-feedback`
-4. 第一次呼叫使用 `context=""` (空字串) - 應成功 (不應 422)
-5. 檢查 response 包含 `level`, `hint`, `token_usage` - 應成功 (不應 500)
-
 ---
 
 ## 高優先級 - 訂閱註冊與付費流程 (Paywall / IAP)
@@ -68,16 +35,6 @@
 **所有項目已完成** ✅ (2026-01-30 ~ 2026-02-03)
 
 ---
-
-### Base URL 統一（AllenLee 回報 2026-01-29）
-- [ ] iOS 端 base URL 需更新（Allen 負責）
-  - 舊：`https://career-app-api-staging-kxaznpplqq-uc.a.run.app`
-  - 新：`https://career-app-api-staging-978304030758.us-central1.run.app`
-  - Production 也要確認：`career-app-api-prod-kxaznpplqq-uc.a.run.app` → 待確認新 URL
-- [ ] 後端文件 base URL 更新（IOS_GUIDE_PARENTS.md 等）
-  - `IOS_GUIDE_PARENTS.md` 中多處引用需確認一致
-  - 舊 weekly reports 仍引用舊 URL（已過期，不需改）
-- [ ] 確認兩個 URL 是否都還能用（Cloud Run 可能兩個都有效）
 
 ### 使用量軟性上限（防濫用機制）
 - [ ] **設定每月使用量 Soft Cap** 🔴 待規格確認
@@ -106,21 +63,11 @@
   - 🔴 依賴：網域設定完成
 
 ### Landing Page 建立
-- [ ] 設計 Landing Page 內容與版型
-  - 🔴 阻塞原因：需要設計/行銷決策（內容、風格、品牌形象）
-  - 建議：可以先用 frontend-design-workflow 生成設計提案
-- [ ] 建立 Landing Page 模板（HTML/CSS）
-  - 🟡 半阻塞：設計完成後可立即執行
-- [ ] 整合到後端路由（如 `/` 或 `/landing`）
-  - 🟡 半阻塞：設計完成後可立即執行
-- [ ] 確保響應式設計（支援手機/桌面）
-  - 🟡 半阻塞：設計完成後可立即執行
-- [ ] 加入 App 下載連結（App Store）
-  - 🟡 半阻塞：需要 App Store 連結
-- [ ] 測試 Landing Page 在不同裝置上的顯示
-  - 🟡 半阻塞：實作完成後可立即執行
-- [ ] 部署並測試網域連線
-  - 🔴 依賴：網域設定完成
+✅ **已完成** (2026-02-03)
+- Landing Page 已建立並部署到 comma.study
+- WordPress Elementor 格式，PM 可自行編輯
+- 響應式設計（手機/平板/桌面）
+- 參考：PRD.md「法律頁面」章節
 
 ## 高優先級 - 資料庫基礎設施
 
