@@ -319,10 +319,18 @@ class SessionService:
         session_number = 1
         needs_renumbering = False
 
+        # Ensure new_datetime is timezone-aware
+        if new_datetime.tzinfo is None:
+            new_datetime = new_datetime.replace(tzinfo=timezone.utc)
+
         for existing in existing_sessions:
             existing_time = (
                 existing.start_time if existing.start_time else existing.session_date
             )
+            # Ensure existing_time is timezone-aware for comparison
+            if existing_time.tzinfo is None:
+                existing_time = existing_time.replace(tzinfo=timezone.utc)
+
             if new_datetime > existing_time:
                 session_number += 1
             else:

@@ -63,7 +63,7 @@ class TestRealtimeModeSwitching:
             email="mode-switch-test@test.com",
             username="modeswitchcounselor",
             full_name="Mode Switch Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -134,7 +134,7 @@ class TestRealtimeModeSwitching:
                 "/api/auth/login",
                 json={
                     "email": "mode-switch-test@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )
@@ -328,7 +328,7 @@ class TestRiskLevelIndicators:
             email="risk-level-test@test.com",
             username="risklevelcounselor",
             full_name="Risk Level Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -399,7 +399,7 @@ class TestRiskLevelIndicators:
                 "/api/auth/login",
                 json={
                     "email": "risk-level-test@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )
@@ -635,7 +635,7 @@ class TestSchemaValidation:
             email="schema-test@test.com",
             username="schemacounselor",
             full_name="Schema Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -706,7 +706,7 @@ class TestSchemaValidation:
                 "/api/auth/login",
                 json={
                     "email": "schema-test@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )
@@ -946,7 +946,7 @@ class TestModeSwitchingWithRiskLevel:
             email="combined-test@test.com",
             username="combinedcounselor",
             full_name="Combined Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -1017,7 +1017,7 @@ class TestModeSwitchingWithRiskLevel:
                 "/api/auth/login",
                 json={
                     "email": "combined-test@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )

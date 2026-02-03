@@ -9,7 +9,187 @@
 
 ## [未發布]
 
+### 新增
+- **多步驟密碼重設頁面與 Deeplink 支援** (2026-02-01)：為 iOS in-app browser 優化的忘記密碼頁面
+  - 4 步驟單頁流程：輸入 Email → 驗證碼 → 新密碼 → 成功
+  - 進度指示器（1/4、2/4、3/4、4/4）
+  - 偵測到 `source=app` 參數時自動 deeplink 跳轉回 App
+  - 失敗機制：App 未開啟時返回網頁登入
+  - Deeplink 協定：`islandparent://auth/forgot-password-done`
+  - 同時支援 iOS in-app browser 和網頁瀏覽器使用
+  - **實作內容**：`app/templates/forgot_password.html`（完全重寫）
+  - **測試**：3 個新增整合測試於 `tests/integration/test_password_reset_flows.py`
+  - **優點**：無縫 iOS App 整合、提升使用者體驗、單頁便利性
+
+- **密碼重設驗證碼系統** (2026-02-01)：增強安全性的 6 位數驗證碼
+  - 6 位數驗證碼（取代 64 字元 URL token）
+  - 10 分鐘驗證碼過期（相較於 6 小時 token 過期）
+  - 5 次失敗驗證後鎖定帳戶（15 分鐘鎖定）
+  - 選用的預驗證端點，可在密碼表單前先檢查驗證碼
+  - 依租戶客製化 Email 樣板
+  - 完整的端對端測試覆蓋（請求 → 驗證 → 確認 → 登入）
+  - **API 端點**：
+    - `POST /api/v1/auth/password-reset/request`（更新為生成驗證碼）
+    - `POST /api/v1/auth/password-reset/verify-code`（新增）
+    - `POST /api/v1/auth/password-reset/confirm`（更新為接受驗證碼）
+  - **實作內容**：`app/api/v1/password_reset.py`、`app/models/password_reset.py`
+  - **測試**：7 個整合測試於 `tests/integration/test_password_reset_verification.py`
+  - **文檔**：完整 API 指南於 `docs/api/password-reset-verification-code.md`
+  - **優點**：行動友善、減少摩擦、透過鎖定機制提升安全性
+
+- **App 配置 API** (2026-01-31)：為 iOS 客戶端提供動態 URL 管理
+  - 多租戶支援（`island_parents`、`career`）
+  - 公開端點 `GET /api/v1/app/config/{tenant}`
+  - 返回動態 URLs：服務條款、隱私權政策、Landing Page、幫助、忘記密碼
+  - 環境感知的 base_url 配置
+  - 版本追蹤與維護模式支援
+  - 無需認證（公開端點）
+  - 無效租戶返回 404 回應
+  - **實作內容**：`app/api/app_config.py`、`app/schemas/app_config.py`
+  - **測試**：完整的單元測試與整合測試覆蓋
+  - **文檔**：已加入 `IOS_API_GUIDE.md` 和 `IOS_GUIDE_PARENTS.md`
+  - **優點**：無需發版即可更新 URL、支援 A/B 測試、即時切換維護模式
+
+- **WordPress 法律頁面** (2026-01-31)：為 Island Parents 提供 Elementor 可編輯的 HTML 頁面
+  - **Landing Page**：產品介紹與功能展示
+    - 部署網址：https://www.comma.study/island_parents_landing/
+    - 重點：即時 AI 回饋、安全評估、教養指導
+  - **隱私權政策**：符合 GDPR/台灣個資法的隱私權政策
+    - 部署網址：https://www.comma.study/island_parents_privacy_policy/
+    - 7 個章節：資料收集、使用、第三方服務、安全、兒童隱私
+  - **服務條款**：完整的服務條款
+    - 部署網址：https://www.comma.study/island_parents_terms_of_service/
+    - 10 個章節：服務說明、使用規範、退款政策、免責聲明
+  - **技術特色**：
+    - 響應式設計（桌面/平板/手機）
+    - 可直接貼上 WordPress Elementor HTML 區塊
+    - PM 可更新內容無需重新部署 API
+    - 乾淨專業的樣式，符合 Island Parents 品牌形象
+  - **位置**：`wordpress-legal-pages/` 目錄
+  - **文檔**：`wordpress-legal-pages/README.md`
+
+- **計費模式支援與每月使用量限制** (2026-01-31)：為儲值與訂閱用戶提供彈性付費模式
+  - 計費模式支援（儲值/訂閱）提供彈性付費模式
+  - 訂閱用戶每月使用上限（360 分鐘/月）
+  - 使用量統計 API 端點（`GET /api/v1/usage/stats`）
+  - 滾動 30 天使用週期與自動重置
+  - 訂閱超限時返回 HTTP 429 錯誤
+  - 向後兼容：所有現有用戶預設為儲值模式
+
+- **API 回應加入郵件驗證狀態** (2026-01-31)：強化認證端點以包含郵件驗證狀態資訊
+  - **註冊回應**：新增 `email_verified`、`verification_email_sent` 和 `message` 欄位
+  - **登入回應**：現在回傳包含 `email_verified` 欄位的 `user` 物件
+  - **郵件驗證檢查**：啟用郵件驗證時，未驗證用戶無法登入（HTTP 403）
+  - **資料庫結構**：Counselor 模型新增 `email_verified` 布林欄位
+  - **驗證郵件端點**：同時設定 `is_active` 和 `email_verified` 為 true
+  - **測試環境**：測試環境預設停用郵件驗證（透過 autouse fixture）
+  - **實作內容**：
+    - 修改：`app/api/auth.py`、`app/schemas/auth.py`、`app/models/counselor.py`
+    - 修改：`tests/integration/conftest.py`、`tests/integration/test_auth_api.py`、`tests/integration/test_email_verification.py`
+    - 新增：`tests/integration/test_issue_4_email_verification_status.py`（4 個完整測試）
+    - 測試覆蓋：37/37 認證測試通過
+
+- **服務條款與隱私權政策頁面** (2026-01-27)：符合 RevenueCat/App Store 審核要求的法律頁面
+  - 路由：`/island-parents/terms` - 包含 10 個完整章節的服務條款
+  - 路由：`/island-parents/privacy` - 符合 GDPR/台灣個資法的隱私權政策
+  - 共用模板系統（`legal_base.html`）搭配固定目錄導航
+  - 響應式設計：桌面版側邊欄目錄 + 手機版可折疊下拉選單
+  - 平滑捲動導航與當前章節高亮（Intersection Observer）
+  - 內容涵蓋：服務說明、使用者權利、資料處理、GDPR 合規、退款政策
+  - 已準備好整合 RevenueCat Paywall（App Store 審核要求）
+  - PM 可隨時更新文案（僅需編輯 HTML 模板，無需重新部署）
+
+- **改進 analyze-partial 的 OpenAPI 文檔** (2026-01-26)：增強 Swagger UI 體驗
+  - 新增詳盡的摘要與說明，解釋多租戶行為差異
+  - 新增 3 個回應範例（island_parents_green、island_parents_red、career_analysis）
+  - 記載所有回應代碼（200/401/404/500）並附上清楚說明
+  - 包含功能亮點（非阻塞、背景任務、RAG、token 追蹤）
+  - 改善 iOS/前端團隊使用 `/docs` 的開發體驗
+
+### 變更
+- **CI/CD Pipeline - Staging 環境自動執行資料庫 Migration** (2026-02-01)：Staging 部署現在會自動執行資料庫 migration
+  - Pipeline 在部署到 Cloud Run 之前執行 `alembic upgrade head`
+  - 使用 `DATABASE_URL`（連線池）以確保與 GitHub Actions 的 IPv4 相容性
+  - 確保資料庫 schema 與部署的程式碼版本相符
+  - Production migrations 仍需手動執行以確保安全（需要人工審核）
+  - **影響**：加快部署週期，防止 schema/程式碼不匹配錯誤
+  - **位置**：`.github/workflows/ci.yml`（僅 staging job）
+
+- **Session 創建時檢查使用限制** (2026-01-31)：Session 創建時根據計費模式檢查使用限制
+  - Counselor 模型擴充計費模式與使用追踪欄位
+  - 儲值用戶：credits <= 0 時阻擋
+  - 訂閱用戶：超過每月限制或訂閱過期時阻擋
+  - 30 天後自動重置使用週期
+
+### 資料庫
+- **計費模式與使用追踪結構** (2026-01-31)：擴充 counselors 表以支援彈性計費
+  - 新增 `billing_mode` 枚舉欄位至 counselors 表（prepaid/subscription）
+  - 新增訂閱使用追踪欄位：
+    - `monthly_usage_limit_minutes`（預設：360）
+    - `monthly_minutes_used`（預設：0）
+    - `usage_period_start`（滾動 30 天週期）
+  - Migration：所有現有用戶預設為儲值模式（向後兼容）
+
 ### 修復
+- **使用量追蹤錯誤修復** (2026-02-03)：修復 session 創建時未更新訂閱帳號的 monthly_minutes_used
+  - **根本原因**：Session 創建端點 (`POST /api/v1/sessions`) 有檢查使用量限制，但沒有累加使用量計數器
+  - **位置**：`app/api/sessions.py:116-122` - 在創建 session 前新增使用量追蹤
+  - **修復**：訂閱模式創建 session 時增加 `monthly_minutes_used`
+  - **邊界情況**：處理沒有 `duration_minutes` 的 session（選填欄位）- 只有提供時才追蹤
+  - **影響**：訂閱帳號現在正確追蹤 session 使用量；每月限制正常執行
+  - **測試覆蓋**：在 `tests/integration/test_usage_tracking_verification.py` 新增 2 個完整回歸測試
+    - `test_usage_tracking_complete_flow`：驗證累積追蹤（0 → 20 → 80 分鐘）
+    - `test_usage_limit_enforcement`：驗證 360 分鐘限制阻擋 session 創建（HTTP 429）
+  - **時區錯誤修復**：修復 session 編號的 naive/aware datetime 比較問題 (`app/services/core/session_service.py`)
+  - **測試結果**：全部 432 個整合測試通過，CI/CD 成功
+
+- **安全評估測試失敗** (2026-01-27)：修復 `test_safe_conversation_returns_green_level`
+  - 根本原因：佔位的 `/messages` 端點未儲存逐字稿資料
+  - 解決方案：測試現在直接設定 session 物件的 `transcript_text`
+  - 更新測試斷言以符合 `RealtimeAnalyzeResponse` schema（summary/alerts/suggestions）
+  - 測試在 CI/CD pipeline 中穩定通過（修復前連續失敗 5 次）
+  - 記錄限制：`/api/v1/sessions/{id}/messages` 端點為佔位（訊息儲存尚未實作）
+
+- **移除重複的 deep-analyze 端點** (2026-01-26)：修復 23 個失敗測試
+  - 移除 `sessions.py` 中過時的 TDD stub 端點（回傳硬編碼回應）
+  - `session_analysis.py` 中的正式實作現在處理所有 deep-analyze 請求
+  - 根本原因：重複端點優先註冊，遮蔽了真正的實作
+  - 測試現在正確接收完整分析結果的 `RealtimeAnalyzeResponse`
+  - 影響：所有 E2E workflow、session analysis 和 RAG 整合測試現已通過
+
+### 已棄用
+- **Deep Analysis API - TDD GREEN 階段** (2026-01-26)：已被 session_analysis.py 取代
+  - ~~新增 POST /sessions/{id}/deep-analyze 端點（佔位，硬編碼安全狀態）~~
+  - ~~DeepAnalysisResponse schema 包含 safety_level/display_text/quick_suggestion~~
+  - 此為 TDD stub，已被完整實作取代
+
+- **Emotion feedback API 日誌記錄** (2026-01-25)：資料庫與 BigQuery 日誌，用於成本追蹤與分析
+  - 追蹤 token 使用量（prompt/completion tokens + 成本）
+  - 記錄分析結果至 SessionAnalysisLog（PostgreSQL）
+  - 背景任務上傳至 BigQuery
+  - 遵循與 quick/deep feedback APIs 相同模式
+
+- **IOS_GUIDE_PARENTS.md v1.10** (2026-01-25)：完整的 Client & Case 管理文檔
+  - 新增 Section 2.6 完整 client-case API 文檔
+  - 包含 Swift 實作範例與錯誤處理
+  - 新增 session 建立流程的前置條件警告
+  - 更新 API 端點總覽（Section 12.3）強調 Island Parents UI APIs
+  - 文檔完整度從 92% 提升至 ~98%
+
+- **Island Parents 交付檢查清單** (2026-01-25)：`docs/weekly/ISLAND_PARENTS_DELIVERY_CHECKLIST.md`
+  - iOS 團隊交接的全面交付總覽
+  - 完整 API 規格與 Request/Response 範例
+  - 使用 staging 環境實際測試資料的驗證結果
+  - iOS 團隊驗證的快速測試指南
+  - 聯絡資訊與需要 PM 決策的待辦事項
+
+### 修復
+- **IOS_GUIDE_PARENTS.md 中的 Staging URLs** (2026-01-25)
+  - 更新 3 個過時的 staging URLs 為當前格式
+  - 舊：`career-app-api-staging-kxaznpplqq-uc.a.run.app`
+  - 新：`career-app-api-staging-978304030758.us-central1.run.app`
+  - 影響章節：2.6（Client-Case API）、11（忘記密碼 Web 流程）
+
 - **ElevenLabs Token API 文檔錯誤** (2026-01-12)
   - 修正 IOS_API_GUIDE.md 中的端點路徑：`/api/v1/realtime/elevenlabs-token` → `/api/v1/transcript/elevenlabs-token`
   - 在 IOS_GUIDE_PARENTS.md 新增 Section 6 完整 API 文檔

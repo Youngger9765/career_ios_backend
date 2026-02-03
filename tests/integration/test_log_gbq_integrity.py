@@ -41,7 +41,7 @@ class TestLogAndGBQIntegrity:
             email=f"integrity-test-{uuid4().hex[:8]}@test.com",
             username=f"integritycounselor{uuid4().hex[:6]}",
             full_name="Integrity Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -55,7 +55,7 @@ class TestLogAndGBQIntegrity:
                 "/api/auth/login",
                 json={
                     "email": counselor.email,
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )

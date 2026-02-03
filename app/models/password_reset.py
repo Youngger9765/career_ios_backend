@@ -3,7 +3,7 @@ Password Reset Token Model
 """
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 
 from app.core.database import Base
 from app.models.base import BaseModel
@@ -25,6 +25,12 @@ class PasswordResetToken(Base, BaseModel):
     expires_at = Column(DateTime(timezone=True), nullable=False)
     used = Column(Boolean, default=False, nullable=False)
     used_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Verification code fields (new system)
+    verification_code = Column(String(6), index=True, nullable=True)
+    verify_attempts = Column(Integer, default=0, nullable=False)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
+    code_expires_at = Column(DateTime(timezone=True), nullable=True)
 
     # IP tracking (optional, for security audit)
     request_ip = Column(String, nullable=True)

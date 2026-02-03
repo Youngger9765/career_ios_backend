@@ -1,6 +1,14 @@
 import enum
 
-from sqlalchemy import Boolean, Column, DateTime, Float, String, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
@@ -12,6 +20,12 @@ class CounselorRole(str, enum.Enum):
     COUNSELOR = "counselor"
     SUPERVISOR = "supervisor"
     ADMIN = "admin"
+
+
+class BillingMode(str, enum.Enum):
+    """Billing mode for counselor"""
+    PREPAID = "prepaid"
+    SUBSCRIPTION = "subscription"
 
 
 class Counselor(Base, BaseModel):
@@ -38,6 +52,7 @@ class Counselor(Base, BaseModel):
 
     # Status & metadata
     is_active = Column(Boolean, default=True)
+    email_verified = Column(Boolean, default=False, nullable=False, comment="Email verification status")
     last_login = Column(DateTime(timezone=True))
 
     # Credit system fields (universal payment mechanism)
@@ -51,6 +66,50 @@ class Counselor(Base, BaseModel):
     subscription_expires_at = Column(
         DateTime(timezone=True), nullable=True, comment="Subscription expiry date"
     )
+
+    # Billing mode (prepaid vs subscription)
+    billing_mode: Column[BillingMode] = Column(
+        SQLEnum(BillingMode, values_callable=lambda x: [e.value for e in x]),
+        server_default="subscription",
+        nullable=False,
+        index=True,
+        comment="Billing mode: prepaid (credit-based) or subscription (time-limited)"
+    )
+
+    # Subscription-specific usage tracking fields
+    monthly_usage_limit_minutes = Column(
+        Integer,
+        default=360,
+        nullable=True,
+        comment="Monthly usage limit in minutes (subscription mode only), 6 hours = 360 min"
+    )
+    monthly_minutes_used = Column(
+        Integer,
+        default=0,
+        nullable=True,
+        comment="Minutes used in current billing period (subscription mode only)"
+    )
+    usage_period_start = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Start of current 30-day usage period (subscription mode only)"
+    )
+
+    def __init__(self, **kwargs):
+        """Initialize counselor with proper defaults"""
+        from datetime import datetime, timezone
+
+        # Set Python-level defaults for fields that need them
+        if 'billing_mode' not in kwargs:
+            kwargs['billing_mode'] = BillingMode.SUBSCRIPTION.value  # Use .value for SQLAlchemy
+        if 'monthly_usage_limit_minutes' not in kwargs:
+            kwargs['monthly_usage_limit_minutes'] = 360
+        if 'monthly_minutes_used' not in kwargs:
+            kwargs['monthly_minutes_used'] = 0
+        if 'usage_period_start' not in kwargs:
+            kwargs['usage_period_start'] = datetime.now(timezone.utc)
+
+        super().__init__(**kwargs)
 
     # Relationships
     cases = relationship("Case", back_populates="counselor")

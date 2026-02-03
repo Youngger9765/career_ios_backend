@@ -174,7 +174,7 @@ class TestE2ESessionWorkflow:
             email="e2e-workflow-test@test.com",
             username="e2eworkflowtester",
             full_name="E2E Workflow Tester",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -242,7 +242,7 @@ class TestE2ESessionWorkflow:
                 "/api/auth/login",
                 json={
                     "email": "e2e-workflow-test@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )

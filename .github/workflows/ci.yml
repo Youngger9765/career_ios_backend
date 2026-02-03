@@ -114,6 +114,25 @@ jobs:
       run: |
         docker push us-central1-docker.pkg.dev/groovy-iris-473015-h3/career-app/app:${{ github.sha }}
 
+    - name: Set up Python for migrations
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Run Database Migrations (Staging)
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        echo "🔄 Running database migrations for staging environment..."
+        poetry install --only main
+        poetry run alembic upgrade head
+        echo "✅ Migrations completed successfully"
+
     - name: Deploy to Cloud Run
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}

@@ -36,7 +36,7 @@ class TestReportsAPI:
             email="counselor-reports@test.com",
             username="reportscounselor",
             full_name="Reports Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -49,7 +49,7 @@ class TestReportsAPI:
                 "/api/auth/login",
                 json={
                     "email": "counselor-reports@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )

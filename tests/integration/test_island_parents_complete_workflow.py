@@ -48,7 +48,7 @@ class TestIslandParentsCompleteWorkflow:
             email=f"parent-{uuid4().hex[:8]}@example.com",
             username=f"parent{uuid4().hex[:6]}",
             full_name="Test Parent User",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -68,7 +68,7 @@ class TestIslandParentsCompleteWorkflow:
                 "/api/auth/login",
                 json={
                     "email": island_parents_counselor.email,
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )

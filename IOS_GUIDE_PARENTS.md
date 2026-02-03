@@ -38,11 +38,93 @@ Island Parents 是一款 **AI 親子教養助手**，幫助家長在與孩子互
 
 ---
 
+## 1.5. App 配置 API (動態 URL 管理)
+
+### 1.5.1 取得 App 配置
+
+**端點:** `GET /api/v1/app/config/island_parents`
+
+**認證:** 🔓 無需認證（公開端點）
+
+**用途:** App 啟動時獲取最新的 URLs，無需硬編碼
+
+### Request
+
+```http
+GET /api/v1/app/config/island_parents
+```
+
+### Response 200 OK
+
+```json
+{
+  "terms_url": "https://www.comma.study/island_parents_terms_of_service/",
+  "privacy_url": "https://www.comma.study/island_parents_privacy_policy/",
+  "landing_page_url": "https://www.comma.study/island_parents_landing/"
+}
+```
+
+### 欄位說明
+
+| 欄位 | 說明 | 使用時機 |
+|------|------|---------|
+| `terms_url` | 服務條款頁面 | 顯示在 WebView |
+| `privacy_url` | 隱私權政策頁面 | 顯示在 WebView |
+| `landing_page_url` | Landing Page | 官網導向 |
+
+### Swift 實作範例
+
+```swift
+struct AppConfig: Codable {
+    let termsUrl: String
+    let privacyUrl: String
+    let landingPageUrl: String
+
+    enum CodingKeys: String, CodingKey {
+        case termsUrl = "terms_url"
+        case privacyUrl = "privacy_url"
+        case landingPageUrl = "landing_page_url"
+    }
+}
+
+// App 啟動時呼叫
+func fetchAppConfig() async throws -> AppConfig {
+    let url = URL(string: "https://your-api.com/api/v1/app/config/island_parents")!
+    let (data, _) = try await URLSession.shared.data(from: url)
+    return try JSONDecoder().decode(AppConfig.self, from: data)
+}
+
+// 儲存在本地
+UserDefaults.standard.set(config.termsUrl, forKey: "termsUrl")
+UserDefaults.standard.set(config.privacyUrl, forKey: "privacyUrl")
+UserDefaults.standard.set(config.landingPageUrl, forKey: "landingPageUrl")
+```
+
+### 使用時機
+
+1. **App 啟動時** - 獲取最新配置並儲存
+2. **法律頁面** - 使用 `terms_url`/`privacy_url` 顯示在 WebView
+3. **行銷頁面** - 使用 `landing_page_url` 顯示產品介紹
+
+### 優點
+
+- ✅ **無需發版更新** - URL 變更只需修改後端配置
+- ✅ **支援 A/B Testing** - 可測試不同 URL
+- ✅ **簡潔高效** - 只返回必要的 3 個 URL 欄位
+
+---
+
 ## 2. 認證系統
 
 ### 2.1 註冊 (Register)
 
 **⚠️ 最新版本：已簡化為只需 Email + Password**
+
+**🔔 重要提醒**：
+- 註冊後會自動發送 **Email 驗證信**
+- 使用者必須點擊郵件中的驗證連結
+- **未驗證的帳號無法登入**（會回傳 403 錯誤）
+- 詳見 [Section 2.2.1 Email 驗證機制](#221-email-驗證機制-)
 
 ```http
 POST /api/auth/register
@@ -56,7 +138,7 @@ Content-Type: application/json
 ```
 
 **必填欄位**：
-- `email`: 使用者 Email（唯一識別）
+- `email`: 使用者 Email（唯一識別，**必須是有效信箱**）
 - `password`: 密碼（最少 8 個字元）
 - `tenant_id`: **固定值** `"island_parents"`（浮島親子專用）
 
@@ -94,6 +176,11 @@ struct RegisterRequest: Codable {
 
 ### 2.2 登入 (Login)
 
+**🔔 重要提醒**：
+- 如果 Email 尚未驗證，登入會失敗（HTTP 403）
+- 請引導使用者重新發送驗證信
+- 詳見 [Section 2.2.1 Email 驗證機制](#221-email-驗證機制-)
+
 ```http
 POST /api/auth/login
 Content-Type: application/json
@@ -108,6 +195,7 @@ Content-Type: application/json
 **⚠️ 注意**：
 - 使用 `email` 而非 `username`
 - 必須傳入 `tenant_id: "island_parents"`
+- **Email 必須已驗證**才能登入成功
 
 **Response (200):**
 ```json
@@ -134,21 +222,221 @@ struct LoginRequest: Codable {
 
 ---
 
-### 2.3 忘記密碼（Web 流程）
+### 2.2.1 Email 驗證機制 ⚠️
 
-**⚠️ iOS 開發重點：使用 SFSafariViewController 開啟 Web 頁面處理**
+**重要**: 註冊後必須驗證 Email 才能登入！
+
+#### 註冊流程說明
+
+1. **使用者註冊**
+   ```swift
+   POST /api/auth/register
+   // 回傳 access_token，但帳號狀態為「未驗證」
+   ```
+
+2. **系統自動發送驗證信**
+   - Email 包含驗證連結
+   - 連結格式：`https://.../api/auth/verify-email?token=xxx`
+   - 有效期限：24 小時
+
+3. **使用者點擊驗證連結**
+   - 瀏覽器開啟驗證頁面
+   - 後端標記帳號為「已驗證」
+
+4. **帳號啟用完成**
+   - 使用者可以正常登入
+
+#### 登入時的驗證檢查
+
+**如果 Email 未驗證，登入會失敗**：
+
+```http
+POST /api/auth/login
+// 回傳 403 Forbidden
+```
+
+**Error Response (403)**:
+```json
+{
+  "detail": "Email not verified. Please check your inbox."
+}
+```
+
+**iOS 錯誤處理範例**:
+```swift
+func login(email: String, password: String) async throws {
+    do {
+        let response = try await apiClient.login(email: email, password: password)
+        // 登入成功，儲存 token
+        saveToken(response.accessToken)
+    } catch APIError.forbidden(let message) {
+        // Email 未驗證
+        if message.contains("Email not verified") {
+            showEmailVerificationAlert(email: email)
+        }
+    }
+}
+
+func showEmailVerificationAlert(email: String) {
+    let alert = UIAlertController(
+        title: "Email 尚未驗證",
+        message: "請至信箱 \(email) 點擊驗證連結，或重新發送驗證信。",
+        preferredStyle: .alert
+    )
+
+    alert.addAction(UIAlertAction(title: "重新發送", style: .default) { _ in
+        Task {
+            try? await self.resendVerificationEmail(email: email)
+        }
+    })
+
+    alert.addAction(UIAlertAction(title: "確定", style: .cancel))
+
+    present(alert, animated: true)
+}
+```
+
+#### 重新發送驗證信 API
+
+**端點**: `POST /api/auth/resend-verification`
+
+**Request**:
+```http
+POST /api/auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+**Response (200)**:
+```json
+{
+  "message": "Verification email sent successfully"
+}
+```
+
+**Swift 實作**:
+```swift
+func resendVerificationEmail(email: String) async throws {
+    let url = URL(string: "\(baseURL)/api/auth/resend-verification")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = ["email": email]
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    // 顯示成功訊息
+    showAlert(title: "驗證信已發送", message: "請檢查信箱 \(email)")
+}
+```
+
+#### Rate Limiting
+
+**重要**: 重新發送驗證信有速率限制
+
+- **限制**: 每小時最多 3 次
+- **超過限制**: HTTP 429 Too Many Requests
+
+**錯誤處理**:
+```swift
+catch APIError.tooManyRequests {
+    showAlert(
+        title: "發送次數過多",
+        message: "請稍後再試（1 小時內最多 3 次）"
+    )
+}
+```
+
+#### 如何檢查使用者是否已驗證？
+
+**方法 1: 登入時檢查（推薦）**
+```swift
+// 登入失敗時檢查錯誤訊息
+if error.message.contains("Email not verified") {
+    // 顯示重發驗證信選項
+}
+```
+
+**方法 2: 從 Token 解析（進階）**
+
+JWT Token 中包含使用者資訊，可以解析檢查：
+
+```swift
+// 解析 JWT Token (需要第三方庫如 JWTDecode)
+import JWTDecode
+
+func isEmailVerified(token: String) -> Bool {
+    do {
+        let jwt = try decode(jwt: token)
+        return jwt["email_verified"].boolean ?? false
+    } catch {
+        return false
+    }
+}
+```
+
+**注意**: JWT 解析為進階功能，一般情況下依賴登入 API 的錯誤回應即可。
+
+#### 完整註冊登入流程
+
+```
+1. 使用者註冊
+   ↓
+2. 後端發送驗證信
+   ↓
+3. App 顯示提示：「請至 {email} 驗證」
+   ↓
+4. 使用者點擊郵件連結 (在瀏覽器開啟)
+   ↓
+5. 瀏覽器顯示「驗證成功」
+   ↓
+6. 使用者回到 App，輸入帳密登入
+   ↓
+7. 登入成功 ✅
+```
+
+**如果使用者沒有收到信**:
+```
+1. 使用者點擊「重新發送驗證信」
+   ↓
+2. App 呼叫 POST /api/auth/resend-verification
+   ↓
+3. 顯示「驗證信已發送」
+   ↓
+4. 使用者檢查信箱（包含垃圾信件夾）
+```
+
+---
+
+### 2.3 忘記密碼（4 步驟驗證碼流程）
+
+**⚠️ iOS 開發重點：使用 SFSafariViewController 開啟 Web 頁面處理，成功後自動 Deeplink 返回 App**
 
 #### 2.3.1 忘記密碼頁面 URL
 
 **Staging 環境**：
 ```
-https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/forgot-password
+https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/forgot-password?source=app&mail={user_email}
 ```
 
 **Production 環境**：
 ```
-https://[production-url]/island-parents/forgot-password
+https://[production-url]/island-parents/forgot-password?source=app&mail={user_email}
 ```
+
+**URL 參數說明**：
+- `source=app` - 必須，觸發自動 Deeplink 返回 App
+- `mail={email}` - 選填，預填使用者 Email
 
 **iOS 實作**：
 ```swift
@@ -157,12 +445,17 @@ import SafariServices
 class LoginViewController: UIViewController {
 
     @IBAction func forgotPasswordTapped(_ sender: UIButton) {
-        openForgotPasswordPage()
+        guard let email = emailTextField.text, !email.isEmpty else {
+            showError("請輸入 Email")
+            return
+        }
+        openForgotPasswordPage(email: email)
     }
 
-    func openForgotPasswordPage() {
+    func openForgotPasswordPage(email: String) {
         let baseURL = "https://career-app-api-staging-978304030758.us-central1.run.app"
-        let urlString = "\(baseURL)/island-parents/forgot-password"
+        let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let urlString = "\(baseURL)/island-parents/forgot-password?source=app&mail=\(encodedEmail)"
 
         guard let url = URL(string: urlString) else {
             print("Invalid URL")
@@ -178,7 +471,7 @@ class LoginViewController: UIViewController {
 }
 ```
 
-#### 2.3.2 完整 Web 流程（給 PM 參考）
+#### 2.3.2 完整 4 步驟驗證碼流程（給 PM 參考）
 
 ```mermaid
 sequenceDiagram
@@ -188,85 +481,227 @@ sequenceDiagram
     participant Backend as Backend API
     participant Email as Email 服務
 
-    Note over User,Email: 第一階段：請求重設密碼
+    Note over User,Email: Step 1: 輸入 Email
 
-    User->>iOS: 1. 點擊「忘記密碼？」
-    iOS->>Safari: 2. 開啟 /island-parents/forgot-password
-    Safari-->>User: 3. 顯示忘記密碼頁面
-    User->>Safari: 4. 輸入 Email → 點擊「發送重置郵件」
+    User->>iOS: 1. 點擊「忘記密碼？」並輸入 Email
+    iOS->>Safari: 2. 開啟 /island-parents/forgot-password?source=app&mail=xxx
+    Safari-->>User: 3. 顯示 Step 1 頁面（Email 已預填）
+
+    Note over User,Email: Step 2: 發送驗證碼
+
+    User->>Safari: 4. 點擊「發送驗證碼」
     Safari->>Backend: 5. POST /api/v1/auth/password-reset/request
-    Backend->>Backend: 6. 生成重設 Token（6 小時有效）
-    Backend->>Email: 7. 寄送重設密碼郵件
+    Backend->>Backend: 6. 生成 6 位數驗證碼（15 分鐘有效）
+    Backend->>Email: 7. 寄送驗證碼郵件
     Backend-->>Safari: 8. 回傳成功訊息
-    Safari-->>User: 9. 顯示「✅ 重置郵件已發送」
-    User->>Safari: 10. 關閉 Safari（返回 App）
+    Safari-->>User: 9. 自動跳轉到 Step 2（輸入驗證碼）
 
-    Note over User,Email: 第二階段：重設密碼
+    Note over User,Email: Step 3: 驗證碼輸入
 
-    User->>Email: 11. 打開郵件 App，收到重設郵件
-    User->>Email: 12. 點擊郵件中的重設連結
-    Email->>Safari: 13. 開啟 /island-parents/reset-password?token=xxx
-    Safari-->>User: 14. 顯示重設密碼頁面
-    User->>Safari: 15. 輸入新密碼 → 點擊「重設密碼」
-    Safari->>Backend: 16. POST /api/v1/auth/password-reset/confirm
-    Backend->>Backend: 17. 驗證 Token → 更新密碼
-    Backend-->>Safari: 18. 回傳成功訊息
-    Safari-->>User: 19. 顯示「✅ 密碼已成功重置」
-    Safari-->>User: 20. 點擊「返回登入」按鈕
-    User->>Safari: 21. 關閉 Safari（返回 App）
+    User->>Email: 10. 查看郵件，複製 6 位數驗證碼
+    User->>Safari: 11. 回到 Safari，輸入驗證碼
+    Safari->>Backend: 12. POST /api/v1/auth/password-reset/verify-code
+    Backend->>Backend: 13. 驗證碼檢查
+    Backend-->>Safari: 14. 驗證成功
+    Safari-->>User: 15. 自動跳轉到 Step 3（設定新密碼）
 
-    Note over User,iOS: 第三階段：用新密碼登入
+    Note over User,Email: Step 4: 設定新密碼
 
-    User->>iOS: 22. 在 App 登入頁面用新密碼登入
-    iOS->>Backend: 23. POST /api/auth/login
-    Backend-->>iOS: 24. 回傳 access_token
-    iOS-->>User: 25. 登入成功 ✅
+    User->>Safari: 16. 輸入新密碼並確認
+    Safari->>Backend: 17. POST /api/v1/auth/password-reset/confirm
+    Backend->>Backend: 18. 更新密碼
+    Backend-->>Safari: 19. 回傳成功訊息
+    Safari-->>User: 20. 顯示 Step 4 成功頁面
+
+    Note over User,iOS: 自動 Deeplink 返回 App
+
+    Safari->>Safari: 21. 偵測到 source=app，觸發 Deeplink
+    Safari->>iOS: 22. window.location.href = 'islandparent://auth/forgot-password-done'
+    iOS->>iOS: 23. 接收 Deeplink，關閉 Safari
+    iOS-->>User: 24. 顯示「密碼重設成功」提示
+    User->>iOS: 25. 用新密碼登入 ✅
 ```
 
-#### 2.3.3 Web 流程文字說明
+#### 2.3.3 4 步驟流程說明
 
-**階段一：請求重設密碼**
-1. 使用者在 App 登入頁面點擊「忘記密碼？」
-2. App 使用 `SFSafariViewController` 開啟忘記密碼頁面
-3. Web 頁面顯示 Email 輸入框
-4. 使用者輸入註冊時的 Email 並點擊「發送重置郵件」
-5. Backend 生成重設 Token（6 小時有效）
-6. Backend 寄送包含重設連結的郵件
-7. Web 頁面顯示成功訊息：「✅ 重置郵件已發送，請檢查您的電子郵件收件匣」
-8. 使用者關閉 Safari，返回 App
+**新版密碼重設流程使用驗證碼而非 Token，提供更安全且即時的體驗：**
 
-**階段二：重設密碼**
-9. 使用者在郵件 App 收到重設郵件
-10. 點擊郵件中的重設連結（自動開啟 Safari）
-11. Web 頁面顯示新密碼輸入框
-12. 使用者輸入新密碼並確認
-13. Backend 驗證 Token 並更新密碼
-14. Web 頁面顯示成功訊息：「✅ 密碼已成功重置」
-15. 點擊「返回登入」按鈕關閉 Safari
+**Step 1: 輸入 Email**
+- 使用者在 App 點擊「忘記密碼」
+- App 開啟 SFSafariViewController，URL 包含 `?source=app&mail={email}`
+- Web 頁面顯示 Email 輸入框（已預填）
+- 使用者點擊「發送驗證碼」
 
-**階段三：登入**
-16. 使用者返回 App 登入頁面
-17. 使用新密碼登入
-18. 登入成功 ✅
+**Step 2: 輸入驗證碼**
+- Backend 生成 6 位數驗證碼（15 分鐘有效）
+- 驗證碼郵件發送到使用者信箱
+- 頁面自動跳轉到驗證碼輸入頁
+- 使用者查看郵件，複製驗證碼
+- 使用者回到 Safari，輸入驗證碼
+- 點擊「驗證」
 
-#### 2.3.4 為什麼使用 Web 方案？
+**Step 3: 設定新密碼**
+- 驗證成功後自動跳轉到密碼設定頁
+- 使用者輸入新密碼並確認
+- 點擊「確認重設密碼」
 
-| 優點 | 說明 |
-|------|------|
-| **降低開發成本** | 不需要在 App 端實作重設密碼 UI |
-| **快速上線** | Backend 已實作完成，iOS 只需開啟 URL |
-| **統一體驗** | Web 頁面支援多平台（iOS, Android, Desktop） |
-| **安全性** | 重設 Token 由 Backend 管理，不經過 App |
+**Step 4: 成功頁面與自動 Deeplink**
+- 密碼重設成功，顯示成功頁面
+- **自動觸發 Deeplink**：`islandparent://auth/forgot-password-done`
+- Safari 自動關閉，返回 App
+- App 顯示成功提示
+- 使用者可立即使用新密碼登入
 
-#### 2.3.5 測試方式
+**Fallback 機制**：
+- 如果 3 秒內 App 未接收 Deeplink（如 App 被關閉）
+- 頁面自動跳轉到網頁登入頁面 `/island-parents`
+
+#### 2.3.4 iOS Deeplink 整合
+
+**1. 註冊 URL Scheme (Info.plist)**
+
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string>islandparent</string>
+        </array>
+        <key>CFBundleURLName</key>
+        <string>com.yourcompany.islandparents</string>
+    </dict>
+</array>
+```
+
+**2. 處理 Deeplink (AppDelegate/SceneDelegate)**
+
+```swift
+// AppDelegate.swift
+func application(_ app: UIApplication,
+                open url: URL,
+                options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+
+    guard url.scheme == "islandparent",
+          url.host == "auth" else {
+        return false
+    }
+
+    // 處理忘記密碼完成 Deeplink
+    if url.path == "/forgot-password-done" {
+        // 關閉 SFSafariViewController
+        if let presented = UIApplication.shared.windows.first?.rootViewController?.presentedViewController {
+            presented.dismiss(animated: true) {
+                // 顯示成功訊息
+                self.showPasswordResetSuccess()
+            }
+        }
+        return true
+    }
+
+    return false
+}
+
+func showPasswordResetSuccess() {
+    DispatchQueue.main.async {
+        let alert = UIAlertController(
+            title: "密碼重設成功",
+            message: "請使用新密碼登入",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "確定", style: .default))
+
+        UIApplication.shared.windows.first?.rootViewController?
+            .present(alert, animated: true)
+    }
+}
+```
+
+**3. 完整流程範例**
+
+```swift
+class ForgotPasswordViewController: UIViewController {
+
+    @IBOutlet weak var emailTextField: UITextField!
+
+    @IBAction func resetPasswordTapped(_ sender: UIButton) {
+        guard let email = emailTextField.text, !email.isEmpty else {
+            showError("請輸入 Email")
+            return
+        }
+
+        // 開啟 Safari ViewController
+        openForgotPasswordPage(email: email)
+    }
+
+    func openForgotPasswordPage(email: String) {
+        let baseURL = "https://career-app-api-staging-978304030758.us-central1.run.app"
+        let encodedEmail = email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+
+        // 重要：必須包含 source=app 參數才會觸發 Deeplink
+        let urlString = "\(baseURL)/island-parents/forgot-password?source=app&mail=\(encodedEmail)"
+
+        guard let url = URL(string: urlString) else {
+            showError("無效的 URL")
+            return
+        }
+
+        let safariVC = SFSafariViewController(url: url)
+        safariVC.preferredControlTintColor = .systemBlue
+        safariVC.dismissButtonStyle = .close
+
+        present(safariVC, animated: true)
+    }
+
+    func showError(_ message: String) {
+        let alert = UIAlertController(
+            title: "錯誤",
+            message: message,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "確定", style: .default))
+        present(alert, animated: true)
+    }
+}
+```
+
+#### 2.3.5 新舊版本差異
+
+| 項目 | 舊版（Token-based） | 新版（Verification Code） |
+|------|------------------|-------------------------|
+| **重設方式** | 郵件連結 + Token | 6 位數驗證碼 |
+| **有效期限** | 6 小時 | 15 分鐘 |
+| **使用者體驗** | 需要點擊郵件連結 | 複製驗證碼即可 |
+| **安全性** | Token 在 URL 中 | 驗證碼不在 URL |
+| **自動返回** | 手動點擊按鈕 | 自動 Deeplink |
+| **步驟數** | 2 個頁面 | 4 個步驟（單頁） |
+
+**新版優勢**：
+- ✅ **更安全**：驗證碼不會出現在 URL 或瀏覽器歷史記錄
+- ✅ **更快速**：15 分鐘內完成，減少等待時間
+- ✅ **更流暢**：自動 Deeplink 返回 App，無需手動操作
+- ✅ **更直觀**：4 步驟進度條，清楚知道目前進度
+
+#### 2.3.6 測試方式
 
 **手動測試**：
-1. 在瀏覽器打開：`https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/forgot-password`
-2. 輸入已註冊的 Email
-3. 檢查信箱收到重設郵件
-4. 點擊郵件中的連結
-5. 設定新密碼
-6. 返回 App 用新密碼登入
+1. 在 iOS 模擬器或實機開啟 App
+2. 點擊「忘記密碼」，輸入 Email
+3. Safari 開啟，確認 URL 包含 `?source=app&mail=xxx`
+4. 點擊「發送驗證碼」
+5. 檢查信箱收到 6 位數驗證碼郵件
+6. 在 Safari 輸入驗證碼，點擊「驗證」
+7. 輸入新密碼並確認
+8. 點擊「確認重設密碼」
+9. ✅ Safari 應自動關閉並返回 App
+10. ✅ App 顯示「密碼重設成功」提示
+11. 使用新密碼登入
+
+**Fallback 測試**：
+1. 在 Safari 瀏覽器（非 App）打開：`https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/forgot-password?source=app&mail=test@example.com`
+2. 完成 4 步驟流程
+3. ✅ 3 秒後應顯示「App 未開啟，返回登入頁面...」
+4. ✅ 自動跳轉到網頁登入頁面
 
 ---
 
@@ -583,6 +1018,170 @@ func listClientCases(skip: Int = 0, limit: Int = 20) async throws -> ClientCaseL
 - **首頁孩子列表**: 顯示所有孩子，點擊進入該孩子的對話歷史
 - **切換孩子**: 使用 Picker 或 Modal 讓家長選擇不同孩子
 - **孩子卡片**: 顯示孩子名稱、總會談次數、最後會談時間
+
+---
+
+## 2.7 使用量統計 API
+
+### 2.7.1 取得使用量統計
+
+**端點:** `GET /api/v1/usage/stats`
+
+**認證:** 🔒 需要 Bearer Token
+
+**用途:** 查詢當前用戶的月度使用量統計，包括已用分鐘數、剩餘配額、使用百分比等
+
+### Request
+
+```http
+GET /api/v1/usage/stats
+Authorization: Bearer {access_token}
+```
+
+### Response 200 OK
+
+```json
+{
+  "billing_mode": "subscription",
+  "monthly_limit_minutes": 360,
+  "monthly_used_minutes": 45,
+  "monthly_remaining_minutes": 315,
+  "usage_percentage": 12.5,
+  "is_limit_reached": false,
+  "usage_period_start": "2026-02-01T00:00:00Z",
+  "usage_period_end": "2026-03-01T00:00:00Z"
+}
+```
+
+### 欄位說明
+
+| 欄位 | 類型 | 說明 | 範例 |
+|------|------|------|------|
+| `billing_mode` | string | 計費模式 (`prepaid` 或 `subscription`) | `"subscription"` |
+| `monthly_limit_minutes` | int | 每月使用限制（分鐘），僅 subscription 模式 | `360` (6 小時) |
+| `monthly_used_minutes` | int | 本月已使用分鐘數，僅 subscription 模式 | `45` |
+| `monthly_remaining_minutes` | int | 本月剩餘分鐘數，僅 subscription 模式 | `315` |
+| `usage_percentage` | float | 使用百分比 (0-100) | `12.5` |
+| `is_limit_reached` | bool | 是否已達使用上限 | `false` |
+| `usage_period_start` | datetime | 計費週期開始時間 (UTC) | `"2026-02-01T00:00:00Z"` |
+| `usage_period_end` | datetime | 計費週期結束時間 (UTC) | `"2026-03-01T00:00:00Z"` |
+
+### Swift 實作範例
+
+```swift
+struct UsageStats: Codable {
+    let billingMode: String
+    let monthlyLimitMinutes: Int?
+    let monthlyUsedMinutes: Int?
+    let monthlyRemainingMinutes: Int?
+    let usagePercentage: Double?
+    let isLimitReached: Bool?
+    let usagePeriodStart: Date?
+    let usagePeriodEnd: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case billingMode = "billing_mode"
+        case monthlyLimitMinutes = "monthly_limit_minutes"
+        case monthlyUsedMinutes = "monthly_used_minutes"
+        case monthlyRemainingMinutes = "monthly_remaining_minutes"
+        case usagePercentage = "usage_percentage"
+        case isLimitReached = "is_limit_reached"
+        case usagePeriodStart = "usage_period_start"
+        case usagePeriodEnd = "usage_period_end"
+    }
+}
+
+func fetchUsageStats(token: String) async throws -> UsageStats {
+    let url = URL(string: "https://your-api.com/api/v1/usage/stats")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    return try decoder.decode(UsageStats.self, from: data)
+}
+```
+
+### UI 使用場景
+
+- **設定頁面**: 顯示本月已用時數和剩餘配額
+- **進度條**: 使用 `usage_percentage` 顯示使用進度
+- **警告提示**: 當 `is_limit_reached == true` 時顯示「已達使用上限」
+- **週期顯示**: 顯示計費週期 (例如：「2/1 - 3/1」)
+
+### UI 示例代碼
+
+```swift
+struct UsageView: View {
+    @State private var stats: UsageStats?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if let stats = stats {
+                // 標題
+                Text("本月使用量")
+                    .font(.headline)
+
+                // 進度條
+                ProgressView(value: (stats.usagePercentage ?? 0) / 100)
+                    .tint(stats.isLimitReached == true ? .red : .blue)
+
+                // 數據顯示
+                HStack {
+                    Text("\(stats.monthlyUsedMinutes ?? 0) 分鐘")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    Text("/ \(stats.monthlyLimitMinutes ?? 0) 分鐘")
+                        .foregroundColor(.secondary)
+                }
+
+                // 剩餘配額
+                if let remaining = stats.monthlyRemainingMinutes {
+                    Text("剩餘 \(remaining) 分鐘")
+                        .font(.subheadline)
+                        .foregroundColor(remaining < 60 ? .red : .green)
+                }
+
+                // 警告
+                if stats.isLimitReached == true {
+                    Label("已達本月使用上限", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundColor(.red)
+                }
+            }
+        }
+        .padding()
+        .task {
+            do {
+                stats = try await fetchUsageStats(token: getToken())
+            } catch {
+                print("Failed to fetch usage stats: \(error)")
+            }
+        }
+    }
+}
+```
+
+### 錯誤處理
+
+| 錯誤碼 | 說明 | 處理方式 |
+|--------|------|---------|
+| `401` | Token 無效或過期 | 導向登入頁面 |
+| `500` | 伺服器錯誤 | 顯示錯誤訊息，稍後重試 |
+
+### 注意事項
+
+1. **自動重置**: 每月 1 日 UTC 00:00 自動重置使用量
+2. **即時更新**: 每次 Session 結束後會更新使用量
+3. **Prepaid 模式**: `monthly_limit_minutes` 等欄位為 `null`
+4. **快取策略**: 建議快取 5-10 分鐘，避免頻繁請求
 
 ---
 
@@ -1653,6 +2252,1105 @@ func showLegalLinks() {
 - **API 文檔**: `/docs` (Swagger UI)
 - **問題回報**: GitHub Issues
 - **Staging 環境**: https://career-app-api-staging-978304030758.us-central1.run.app
+
+---
+
+## 16. 完整 iOS API 參考
+
+### 16.1 Base URL 配置
+
+```swift
+struct APIConfig {
+    // Staging 環境
+    static let stagingBaseURL = "https://career-app-api-staging-978304030758.us-central1.run.app"
+
+    // Production 環境（待確認）
+    static let productionBaseURL = "https://career-app-api-prod-kxaznpplqq-uc.a.run.app"
+
+    // 當前環境
+    static let baseURL = stagingBaseURL
+}
+```
+
+---
+
+### 16.2 認證 Header 設定
+
+所有需要認證的 API 都必須在 Header 加上 JWT Token：
+
+```swift
+func createAuthRequest(url: URL) -> URLRequest {
+    var request = URLRequest(url: url)
+    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    return request
+}
+```
+
+---
+
+### 16.3 認證 APIs
+
+#### 16.3.1 註冊 (POST)
+
+```swift
+// Endpoint
+POST /api/auth/register
+
+// Request Model
+struct RegisterRequest: Codable {
+    let email: String
+    let password: String
+    let tenantId: String = "island_parents"
+
+    enum CodingKeys: String, CodingKey {
+        case email, password
+        case tenantId = "tenant_id"
+    }
+}
+
+// Response Model
+struct AuthResponse: Codable {
+    let accessToken: String
+    let tokenType: String
+    let expiresIn: Int
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case tokenType = "token_type"
+        case expiresIn = "expires_in"
+    }
+}
+
+// API Call
+func register(email: String, password: String) async throws -> AuthResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/auth/register")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = RegisterRequest(
+        email: email,
+        password: password,
+        tenantId: "island_parents"
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 201 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(AuthResponse.self, from: data)
+}
+```
+
+#### 16.3.2 登入 (POST)
+
+```swift
+// Endpoint
+POST /api/auth/login
+
+// Request Model (與註冊相同)
+struct LoginRequest: Codable {
+    let email: String
+    let password: String
+    let tenantId: String = "island_parents"
+
+    enum CodingKeys: String, CodingKey {
+        case email, password
+        case tenantId = "tenant_id"
+    }
+}
+
+// Response Model (與註冊相同)
+// 使用 AuthResponse
+
+// API Call
+func login(email: String, password: String) async throws -> AuthResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/auth/login")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = LoginRequest(
+        email: email,
+        password: password,
+        tenantId: "island_parents"
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(AuthResponse.self, from: data)
+}
+```
+
+#### 16.3.3 Email 驗證 (POST)
+
+```swift
+// Endpoint
+POST /api/auth/verify-email
+
+// Request Model
+struct VerifyEmailRequest: Codable {
+    let token: String
+}
+
+// Response Model
+struct VerifyEmailResponse: Codable {
+    let message: String
+}
+
+// API Call
+func verifyEmail(token: String) async throws -> VerifyEmailResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/auth/verify-email")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = VerifyEmailRequest(token: token)
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(VerifyEmailResponse.self, from: data)
+}
+```
+
+#### 16.3.4 重發驗證信 (POST)
+
+```swift
+// Endpoint
+POST /api/auth/resend-verification
+
+// Request Model
+struct ResendVerificationRequest: Codable {
+    let email: String
+}
+
+// Response Model
+struct ResendVerificationResponse: Codable {
+    let message: String
+}
+
+// API Call
+func resendVerificationEmail(email: String) async throws -> ResendVerificationResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/auth/resend-verification")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let body = ResendVerificationRequest(email: email)
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(ResendVerificationResponse.self, from: data)
+}
+```
+
+---
+
+### 16.4 App 配置 APIs
+
+#### 16.4.1 取得 App 配置 (GET)
+
+```swift
+// Endpoint
+GET /api/v1/app/config/island_parents
+
+// Response Model
+struct AppConfig: Codable {
+    let termsUrl: String
+    let privacyUrl: String
+    let landingPageUrl: String
+
+    enum CodingKeys: String, CodingKey {
+        case termsUrl = "terms_url"
+        case privacyUrl = "privacy_url"
+        case landingPageUrl = "landing_page_url"
+    }
+}
+
+// API Call (無需認證)
+func fetchAppConfig() async throws -> AppConfig {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/app/config/island_parents")!
+    let (data, _) = try await URLSession.shared.data(from: url)
+    return try JSONDecoder().decode(AppConfig.self, from: data)
+}
+```
+
+---
+
+### 16.5 孩子與案例 APIs
+
+#### 16.5.1 創建孩子與案例 (POST)
+
+```swift
+// Endpoint
+POST /api/v1/ui/client-case
+
+// Request Model
+struct ClientCaseCreateRequest: Codable {
+    let name: String
+    let grade: String
+    let relationship: String
+}
+
+// Response Model
+struct ClientCaseCreateResponse: Codable {
+    let clientId: String
+    let clientCode: String
+    let clientName: String
+    let clientEmail: String?
+    let caseId: String
+    let caseNumber: String
+    let caseStatus: Int
+    let createdAt: String
+    let message: String
+
+    enum CodingKeys: String, CodingKey {
+        case clientId = "client_id"
+        case clientCode = "client_code"
+        case clientName = "client_name"
+        case clientEmail = "client_email"
+        case caseId = "case_id"
+        case caseNumber = "case_number"
+        case caseStatus = "case_status"
+        case createdAt = "created_at"
+        case message
+    }
+}
+
+// API Call
+func createClientCase(
+    name: String,
+    grade: String,
+    relationship: String
+) async throws -> ClientCaseCreateResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/ui/client-case")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "POST"
+
+    let body = ClientCaseCreateRequest(
+        name: name,
+        grade: grade,
+        relationship: relationship
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 201 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(ClientCaseCreateResponse.self, from: data)
+}
+```
+
+#### 16.5.2 列出所有孩子 (GET)
+
+```swift
+// Endpoint
+GET /api/v1/ui/client-case-list?skip=0&limit=20
+
+// Response Model
+struct ClientCaseListItem: Codable {
+    let clientId: String
+    let caseId: String
+    let clientName: String
+    let clientCode: String
+    let caseNumber: String
+    let caseStatus: Int
+    let caseStatusLabel: String
+    let totalSessions: Int
+    let lastSessionDate: String?
+    let caseCreatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case clientId = "client_id"
+        case caseId = "case_id"
+        case clientName = "client_name"
+        case clientCode = "client_code"
+        case caseNumber = "case_number"
+        case caseStatus = "case_status"
+        case caseStatusLabel = "case_status_label"
+        case totalSessions = "total_sessions"
+        case lastSessionDate = "last_session_date"
+        case caseCreatedAt = "case_created_at"
+    }
+}
+
+struct ClientCaseListResponse: Codable {
+    let total: Int
+    let skip: Int
+    let limit: Int
+    let items: [ClientCaseListItem]
+}
+
+// API Call
+func listClientCases(skip: Int = 0, limit: Int = 20) async throws -> ClientCaseListResponse {
+    var components = URLComponents(string: "\(APIConfig.baseURL)/api/v1/ui/client-case-list")!
+    components.queryItems = [
+        URLQueryItem(name: "skip", value: "\(skip)"),
+        URLQueryItem(name: "limit", value: "\(limit)")
+    ]
+
+    var request = createAuthRequest(url: components.url!)
+    request.httpMethod = "GET"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(ClientCaseListResponse.self, from: data)
+}
+```
+
+---
+
+### 16.6 Session APIs
+
+#### 16.6.1 建立 Session (POST)
+
+```swift
+// Endpoint
+POST /api/v1/sessions
+
+// Request Model
+struct CreateSessionRequest: Codable {
+    let caseId: String
+    let sessionMode: String?
+    let scenario: String?
+    let scenarioDescription: String?
+
+    enum CodingKeys: String, CodingKey {
+        case caseId = "case_id"
+        case sessionMode = "session_mode"
+        case scenario
+        case scenarioDescription = "scenario_description"
+    }
+}
+
+// Response Model
+struct SessionResponse: Codable {
+    let id: String
+    let clientId: String
+    let caseId: String
+    let sessionMode: String?
+    let scenario: String?
+    let scenarioDescription: String?
+    let status: String
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case clientId = "client_id"
+        case caseId = "case_id"
+        case sessionMode = "session_mode"
+        case scenario
+        case scenarioDescription = "scenario_description"
+        case status
+        case createdAt = "created_at"
+    }
+}
+
+// API Call
+func createSession(
+    caseId: String,
+    sessionMode: String? = "practice",
+    scenario: String? = nil,
+    scenarioDescription: String? = nil
+) async throws -> SessionResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "POST"
+
+    let body = CreateSessionRequest(
+        caseId: caseId,
+        sessionMode: sessionMode,
+        scenario: scenario,
+        scenarioDescription: scenarioDescription
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 201 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(SessionResponse.self, from: data)
+}
+```
+
+#### 16.6.2 取得 Session (GET)
+
+```swift
+// Endpoint
+GET /api/v1/sessions/{session_id}
+
+// Response Model (與 POST 建立 Session 相同)
+// 使用 SessionResponse
+
+// API Call
+func getSession(sessionId: String) async throws -> SessionResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "GET"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(SessionResponse.self, from: data)
+}
+```
+
+#### 16.6.3 列出 Sessions (GET)
+
+```swift
+// Endpoint
+GET /api/v1/sessions?client_id={id}&session_mode={mode}&skip=0&limit=20
+
+// Response Model
+struct SessionListResponse: Codable {
+    let total: Int
+    let items: [SessionListItem]
+}
+
+struct SessionListItem: Codable {
+    let id: String
+    let clientId: String
+    let clientName: String
+    let caseId: String
+    let sessionNumber: Int
+    let sessionMode: String?
+    let scenario: String?
+    let scenarioDescription: String?
+    let hasReport: Bool
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case clientId = "client_id"
+        case clientName = "client_name"
+        case caseId = "case_id"
+        case sessionNumber = "session_number"
+        case sessionMode = "session_mode"
+        case scenario
+        case scenarioDescription = "scenario_description"
+        case hasReport = "has_report"
+        case createdAt = "created_at"
+    }
+}
+
+// API Call
+func listSessions(
+    clientId: String? = nil,
+    sessionMode: String? = nil,
+    skip: Int = 0,
+    limit: Int = 20
+) async throws -> SessionListResponse {
+    var components = URLComponents(string: "\(APIConfig.baseURL)/api/v1/sessions")!
+    var queryItems: [URLQueryItem] = [
+        URLQueryItem(name: "skip", value: "\(skip)"),
+        URLQueryItem(name: "limit", value: "\(limit)")
+    ]
+
+    if let clientId = clientId {
+        queryItems.append(URLQueryItem(name: "client_id", value: clientId))
+    }
+
+    if let sessionMode = sessionMode {
+        queryItems.append(URLQueryItem(name: "session_mode", value: sessionMode))
+    }
+
+    components.queryItems = queryItems
+
+    var request = createAuthRequest(url: components.url!)
+    request.httpMethod = "GET"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(SessionListResponse.self, from: data)
+}
+```
+
+#### 16.6.4 上傳逐字稿片段 (POST)
+
+```swift
+// Endpoint
+POST /api/v1/sessions/{session_id}/recordings/append
+
+// Request Model
+struct AppendRecordingRequest: Codable {
+    let transcriptSegment: String
+    let startTime: String  // ISO 8601 格式
+    let endTime: String    // ISO 8601 格式
+
+    enum CodingKeys: String, CodingKey {
+        case transcriptSegment = "transcript_segment"
+        case startTime = "start_time"
+        case endTime = "end_time"
+    }
+}
+
+// Response Model
+struct AppendRecordingResponse: Codable {
+    let success: Bool
+    let sessionId: String
+    let totalDurationSeconds: Double
+    let transcriptLength: Int
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case sessionId = "session_id"
+        case totalDurationSeconds = "total_duration_seconds"
+        case transcriptLength = "transcript_length"
+    }
+}
+
+// API Call
+func appendRecording(
+    sessionId: String,
+    transcript: String,
+    startTime: Date,
+    endTime: Date
+) async throws -> AppendRecordingResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)/recordings/append")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "POST"
+
+    let body = AppendRecordingRequest(
+        transcriptSegment: transcript,
+        startTime: startTime.ISO8601Format(),
+        endTime: endTime.ISO8601Format()
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(AppendRecordingResponse.self, from: data)
+}
+```
+
+---
+
+### 16.7 AI 分析 APIs
+
+#### 16.7.1 Quick Feedback (POST)
+
+```swift
+// Endpoint
+POST /api/v1/sessions/{session_id}/quick-feedback?session_mode=practice
+
+// 無需 Request Body
+
+// Response Model
+struct QuickFeedbackResponse: Codable {
+    let message: String      // 強制 ≤15 字
+    let type: String
+    let timestamp: String
+    let latencyMs: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case message, type, timestamp
+        case latencyMs = "latency_ms"
+    }
+}
+
+// API Call
+func getQuickFeedback(
+    sessionId: String,
+    sessionMode: String = "practice"
+) async throws -> QuickFeedbackResponse {
+    var components = URLComponents(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)/quick-feedback")!
+    components.queryItems = [
+        URLQueryItem(name: "session_mode", value: sessionMode)
+    ]
+
+    var request = createAuthRequest(url: components.url!)
+    request.httpMethod = "POST"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(QuickFeedbackResponse.self, from: data)
+}
+```
+
+#### 16.7.2 Deep Analyze (POST)
+
+```swift
+// Endpoint
+POST /api/v1/sessions/{session_id}/deep-analyze
+
+// 無需 Request Body
+
+// Response Model
+struct DeepAnalyzeResponse: Codable {
+    let safetyLevel: String  // "green", "yellow", "red"
+    let summary: String
+    let alerts: [String]     // 注意：是字串陣列
+    let suggestions: [String] // 注意：是字串陣列
+    let timeRange: String
+    let timestamp: String
+
+    enum CodingKeys: String, CodingKey {
+        case safetyLevel = "safety_level"
+        case summary, alerts, suggestions
+        case timeRange = "time_range"
+        case timestamp
+    }
+}
+
+// API Call
+func deepAnalyze(sessionId: String) async throws -> DeepAnalyzeResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)/deep-analyze")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "POST"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(DeepAnalyzeResponse.self, from: data)
+}
+```
+
+#### 16.7.3 Emotion Analysis (POST)
+
+```swift
+// Endpoint
+POST /api/v1/sessions/{session_id}/emotion-feedback
+
+// Request Model
+struct EmotionFeedbackRequest: Codable {
+    let context: String
+    let target: String
+}
+
+// Response Model
+struct EmotionFeedbackResponse: Codable {
+    let level: Int    // 1-3
+    let hint: String  // 強制 ≤17 字
+}
+
+// API Call
+func analyzeEmotion(
+    sessionId: String,
+    context: String,
+    target: String
+) async throws -> EmotionFeedbackResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)/emotion-feedback")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "POST"
+    request.timeoutInterval = 10.0  // 10 秒 timeout
+
+    let body = EmotionFeedbackRequest(
+        context: context,
+        target: target
+    )
+    request.httpBody = try JSONEncoder().encode(body)
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(EmotionFeedbackResponse.self, from: data)
+}
+```
+
+#### 16.7.4 生成報告 (POST)
+
+```swift
+// Endpoint
+POST /api/v1/sessions/{session_id}/report
+
+// 無需 Request Body
+
+// Response Model
+struct ReportResponse: Codable {
+    let encouragement: String  // 強制 ≤15 字
+    let issue: String
+    let analyze: String
+    let suggestion: String
+    let references: [ReportReference]
+    let timestamp: String
+}
+
+struct ReportReference: Codable {
+    let title: String
+    let content: String
+    let source: String?
+    let theory: String?
+}
+
+// API Call
+func generateReport(sessionId: String) async throws -> ReportResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)/report")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "POST"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(ReportResponse.self, from: data)
+}
+```
+
+#### 16.7.5 取得報告 (GET)
+
+```swift
+// Endpoint
+GET /api/v1/sessions/{session_id}/report
+
+// Response Model (與 POST 生成報告相同)
+// 使用 ReportResponse
+
+// API Call
+func getReport(sessionId: String) async throws -> ReportResponse {
+    let url = URL(string: "\(APIConfig.baseURL)/api/v1/sessions/\(sessionId)/report")!
+    var request = createAuthRequest(url: url)
+    request.httpMethod = "GET"
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw APIError.invalidResponse
+    }
+
+    return try JSONDecoder().decode(ReportResponse.self, from: data)
+}
+```
+
+---
+
+### 16.8 錯誤處理
+
+#### 16.8.1 通用錯誤 Model
+
+```swift
+enum APIError: Error {
+    case invalidResponse
+    case httpError(statusCode: Int, message: String)
+    case decodingError(Error)
+    case networkError(Error)
+    case unauthorized
+    case notFound
+    case serverError
+}
+
+struct ErrorResponse: Codable {
+    let type: String?
+    let title: String?
+    let status: Int?
+    let detail: String
+    let instance: String?
+}
+
+// 通用錯誤處理
+func handleAPIError(data: Data?, response: URLResponse?, error: Error?) throws {
+    if let error = error {
+        throw APIError.networkError(error)
+    }
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw APIError.invalidResponse
+    }
+
+    switch httpResponse.statusCode {
+    case 200...299:
+        return  // 成功
+    case 401:
+        throw APIError.unauthorized
+    case 404:
+        throw APIError.notFound
+    case 500...599:
+        throw APIError.serverError
+    default:
+        if let data = data,
+           let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+            throw APIError.httpError(
+                statusCode: httpResponse.statusCode,
+                message: errorResponse.detail
+            )
+        } else {
+            throw APIError.invalidResponse
+        }
+    }
+}
+```
+
+#### 16.8.2 錯誤顯示範例
+
+```swift
+func displayError(_ error: Error) {
+    var message = "發生錯誤"
+
+    if let apiError = error as? APIError {
+        switch apiError {
+        case .unauthorized:
+            message = "登入已過期，請重新登入"
+            // 跳轉到登入頁面
+        case .notFound:
+            message = "找不到資源"
+        case .serverError:
+            message = "伺服器錯誤，請稍後再試"
+        case .httpError(_, let detail):
+            message = detail
+        case .networkError:
+            message = "網路連線錯誤"
+        case .decodingError:
+            message = "資料格式錯誤"
+        case .invalidResponse:
+            message = "無效的回應"
+        }
+    }
+
+    // 顯示錯誤訊息
+    let alert = UIAlertController(
+        title: "錯誤",
+        message: message,
+        preferredStyle: .alert
+    )
+    alert.addAction(UIAlertAction(title: "確定", style: .default))
+    present(alert, animated: true)
+}
+```
+
+---
+
+### 16.9 完整使用範例
+
+#### 16.9.1 完整註冊登入流程
+
+```swift
+class AuthService {
+    private let baseURL = APIConfig.baseURL
+    private var accessToken: String?
+
+    // 註冊
+    func register(email: String, password: String) async throws {
+        let response = try await register(email: email, password: password)
+
+        // 儲存 Token
+        saveToken(response.accessToken)
+        self.accessToken = response.accessToken
+    }
+
+    // 登入
+    func login(email: String, password: String) async throws {
+        let response = try await login(email: email, password: password)
+
+        // 儲存 Token
+        saveToken(response.accessToken)
+        self.accessToken = response.accessToken
+    }
+
+    // 儲存 Token 到 Keychain
+    private func saveToken(_ token: String) {
+        let data = token.data(using: .utf8)!
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "accessToken",
+            kSecValueData as String: data
+        ]
+
+        SecItemDelete(query as CFDictionary)
+        SecItemAdd(query as CFDictionary, nil)
+    }
+
+    // 讀取 Token
+    func loadToken() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "accessToken",
+            kSecReturnData as String: true
+        ]
+
+        var result: AnyObject?
+        SecItemCopyMatching(query as CFDictionary, &result)
+
+        if let data = result as? Data {
+            return String(data: data, encoding: .utf8)
+        }
+        return nil
+    }
+}
+```
+
+#### 16.9.2 完整 Session 流程
+
+```swift
+class SessionService {
+    private let baseURL = APIConfig.baseURL
+    private var currentSessionId: String?
+
+    // 1. 創建孩子與案例
+    func setupClient(
+        name: String,
+        grade: String,
+        relationship: String
+    ) async throws -> String {
+        let response = try await createClientCase(
+            name: name,
+            grade: grade,
+            relationship: relationship
+        )
+
+        // 儲存 case_id
+        UserDefaults.standard.set(response.caseId, forKey: "currentCaseId")
+
+        return response.caseId
+    }
+
+    // 2. 開始新的會談
+    func startSession(
+        caseId: String,
+        scenario: String,
+        description: String
+    ) async throws -> String {
+        let response = try await createSession(
+            caseId: caseId,
+            sessionMode: "practice",
+            scenario: scenario,
+            scenarioDescription: description
+        )
+
+        currentSessionId = response.id
+        return response.id
+    }
+
+    // 3. 上傳逐字稿（每 10-15 秒呼叫）
+    func uploadTranscript(_ text: String) async throws {
+        guard let sessionId = currentSessionId else {
+            throw APIError.invalidResponse
+        }
+
+        _ = try await appendRecording(
+            sessionId: sessionId,
+            transcript: text,
+            startTime: Date(),
+            endTime: Date()
+        )
+    }
+
+    // 4. 取得即時回饋（每 15 秒呼叫）
+    func getRealtimeFeedback() async throws -> String {
+        guard let sessionId = currentSessionId else {
+            throw APIError.invalidResponse
+        }
+
+        let response = try await getQuickFeedback(
+            sessionId: sessionId,
+            sessionMode: "practice"
+        )
+
+        return response.message  // ≤15 字
+    }
+
+    // 5. 深度分析（動態間隔）
+    func performDeepAnalysis() async throws -> DeepAnalyzeResponse {
+        guard let sessionId = currentSessionId else {
+            throw APIError.invalidResponse
+        }
+
+        return try await deepAnalyze(sessionId: sessionId)
+    }
+
+    // 6. 結束會談並生成報告
+    func finishSession() async throws -> ReportResponse {
+        guard let sessionId = currentSessionId else {
+            throw APIError.invalidResponse
+        }
+
+        let report = try await generateReport(sessionId: sessionId)
+
+        currentSessionId = nil
+        return report
+    }
+}
+```
+
+---
+
+### 16.10 測試用帳號
+
+Staging 環境測試帳號：
+
+```swift
+// Island Parents 測試帳號
+let testEmail = "counselor@island.com"
+let testPassword = "password123"
+
+// 登入測試
+Task {
+    do {
+        let authService = AuthService()
+        try await authService.login(
+            email: testEmail,
+            password: testPassword
+        )
+        print("登入成功")
+    } catch {
+        print("登入失敗: \(error)")
+    }
+}
+```
 
 ---
 

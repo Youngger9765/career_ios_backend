@@ -2,9 +2,9 @@
 Password Reset API endpoints (v1)
 
 Provides secure password reset functionality:
-1. Request password reset - Send reset email
-2. Verify reset token - Check if token is valid
-3. Confirm password reset - Update password with token
+1. Request password reset - Send reset email with verification code
+2. Verify verification code - Check if code is valid
+3. Confirm password reset - Update password with verification code
 """
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -13,8 +13,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import hash_password
+from app.middleware.rate_limit import limiter
 from app.models.counselor import Counselor
 from app.models.password_reset import PasswordResetToken
 from app.schemas.auth import (
@@ -22,16 +24,14 @@ from app.schemas.auth import (
     PasswordResetConfirmResponse,
     PasswordResetRequest,
     PasswordResetResponse,
-    PasswordResetVerifyResponse,
+    VerifyCodeRequest,
+    VerifyCodeResponse,
 )
 from app.services.external.email_sender import email_sender
+from app.utils.verification_code import generate_verification_code
 
 router = APIRouter(prefix="/auth/password-reset", tags=["Password Reset"])
 
-# Rate limiting: Track request timestamps per email (3 requests per minute)
-_rate_limit_cache: dict[str, list[datetime]] = {}
-MAX_REQUESTS_PER_MINUTE = 3
-RATE_LIMIT_WINDOW_SECONDS = 60
 TOKEN_EXPIRY_HOURS = 6
 
 # Weak password blacklist
@@ -50,30 +50,6 @@ WEAK_PASSWORDS = {
 def generate_secure_token() -> str:
     """Generate a cryptographically secure random token"""
     return secrets.token_urlsafe(32)
-
-
-def is_rate_limited(email: str, tenant_id: str) -> bool:
-    """Check if email is rate limited for password reset requests (3 requests per minute)"""
-    cache_key = f"{email}:{tenant_id}"
-    now = datetime.now(timezone.utc)
-    window_start = now - timedelta(seconds=RATE_LIMIT_WINDOW_SECONDS)
-
-    # Get or initialize request timestamps for this user
-    if cache_key not in _rate_limit_cache:
-        _rate_limit_cache[cache_key] = []
-
-    # Remove timestamps outside the current window
-    _rate_limit_cache[cache_key] = [
-        ts for ts in _rate_limit_cache[cache_key] if ts > window_start
-    ]
-
-    # Check if limit exceeded
-    if len(_rate_limit_cache[cache_key]) >= MAX_REQUESTS_PER_MINUTE:
-        return True
-
-    # Add current request timestamp
-    _rate_limit_cache[cache_key].append(now)
-    return False
 
 
 def is_password_weak(password: str) -> tuple[bool, str | None]:
@@ -103,6 +79,7 @@ def is_password_weak(password: str) -> tuple[bool, str | None]:
 
 
 @router.post("/request", response_model=PasswordResetResponse)
+@limiter.limit(f"{settings.RATE_LIMIT_PASSWORD_RESET_PER_HOUR}/hour")
 async def request_password_reset(
     request_data: PasswordResetRequest,
     request: Request,
@@ -121,7 +98,7 @@ async def request_password_reset(
 
     Notes:
         - Always returns success to prevent user enumeration
-        - Rate limited to 3 requests per minute
+        - Rate limited to prevent abuse
         - Token expires in 6 hours
     """
     # Validate input
@@ -129,16 +106,6 @@ async def request_password_reset(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Either email or phone must be provided",
-        )
-
-    # Use email as primary identifier
-    identifier = request_data.email or request_data.phone
-
-    # Check rate limiting
-    if is_rate_limited(identifier, request_data.tenant_id):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Rate limit exceeded. Maximum {MAX_REQUESTS_PER_MINUTE} requests per minute allowed",
         )
 
     # Query counselor by email/phone and tenant_id
@@ -157,8 +124,11 @@ async def request_password_reset(
 
     # Only create token if counselor exists
     if counselor:
-        # Generate secure token
+        # Generate secure token (for backward compatibility)
         token = generate_secure_token()
+
+        # Generate 6-digit verification code
+        verification_code = generate_verification_code()
 
         # Create password reset token
         reset_token = PasswordResetToken(
@@ -166,6 +136,8 @@ async def request_password_reset(
             email=counselor.email,
             tenant_id=counselor.tenant_id,
             expires_at=datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRY_HOURS),
+            verification_code=verification_code,
+            code_expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
             used=False,
             request_ip=request.client.host if request.client else None,
         )
@@ -173,13 +145,14 @@ async def request_password_reset(
         db.add(reset_token)
         db.commit()
 
-        # Send email (async)
+        # Send email with verification code (async)
         try:
             await email_sender.send_password_reset_email(
                 to_email=counselor.email,
-                reset_token=token,
+                verification_code=verification_code,
                 counselor_name=counselor.full_name or "User",  # Handle None case
                 tenant_id=counselor.tenant_id,
+                source=request_data.source,  # Pass source parameter for compatibility
             )
         except Exception as e:
             # Log error but don't expose to user
@@ -193,57 +166,109 @@ async def request_password_reset(
     return response
 
 
-@router.get("/verify", response_model=PasswordResetVerifyResponse)
-def verify_reset_token(
-    token: str,
+@router.post("/verify-code", response_model=VerifyCodeResponse)
+def verify_password_reset_code(
+    request: VerifyCodeRequest,
     db: Session = Depends(get_db),
-) -> PasswordResetVerifyResponse:
+) -> VerifyCodeResponse:
     """
-    Verify if password reset token is valid
+    Verify password reset verification code
 
     Args:
-        token: Reset token to verify
+        request: Email, verification code, and tenant_id
         db: Database session
 
     Returns:
-        PasswordResetVerifyResponse with validation result
+        VerifyCodeResponse with validation result
 
     Raises:
-        HTTPException: 400 if token is invalid, expired, or used
+        HTTPException: 400 if code is invalid, expired, or account is locked
     """
-    # Query token
-    result = db.execute(
-        select(PasswordResetToken).where(PasswordResetToken.token == token)
-    )
-    reset_token = result.scalar_one_or_none()
+    try:
+        # First, try to find any token for this email/tenant (to check lockout)
+        result = db.execute(
+            select(PasswordResetToken)
+            .where(
+                PasswordResetToken.email == request.email,
+                PasswordResetToken.tenant_id == request.tenant_id,
+                PasswordResetToken.deleted_at.is_(None),
+            )
+            .order_by(PasswordResetToken.created_at.desc())
+        )
+        reset_token = result.scalars().first()
 
-    if not reset_token:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid reset token",
+        if not reset_token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid verification code",
+            )
+
+        # Check if account is locked
+        if reset_token.locked_until is not None:
+            locked_until = reset_token.locked_until
+            if locked_until.tzinfo is None:
+                locked_until = locked_until.replace(tzinfo=timezone.utc)
+
+            if locked_until > datetime.now(timezone.utc):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Too many failed attempts. Account is temporarily locked.",
+                )
+
+        # Check if verification code matches
+        if reset_token.verification_code != request.verification_code:
+            # Increment verify_attempts
+            reset_token.verify_attempts += 1
+
+            # Lock account if 5 or more failed attempts
+            if reset_token.verify_attempts >= 5:
+                reset_token.locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+            db.commit()
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid verification code",
+            )
+
+        # Check if code has expired
+        code_expires_at = reset_token.code_expires_at
+        if code_expires_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification code has expired",
+            )
+
+        if code_expires_at.tzinfo is None:
+            code_expires_at = code_expires_at.replace(tzinfo=timezone.utc)
+
+        if code_expires_at < datetime.now(timezone.utc):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification code has expired",
+            )
+
+        # Check if code has already been used
+        if reset_token.used:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification code has already been used",
+            )
+
+        # Code is valid
+        return VerifyCodeResponse(
+            valid=True,
+            message="Verification code is valid",
         )
 
-    if reset_token.used:
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has already been used",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to verify code: {str(e)}",
         )
-
-    # Ensure expires_at is timezone-aware for comparison
-    expires_at = reset_token.expires_at
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-
-    if expires_at < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has expired",
-        )
-
-    return PasswordResetVerifyResponse(
-        valid=True,
-        email=reset_token.email,
-    )
 
 
 @router.post("/confirm", response_model=PasswordResetConfirmResponse)
@@ -266,33 +291,44 @@ def confirm_password_reset(
     Raises:
         HTTPException: 400 if token invalid or password weak
     """
-    # Query token
+    # Query token by verification_code, email, and tenant_id
     result = db.execute(
-        select(PasswordResetToken).where(PasswordResetToken.token == confirm_data.token)
+        select(PasswordResetToken).where(
+            PasswordResetToken.verification_code == confirm_data.verification_code,
+            PasswordResetToken.email == confirm_data.email,
+            PasswordResetToken.tenant_id == confirm_data.tenant_id,
+            PasswordResetToken.deleted_at.is_(None),
+        )
     )
     reset_token = result.scalar_one_or_none()
 
     if not reset_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid reset token",
+            detail="Invalid verification code",
         )
 
     if reset_token.used:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has already been used",
+            detail="Verification code has already been used",
         )
 
-    # Ensure expires_at is timezone-aware for comparison
-    expires_at = reset_token.expires_at
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-
-    if expires_at < datetime.now(timezone.utc):
+    # Check verification code expiry (10 minutes)
+    code_expires_at = reset_token.code_expires_at
+    if code_expires_at is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token has expired",
+            detail="Invalid verification code",
+        )
+
+    if code_expires_at.tzinfo is None:
+        code_expires_at = code_expires_at.replace(tzinfo=timezone.utc)
+
+    if code_expires_at < datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification code has expired",
         )
 
     # Validate password strength
@@ -321,6 +357,10 @@ def confirm_password_reset(
 
         # Update password
         counselor.hashed_password = hash_password(confirm_data.new_password)
+
+        # Mark email as verified (since they received and confirmed the verification code)
+        if not counselor.email_verified:
+            counselor.email_verified = True
 
         # Mark token as used
         reset_token.mark_as_used(ip=request.client.host if request.client else None)

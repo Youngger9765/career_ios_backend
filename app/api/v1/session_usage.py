@@ -334,6 +334,21 @@ def create_session_usage(
                 },
             )
 
+        # Accumulate usage time for subscription counselors when status is completed
+        if request.status == "completed":
+            import math
+
+            from app.models.counselor import BillingMode
+
+            counselor = db.query(Counselor).filter(Counselor.id == current_user.id).first()
+            if counselor and counselor.billing_mode == BillingMode.SUBSCRIPTION:
+                if duration_seconds:
+                    # Calculate minutes with ceiling rounding
+                    minutes_used = math.ceil(duration_seconds / 60.0)
+
+                    # Accumulate to monthly_minutes_used
+                    counselor.monthly_minutes_used = (counselor.monthly_minutes_used or 0) + minutes_used
+
         db.commit()
         db.refresh(usage)
 
@@ -380,6 +395,9 @@ def update_session_usage(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Usage record {usage_id} not found",
         )
+
+    # Store original status BEFORE update to detect status transition
+    original_status = usage.status
 
     # Update fields
     if request.status is not None:
@@ -428,7 +446,7 @@ def update_session_usage(
         usage.credits_deducted = credits_to_deduct
         usage.credit_deducted = True
 
-        # Deduct credits from counselor
+        # Deduct credits from counselor (prepaid mode)
         billing_service = CreditBillingService(db)
         billing_service.add_credits(
             counselor_id=current_user.id,
@@ -441,6 +459,25 @@ def update_session_usage(
                 "credits_deducted": credits_to_deduct,
             },
         )
+
+        # Accumulate usage time for subscription counselors
+        # ONLY if transitioning TO completed (not if already completed)
+        import math
+
+        from app.models.counselor import BillingMode
+
+        counselor = db.query(Counselor).filter(Counselor.id == current_user.id).first()
+        if (
+            counselor
+            and counselor.billing_mode == BillingMode.SUBSCRIPTION
+            and original_status != "completed"  # Prevent duplicate accumulation
+        ):
+            if usage.duration_seconds:
+                # Calculate minutes with ceiling rounding
+                minutes_used = math.ceil(usage.duration_seconds / 60.0)
+
+                # Accumulate to monthly_minutes_used
+                counselor.monthly_minutes_used = (counselor.monthly_minutes_used or 0) + minutes_used
 
     if request.credits_consumed is not None:
         usage.credits_consumed = request.credits_consumed

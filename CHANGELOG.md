@@ -9,7 +9,213 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Completed
+- **Domain & Deployment** (2026-02-04): All domain-related tasks completed
+  - Landing Page deployed to comma.study (WordPress)
+  - Backend Web pages DNS/SSL configured (forgot-password, reset-password, etc.)
+  - `APP_URL` environment variable updated to comma subdomain
+
+### Changed
+- **Subscription Management Delegation to RevenueCat** (2026-02-03): Removed backend subscription expiry validation to let RevenueCat handle subscription state
+  - **Removed**: `subscription_expires_at` validation in `app/middleware/usage_limit.py` (lines 40-58)
+  - **Removed**: `subscription_expires_at` initialization in `Counselor.__init__` (lines 111-113)
+  - **Kept**: `subscription_expires_at` field in model for backward compatibility
+  - **Architecture**: RevenueCat is now the single source of truth for subscription validity on iOS
+  - **Backend Role**: Only manages usage quotas (monthly_limit_minutes = 360 minutes)
+  - **Impact**: Subscription users can create sessions without backend expiry check; iOS client validates subscription via RevenueCat SDK
+  - **Reason**: Eliminates redundant validation logic; prevents sync issues between backend and RevenueCat state
+
+### Fixed
+- **Usage Tracking Bug Fix** (2026-02-03): Fixed session creation not updating monthly_minutes_used for subscription accounts
+  - **Root Cause**: Session creation endpoint (`POST /api/v1/sessions`) was checking usage limits but not incrementing the usage counter
+  - **Location**: `app/api/sessions.py:116-122` - Added usage tracking before creating session
+  - **Fix**: Increment `monthly_minutes_used` when creating sessions with subscription mode
+  - **Edge Case**: Handle sessions without `duration_minutes` (optional field) - only track when provided
+  - **Impact**: Subscription accounts now correctly track session usage; monthly limits properly enforced
+  - **Test Coverage**: Added 2 comprehensive regression tests in `tests/integration/test_usage_tracking_verification.py`
+    - `test_usage_tracking_complete_flow`: Verifies cumulative tracking (0 → 20 → 80 minutes)
+    - `test_usage_limit_enforcement`: Verifies 360-minute limit blocks session creation (HTTP 429)
+  - **Timezone Bug Fix**: Fixed naive/aware datetime comparison in session numbering (`app/services/core/session_service.py`)
+  - **Test Results**: All 432 integration tests pass, CI/CD successful
+
+- **Subscription Initialization Bug** (2026-02-03): Fixed new subscription accounts being rejected with "subscription expired" error
+  - **Root Cause**: `usage_period_start` and `subscription_expires_at` were not initialized in `Counselor.__init__`
+  - **Fix**: Added automatic initialization of both fields for new accounts
+  - **Values**: `usage_period_start` = account creation time, `subscription_expires_at` = creation time + 365 days
+  - **Impact**: New accounts can now create sessions immediately after registration
+  - **Test Results**: All 8 billing tests pass, session creation tests pass
+  - **Deprecated Warning Fixed**: Replaced `datetime.utcnow()` with `datetime.now(timezone.utc)`
+
 ### Added
+- **Subscription Billing as Default** (2026-02-03): Changed default billing mode from prepaid to subscription for RevenueCat integration
+  - **Model Update**: `Counselor.billing_mode` now defaults to `subscription` (was `prepaid`)
+  - **Business Context**: Frontend uses RevenueCat for iOS subscription management
+  - **New Accounts**: All registrations via `/api/auth/register` default to subscription mode
+  - **Default Limits**: New accounts get 360 minutes (6 hours) monthly limit
+  - **Migration Scripts**: Added scripts to migrate existing accounts to subscription
+  - **Test Coverage**: 8 new tests covering both subscription and prepaid modes
+  - **Backward Compatible**: Existing prepaid accounts remain unaffected, prepaid mode still functional
+  - **Impact**: Aligns new user onboarding with iOS App Store subscription model
+
+- **Usage Stats API Documentation - Complete** (2026-02-03): Added usage statistics query endpoint to console and iOS guide
+  - **Console Update**: Added "使用量統計 Usage" section with usage stats endpoint
+  - **iOS Guide Update**: Added IOS_GUIDE_PARENTS.md Section 2.7 "使用量統計 API" with full Swift implementation
+  - **Endpoint**: `GET /api/v1/usage/stats` (requires auth)
+  - **Features**: Monthly limit, used minutes, remaining quota, usage percentage, billing period
+  - **Swift Examples**: Complete UsageStats Codable struct, async fetch function, SwiftUI usage view
+  - **UI Components**: Progress bar, warning alerts, remaining quota display
+  - **Impact**: iOS developers have complete reference for implementing usage tracking UI
+
+- **Email Verification Documentation** (2026-02-03): Added comprehensive email verification guide to iOS documentation
+  - **New Section**: IOS_GUIDE_PARENTS.md Section 2.2.1 "Email 驗證機制"
+  - **Content**: Complete email verification flow, error handling (403), resend mechanism
+  - **API Reference**: Section 16.3.3 (verify-email), Section 16.3.4 (resend-verification)
+  - **Swift Examples**: Full implementation examples for error handling and resend
+  - **Console Page**: Added email verification and resend endpoints to test console
+  - **Impact**: iOS developers now have complete guide for handling email verification
+
+### Changed
+- **App Config API - BREAKING CHANGE** (2026-02-03): Simplified from 8 fields to 3 essential URL fields
+  - **Removed fields**: `help_url`, `forgot_password_url`, `base_url`, `version`, `maintenance_mode`
+  - **Kept fields**: `terms_url`, `privacy_url`, `landing_page_url`
+  - **Reason**: iOS client only needs these 3 URLs; other fields unused
+  - **Impact**: iOS client MUST update `AppConfig` struct before consuming this API
+  - **Migration**: Remove 5 fields from Swift model, keep only 3 fields
+  - **Endpoint**: `GET /api/v1/app/config/{tenant}` (island_parents, career)
+  - **Tests**: All 5 integration tests pass, explicitly verify removed fields absent
+
+- **CI/CD Pipeline - Automatic Database Migrations for Staging** (2026-02-01): Staging deployments now automatically execute database migrations
+  - Pipeline runs `alembic upgrade head` before deploying to Cloud Run
+  - Uses `DATABASE_URL` (connection pooler) for IPv4 compatibility with GitHub Actions
+  - Ensures database schema matches deployed code version
+  - Production migrations remain manual for safety (requires human approval)
+  - **Impact**: Faster deployment cycle, prevents schema/code mismatch errors
+  - **Location**: `.github/workflows/ci.yml` (staging job only)
+
+- **Password Reset API - BREAKING CHANGE** (2026-02-01): Migrated from URL-based tokens to 6-digit verification codes
+  - **Previous**: `GET /api/v1/auth/password-reset/verify?token=xxx` (removed)
+  - **New**: `POST /api/v1/auth/password-reset/verify-code` (added)
+  - **Reason**: Better mobile UX, easier for users to type codes from email
+  - **Client Impact**: iOS app must update to use new verification code flow
+  - **Migration Guide**: See `docs/api/password-reset-verification-code.md`
+
+### Added
+- **Multi-Step Password Reset Template with Deeplink Support** (2026-02-01): Enhanced forgot password page for iOS in-app browser
+  - 4-step single-page flow: Email → Verification Code → New Password → Success
+  - Progress indicator (1/4, 2/4, 3/4, 4/4)
+  - Auto-deeplink redirect to App when `source=app` parameter detected
+  - Fallback mechanism: Returns to web login if App fails to open
+  - Deeplink scheme: `islandparent://auth/forgot-password-done`
+  - Support for both iOS in-app browser and web browser usage
+  - **Implementation**: `app/templates/forgot_password.html` (complete rewrite)
+  - **Testing**: 3 new integration tests in `tests/integration/test_password_reset_flows.py`
+  - **Benefits**: Seamless iOS App integration, improved user experience, single-page convenience
+
+- **Password Reset Verification Code System** (2026-02-01): Enhanced security with user-friendly 6-digit codes
+  - 6-digit verification codes (instead of 64-character URL tokens)
+  - 10-minute code expiration (vs 6-hour token expiration)
+  - Account lockout after 5 failed verification attempts (15-minute lockout)
+  - Optional pre-validation endpoint to check code before password form
+  - Email delivery with customizable templates per tenant
+  - Full end-to-end test coverage (request → verify → confirm → login)
+  - **API Endpoints**:
+    - `POST /api/v1/auth/password-reset/request` (updated to generate codes)
+    - `POST /api/v1/auth/password-reset/verify-code` (new)
+    - `POST /api/v1/auth/password-reset/confirm` (updated to accept codes)
+  - **Implementation**: `app/api/v1/password_reset.py`, `app/models/password_reset.py`
+  - **Testing**: 7 integration tests in `tests/integration/test_password_reset_verification.py`
+  - **Documentation**: Complete API guide at `docs/api/password-reset-verification-code.md`
+  - **Benefits**: Mobile-friendly, reduced friction, improved security with lockout mechanism
+
+- **App Config API** (2026-01-31): Dynamic URL management for iOS client
+  - Multi-tenant support (`island_parents`, `career`)
+  - Public endpoint `GET /api/v1/app/config/{tenant}`
+  - Returns dynamic URLs: terms, privacy, landing page, help, forgot password
+  - Environment-aware base_url configuration
+  - Version tracking and maintenance mode support
+  - No authentication required (public endpoint)
+  - 404 response for invalid tenants
+  - **Implementation**: `app/api/app_config.py`, `app/schemas/app_config.py`
+  - **Testing**: Complete unit and integration test coverage
+  - **Documentation**: Added to `IOS_API_GUIDE.md` and `IOS_GUIDE_PARENTS.md`
+  - **Benefits**: No app release needed to update URLs, supports A/B testing, instant maintenance mode toggle
+
+- **WordPress Legal Pages** (2026-01-31): Elementor-ready HTML pages for Island Parents
+  - **Landing Page**: Product introduction and features showcase
+    - Deployed to: https://www.comma.study/island_parents_landing/
+    - Highlights: Real-time AI feedback, safety assessment, parenting guidance
+  - **Privacy Policy**: GDPR/Taiwan PIPA compliant privacy policy
+    - Deployed to: https://www.comma.study/island_parents_privacy_policy/
+    - 7 sections: Data collection, usage, third-party services, security, children's privacy
+  - **Terms of Service**: Comprehensive terms of service
+    - Deployed to: https://www.comma.study/island_parents_terms_of_service/
+    - 10 sections: Service description, usage rules, refund policy, disclaimers
+  - **Technical Features**:
+    - Responsive design (desktop/tablet/mobile)
+    - Direct paste into WordPress Elementor HTML blocks
+    - PM can update content without API redeployment
+    - Clean, professional styling matching Island Parents branding
+  - **Location**: `wordpress-legal-pages/` directory
+  - **Documentation**: `wordpress-legal-pages/README.md`
+
+- **Billing Mode Support and Monthly Usage Limits** (2026-01-31): Flexible payment models for prepaid and subscription users
+  - Billing mode support (prepaid/subscription) for flexible payment models
+  - Monthly usage limits for subscription users (360 minutes/month)
+  - Usage statistics API endpoint (`GET /api/v1/usage/stats`)
+  - Rolling 30-day usage period with auto-reset
+  - HTTP 429 error when subscription limit exceeded
+  - Backward compatible: All existing users default to prepaid mode
+
+- **Email Verification Status in API Responses** (2026-01-31): Enhanced auth endpoints to include email verification status
+  - **Register Response**: Added `email_verified`, `verification_email_sent`, and `message` fields
+  - **Login Response**: Now returns `user` object with `email_verified` field
+  - **Email Verification Check**: Login blocked for unverified users when email verification enabled (HTTP 403)
+  - **Database Schema**: Added `email_verified` boolean column to Counselor model
+  - **Verify Email Endpoint**: Sets both `is_active` and `email_verified` to true
+  - **Test Environment**: Email verification disabled by default in tests via autouse fixture
+  - **Implementation**:
+    - Modified: `app/api/auth.py`, `app/schemas/auth.py`, `app/models/counselor.py`
+    - Modified: `tests/integration/conftest.py`, `tests/integration/test_auth_api.py`, `tests/integration/test_email_verification.py`
+    - Added: `tests/integration/test_issue_4_email_verification_status.py` (4 comprehensive tests)
+    - Test Coverage: 37/37 auth tests passing
+
+- **Registration Security Enhancements** (2026-01-30): Comprehensive security layer for user authentication
+  - **Rate Limiting**: SlowAPI-based protection against abuse
+    - Registration: 3 requests per hour per IP
+    - Login: 5 requests per minute per IP
+    - Password reset: 3 requests per hour per IP
+    - Development environment: Relaxed limits (100/20/20) for testing
+  - **Password Strength Validation**: Enhanced from 8 to 12 character minimum
+    - Must contain uppercase, lowercase, numbers, and special characters
+    - Checks against 10,000+ common password blacklist
+    - Clear error messages guide users to create strong passwords
+  - **Email Verification System**: JWT-based verification workflow
+    - Configurable via `ENABLE_EMAIL_VERIFICATION` env variable (default: enabled)
+    - 24-hour token expiry for verification links
+    - New endpoints: `/api/v1/auth/verify-email` and `/api/v1/auth/resend-verification`
+    - Unverified accounts cannot login (HTTP 403 with clear message)
+  - **Implementation**:
+    - New modules: `app/middleware/rate_limit.py`, `app/core/password_validator.py`, `app/core/email_verification.py`
+    - Modified: `app/api/auth.py`, `app/schemas/auth.py`, `app/services/external/email_sender.py`
+  - **Testing**: 32 new integration tests (100% pass rate)
+    - `test_rate_limiting.py` (3 tests)
+    - `test_password_validation.py` (14 tests)
+    - `test_email_verification.py` (15 tests)
+    - Updated 37 existing test files with strong passwords (161 instances)
+  - **Security**: All features follow OWASP best practices and production-ready
+
+- **Deeplink Redirect & Email Autofill for Password Reset** (2026-01-30): iOS App integration improvements
+  - Added `source` parameter to `PasswordResetRequest` schema (Optional, backward compatible)
+  - Password reset emails include `&source=app` in reset link when requested from iOS
+  - Reset password page (`reset_password.html`) detects source and redirects accordingly:
+    - From App: Attempts deeplink `islandparent://auth/forgot-password-done`
+    - Fallback mechanism: 3-second timeout checks `document.visibilityState`
+    - If App not installed/opened: Auto-redirects to web login page
+  - Forgot password page (`forgot_password.html`) supports `?mail=xxx` parameter
+  - Email autofill: iOS can pass user email via URL parameter for seamless UX
+  - All changes backward compatible (Optional parameters, graceful fallback)
+  - Testing: All 14 password reset integration tests pass
+
 - **Terms of Service & Privacy Policy Pages** (2026-01-27): Legal pages for RevenueCat/App Store compliance
   - Route: `/island-parents/terms` - Terms of Service with 10 comprehensive sections
   - Route: `/island-parents/privacy` - Privacy Policy compliant with GDPR/Taiwan PIPA
@@ -27,7 +233,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Included feature highlights (non-blocking, background tasks, RAG, token tracking)
   - Improved developer experience for iOS/frontend teams using `/docs`
 
+### Removed
+- **Old Token-based Password Reset Verification** (2026-02-01): Deprecated endpoint removed
+  - `GET /api/v1/auth/password-reset/verify?token=xxx` endpoint removed
+  - `PasswordResetVerifyResponse` schema no longer exported (internal use only)
+  - **Reason**: Replaced by more secure verification code flow
+  - **Migration**: Update clients to use `POST /api/v1/auth/password-reset/verify-code`
+
+### Security
+- **Password Reset Brute Force Protection** (2026-02-01): Multi-layer security enhancements
+  - Rate limiting: 5 password reset requests per hour per IP
+  - Verification lockout: 15-minute account lock after 5 failed code verification attempts
+  - Failed attempt tracking: `verify_attempts` counter and `locked_until` timestamp
+  - IP audit trail: Request IP and usage IP logged to database
+  - User enumeration prevention: Always return success message regardless of email existence
+  - One-time code usage: Tokens marked as `used` with timestamp after successful password reset
+  - **Risk Mitigation**: Prevents automated attacks, credential stuffing, and verification code guessing
+
+### Changed
+- **Session Creation with Usage Limits** (2026-01-31): Session creation now checks usage limits based on billing mode
+  - Counselor model extended with billing mode and usage tracking fields
+  - Prepaid users: Blocked if credits <= 0
+  - Subscription users: Blocked if monthly limit exceeded or subscription expired
+  - Auto-resets usage period after 30 days
+
+- **Parents Report Prompt Refinement** (2026-01-29): Balanced professional authority with accessibility
+  - Modified prompt in `parents_report_service.py` to use life-like language while maintaining credibility
+  - **Strategy**: Moderate use of simple professional terms, avoid excessive academic jargon
+  - **Preserved terms**: 同理, 界限, 情緒, 歸屬感, 價值感 (simple, understandable)
+  - **Removed**: Expert name-dropping (Gottman, 阿德勒, 薩提爾, Dan Siegel, Ross Greene, Dr. Becky Kennedy)
+  - **Translated concepts**:
+    - '冰山理論' → '表面行為背後的真正需求'
+    - '情緒教練時刻' → '陪伴孩子面對情緒'
+    - '黃金時刻' → '很難得的時刻'
+    - '權力鬥爭' → '親子之間的拉扯'
+  - **Neutral phrasing**: 'Gottman理論' → '研究發現...', '專家建議...'
+  - **RAG integration**: Remains active, only presentation style changed
+  - **A/B testing validation**: Academic density reduced 100% (19.1 → 0.0 terms/1000 chars)
+  - **Impact**: No API changes, no schema changes, no iOS changes required
+  - **Testing**: Created automated A/B testing script (`scripts/test_parents_report_ab.py`)
+  - **Verification**: All 9 integration tests pass
+
+### Database
+- **Billing Mode and Usage Tracking Schema** (2026-01-31): Extended counselors table for flexible billing
+  - Added `billing_mode` enum column to counselors table (prepaid/subscription)
+  - Added subscription usage tracking columns:
+    - `monthly_usage_limit_minutes` (default: 360)
+    - `monthly_minutes_used` (default: 0)
+    - `usage_period_start` (rolling 30-day period)
+  - Migration: All existing users default to prepaid mode (backward compatible)
+
 ### Fixed
+- **Emotion-Feedback API Production Bugs** (2026-01-28 to 2026-01-29): Resolved 422 and 500 errors
+  - **422 Error Fix** (Commit c8cfe7b): Empty context validation
+    - Modified `EmotionFeedbackRequest.context` to allow empty string (default="")
+    - First emotion-feedback call can now send `context=""` without validation error
+    - Changed schema from `min_length=1` to optional empty string
+  - **500 Error Fix** (Commit c8cfe7b): Token usage extraction
+    - Fixed `get_last_token_usage()` method not found error in `emotion_service.py`
+    - Extract token usage directly from `response.usage_metadata`
+    - Pattern matches `quick_feedback_service.py` implementation
+  - **Redundant Validation Removal** (Commit 2af6ab2): Route handler cleanup
+    - Removed duplicate empty context check in `/api/sessions.py` endpoint
+    - Route handler had second validation layer (400 error) blocking empty context
+    - Now relies solely on Pydantic schema validation
+  - **Test Enablement**: Removed `pytest.mark.skip` decorator from emotion API tests
+  - **Impact**: All emotion-feedback API calls now work correctly in staging/production
+  - **Testing**: `test_emotion_api.py` tests enabled and passing
+
 - **Safety Assessment Test Failure** (2026-01-27): Fixed `test_safe_conversation_returns_green_level`
   - Root cause: Placeholder `/messages` endpoint doesn't store transcript data
   - Solution: Test now directly sets `transcript_text` on session object

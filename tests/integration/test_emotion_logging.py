@@ -38,7 +38,7 @@ class TestEmotionLogging:
             email="log-test@island-parents.com",
             username="logtest",
             full_name="Log Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -51,7 +51,7 @@ class TestEmotionLogging:
                 "/api/auth/login",
                 json={
                     "email": "log-test@island-parents.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )

@@ -32,7 +32,7 @@ class TestSessionAnalysisLogAPI:
             email="counselor-analysis@test.com",
             username="analysiscounselor",
             full_name="Analysis Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -45,7 +45,7 @@ class TestSessionAnalysisLogAPI:
                 "/api/auth/login",
                 json={
                     "email": "counselor-analysis@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -158,7 +158,7 @@ class TestSessionAnalysisLogAPI:
             email="tenant1@test.com",
             username="tenant1counselor",
             full_name="Tenant 1 Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="tenant1",
             role="counselor",
             is_active=True,
@@ -168,7 +168,7 @@ class TestSessionAnalysisLogAPI:
             email="tenant2@test.com",
             username="tenant2counselor",
             full_name="Tenant 2 Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="tenant2",
             role="counselor",
             is_active=True,
@@ -220,7 +220,7 @@ class TestSessionAnalysisLogAPI:
                 "/api/auth/login",
                 json={
                     "email": "tenant2@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "tenant2",
                 },
             )
@@ -373,7 +373,7 @@ class TestSessionUsageAPI:
             email="counselor-usage@test.com",
             username="usagecounselor",
             full_name="Usage Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -387,7 +387,7 @@ class TestSessionUsageAPI:
                 "/api/auth/login",
                 json={
                     "email": "counselor-usage@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -620,7 +620,7 @@ class TestSessionUsageAPI:
             email="usage-tenant1@test.com",
             username="usagetenant1",
             full_name="Usage Tenant 1 Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="tenant1",
             role="counselor",
             is_active=True,
@@ -630,7 +630,7 @@ class TestSessionUsageAPI:
             email="usage-tenant2@test.com",
             username="usagetenant2",
             full_name="Usage Tenant 2 Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="tenant2",
             role="counselor",
             is_active=True,
@@ -682,7 +682,7 @@ class TestSessionUsageAPI:
                 "/api/auth/login",
                 json={
                     "email": "usage-tenant2@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "tenant2",
                 },
             )
@@ -815,7 +815,7 @@ class TestSessionUsageIntegration:
             email="counselor-integration@test.com",
             username="integrationcounselor",
             full_name="Integration Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -829,7 +829,7 @@ class TestSessionUsageIntegration:
                 "/api/auth/login",
                 json={
                     "email": "counselor-integration@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )

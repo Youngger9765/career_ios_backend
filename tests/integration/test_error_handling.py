@@ -20,13 +20,18 @@ def client(db_session):
 
 
 @pytest.fixture
-def auth_headers(client):
+def auth_headers(client, monkeypatch):
     """Create authenticated user and return auth headers"""
+    # Disable email verification for test user
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "ENABLE_EMAIL_VERIFICATION", False)
+
     # Register and login to get token
     register_data = {
         "email": "test@example.com",
         "username": "testuser",
-        "password": "testpass123",
+        "password": "V@lidT3stPass123",
         "full_name": "Test User",
         "tenant_id": "test-tenant",
         "role": "counselor",
@@ -128,7 +133,7 @@ class TestRFC7807IntegrationFormat:
         register_data = {
             "email": "duplicate@example.com",
             "username": "user1",
-            "password": "testpass123",
+            "password": "V@lidT3stPass123",
             "full_name": "User One",
             "tenant_id": "test-tenant",
             "role": "counselor",
@@ -186,7 +191,7 @@ class TestAuthEndpointErrors:
         register_data = {
             "email": "user1@example.com",
             "username": "duplicate_user",
-            "password": "testpass123",
+            "password": "V@lidT3stPass123",
             "full_name": "User One",
             "tenant_id": "test-tenant",
             "role": "counselor",

@@ -427,7 +427,7 @@ def admin_token(client, db_session):
         email="admin@test.com",
         username="admin",
         full_name="Admin User",
-        hashed_password=hash_password("admin123"),
+        hashed_password=hash_password("@dmin!P@ss123"),
         tenant_id="career",
         role=CounselorRole.ADMIN,
         is_active=True,
@@ -440,7 +440,7 @@ def admin_token(client, db_session):
         "/api/auth/login",
         json={
             "email": "admin@test.com",
-            "password": "admin123",
+            "password": "@dmin!P@ss123",
             "tenant_id": "career",
         },
     )

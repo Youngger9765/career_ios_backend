@@ -79,7 +79,7 @@ class TestQuickFeedbackAPI:
             email="quick-feedback-api-test@test.com",
             username="quickfeedbackapitest",
             full_name="Quick Feedback API Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -150,7 +150,7 @@ class TestQuickFeedbackAPI:
                 "/api/auth/login",
                 json={
                     "email": "quick-feedback-api-test@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )

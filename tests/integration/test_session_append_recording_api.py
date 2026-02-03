@@ -61,7 +61,7 @@ def test_counselor(db_session: DBSession):
         email="counselor@test.com",
         username="test_counselor",
         full_name="Test Counselor",
-        hashed_password=hash_password("password123"),
+        hashed_password=hash_password("ValidP@ssw0rd123"),
         tenant_id="test_tenant",
         role="counselor",
         is_active=True,
@@ -140,7 +140,7 @@ def auth_token(client, test_counselor: Counselor):
         "/api/auth/login",
         json={
             "email": "counselor@test.com",
-            "password": "password123",
+            "password": "ValidP@ssw0rd123",
             "tenant_id": "test_tenant",
         },
     )

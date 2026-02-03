@@ -43,7 +43,7 @@ class TestSessionsNPlusOneQueries:
             email="counselor-n1@test.com",
             username="n1counselor",
             full_name="N+1 Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -56,7 +56,7 @@ class TestSessionsNPlusOneQueries:
                 "/api/auth/login",
                 json={
                     "email": "counselor-n1@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )

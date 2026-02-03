@@ -30,17 +30,56 @@ class EmailSenderService:
     async def send_password_reset_email(
         self,
         to_email: str,
-        reset_token: str,
+        verification_code: str,
         counselor_name: str = None,
         tenant_id: str = "career",
+        source: str | None = None,
     ) -> bool:
         """
-        Send password reset email
+        Send password reset email with 6-digit verification code
 
         Args:
             to_email: Recipient email
-            reset_token: Password reset token
+            verification_code: 6-digit verification code
             counselor_name: Optional counselor name for personalization
+            tenant_id: Tenant ID for customizing email content
+            source: Request source ('app' or 'web') - kept for compatibility
+
+        Returns:
+            True if sent successfully
+        """
+        # Tenant name mapping
+        tenant_names = {
+            "career": "Career",
+            "island": "浮島",
+            "island_parents": "浮島親子",
+        }
+        tenant_name = tenant_names.get(tenant_id, "Career")
+
+        subject = f"Password Reset Verification Code - {tenant_name}"
+
+        html_body = self._generate_password_reset_html(
+            counselor_name or "User", verification_code, tenant_name
+        )
+
+        try:
+            return await self._send_email(to_email, subject, html_body)
+        except Exception as e:
+            logger.error(f"Failed to send password reset email: {e}")
+            raise
+
+    async def send_verification_email(
+        self,
+        to_email: str,
+        verification_token: str,
+        tenant_id: str = "career",
+    ) -> bool:
+        """
+        Send email verification email
+
+        Args:
+            to_email: Recipient email
+            verification_token: Email verification token
             tenant_id: Tenant ID for customizing email content
 
         Returns:
@@ -54,26 +93,23 @@ class EmailSenderService:
         }
         tenant_name = tenant_names.get(tenant_id, "Career")
 
-        subject = f"Password Reset Request - {tenant_name}"
+        subject = f"Verify Your Email - {tenant_name}"
 
-        # Generate password reset URL using configured APP_URL
-        # Use dynamic tenant route if tenant is valid, otherwise use generic path
+        # Generate verification URL
         tenant_url_path = get_tenant_url_path(tenant_id)
         if tenant_url_path:
-            reset_path = f"/{tenant_url_path}/reset-password"
+            verify_path = f"/{tenant_url_path}/verify-email"
         else:
-            reset_path = "/reset-password"  # Generic fallback
+            verify_path = "/verify-email"
 
-        reset_url = f"{self.app_url}{reset_path}?token={reset_token}"
+        verify_url = f"{self.app_url}{verify_path}?token={verification_token}"
 
-        html_body = self._generate_password_reset_html(
-            counselor_name or "User", reset_url, tenant_name
-        )
+        html_body = self._generate_verification_html(to_email, verify_url, tenant_name)
 
         try:
             return await self._send_email(to_email, subject, html_body)
         except Exception as e:
-            logger.error(f"Failed to send password reset email: {e}")
+            logger.error(f"Failed to send verification email: {e}")
             raise
 
     async def send_billing_report(
@@ -104,16 +140,126 @@ class EmailSenderService:
             raise
 
     def _generate_password_reset_html(
-        self, counselor_name: str, reset_url: str, tenant_name: str = "Career"
+        self, counselor_name: str, verification_code: str, tenant_name: str = "Career"
     ) -> str:
-        """Generate password reset email HTML"""
+        """Generate password reset email HTML with verification code"""
         html = f"""
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Reset Request</title>
+    <title>Password Reset Verification Code</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }}
+        .container {{
+            background-color: white;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        h1 {{
+            color: #1a73e8;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }}
+        .content {{
+            margin: 20px 0;
+            font-size: 16px;
+        }}
+        .code-container {{
+            text-align: center;
+            margin: 30px 0;
+            padding: 30px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }}
+        .verification-code {{
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            color: #1a73e8;
+            font-family: 'Courier New', monospace;
+        }}
+        .code-label {{
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }}
+        .warning {{
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #fef7e0;
+            border-left: 4px solid #f9ab00;
+            border-radius: 4px;
+            font-size: 14px;
+        }}
+        .footer {{
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Password Reset Verification Code</h1>
+
+        <div class="content">
+            <p>Hi {counselor_name},</p>
+
+            <p>We received a request to reset your password for your <strong>{tenant_name}</strong> account.</p>
+
+            <p>Use the verification code below to reset your password. This code will expire in 10 minutes.</p>
+        </div>
+
+        <div class="code-container">
+            <div class="verification-code">{verification_code}</div>
+            <div class="code-label">Enter this code in the app</div>
+        </div>
+
+        <div class="warning">
+            <p><strong>Security Notice:</strong></p>
+            <ul style="margin: 10px 0 0 20px;">
+                <li>If you didn't request this password reset, please ignore this email.</li>
+                <li>Never share this code with anyone.</li>
+                <li>This code will expire in 10 minutes for your security.</li>
+                <li>The code can only be used once.</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>{tenant_name} Platform</p>
+            <p>This is an automated email. Please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+        return html
+
+    def _generate_verification_html(
+        self, email: str, verify_url: str, tenant_name: str = "Career"
+    ) -> str:
+        """Generate email verification HTML"""
+        html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email</title>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -143,7 +289,7 @@ class EmailSenderService:
             text-align: center;
             margin: 30px 0;
         }}
-        .reset-button {{
+        .verify-button {{
             display: inline-block;
             background-color: #000000 !important;
             color: #ffffff !important;
@@ -153,14 +299,14 @@ class EmailSenderService:
             font-weight: 600;
             font-size: 16px;
         }}
-        .reset-button:hover {{
+        .verify-button:hover {{
             background-color: #333333 !important;
         }}
-        .warning {{
+        .info {{
             margin-top: 30px;
             padding: 15px;
-            background-color: #fef7e0;
-            border-left: 4px solid #f9ab00;
+            background-color: #e8f4fd;
+            border-left: 4px solid #1a73e8;
             border-radius: 4px;
             font-size: 14px;
         }}
@@ -176,27 +322,31 @@ class EmailSenderService:
 </head>
 <body>
     <div class="container">
-        <h1>Password Reset Request</h1>
+        <h1>Verify Your Email Address</h1>
 
         <div class="content">
-            <p>Hi {counselor_name},</p>
+            <p>Welcome to <strong>{tenant_name}</strong>!</p>
 
-            <p>We received a request to reset your password for your <strong>{tenant_name}</strong> account.</p>
+            <p>Thank you for registering with us. To complete your registration and activate your account, please verify your email address.</p>
 
-            <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
+            <p>Click the button below to verify your email. This link will expire in 24 hours.</p>
         </div>
 
         <div class="button-container">
-            <a href="{reset_url}" class="reset-button">Reset Password</a>
+            <a href="{verify_url}" class="verify-button">Verify Email</a>
         </div>
 
-        <div class="warning">
-            <p><strong>Security Notice:</strong></p>
+        <div class="info">
+            <p><strong>What happens next?</strong></p>
             <ul style="margin: 10px 0 0 20px;">
-                <li>If you didn't request this password reset, please ignore this email.</li>
-                <li>Never share this link with anyone.</li>
-                <li>This link will expire in 1 hour for your security.</li>
+                <li>Click the verification button above</li>
+                <li>Your account will be activated immediately</li>
+                <li>You can then log in and start using our services</li>
             </ul>
+        </div>
+
+        <div class="content" style="margin-top: 30px; font-size: 14px; color: #666;">
+            <p>If you didn't create an account with {tenant_name}, you can safely ignore this email.</p>
         </div>
 
         <div class="footer">

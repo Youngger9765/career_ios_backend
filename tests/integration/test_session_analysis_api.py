@@ -69,7 +69,7 @@ class TestSessionDeepAnalyzeAPI:
             email="deep-analyze-test@test.com",
             username="deepanalyzecounselor",
             full_name="Deep Analyze Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -140,7 +140,7 @@ class TestSessionDeepAnalyzeAPI:
                 "/api/auth/login",
                 json={
                     "email": "deep-analyze-test@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )
@@ -317,7 +317,7 @@ class TestSessionQuickFeedbackAPI:
             email="quick-feedback-test@test.com",
             username="quickfeedbackcounselor",
             full_name="Quick Feedback Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -384,7 +384,7 @@ class TestSessionQuickFeedbackAPI:
                 "/api/auth/login",
                 json={
                     "email": "quick-feedback-test@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )

@@ -32,7 +32,7 @@ class TestWebSessionWorkflow:
             email=f"web-counselor-{uuid4().hex[:8]}@test.com",
             username=f"webcounselor{uuid4().hex[:6]}",
             full_name="Web Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -49,7 +49,7 @@ class TestWebSessionWorkflow:
             "/api/auth/login",
             json={
                 "email": counselor.email,
-                "password": "password123",
+                "password": "ValidP@ssw0rd123",
                 "tenant_id": counselor.tenant_id,
             },
         )

@@ -20,9 +20,10 @@ from app.core.exceptions import (
     InternalServerError,
     NotFoundError,
 )
+from app.middleware.usage_limit import check_usage_limit
 from app.models.case import Case
 from app.models.client import Client
-from app.models.counselor import Counselor
+from app.models.counselor import BillingMode, Counselor
 from app.models.report import Report
 from app.models.session import Session
 from app.repositories.session_repository import SessionRepository
@@ -105,11 +106,23 @@ def create_session(
     db: DBSession = Depends(get_db),
 ) -> SessionResponse:
     """創建逐字稿記錄（不生成報告）"""
+    # Check usage limits before creating session
+    check_usage_limit(current_user)
+
     service = SessionService(db)
     repo = SessionRepository(db)
     instance = str(request.url.path)
     try:
+        # Track usage for subscription mode BEFORE creating session
+        # This ensures the usage update is part of the same transaction
+        if current_user.billing_mode == BillingMode.SUBSCRIPTION and session_data.duration_minutes is not None:
+            # Increment monthly usage by session duration
+            current_user.monthly_minutes_used = (
+                current_user.monthly_minutes_used or 0
+            ) + session_data.duration_minutes
+
         session = service.create_session(session_data, current_user, tenant_id)
+
         case = repo.get_case_by_id(session.case_id, tenant_id)
         client = repo.get_client_by_id(case.client_id)
         return _build_session_response(session, client, case, has_report=False)

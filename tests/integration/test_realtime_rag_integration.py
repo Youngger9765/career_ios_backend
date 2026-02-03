@@ -57,7 +57,7 @@ class TestRealtimeRAGIntegration:
             email="rag-integration-test@test.com",
             username="ragintegrationcounselor",
             full_name="RAG Integration Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="island_parents",
             role="counselor",
             is_active=True,
@@ -128,7 +128,7 @@ class TestRealtimeRAGIntegration:
                 "/api/auth/login",
                 json={
                     "email": "rag-integration-test@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "island_parents",
                 },
             )

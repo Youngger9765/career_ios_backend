@@ -26,7 +26,7 @@ class TestClientsAPI:
             email="counselor@test.com",
             username="testcounselor",
             full_name="Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -40,7 +40,7 @@ class TestClientsAPI:
                 "/api/auth/login",
                 json={
                     "email": "counselor@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
@@ -369,7 +369,7 @@ class TestClientsAPI:
             email="other@test.com",
             username="othercounselor",
             full_name="Other Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -414,7 +414,7 @@ class TestClientsAPI:
             email="admin@test.com",
             username="admin",
             full_name="Admin User",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="admin",
             is_active=True,
@@ -428,7 +428,7 @@ class TestClientsAPI:
             email="other2@test.com",
             username="othercounselor2",
             full_name="Other Counselor 2",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -459,7 +459,7 @@ class TestClientsAPI:
                 "/api/auth/login",
                 json={
                     "email": "admin@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )

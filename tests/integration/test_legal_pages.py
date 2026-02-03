@@ -1,7 +1,6 @@
 """
 Integration tests for Terms of Service and Privacy Policy pages
 """
-import pytest
 from fastapi.testclient import TestClient
 
 

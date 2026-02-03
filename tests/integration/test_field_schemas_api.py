@@ -24,7 +24,7 @@ class TestFieldSchemasAPI:
             email="counselor-schemas@test.com",
             username="schemascounselor",
             full_name="Schemas Test Counselor",
-            hashed_password=hash_password("password123"),
+            hashed_password=hash_password("ValidP@ssw0rd123"),
             tenant_id="career",
             role="counselor",
             is_active=True,
@@ -37,7 +37,7 @@ class TestFieldSchemasAPI:
                 "/api/auth/login",
                 json={
                     "email": "counselor-schemas@test.com",
-                    "password": "password123",
+                    "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )

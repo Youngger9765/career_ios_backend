@@ -35,6 +35,22 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 90  # 90 days (3 months)
     REFRESH_TOKEN_EXPIRE_DAYS: int = 90  # 90 days (3 months, match access token)
 
+    # Email Verification
+    ENABLE_EMAIL_VERIFICATION: bool = True  # Toggle email verification requirement
+    VERIFICATION_TOKEN_EXPIRE_HOURS: int = 24  # Email verification token validity
+
+    # Verification Code Settings
+    VERIFICATION_CODE_LENGTH: int = 6
+    VERIFICATION_CODE_EXPIRY_MINUTES: int = 15
+    VERIFICATION_CODE_MAX_ATTEMPTS: int = 5
+    VERIFICATION_CODE_LOCKOUT_MINUTES: int = 15
+    VERIFICATION_CODE_RESEND_COOLDOWN_SECONDS: int = 60
+
+    # Rate Limiting (always enabled for security)
+    RATE_LIMIT_REGISTER_PER_HOUR: int = 100 if DEBUG else 3  # Registration attempts per IP per hour
+    RATE_LIMIT_LOGIN_PER_MINUTE: int = 20 if DEBUG else 5  # Login attempts per IP per minute
+    RATE_LIMIT_PASSWORD_RESET_PER_HOUR: int = 20 if DEBUG else 3  # Password reset requests per IP per hour
+
     # OpenAI (用於 Embeddings, Whisper STT, RAG Chat)
     OPENAI_API_KEY: Optional[str] = "sk-test-key-for-ci"  # Override in .env
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
@@ -101,6 +117,26 @@ class Settings(BaseSettings):
     # File Upload
     MAX_UPLOAD_SIZE: int = 100 * 1024 * 1024  # 100MB
     ALLOWED_AUDIO_TYPES: List[str] = [".mp3", ".wav", ".m4a", ".aac"]
+
+    # App Config (for iOS client) - Multi-tenant
+    # Island Parents tenant
+    ISLAND_PARENTS_TERMS_URL: str = "https://www.comma.study/island_parents_terms_of_service/"
+    ISLAND_PARENTS_PRIVACY_URL: str = "https://www.comma.study/island_parents_privacy_policy/"
+    ISLAND_PARENTS_LANDING_PAGE_URL: str = "https://www.comma.study/island_parents_landing/"
+    ISLAND_PARENTS_HELP_URL: str = "https://duodian.com/career/help"
+    ISLAND_PARENTS_FORGOT_PASSWORD_URL: str = "https://duodian.com/career/forgot-password"
+
+    # Legacy/Career tenant (backward compatibility)
+    APP_TERMS_URL: str = "https://duodian.com/career/terms"
+    APP_PRIVACY_URL: str = "https://duodian.com/career/privacy"
+    APP_LANDING_PAGE_URL: str = "https://duodian.com/career"
+    APP_HELP_URL: str = "https://duodian.com/career/help"
+    APP_FORGOT_PASSWORD_URL: str = "https://duodian.com/career/forgot-password"
+
+    # Common config
+    APP_BASE_URL: str = "https://career-app-api-prod.run.app"
+    APP_CONFIG_VERSION: str = "1.0.0"
+    APP_MAINTENANCE_MODE: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",
