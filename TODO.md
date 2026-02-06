@@ -1,6 +1,6 @@
 # TODO
 
-**Last Updated**: 2026-02-06
+**Last Updated**: 2026-02-07
 
 ---
 
@@ -29,6 +29,13 @@
 - [x] **GET verify-email route** ✅ (2026-02-06)
   - 新增 GET `/{tenant}/verify-email` 支援 email link 點擊
   - Staging 已測試
+
+### iOS 開發文件
+- [x] **IOS_GUIDE_PARENTS.md 文件補齊** ✅ (2026-02-07)
+  - 新增 `password_rules` 欄位說明表（型別 + 用途）
+  - 修正 verify-email URL 格式（GET `/{tenant}/verify-email`）
+  - Section 16.3.3 拆分 GET（瀏覽器）+ POST（程式化）兩種方式
+  - PROD + Staging 已部署
 
 ---
 
