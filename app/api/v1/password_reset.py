@@ -54,7 +54,9 @@ def generate_secure_token() -> str:
 
 def is_password_weak(password: str) -> tuple[bool, str | None]:
     """
-    Check if password meets security requirements
+    Check if password meets security requirements.
+
+    Rules: min 8 chars, at least one letter, at least one digit, not common.
 
     Returns:
         (is_weak, error_message)
@@ -62,18 +64,14 @@ def is_password_weak(password: str) -> tuple[bool, str | None]:
     if len(password) < 8:
         return True, "Password must be at least 8 characters long"
 
-    # Disabled for testing - only check minimum length
-    # if password.lower() in WEAK_PASSWORDS:
-    #     return True, "Password is too common. Please choose a stronger password"
+    if not any(c.isalpha() for c in password):
+        return True, "Password must contain at least one letter"
 
-    # if password.isdigit():
-    #     return True, "Password cannot be only numbers"
+    if not any(c.isdigit() for c in password):
+        return True, "Password must contain at least one number"
 
-    # if not any(c.isalpha() for c in password):
-    #     return True, "Password must contain at least one letter"
-
-    # if not any(c.isdigit() for c in password):
-    #     return True, "Password must contain at least one number"
+    if password.lower() in WEAK_PASSWORDS:
+        return True, "Password is too common. Please choose a stronger password"
 
     return False, None
 

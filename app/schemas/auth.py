@@ -23,7 +23,7 @@ class RegisterRequest(BaseModel):
     """Registration request - simplified to only require email and password"""
 
     email: EmailStr
-    password: str = Field(..., min_length=12, description="Password must be at least 12 characters with uppercase, lowercase, digit, and special character")
+    password: str = Field(..., min_length=8, description="Password must be at least 8 characters with letters and digits")
     tenant_id: str
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     full_name: Optional[str] = Field(None, min_length=1)
@@ -160,15 +160,22 @@ class PasswordResetConfirm(BaseModel):
     """Password reset confirmation"""
 
     verification_code: str = Field(..., min_length=6, max_length=6, pattern="^[0-9]{6}$")
-    new_password: str = Field(..., min_length=8)
+    new_password: str = Field(..., min_length=8, description="Password must be at least 8 characters with letters and digits")
     email: EmailStr
     tenant_id: str
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        """Validate new password strength requirements"""
+        validate_password_strength(v)
+        return v
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "verification_code": "123456",
-                "new_password": "SecurePassword123!",
+                "new_password": "SecurePass1",
                 "email": "user@example.com",
                 "tenant_id": "test_tenant",
             }

@@ -1482,7 +1482,7 @@ Authorization: Bearer {access_token}
 
 **欄位說明:**
 - `email` (必填): 電子郵件地址，需符合 Email 格式
-- `password` (必填): 密碼，至少 8 個字元
+- `password` (必填): 密碼，至少 8 個字元，需包含至少一個英文字母 (a-z) 和至少一個數字 (0-9)，且不可為常見密碼。無大寫或特殊字元要求
 - `tenant_id` (必填): 租戶 ID（如 "career" 或 "island"）
 - `username` (選填): 用戶名，3-50 個字元。如果提供，必須全系統唯一。可後續透過 `/api/auth/me` 補填
 - `full_name` (選填): 全名。可後續透過 `/api/auth/me` 補填
@@ -1526,18 +1526,32 @@ Authorization: Bearer {access_token}
 }
 ```
 
-**422 Unprocessable Entity - 驗證錯誤:**
+**422 Unprocessable Entity - 驗證錯誤 (RFC 7807 格式):**
 ```json
 {
-  "detail": [
+  "type": "https://api.career-counseling.app/errors/validation-error",
+  "title": "Unprocessable Entity",
+  "status": 422,
+  "detail": "Validation failed: 1 error(s)",
+  "instance": "/api/auth/register",
+  "errors": [
     {
-      "loc": ["body", "password"],
-      "msg": "ensure this value has at least 8 characters",
-      "type": "value_error.any_str.min_length"
+      "field": "body -> password",
+      "message": "Value error, Password validation failed: Password must be at least 8 characters; Password must contain at least one digit (0-9)",
+      "type": "value_error"
     }
-  ]
+  ],
+  "password_rules": {
+    "min_length": 8,
+    "require_letter": true,
+    "require_digit": true,
+    "require_uppercase": false,
+    "require_special_char": false
+  }
 }
 ```
+
+> **💡 `password_rules` 欄位:** 當密碼驗證失敗時，回應會包含 `password_rules` 物件，iOS 端可用來動態顯示密碼規則提示，無需硬編碼規則。
 
 **Swift 範例 (簡化版):**
 ```swift
@@ -1599,12 +1613,46 @@ func register(
     if httpResponse.statusCode == 201 {
         let registerResponse = try JSONDecoder().decode(RegisterResponse.self, from: data)
         return registerResponse.access_token
+    } else if httpResponse.statusCode == 422 {
+        // 密碼驗證失敗 - 解析 RFC 7807 錯誤與 password_rules
+        let errorResponse = try JSONDecoder().decode(ValidationErrorResponse.self, from: data)
+        if let rules = errorResponse.password_rules {
+            // 使用 password_rules 動態顯示密碼規則
+            print("密碼規則: 最少 \(rules.min_length) 字元, 需要字母: \(rules.require_letter), 需要數字: \(rules.require_digit)")
+        }
+        let messages = errorResponse.errors.map { $0.message }
+        throw NSError(domain: "RegisterError", code: 422, userInfo: [NSLocalizedDescriptionKey: messages.joined(separator: "\n")])
     } else {
-        // 處理錯誤
+        // 處理其他錯誤
         let errorData = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         let errorMessage = errorData?["detail"] as? String ?? "註冊失敗"
         throw NSError(domain: "RegisterError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
     }
+}
+
+// 密碼驗證錯誤回應 Models (RFC 7807)
+struct ValidationErrorResponse: Codable {
+    let type: String
+    let title: String
+    let status: Int
+    let detail: String
+    let instance: String
+    let errors: [ValidationError]
+    let password_rules: PasswordRules?
+}
+
+struct ValidationError: Codable {
+    let field: String
+    let message: String
+    let type: String
+}
+
+struct PasswordRules: Codable {
+    let min_length: Int
+    let require_letter: Bool
+    let require_digit: Bool
+    let require_uppercase: Bool
+    let require_special_char: Bool
 }
 ```
 
