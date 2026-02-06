@@ -1,6 +1,6 @@
 # TODO
 
-**Last Updated**: 2026-02-06
+**Last Updated**: 2026-02-07
 
 ---
 
@@ -21,7 +21,7 @@
 
 ### 密碼規則
 - [x] **簡化密碼規則** ✅ (2026-02-06)
-  - letter (a-z) + digit (0-9), min 8 chars
+  - letter (a-z/A-Z，不分大小寫) + digit (0-9), min 8 chars
   - RFC 7807 error format with `password_rules` dict
   - Staging 已測試 4 種 scenario 全部正確
 
@@ -29,6 +29,13 @@
 - [x] **GET verify-email route** ✅ (2026-02-06)
   - 新增 GET `/{tenant}/verify-email` 支援 email link 點擊
   - Staging 已測試
+
+### iOS 開發文件
+- [x] **IOS_GUIDE_PARENTS.md 文件補齊** ✅ (2026-02-07)
+  - 新增 `password_rules` 欄位說明表（型別 + 用途）
+  - 修正 verify-email URL 格式（GET `/{tenant}/verify-email`）
+  - Section 16.3.3 拆分 GET（瀏覽器）+ POST（程式化）兩種方式
+  - PROD + Staging 已部署
 
 ---
 
