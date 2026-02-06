@@ -53,13 +53,24 @@ def seed_database():
                 tenant_id="island",
                 is_active=True,
             ),
+            # Apple Review account (island_parents tenant)
+            Counselor(
+                email="apple_review@islandparents.app",
+                username="apple_reviewer",
+                full_name="Apple Reviewer",
+                hashed_password=hash_password("Island2026"),
+                role=CounselorRole.COUNSELOR,
+                tenant_id="island_parents",
+                is_active=True,
+                email_verified=True,
+            ),
         ]
 
         for counselor in counselors:
             db.add(counselor)
 
         db.commit()
-        print("✅ Created 4 test counselors")
+        print("✅ Created 5 test counselors (including Apple Review account)")
 
         # Get counselor IDs for client creation
         career_counselor = (
@@ -133,6 +144,8 @@ def seed_database():
         print("\nIsland Tenant:")
         print("  Admin: admin@island.com / password123")
         print("  Counselor: counselor@island.com / password123")
+        print("\nIsland Parents Tenant (Apple Review):")
+        print("  apple_review@islandparents.app / Island2026")
         print("=" * 50)
 
 

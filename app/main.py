@@ -426,6 +426,145 @@ async def tenant_reset_password(
     )
 
 
+@app.get("/{tenant_id}/verify-email", response_class=HTMLResponse)
+def tenant_verify_email(
+    tenant_id: str,
+    token: Optional[str] = Query(None, description="Email verification token"),
+) -> Response:
+    """
+    Email verification page for any tenant.
+
+    This GET endpoint handles the verification link clicked from the email.
+    The email link format: {APP_URL}/{tenant_url_path}/verify-email?token=xxx
+
+    Args:
+        tenant_id: Tenant ID in URL format (kebab-case, e.g., "island-parents")
+        token: JWT verification token from query parameter
+    """
+    from jose import JWTError
+    from sqlalchemy import select
+
+    from app.core.database import get_db
+    from app.core.email_verification import verify_verification_token
+    from app.models.counselor import Counselor
+
+    # --- HTML templates ---
+    def _success_html(email: str) -> str:
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verified</title>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f8f9fa; }}
+        .card {{ background: white; border-radius: 12px; padding: 48px; max-width: 420px; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }}
+        .icon {{ font-size: 48px; margin-bottom: 16px; }}
+        h1 {{ color: #1a1a1a; font-size: 22px; margin: 0 0 12px; }}
+        p {{ color: #666; font-size: 15px; line-height: 1.5; margin: 0; }}
+        .email {{ color: #333; font-weight: 600; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">&#10003;</div>
+        <h1>Email Verified Successfully</h1>
+        <p>Your email <span class="email">{email}</span> has been verified.<br>You can now log in to the app.</p>
+    </div>
+</body>
+</html>"""
+
+    def _error_html(message: str) -> str:
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification Failed</title>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f8f9fa; }}
+        .card {{ background: white; border-radius: 12px; padding: 48px; max-width: 420px; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }}
+        .icon {{ font-size: 48px; margin-bottom: 16px; }}
+        h1 {{ color: #1a1a1a; font-size: 22px; margin: 0 0 12px; }}
+        p {{ color: #666; font-size: 15px; line-height: 1.5; margin: 0; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">&#10007;</div>
+        <h1>Verification Failed</h1>
+        <p>{message}</p>
+    </div>
+</body>
+</html>"""
+
+    # --- Validate tenant ---
+    normalized_tenant = normalize_tenant_from_url(tenant_id)
+    if not normalized_tenant or not validate_tenant(normalized_tenant):
+        return HTMLResponse(content=_error_html("Invalid tenant."), status_code=404)
+
+    if not token:
+        return HTMLResponse(
+            content=_error_html("No verification token provided."),
+            status_code=400,
+        )
+
+    # --- Verify token and update counselor ---
+    db = next(get_db())
+    try:
+        payload = verify_verification_token(token)
+        email = payload["email"]
+        tenant_id_from_token = payload["tenant_id"]
+
+        # Ensure token tenant matches URL tenant
+        if tenant_id_from_token != normalized_tenant:
+            return HTMLResponse(
+                content=_error_html("Token does not match this tenant."),
+                status_code=400,
+            )
+
+        counselor = db.execute(
+            select(Counselor).where(
+                Counselor.email == email,
+                Counselor.tenant_id == tenant_id_from_token,
+            )
+        ).scalar_one_or_none()
+
+        if not counselor:
+            return HTMLResponse(
+                content=_error_html("Account not found."),
+                status_code=404,
+            )
+
+        if counselor.is_active and counselor.email_verified:
+            return HTMLResponse(
+                content=_success_html(email),
+                status_code=200,
+            )
+
+        counselor.is_active = True
+        counselor.email_verified = True
+        db.commit()
+
+        return HTMLResponse(content=_success_html(email), status_code=200)
+
+    except JWTError:
+        return HTMLResponse(
+            content=_error_html(
+                "Invalid or expired verification token. Please request a new verification email."
+            ),
+            status_code=400,
+        )
+    except Exception:
+        db.rollback()
+        return HTMLResponse(
+            content=_error_html("An unexpected error occurred. Please try again later."),
+            status_code=500,
+        )
+    finally:
+        db.close()
+
+
 @app.get("/island-parents/clients", response_class=HTMLResponse)
 async def island_parents_clients(request: Request) -> Response:
     """Island Parents - Client selection page"""

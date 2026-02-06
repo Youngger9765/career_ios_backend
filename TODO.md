@@ -1,6 +1,6 @@
 # TODO
 
-**Last Updated**: 2026-02-04
+**Last Updated**: 2026-02-06
 
 ---
 
@@ -12,6 +12,27 @@
   - 原 Staging DB (ehvgueyrxpvkleqidkdu) 轉正為 Production
   - GitHub Secrets 已更新 (PROD_DATABASE_URL, PROD_SUPABASE_*)
 
+### App Store 審核準備
+- [x] **Apple Review 帳號** ✅ (2026-02-06)
+  - 帳號: apple_review@islandparents.app / Island2026
+  - 已加入 seed script (`scripts/seed_db.py`)
+  - PROD/Staging DB 已建立並驗證可登入
+  - IOS_GUIDE_PARENTS.md 已更新至 v1.12
+
+### 密碼規則
+- [x] **簡化密碼規則** ✅ (2026-02-06)
+  - letter (a-z) + digit (0-9), min 8 chars
+  - RFC 7807 error format with `password_rules` dict
+  - Staging 已測試 4 種 scenario 全部正確
+
+### Email 驗證
+- [x] **GET verify-email route** ✅ (2026-02-06)
+  - 新增 GET `/{tenant}/verify-email` 支援 email link 點擊
+  - Staging 已測試
+
+---
+
+### 待處理
 - [ ] **找新的 Staging DB** 🟡 待處理
   - 目的：分離 Staging/Production 環境
   - 選項：Supabase Free Tier / Neon / Railway

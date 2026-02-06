@@ -77,7 +77,10 @@ def handle_exception(request: Request, exc: Exception) -> JSONResponse:
     if isinstance(exc, RequestValidationError):
         # Format validation errors
         error_details = []
+        has_password_error = False
+
         for error in exc.errors():
+            field_name = error["loc"][-1] if error["loc"] else ""
             error_details.append(
                 {
                     "field": " -> ".join(str(loc) for loc in error["loc"]),
@@ -85,6 +88,8 @@ def handle_exception(request: Request, exc: Exception) -> JSONResponse:
                     "type": error["type"],
                 }
             )
+            if field_name in ("password", "new_password"):
+                has_password_error = True
 
         detail = f"Validation failed: {len(error_details)} error(s)"
         error_response = format_error_response(
@@ -93,6 +98,11 @@ def handle_exception(request: Request, exc: Exception) -> JSONResponse:
             instance=instance,
             errors=error_details,  # Extra field with validation details
         )
+
+        if has_password_error:
+            from app.core.password_validator import get_password_rules
+
+            error_response["password_rules"] = get_password_rules()
 
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

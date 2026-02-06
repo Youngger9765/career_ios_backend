@@ -1,9 +1,9 @@
 # Island Parents iOS App 開發指南
 
-> **版本**: v1.11
+> **版本**: v1.12
 > **適用對象**: iOS 開發者
 > **後端版本**: career_ios_backend
-> **最後更新**: 2026-01-27
+> **最後更新**: 2026-02-06
 
 ---
 
@@ -139,7 +139,7 @@ Content-Type: application/json
 
 **必填欄位**：
 - `email`: 使用者 Email（唯一識別，**必須是有效信箱**）
-- `password`: 密碼（最少 8 個字元）
+- `password`: 密碼（最少 8 個字元，需包含英文字母和數字，不可為常見密碼）
 - `tenant_id`: **固定值** `"island_parents"`（浮島親子專用）
 
 **選填欄位**（已移除，不需要傳）：
@@ -171,6 +171,115 @@ struct RegisterRequest: Codable {
 ```
 
 **註冊成功後自動登入**：無需再次呼叫 login API，直接使用回傳的 `access_token`。
+
+#### 2.1.1 密碼驗證規則與錯誤處理
+
+**密碼規則：**
+- 最少 8 個字元
+- 至少包含一個英文字母 (a-z，不分大小寫)
+- 至少包含一個數字 (0-9)
+- 不可為常見密碼（如 "12345678"、"qwerty123"）
+- 無大寫字母要求
+- 無特殊字元要求
+
+**422 密碼驗證失敗回應：**
+
+當密碼不符合規則時，後端會回傳 RFC 7807 格式的錯誤，並包含 `password_rules` 欄位：
+
+```json
+{
+  "type": "https://api.career-counseling.app/errors/validation-error",
+  "title": "Unprocessable Entity",
+  "status": 422,
+  "detail": "Validation failed: 1 error(s)",
+  "instance": "/api/auth/register",
+  "errors": [
+    {
+      "field": "body -> password",
+      "message": "Value error, Password validation failed: Password must be at least 8 characters; Password must contain at least one digit (0-9)",
+      "type": "value_error"
+    }
+  ],
+  "password_rules": {
+    "min_length": 8,
+    "require_letter": true,
+    "require_digit": true,
+    "require_uppercase": false,
+    "require_special_char": false
+  }
+}
+```
+
+**iOS 實作建議 - 解析密碼規則：**
+```swift
+// 密碼驗證錯誤回應 Models
+struct ValidationErrorResponse: Codable {
+    let type: String
+    let title: String
+    let status: Int
+    let detail: String
+    let instance: String
+    let errors: [ValidationError]
+    let passwordRules: PasswordRules?
+
+    enum CodingKeys: String, CodingKey {
+        case type, title, status, detail, instance, errors
+        case passwordRules = "password_rules"
+    }
+}
+
+struct ValidationError: Codable {
+    let field: String
+    let message: String
+    let type: String
+}
+
+struct PasswordRules: Codable {
+    let minLength: Int
+    let requireLetter: Bool
+    let requireDigit: Bool
+    let requireUppercase: Bool
+    let requireSpecialChar: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case minLength = "min_length"
+        case requireLetter = "require_letter"
+        case requireDigit = "require_digit"
+        case requireUppercase = "require_uppercase"
+        case requireSpecialChar = "require_special_char"
+    }
+
+    /// 根據 password_rules 動態產生密碼提示文字
+    var ruleDescriptions: [String] {
+        var rules: [String] = []
+        rules.append("至少 \(minLength) 個字元")
+        if requireLetter { rules.append("包含英文字母") }
+        if requireDigit { rules.append("包含數字") }
+        if requireUppercase { rules.append("包含大寫字母") }
+        if requireSpecialChar { rules.append("包含特殊字元") }
+        return rules
+    }
+}
+
+// 使用範例 - 註冊時處理密碼錯誤
+func handleRegistrationError(data: Data, statusCode: Int) {
+    guard statusCode == 422 else { return }
+
+    if let errorResponse = try? JSONDecoder().decode(ValidationErrorResponse.self, from: data) {
+        // 顯示錯誤訊息
+        for error in errorResponse.errors {
+            print("欄位: \(error.field), 錯誤: \(error.message)")
+        }
+
+        // 使用 password_rules 動態顯示密碼規則提示
+        if let rules = errorResponse.passwordRules {
+            let hints = rules.ruleDescriptions.joined(separator: "、")
+            print("密碼需要: \(hints)")
+            // 例如顯示: "密碼需要: 至少 8 個字元、包含英文字母、包含數字"
+        }
+    }
+}
+```
 
 ---
 
@@ -2231,6 +2340,7 @@ func showLegalLinks() {
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v1.12 | 2026-02-06 | **Apple Review 帳號**: 新增 Apple 審核帳號資訊 (Section 16.10)；密碼規則更新 (letter+digit, min 8)；新增密碼驗證錯誤處理 (Section 2.1.1) |
 | v1.11 | 2026-01-27 | **Terms & Privacy 頁面整合**: (1) 新增 Section 12.1.2 Terms & Privacy 網頁說明；(2) 包含 RevenueCat Paywall 配置指南；(3) 提供 Staging/Production URL；(4) Swift 實作範例；(5) App Store 審核要求說明 |
 | v1.10 | 2026-01-25 | **Client-Case 管理完整版**: (1) 新增 Section 2.6 詳細說明 Client-Case 創建與列表 API；(2) 包含完整 Request/Response 範例；(3) Swift 實作範例；(4) 錯誤處理說明；(5) 更新 API 端點總覽 Section 12.3 |
 | v1.9 | 2026-01-25 | **重大更新**: (1) 簡化註冊 API - 只需 email + password + tenant_id；(2) 新增詳細忘記密碼 Web 流程（含流程圖給 PM）；(3) 忘記密碼使用特定 URL `/island-parents/forgot-password`；(4) 新增完整 iOS 實作範例 |
@@ -3330,7 +3440,26 @@ class SessionService {
 
 ### 16.10 測試用帳號
 
-Staging 環境測試帳號：
+#### Apple Review 帳號（App Store 審核用）
+
+| 欄位 | 值 |
+|------|------|
+| Email | `apple_review@islandparents.app` |
+| Password | `Island2026` |
+| Tenant | `island_parents` |
+| email_verified | `true` |
+| is_active | `true` |
+| Credits | 1000 |
+
+> **Staging + Production 都已設定完成**，Apple 審核人員可直接登入。
+
+```swift
+// Apple Review 帳號
+let appleReviewEmail = "apple_review@islandparents.app"
+let appleReviewPassword = "Island2026"
+```
+
+#### 開發測試帳號
 
 ```swift
 // Island Parents 測試帳號
@@ -3354,4 +3483,4 @@ Task {
 
 ---
 
-**最後更新**: 2026-01-27 (v1.11)
+**最後更新**: 2026-02-06 (v1.12)
