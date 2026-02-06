@@ -58,7 +58,7 @@ def seed_database():
                 email="apple_review@islandparents.app",
                 username="apple_reviewer",
                 full_name="Apple Reviewer",
-                hashed_password=hash_password("apple2026"),
+                hashed_password=hash_password("Island2026"),
                 role=CounselorRole.COUNSELOR,
                 tenant_id="island_parents",
                 is_active=True,
@@ -145,7 +145,7 @@ def seed_database():
         print("  Admin: admin@island.com / password123")
         print("  Counselor: counselor@island.com / password123")
         print("\nIsland Parents Tenant (Apple Review):")
-        print("  apple_review@islandparents.app / apple2026")
+        print("  apple_review@islandparents.app / Island2026")
         print("=" * 50)
 
 

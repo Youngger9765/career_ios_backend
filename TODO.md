@@ -14,7 +14,7 @@
 
 ### App Store 審核準備
 - [x] **Apple Review 帳號** ✅ (2026-02-06)
-  - 帳號: apple_review@islandparents.app / apple2026
+  - 帳號: apple_review@islandparents.app / Island2026
   - 已加入 seed script (`scripts/seed_db.py`)
   - PROD/Staging DB 已建立並驗證可登入
   - IOS_GUIDE_PARENTS.md 已更新至 v1.12

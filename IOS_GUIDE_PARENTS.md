@@ -3445,7 +3445,7 @@ class SessionService {
 | 欄位 | 值 |
 |------|------|
 | Email | `apple_review@islandparents.app` |
-| Password | `apple2026` |
+| Password | `Island2026` |
 | Tenant | `island_parents` |
 | email_verified | `true` |
 | is_active | `true` |
@@ -3456,7 +3456,7 @@ class SessionService {
 ```swift
 // Apple Review 帳號
 let appleReviewEmail = "apple_review@islandparents.app"
-let appleReviewPassword = "apple2026"
+let appleReviewPassword = "Island2026"
 ```
 
 #### 開發測試帳號
