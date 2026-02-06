@@ -210,6 +210,18 @@ struct RegisterRequest: Codable {
 }
 ```
 
+**`password_rules` 欄位說明：**
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| `min_length` | `int` | 密碼最少字元數 |
+| `require_letter` | `bool` | 是否需要至少一個英文字母 (a-z，不分大小寫) |
+| `require_digit` | `bool` | 是否需要至少一個數字 (0-9) |
+| `require_uppercase` | `bool` | 是否需要大寫字母（目前為 `false`） |
+| `require_special_char` | `bool` | 是否需要特殊字元（目前為 `false`） |
+
+> 💡 iOS 端可根據這些欄位動態產生密碼規則提示，無需硬編碼規則。當後端調整規則時，前端自動適應。
+
 **iOS 實作建議 - 解析密碼規則：**
 ```swift
 // 密碼驗證錯誤回應 Models
@@ -345,7 +357,9 @@ struct LoginRequest: Codable {
 
 2. **系統自動發送驗證信**
    - Email 包含驗證連結
-   - 連結格式：`https://.../api/auth/verify-email?token=xxx`
+   - 連結格式：`https://{APP_URL}/{tenant}/verify-email?token=xxx`
+   - 例如：`https://career-app-api-978304030758.us-central1.run.app/island-parents/verify-email?token=xxx`
+   - ⚠️ 這是 **GET** 請求，由瀏覽器開啟（非 iOS App 呼叫）
    - 有效期限：24 小時
 
 3. **使用者點擊驗證連結**
@@ -2503,7 +2517,31 @@ func login(email: String, password: String) async throws -> AuthResponse {
 }
 ```
 
-#### 16.3.3 Email 驗證 (POST)
+#### 16.3.3 Email 驗證
+
+**方式一：GET（瀏覽器驗證 - 主要方式）**
+
+使用者點擊 Email 中的驗證連結，瀏覽器自動開啟：
+
+```
+GET /{tenant}/verify-email?token=xxx
+```
+
+| 項目 | 說明 |
+|------|------|
+| HTTP Method | `GET` |
+| URL 格式 | `https://{APP_URL}/{tenant}/verify-email?token=xxx` |
+| tenant 格式 | kebab-case（例如 `island-parents`，非 `island_parents`） |
+| Response | HTML 頁面（成功/失敗） |
+| Token 有效期 | 24 小時 |
+
+**成功回應**：HTML 頁面顯示 "Email Verified Successfully"
+**失敗回應**：HTML 頁面顯示錯誤原因（token 過期、帳號不存在等）
+
+> 💡 iOS App 不需要呼叫此 endpoint。使用者點擊 Email 連結後，系統瀏覽器會自動處理。
+> App 只需在下次登入時正常呼叫 login API 即可。
+
+**方式二：POST（程式化驗證 - 備用）**
 
 ```swift
 // Endpoint
