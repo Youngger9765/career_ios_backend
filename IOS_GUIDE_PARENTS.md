@@ -1,9 +1,9 @@
 # Island Parents iOS App 開發指南
 
-> **版本**: v1.11
+> **版本**: v1.12
 > **適用對象**: iOS 開發者
 > **後端版本**: career_ios_backend
-> **最後更新**: 2026-01-27
+> **最後更新**: 2026-02-06
 
 ---
 
@@ -2340,6 +2340,7 @@ func showLegalLinks() {
 
 | 版本 | 日期 | 說明 |
 |------|------|------|
+| v1.12 | 2026-02-06 | **Apple Review 帳號**: 新增 Apple 審核帳號資訊 (Section 16.10)；密碼規則更新 (letter+digit, min 8)；新增密碼驗證錯誤處理 (Section 2.1.1) |
 | v1.11 | 2026-01-27 | **Terms & Privacy 頁面整合**: (1) 新增 Section 12.1.2 Terms & Privacy 網頁說明；(2) 包含 RevenueCat Paywall 配置指南；(3) 提供 Staging/Production URL；(4) Swift 實作範例；(5) App Store 審核要求說明 |
 | v1.10 | 2026-01-25 | **Client-Case 管理完整版**: (1) 新增 Section 2.6 詳細說明 Client-Case 創建與列表 API；(2) 包含完整 Request/Response 範例；(3) Swift 實作範例；(4) 錯誤處理說明；(5) 更新 API 端點總覽 Section 12.3 |
 | v1.9 | 2026-01-25 | **重大更新**: (1) 簡化註冊 API - 只需 email + password + tenant_id；(2) 新增詳細忘記密碼 Web 流程（含流程圖給 PM）；(3) 忘記密碼使用特定 URL `/island-parents/forgot-password`；(4) 新增完整 iOS 實作範例 |
@@ -3439,7 +3440,26 @@ class SessionService {
 
 ### 16.10 測試用帳號
 
-Staging 環境測試帳號：
+#### Apple Review 帳號（App Store 審核用）
+
+| 欄位 | 值 |
+|------|------|
+| Email | `apple_review@islandparents.app` |
+| Password | `apple2026` |
+| Tenant | `island_parents` |
+| email_verified | `true` |
+| is_active | `true` |
+| Credits | 1000 |
+
+> **Staging + Production 都已設定完成**，Apple 審核人員可直接登入。
+
+```swift
+// Apple Review 帳號
+let appleReviewEmail = "apple_review@islandparents.app"
+let appleReviewPassword = "apple2026"
+```
+
+#### 開發測試帳號
 
 ```swift
 // Island Parents 測試帳號
@@ -3463,4 +3483,4 @@ Task {
 
 ---
 
-**最後更新**: 2026-01-27 (v1.11)
+**最後更新**: 2026-02-06 (v1.12)
