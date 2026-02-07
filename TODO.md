@@ -39,12 +39,23 @@
 
 ---
 
+### Firebase Hosting Proxy
+- [x] **Firebase Hosting 反向代理** ✅ (2026-02-07)
+  - `island-parents-app.web.app` → Cloud Run PROD（island_parents 租戶）
+  - `groovy-iris-473015-h3.web.app` → Cloud Run PROD（備用）
+  - 多站架構：每個租戶可有獨立 URL，共用同一 Cloud Run
+  - 免費方案（Firebase Hosting Free Tier: 10GB/月流量）
+  - 最多 36 個 sites / project
+
+---
+
 ### 待處理
-- [ ] **隱藏 Cloud Run URL（Email 驗證連結）** 🟡 待處理
-  - 問題：驗證信暴露 `career-app-api-978304030758.us-central1.run.app`
-  - 推薦方案：Firebase Hosting proxy（免費、零成本、10 分鐘設定）
-  - 進階方案：Cloudflare + 自有域名（~$10/年）
+- [ ] **全站切換 Firebase Hosting URL** 🟡 待處理
+  - 目標：所有 API 請求改走 `island-parents-app.web.app`
+  - iOS 端：修改 base URL config（1 個變數）
+  - 後端：修改 `APP_URL` 環境變數（GitHub Secrets）→ 驗證信連結改用 Firebase URL
   - 優先級：App Store 上架前完成
+  - ⚠️ 舊的 Cloud Run URL 仍可用，不影響既有功能
 
 - [ ] **找新的 Staging DB** 🟡 待處理
   - 目的：分離 Staging/Production 環境
