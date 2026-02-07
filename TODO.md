@@ -40,6 +40,12 @@
 ---
 
 ### 待處理
+- [ ] **隱藏 Cloud Run URL（Email 驗證連結）** 🟡 待處理
+  - 問題：驗證信暴露 `career-app-api-978304030758.us-central1.run.app`
+  - 推薦方案：Firebase Hosting proxy（免費、零成本、10 分鐘設定）
+  - 進階方案：Cloudflare + 自有域名（~$10/年）
+  - 優先級：App Store 上架前完成
+
 - [ ] **找新的 Staging DB** 🟡 待處理
   - 目的：分離 Staging/Production 環境
   - 選項：Supabase Free Tier / Neon / Railway
