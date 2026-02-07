@@ -49,11 +49,10 @@ GET /api/v1/app/config/island_parents
   "terms_url": "https://www.comma.study/island_parents_terms_of_service/",
   "privacy_url": "https://www.comma.study/island_parents_privacy_policy/",
   "landing_page_url": "https://www.comma.study/island_parents_landing/",
-  "help_url": "https://duodian.com/career/help",
-  "forgot_password_url": "https://duodian.com/career/forgot-password",
-  "base_url": "https://career-app-api-staging-xxxx.run.app",
-  "version": "1.0.0",
-  "maintenance_mode": false
+  "data_usage_url": "https://www.comma.study/island_parents_data_usage/",
+  "help_url": "https://www.comma.study/island_parents_help/",
+  "faq_url": "https://www.comma.study/island_parents_faq/",
+  "contact_url": "https://www.comma.study/island_parents_contact_us/"
 }
 ```
 
@@ -61,7 +60,11 @@ GET /api/v1/app/config/island_parents
 
 ```json
 {
-  "detail": "Tenant 'invalid_tenant' not found"
+  "type": "https://api.career-counseling.app/errors/not-found",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "Tenant 'invalid_tenant' not found",
+  "instance": "/api/v1/app/config/invalid_tenant"
 }
 ```
 
@@ -71,37 +74,40 @@ GET /api/v1/app/config/island_parents
 |------|------|------|
 | `terms_url` | string | 服務條款頁面 URL |
 | `privacy_url` | string | 隱私權政策頁面 URL |
-| `landing_page_url` | string | Landing Page URL |
-| `help_url` | string | 幫助頁面 URL |
-| `forgot_password_url` | string | 忘記密碼頁面 URL |
-| `base_url` | string | API Base URL（當前環境） |
-| `version` | string | App 配置版本號 |
-| `maintenance_mode` | boolean | 維護模式開關 |
+| `landing_page_url` | string | Landing Page / 行銷頁面 URL |
+| `data_usage_url` | string | 資料使用說明頁面 URL |
+| `help_url` | string | 使用指南 / Help Center URL |
+| `faq_url` | string | 常見問題 (FAQ) 頁面 URL |
+| `contact_url` | string | 聯絡我們頁面 URL |
 
 ### 使用場景
 
 1. **App 啟動時**
    - 呼叫此 API 獲取最新 URLs
-   - 儲存在本地，供後續使用
+   - 儲存在 UserDefaults，供後續使用
 
 2. **顯示法律頁面**
    - 使用 `terms_url` 和 `privacy_url` 在 WebView 中顯示
 
 3. **導向 Landing Page**
-   - 使用 `landing_page_url` 導向官網
+   - 使用 `landing_page_url` 導向官網 / 行銷頁面
 
-4. **版本檢查**
-   - 檢查 `version` 欄位判斷是否需要更新
+4. **App 設定頁面**
+   - **資料使用說明**: 使用 `data_usage_url`
+   - **使用指南**: 使用 `help_url`
+   - **FAQ**: 使用 `faq_url`
+   - **聯絡我們**: 使用 `contact_url`
 
-5. **維護模式**
-   - 根據 `maintenance_mode` 顯示維護畫面
+5. **WebView 顯示支援頁面**
+   - 所有 URL 都可在 WebView 中顯示
 
 ### 優點
 
 - ✅ **無需發版更新 URL** - 後端動態配置即可
-- ✅ **支援多租戶** - 不同版本（島嶼親子/職涯諮詢）使用不同配置
+- ✅ **支援多租戶** - 不同版本（island_parents/career）使用不同配置
 - ✅ **支援 A/B Testing** - 可測試不同 URL
-- ✅ **維護模式切換** - 緊急維護時快速開啟
+- ✅ **統一管理** - 所有外部連結集中在一個 API
+- ✅ **清晰易讀** - 使用標準化的 URL 路徑命名 (`/island_parents_*`)
 
 ---
 
