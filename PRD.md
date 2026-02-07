@@ -1,7 +1,7 @@
 # 職涯諮詢平台 PRD
 
-**Version**: 0.8.1
-**Last Updated**: 2026-02-04
+**Version**: 0.9.0
+**Last Updated**: 2026-02-08
 
 ## 系統概述
 
@@ -62,7 +62,7 @@
 **實作內容**:
 - ✅ API 端點：`GET /api/v1/app/config/{tenant}`
 - ✅ Multi-tenant 支援（island_parents, career）
-- ✅ 動態返回：terms_url, privacy_url, landing_page_url, help_url, forgot_password_url
+- ✅ 動態返回 7 個 URL 欄位：terms_url, privacy_url, landing_page_url, help_url, forgot_password_url, data_usage_url, faq_url, contact_url
 - ✅ 支援維護模式切換（maintenance_mode）
 - ✅ 版本號管理（version）
 - ✅ 公開端點（無需認證）
@@ -73,6 +73,82 @@
 - 404 for invalid tenants
 - Environment-aware base_url
 - All tests passing ✅
+
+### ✅ App Config API Expansion (2026-02-08) - COMPLETED
+**Status**: ✅ Complete | **PR**: #26 (Merged to main & staging)
+
+**功能說明**: 擴展 App Config API 從 3 個欄位到 7 個欄位，提供更完整的 URL 配置
+
+**實作內容**:
+- ✅ 新增 4 個 URL 欄位：
+  - `data_usage_url` - 資料使用說明頁面
+  - `help_url` - 用戶指南/幫助中心
+  - `faq_url` - 常見問題頁面
+  - `contact_url` - 聯絡我們頁面
+- ✅ Island Parents URL 標準化（清理 URL 編碼、page_id 格式）
+  - 統一格式：`/island_parents_*` 路徑模式
+  - 移除 URL 編碼的中文字元
+- ✅ 向後相容性：純新增欄位，無破壞性變更
+- ✅ 完整測試覆蓋：所有 5 個整合測試通過
+- ✅ Production & Staging 測試通過
+
+**技術細節**:
+- 修改檔案：
+  - `app/schemas/app_config.py` - 擴展 schema
+  - `app/core/config.py` - 新增 URL 常數
+  - `app/api/app_config.py` - 更新端點文檔
+  - `tests/integration/test_app_config_api.py` - 驗證 7 個欄位
+- 測試狀態：Integration tests 100% passing
+- 部署狀態：Already deployed to Production & Staging
+
+**相關文件**:
+- 📝 PR: https://github.com/Youngger9765/career_ios_backend/pull/26
+- 📝 CHANGELOG.md - 完整變更記錄
+
+### ✅ Admin Dashboard Improvements (2026-02-07 ~ 2026-02-08) - COMPLETED
+**Status**: ✅ Complete | **Date**: 2026-02-08
+
+**功能說明**: 管理後台儀表板改進，修復數據準確性問題並優化業務價值
+
+**實作內容**:
+- ✅ **替換 Model Distribution 圖表為 Daily Active Users (DAU)**
+  - 移除低價值的 Model Distribution 餅圖（固定比例無洞察）
+  - 新增 DAU 趨勢線圖（追蹤用戶參與度）
+  - 綠色配色方案（成長/正向趨勢）
+  - 整數 Y 軸（無小數點）
+- ✅ **修復 4 個關鍵數據準確性 Bug**
+  - Bug 1: Cost Breakdown 重複項目（模型名稱標準化）
+  - Bug 2: Total Cost 不正確（加入 Gemini 成本）
+  - Bug 3: Avg Tokens/Day 無意義（改為 Avg Cost/Day）
+  - Bug 4: 時間範圍圖表不完整（填充缺失日期為 0）
+- ✅ **Top Users Token Split**
+  - 拆分 "Total Tokens" 為 3 個服務專屬欄位
+  - Gemini Flash 3 tokens（報告生成）
+  - Gemini Lite tokens（情緒回饋）
+  - ElevenLabs hours（STT 轉錄時長）
+  - 色彩編碼：紫色（Flash 3）、綠色（Lite）、藍色（ElevenLabs）
+- ✅ **UI 改進**
+  - 提升圖表對比度和可見性
+  - 統一數據格式化（千分位逗號、小時格式）
+  - 更清晰的標籤和單位顯示
+
+**技術細節**:
+- 修改檔案：
+  - `app/api/v1/admin/dashboard.py` - 4 個端點修改
+  - `app/templates/admin_dashboard.html` - UI 更新
+- 測試狀態：Manual testing on Production & Staging
+- 部署狀態：已部署至 Production & Staging
+
+**業務影響**:
+- 數據準確性：Total Cost 從 $0.22 修正為 $0.66
+- 可見性：Cost Breakdown 從 4-5 項減少至 2-3 項（去重）
+- 洞察力：DAU 圖表提供用戶參與度趨勢
+- 決策支持：Token Split 幫助識別成本來源
+
+**相關文件**:
+- 📝 CHANGELOG.md - 完整變更記錄
+- 📝 `DASHBOARD_TOKENS_SPLIT.md` - Token Split 實作細節
+- 📝 `DASHBOARD_BUG_FIXES.md` - Bug 修復說明
 
 ### ✅ Issue #6: WordPress Legal Pages & Domain Setup - COMPLETED
 **Status**: ✅ Complete | **Date**: 2026-02-04
@@ -131,14 +207,22 @@
 
 ## 當前可用功能 (2025-12-31)
 
-### ✅ App Config API (2026-01-31)
+### ✅ App Config API (2026-01-31, Expanded 2026-02-08)
 **功能定位**: 多租戶動態 URL 配置管理
 
 - **端點**: `GET /api/v1/app/config/{tenant}`
 - **認證**: 🔓 無需認證（公開端點）
 - **支援租戶**: `island_parents`, `career`（未來）
 - **核心功能**:
-  - 動態返回 terms_url, privacy_url, landing_page_url
+  - 動態返回 8 個 URL 欄位：
+    - `terms_url` - 服務條款
+    - `privacy_url` - 隱私政策
+    - `landing_page_url` - Landing Page
+    - `help_url` - 用戶指南/幫助中心
+    - `forgot_password_url` - 忘記密碼
+    - `data_usage_url` - 資料使用說明（新增 2026-02-08）
+    - `faq_url` - 常見問題（新增 2026-02-08）
+    - `contact_url` - 聯絡我們（新增 2026-02-08）
   - 支援維護模式切換（maintenance_mode）
   - 版本號管理（version）
   - 基於環境返回正確的 base_url
