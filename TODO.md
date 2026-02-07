@@ -67,7 +67,7 @@
 - [x] **建立 Staging Firebase Hosting Site** ✅ (2026-02-07)
   - `island-parents-staging.web.app` → Cloud Run Staging
   - GitHub Secret `APP_URL` 已更新為 Firebase URL
-  - Login API 驗證通過
+  - E2E 驗證通過：註冊 → 收信（staging URL）→ 點連結 → DB email_verified=True
 
 - [ ] **找新的 Staging DB** 🟡 待處理
   - 目的：分離 Staging/Production 環境
