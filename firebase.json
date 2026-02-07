@@ -27,6 +27,20 @@
           }
         }
       ]
+    },
+    {
+      "site": "island-parents-staging",
+      "public": "firebase-hosting",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        {
+          "source": "**",
+          "run": {
+            "serviceId": "career-app-api-staging",
+            "region": "us-central1"
+          }
+        }
+      ]
     }
   ]
 }

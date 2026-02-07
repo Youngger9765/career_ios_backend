@@ -17,7 +17,7 @@
   - 帳號: apple_review@islandparents.app / Island2026
   - 已加入 seed script (`scripts/seed_db.py`)
   - PROD/Staging DB 已建立並驗證可登入
-  - IOS_GUIDE_PARENTS.md 已更新至 v1.12
+  - IOS_GUIDE_PARENTS.md 已更新至 v1.13
 
 ### 密碼規則
 - [x] **簡化密碼規則** ✅ (2026-02-06)
@@ -49,13 +49,25 @@
 
 ---
 
+### PROD URL 遷移（後端已完成）
+- [x] **PROD_APP_URL 切換至 Firebase** ✅ (2026-02-07)
+  - GitHub Secret `PROD_APP_URL` = `https://island-parents-app.web.app`
+  - 驗證信連結已改用 Firebase URL（E2E 測試通過）
+  - IOS_GUIDE_PARENTS.md v1.13 已更新 PROD URL
+  - docs/BACKEND_DELIVERY.md 已更新 Terms/Privacy URL
+
+---
+
 ### 待處理
-- [ ] **全站切換 Firebase Hosting URL** 🟡 待處理
-  - 目標：所有 API 請求改走 `island-parents-app.web.app`
-  - iOS 端：修改 base URL config（1 個變數）
-  - 後端：修改 `APP_URL` 環境變數（GitHub Secrets）→ 驗證信連結改用 Firebase URL
-  - 優先級：App Store 上架前完成
-  - ⚠️ 舊的 Cloud Run URL 仍可用，不影響既有功能
+- [ ] **iOS 端切換 Base URL** 🟡 待 iOS 開發
+  - 目標：iOS App 改用 `island-parents-app.web.app` 作為 base URL
+  - 只需改 1 個變數，所有 API 路徑不變
+  - ⚠️ 舊的 Cloud Run URL 仍可用，不影響既有版本
+
+- [x] **建立 Staging Firebase Hosting Site** ✅ (2026-02-07)
+  - `island-parents-staging.web.app` → Cloud Run Staging
+  - GitHub Secret `APP_URL` 已更新為 Firebase URL
+  - Login API 驗證通過
 
 - [ ] **找新的 Staging DB** 🟡 待處理
   - 目的：分離 Staging/Production 環境
