@@ -47,6 +47,7 @@ from app.api.v1 import (
     session_usage,
     usage,
 )
+from app.api.v1.admin import dashboard
 from app.core.config import settings
 from app.core.exceptions import NotFoundError
 from app.middleware.error_handler import (
@@ -113,6 +114,9 @@ app.include_router(session_usage.router)
 
 # Include usage stats routes
 app.include_router(usage.router, prefix="/api/v1")
+
+# Include admin dashboard routes
+app.include_router(dashboard.router)
 
 # Include client routes
 app.include_router(clients.router)
@@ -316,6 +320,12 @@ async def admin_page(request: Request) -> Response:
     return templates.TemplateResponse(
         "admin.html", {"request": request, "debug_mode": settings.DEBUG}
     )
+
+
+@app.get("/admin/dashboard", response_class=HTMLResponse)
+async def admin_dashboard_page(request: Request) -> Response:
+    """Admin Dashboard - AI Monitoring Dashboard"""
+    return templates.TemplateResponse("admin_dashboard.html", {"request": request})
 
 
 @app.get("/closure-report", response_class=HTMLResponse)
