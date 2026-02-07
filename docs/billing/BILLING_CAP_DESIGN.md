@@ -343,15 +343,66 @@ API 成本 (3hr):      57 TWD ($1.77 USD)
 > **100 TWD 月費最多給 5.4 小時（保本），推薦 3-4 小時（30-40% 毛利）。**
 > **6 小時會虧 13%，若要給 6 小時，月費需漲到 160-190 TWD。**
 
-### 8.8 GCP Billing Alert 設定
+### 8.8 GCP Billing Budget 設定（✅ 已完成）
 
-| 層級 | 月度金額 (USD) | 動作 |
-|------|--------------|------|
-| 提醒 | $2,500 (50%) | Email 通知 |
-| 警告 | $3,750 (75%) | Slack 通知 + 審查 |
-| 硬上限 | $5,000 (100%) | 自動限流 |
+**設定日期**: 2026-02-07
+**Budget ID**: `faab94a6-382c-402f-a5a7-59e5910b23b4`
+**適用範圍**: GCP Project `groovy-iris-473015-h3`（包含 Vertex AI + Cloud Run + 所有 GCP 服務）
 
-### 8.9 異常偵測
+| 層級 | 月度金額 (USD) | 觸發條件 | 動作 |
+|------|--------------|---------|------|
+| **提醒** | **$950** | 達 50% ($1,900 × 50%) | Email 通知到 `CC_BDS@careercreator.tw` + `dev02@careercreator.tw` |
+| **警告** | **$1,425** | 達 75% ($1,900 × 75%) | Email 通知（需人工審查用量） |
+| **危險** | **$1,900** | 達 100%（硬上限） | Email 通知（緊急審查，考慮限流） |
+
+**涵蓋服務**：
+- Vertex AI (Gemini Flash Lite + Gemini 3 Flash): 預估 $540/月，上限 $1,500
+- Cloud Run (FastAPI): 預估 $100/月，上限 $300
+- 其他 GCP 服務（網路、儲存等）: 預估 $20/月，上限 $100
+
+**不涵蓋服務**（需另外監控）：
+- ❌ ElevenLabs STT（獨立平台，見 8.11）
+- ❌ OpenAI Embedding（獨立平台，用量極低 ~$2/月）
+- ❌ Supabase（獨立平台，固定 $25/月）
+
+**為何只能整個 GCP Project 設定？**
+- GCP Billing Budget API 不支援針對單一服務（如 Vertex AI）設定上限
+- 只能針對整個 Project 或 Billing Account 設定
+- Vertex AI 本身的 Quota 系統只能限制 QPM（每分鐘請求數），無法限制月度花費
+
+**查詢指令**：
+```bash
+gcloud beta billing budgets describe faab94a6-382c-402f-a5a7-59e5910b23b4 \
+  --billing-account=01A2A2-486C62-38898F
+```
+
+### 8.9 ElevenLabs Billing Cap 設定（⚠️ 需手動完成）
+
+**平台**: ElevenLabs Dashboard
+**設定位置**: https://elevenlabs.io/app/settings/billing
+
+**建議上限**: **$2,000 USD/月**
+
+| 指標 | 金額 |
+|------|------|
+| 預估月費（2000 人 × avg 2hr） | $1,600 |
+| 建議上限（留 25% buffer） | **$2,000** |
+| 硬上限（極端情況） | $2,500 |
+
+**設定方式**：
+1. 登入 ElevenLabs Dashboard
+2. 進入 Settings → Billing
+3. 設定 Monthly Spending Limit: **$2,000**
+4. 啟用超額通知到 `CC_BDS@careercreator.tw` 和 `dev02@careercreator.tw`
+
+**為何需手動設定？**
+- ElevenLabs 無提供 API 來設定 billing cap
+- 必須透過網頁 Dashboard 手動操作
+
+**優化方案（長期）**：
+- 若能談成 Enterprise 方案（$0.22/hr），可降至 $1,200/月（節省 40%）
+
+### 8.10 異常偵測
 
 | 規則 | 閾值 | 動作 |
 |------|------|------|
@@ -360,7 +411,7 @@ API 成本 (3hr):      57 TWD ($1.77 USD)
 | 單小時 Emotion 呼叫 | > 1500 次 | Rate limit |
 | ElevenLabs 日費用 | > $100 | Email 警報 |
 
-### 8.10 使用額度重置機制
+### 8.11 使用額度重置機制
 
 每位用戶每月有固定使用額度（目前設定 6 小時）。額度重置由後端自動處理：
 
