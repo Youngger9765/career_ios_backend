@@ -557,8 +557,12 @@
                 <div class="summary-value">Cloud Run (us-central1, 1 vCPU, 1GB RAM)</div>
             </div>
             <div class="summary-row">
-                <div class="summary-label">資料庫</div>
-                <div class="summary-value">Supabase PostgreSQL (Free Tier, 500MB)</div>
+                <div class="summary-label">關聯式資料庫</div>
+                <div class="summary-value">Supabase PostgreSQL 15 (Pro Tier)</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">向量資料庫</div>
+                <div class="summary-value">pgvector (PostgreSQL extension) - RAG 知識檢索</div>
             </div>
             <div class="summary-row">
                 <div class="summary-label">反向代理</div>
@@ -566,11 +570,11 @@
             </div>
             <div class="summary-row">
                 <div class="summary-label">AI 引擎</div>
-                <div class="summary-value">Google Gemini 3 Flash</div>
+                <div class="summary-value">Gemini Flash Lite (即時情緒分析) + Gemini 3 Flash (報告生成)</div>
             </div>
             <div class="summary-row">
                 <div class="summary-label">語音轉文字</div>
-                <div class="summary-value">ElevenLabs Scribe</div>
+                <div class="summary-value">ElevenLabs Scribe v2 Realtime</div>
             </div>
             <div class="summary-row">
                 <div class="summary-label">CI/CD</div>
@@ -578,53 +582,65 @@
             </div>
             <div class="summary-row">
                 <div class="summary-label">版本控制</div>
-                <div class="summary-value">GitHub Private Repository</div>
+                <div class="summary-value">GitHub Public Repository</div>
             </div>
         </div>
 
         <table class="env-table" style="margin-bottom: 16px;">
             <thead>
                 <tr>
-                    <th>服務</th>
-                    <th>方案</th>
-                    <th>預估月費</th>
+                    <th>服務類別</th>
+                    <th>項目</th>
+                    <th>配置/定價</th>
+                    <th>月費 (USD)</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
+                    <td rowspan="3"><strong>固定成本</strong></td>
                     <td>Cloud Run</td>
-                    <td>Pay-per-use (min-instances=1)</td>
-                    <td>$5-15</td>
+                    <td>1 vCPU, 1GB RAM, min-instances=1</td>
+                    <td>~$50</td>
                 </tr>
                 <tr>
-                    <td>Supabase</td>
+                    <td>Supabase Pro</td>
+                    <td>PostgreSQL 15 + pgvector, 8GB storage</td>
+                    <td>$25</td>
+                </tr>
+                <tr>
+                    <td>Firebase Hosting + GitHub Actions</td>
                     <td>Free Tier</td>
                     <td>$0</td>
                 </tr>
                 <tr>
-                    <td>Firebase Hosting</td>
-                    <td>Free Tier</td>
-                    <td>$0</td>
+                    <td colspan="3" style="text-align: right; font-weight: 600;">小計</td>
+                    <td style="font-weight: 600;">~$80/月</td>
                 </tr>
                 <tr>
-                    <td>Gemini API</td>
-                    <td>Pay-per-use</td>
-                    <td>$5-20</td>
+                    <td rowspan="5"><strong>變動成本<br>(每小時 $0.587)</strong></td>
+                    <td>ElevenLabs STT</td>
+                    <td>Scribe v2 Realtime, $0.40/hr</td>
+                    <td rowspan="5">依使用量<br><br><em>範例：</em><br>2000 用戶<br>× 2 hr/月<br>= 4000 hr<br><strong>≈ $2,348</strong></td>
                 </tr>
                 <tr>
-                    <td>ElevenLabs</td>
-                    <td>Pay-per-use</td>
-                    <td>$5-15</td>
+                    <td>Gemini Emotion</td>
+                    <td>Flash Lite, 1200 calls/hr, $0.10/hr</td>
                 </tr>
                 <tr>
-                    <td>GitHub Actions</td>
-                    <td>Free Tier</td>
-                    <td>$0</td>
+                    <td>Gemini Report</td>
+                    <td>3 Flash, 1 call/session, $0.035/hr</td>
                 </tr>
                 <tr>
-                    <td><strong>合計</strong></td>
-                    <td></td>
-                    <td><strong>$15-50/月</strong></td>
+                    <td>OpenAI Embedding</td>
+                    <td>text-embedding-3-small, $0.001/hr</td>
+                </tr>
+                <tr>
+                    <td>Cloud Run 運算</td>
+                    <td>API 處理成本, $0.002/hr</td>
+                </tr>
+                <tr>
+                    <td colspan="3" style="text-align: right; font-weight: 700; background: #f0ebe4;">總計 (2000 用戶, 平均 2 hr/月)</td>
+                    <td style="font-weight: 700; background: #f0ebe4;">~$2,428/月</td>
                 </tr>
             </tbody>
         </table>
@@ -632,7 +648,15 @@
         <div class="note-list">
             <div class="note-item">
                 <span class="note-icon" style="color:#1976d2;">&#128161;</span>
-                <span>以上為低用量階段預估（10-50 位用戶）。隨用戶增長，Cloud Run 和 AI API 費用會按比例增加。Supabase 超過 500MB 後需升級至 Pro 方案（$25/月）。</span>
+                <span><strong>成本結構</strong>：固定成本 ~$80/月，變動成本每小時 $0.587（其中 ElevenLabs STT 佔 68%，為最大成本驅動因素）。以 2000 用戶、平均 2 小時/月使用量計算，總支出約 $2,428/月，月利潤 $3,822（61% 毛利率）。</span>
+            </div>
+            <div class="note-item">
+                <span class="note-icon" style="color:#e65100;">&#9888;</span>
+                <span><strong>成本控管</strong>：已設定 GCP 預算上限 $1,500/月（超過時發送電子郵件通知），ElevenLabs 建議手動設定 $2,000/月上限。每位用戶設定 6 小時/月使用量上限（360 分鐘），平衡用戶體驗與成本控制。</span>
+            </div>
+            <div class="note-item">
+                <span class="note-icon" style="color:#1976d2;">&#128161;</span>
+                <span><strong>收入模型</strong>：2000 用戶 × 100 TWD/月 = 200,000 TWD/月（約 $6,250/月），扣除 API 成本後仍有良好獲利空間。詳細財務模型見 <code>docs/billing/BILLING_CAP_DESIGN.md</code>。</span>
             </div>
         </div>
     </div>
