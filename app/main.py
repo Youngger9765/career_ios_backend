@@ -322,6 +322,12 @@ async def admin_page(request: Request) -> Response:
     )
 
 
+@app.get("/admin/login", response_class=HTMLResponse)
+async def admin_login_page(request: Request) -> Response:
+    """Admin Login Page"""
+    return templates.TemplateResponse("admin_login.html", {"request": request})
+
+
 @app.get("/admin/dashboard", response_class=HTMLResponse)
 async def admin_dashboard_page(request: Request) -> Response:
     """Admin Dashboard - AI Monitoring Dashboard"""

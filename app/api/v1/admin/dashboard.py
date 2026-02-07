@@ -6,7 +6,6 @@ import csv
 import io
 import logging
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 from typing import Dict, List, Literal, Optional
 from uuid import UUID
 

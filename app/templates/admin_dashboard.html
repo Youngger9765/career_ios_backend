@@ -41,6 +41,42 @@
             font-weight: 700;
         }
 
+        .header-right {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        .user-info .email {
+            font-size: 14px;
+            color: #475569;
+        }
+
+        .logout-btn {
+            padding: 8px 16px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+
         .controls {
             display: flex;
             gap: 12px;
@@ -247,10 +283,16 @@
     <div class="container">
         <div class="header">
             <h1>🤖 AI Monitoring Dashboard</h1>
-            <div class="time-selector">
-                <button class="time-btn active" data-range="day">今天</button>
-                <button class="time-btn" data-range="week">過去7天</button>
-                <button class="time-btn" data-range="month">過去30天</button>
+            <div class="header-right">
+                <div class="time-selector">
+                    <button class="time-btn active" data-range="day">今天</button>
+                    <button class="time-btn" data-range="week">過去7天</button>
+                    <button class="time-btn" data-range="month">過去30天</button>
+                </div>
+                <div class="user-info">
+                    <span class="email" id="user-email">-</span>
+                </div>
+                <button class="logout-btn" id="logout-btn">登出</button>
             </div>
         </div>
 
@@ -370,14 +412,12 @@
         let currentModel = '';
         let charts = {};
 
-        // Get auth token from localStorage or prompt
+        // Get auth token from localStorage or redirect to login
         function getAuthToken() {
-            let token = localStorage.getItem('admin_token');
+            const token = localStorage.getItem('admin_token');
             if (!token) {
-                token = prompt('Please enter your admin JWT token:');
-                if (token) {
-                    localStorage.setItem('admin_token', token);
-                }
+                window.location.href = '/admin/login';
+                return null;
             }
             return token;
         }
@@ -386,7 +426,6 @@
         async function apiCall(endpoint, params = {}) {
             const token = getAuthToken();
             if (!token) {
-                alert('Authentication required');
                 return null;
             }
 
@@ -401,9 +440,10 @@
                 });
 
                 if (!response.ok) {
-                    if (response.status === 403) {
-                        alert('Admin access required');
+                    if (response.status === 401 || response.status === 403) {
                         localStorage.removeItem('admin_token');
+                        localStorage.removeItem('admin_user');
+                        window.location.href = '/admin/login';
                         return null;
                     }
                     throw new Error(`HTTP ${response.status}`);
@@ -734,7 +774,30 @@
             loadCostTrend();
         });
 
+        // Load user info
+        function loadUserInfo() {
+            const userStr = localStorage.getItem('admin_user');
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    document.getElementById('user-email').textContent = user.email;
+                } catch (e) {
+                    console.error('Failed to parse user info:', e);
+                }
+            }
+        }
+
+        // Logout handler
+        document.getElementById('logout-btn').addEventListener('click', function() {
+            if (confirm('確定要登出嗎？')) {
+                localStorage.removeItem('admin_token');
+                localStorage.removeItem('admin_user');
+                window.location.href = '/admin/login';
+            }
+        });
+
         // Initialize
+        loadUserInfo();
         loadAllData();
     </script>
 </body>
