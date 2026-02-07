@@ -62,7 +62,11 @@ GET /api/v1/app/config/island_parents
 {
   "terms_url": "https://www.comma.study/island_parents_terms_of_service/",
   "privacy_url": "https://www.comma.study/island_parents_privacy_policy/",
-  "landing_page_url": "https://www.comma.study/island_parents_landing/"
+  "landing_page_url": "https://www.comma.study/island_parents_landing/",
+  "data_usage_url": "https://www.comma.study/island_parents_data_usage/",
+  "help_url": "https://www.comma.study/island_parents_help/",
+  "faq_url": "https://www.comma.study/island_parents_faq/",
+  "contact_url": "https://www.comma.study/island_parents_contact_us/"
 }
 ```
 
@@ -70,9 +74,13 @@ GET /api/v1/app/config/island_parents
 
 | 欄位 | 說明 | 使用時機 |
 |------|------|---------|
-| `terms_url` | 服務條款頁面 | 顯示在 WebView |
-| `privacy_url` | 隱私權政策頁面 | 顯示在 WebView |
-| `landing_page_url` | Landing Page | 官網導向 |
+| `terms_url` | 服務條款頁面 | 顯示在 WebView（法律文件） |
+| `privacy_url` | 隱私權政策頁面 | 顯示在 WebView（法律文件） |
+| `landing_page_url` | Landing Page | 官網導向 / 行銷頁面 |
+| `data_usage_url` | 資料使用說明 | App 設定 → 資料使用說明 |
+| `help_url` | 使用指南 | App 設定 → 使用指南 / Help Center |
+| `faq_url` | 常見問題 | App 設定 → FAQ 頁面 |
+| `contact_url` | 聯絡我們 | App 設定 → 聯絡我們頁面 |
 
 ### Swift 實作範例
 
@@ -81,38 +89,76 @@ struct AppConfig: Codable {
     let termsUrl: String
     let privacyUrl: String
     let landingPageUrl: String
+    let dataUsageUrl: String
+    let helpUrl: String
+    let faqUrl: String
+    let contactUrl: String
 
     enum CodingKeys: String, CodingKey {
         case termsUrl = "terms_url"
         case privacyUrl = "privacy_url"
         case landingPageUrl = "landing_page_url"
+        case dataUsageUrl = "data_usage_url"
+        case helpUrl = "help_url"
+        case faqUrl = "faq_url"
+        case contactUrl = "contact_url"
     }
 }
 
 // App 啟動時呼叫
 func fetchAppConfig() async throws -> AppConfig {
-    let url = URL(string: "https://your-api.com/api/v1/app/config/island_parents")!
+    let url = URL(string: "https://island-parents-app.web.app/api/v1/app/config/island_parents")!
     let (data, _) = try await URLSession.shared.data(from: url)
     return try JSONDecoder().decode(AppConfig.self, from: data)
 }
 
 // 儲存在本地
-UserDefaults.standard.set(config.termsUrl, forKey: "termsUrl")
-UserDefaults.standard.set(config.privacyUrl, forKey: "privacyUrl")
-UserDefaults.standard.set(config.landingPageUrl, forKey: "landingPageUrl")
+extension AppConfig {
+    func saveToUserDefaults() {
+        UserDefaults.standard.set(termsUrl, forKey: "termsUrl")
+        UserDefaults.standard.set(privacyUrl, forKey: "privacyUrl")
+        UserDefaults.standard.set(landingPageUrl, forKey: "landingPageUrl")
+        UserDefaults.standard.set(dataUsageUrl, forKey: "dataUsageUrl")
+        UserDefaults.standard.set(helpUrl, forKey: "helpUrl")
+        UserDefaults.standard.set(faqUrl, forKey: "faqUrl")
+        UserDefaults.standard.set(contactUrl, forKey: "contactUrl")
+    }
+}
 ```
 
 ### 使用時機
 
-1. **App 啟動時** - 獲取最新配置並儲存
+1. **App 啟動時** - 獲取最新配置並儲存到 UserDefaults
 2. **法律頁面** - 使用 `terms_url`/`privacy_url` 顯示在 WebView
 3. **行銷頁面** - 使用 `landing_page_url` 顯示產品介紹
+4. **App 設定頁面** - 使用 `data_usage_url`, `help_url`, `faq_url`, `contact_url` 顯示支援資訊
+
+### 使用範例
+
+```swift
+// 在設定頁面顯示 WebView
+func showHelpPage() {
+    guard let helpUrl = UserDefaults.standard.string(forKey: "helpUrl"),
+          let url = URL(string: helpUrl) else { return }
+
+    let webView = WKWebView()
+    webView.load(URLRequest(url: url))
+    // 顯示 webView...
+}
+
+// 同樣方式處理其他 URL
+func showFAQ() { /* 使用 faqUrl */ }
+func showDataUsage() { /* 使用 dataUsageUrl */ }
+func showContactUs() { /* 使用 contactUrl */ }
+```
 
 ### 優點
 
 - ✅ **無需發版更新** - URL 變更只需修改後端配置
 - ✅ **支援 A/B Testing** - 可測試不同 URL
-- ✅ **簡潔高效** - 只返回必要的 3 個 URL 欄位
+- ✅ **完整支援資訊** - 提供 7 個常用 URL（法律、行銷、支援）
+- ✅ **統一管理** - 所有外部連結集中在一個 API
+- ✅ **清晰易讀** - 使用標準化的 URL 路徑命名
 
 ---
 
@@ -2632,11 +2678,19 @@ struct AppConfig: Codable {
     let termsUrl: String
     let privacyUrl: String
     let landingPageUrl: String
+    let dataUsageUrl: String
+    let helpUrl: String
+    let faqUrl: String
+    let contactUrl: String
 
     enum CodingKeys: String, CodingKey {
         case termsUrl = "terms_url"
         case privacyUrl = "privacy_url"
         case landingPageUrl = "landing_page_url"
+        case dataUsageUrl = "data_usage_url"
+        case helpUrl = "help_url"
+        case faqUrl = "faq_url"
+        case contactUrl = "contact_url"
     }
 }
 
@@ -2645,6 +2699,17 @@ func fetchAppConfig() async throws -> AppConfig {
     let url = URL(string: "\(APIConfig.baseURL)/api/v1/app/config/island_parents")!
     let (data, _) = try await URLSession.shared.data(from: url)
     return try JSONDecoder().decode(AppConfig.self, from: data)
+}
+
+// 使用範例
+let config = try await fetchAppConfig()
+config.saveToUserDefaults() // 儲存到 UserDefaults
+
+// 在設定頁面使用
+func showHelp() {
+    guard let url = URL(string: config.helpUrl) else { return }
+    let webView = WKWebView()
+    webView.load(URLRequest(url: url))
 }
 ```
 

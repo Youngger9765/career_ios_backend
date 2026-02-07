@@ -66,7 +66,8 @@ class MetadataBuilder:
             completion_tokens = getattr(token_usage, "candidates_token_count", 0)
             total_tokens = getattr(token_usage, "total_token_count", 0)
 
-            # Estimate cost (Gemini 3 Flash pricing)
+            # Estimate cost (Gemini Flash 3 pricing)
+            # Input: $0.50 per 1M tokens, Output: $3.00 per 1M tokens
             input_cost = Decimal(prompt_tokens) * Decimal("0.00000050")
             output_cost = Decimal(completion_tokens) * Decimal("0.000003")
             estimated_cost = input_cost + output_cost
@@ -96,8 +97,8 @@ class MetadataBuilder:
             "rag_similarity_threshold": 0.35,
             "rag_search_time_ms": None,
             "provider": "gemini",
-            "model_name": "gemini-3-flash-preview",
-            "model_version": "3.0",
+            "model_name": "gemini-1.5-flash-latest",  # Correct model name for deep analysis
+            "model_version": "1.5",
             "start_time": analysis_start_time.isoformat(),
             "end_time": end_time.isoformat(),
             "duration_ms": duration_ms,
@@ -143,6 +144,12 @@ class MetadataBuilder:
         Returns:
             Simplified metadata dictionary
         """
+        # Calculate Gemini Flash 3 cost
+        # Input: $0.50 per 1M tokens, Output: $3.00 per 1M tokens
+        input_cost = (prompt_tokens / 1_000_000) * 0.50
+        output_cost = (completion_tokens / 1_000_000) * 3.00
+        estimated_cost_usd = input_cost + output_cost
+
         return {
             "mode": mode,
             "duration_ms": duration_ms,
@@ -151,4 +158,7 @@ class MetadataBuilder:
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
             "total_tokens": prompt_tokens + completion_tokens,
+            "estimated_cost_usd": estimated_cost_usd,
+            "model_name": "gemini-1.5-flash-latest",  # Correct model for deep analysis
+            "provider": "gemini",
         }

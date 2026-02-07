@@ -123,14 +123,20 @@ class Settings(BaseSettings):
     ISLAND_PARENTS_TERMS_URL: str = "https://www.comma.study/island_parents_terms_of_service/"
     ISLAND_PARENTS_PRIVACY_URL: str = "https://www.comma.study/island_parents_privacy_policy/"
     ISLAND_PARENTS_LANDING_PAGE_URL: str = "https://www.comma.study/island_parents_landing/"
-    ISLAND_PARENTS_HELP_URL: str = "https://duodian.com/career/help"
+    ISLAND_PARENTS_DATA_USAGE_URL: str = "https://www.comma.study/island_parents_data_usage/"
+    ISLAND_PARENTS_HELP_URL: str = "https://www.comma.study/island_parents_help/"
+    ISLAND_PARENTS_FAQ_URL: str = "https://www.comma.study/island_parents_faq/"
+    ISLAND_PARENTS_CONTACT_URL: str = "https://www.comma.study/island_parents_contact_us/"
     ISLAND_PARENTS_FORGOT_PASSWORD_URL: str = "https://duodian.com/career/forgot-password"
 
     # Legacy/Career tenant (backward compatibility)
     APP_TERMS_URL: str = "https://duodian.com/career/terms"
     APP_PRIVACY_URL: str = "https://duodian.com/career/privacy"
     APP_LANDING_PAGE_URL: str = "https://duodian.com/career"
+    APP_DATA_USAGE_URL: str = "https://duodian.com/career/data-usage"
     APP_HELP_URL: str = "https://duodian.com/career/help"
+    APP_FAQ_URL: str = "https://duodian.com/career/faq"
+    APP_CONTACT_URL: str = "https://duodian.com/career/contact"
     APP_FORGOT_PASSWORD_URL: str = "https://duodian.com/career/forgot-password"
 
     # Common config

@@ -79,12 +79,34 @@ class ParentsReportService:
         latency_ms = int((time.time() - start_time) * 1000)
         logger.info(f"Report generated in {latency_ms}ms")
 
+        # Extract usage metadata from Gemini response
+        usage_metadata = gemini_response.get("usage_metadata", {})
+        prompt_tokens = usage_metadata.get("prompt_token_count", 0) or 0
+        completion_tokens = usage_metadata.get("candidates_token_count", 0) or 0
+        total_tokens = usage_metadata.get("total_token_count", 0) or 0
+
+        # Calculate Gemini Flash 1.5 cost using centralized pricing
+        from app.core.pricing import (
+            GEMINI_1_5_FLASH_REPORT_INPUT_USD_PER_1M_TOKENS,
+            GEMINI_1_5_FLASH_REPORT_OUTPUT_USD_PER_1M_TOKENS,
+            calculate_gemini_cost,
+        )
+
+        estimated_cost_usd = calculate_gemini_cost(
+            input_tokens=prompt_tokens,
+            output_tokens=completion_tokens,
+            input_price_per_1m=GEMINI_1_5_FLASH_REPORT_INPUT_USD_PER_1M_TOKENS,
+            output_price_per_1m=GEMINI_1_5_FLASH_REPORT_OUTPUT_USD_PER_1M_TOKENS,
+        )
+
         # Build token usage data
         token_usage = {
-            "prompt_tokens": gemini_response.get("prompt_tokens", 0),
-            "completion_tokens": gemini_response.get("completion_tokens", 0),
-            "total_tokens": gemini_response.get("total_tokens", 0),
-            "estimated_cost_usd": gemini_response.get("estimated_cost_usd", 0),
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            "estimated_cost_usd": estimated_cost_usd,
+            "model_name": gemini_service.model_name,
+            "provider": "gemini",
             "llm_raw_response": llm_raw_response,
         }
 

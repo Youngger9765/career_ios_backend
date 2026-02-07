@@ -224,6 +224,8 @@ async def session_quick_feedback(
                 "recent_transcript_length": len(recent_transcript),
                 "full_transcript_length": len(full_transcript),
                 "scenario": session.scenario,
+                "model_name": feedback_result.get("model_name", "gemini-1.5-flash-latest"),
+                "provider": feedback_result.get("provider", "gemini"),
             },
         }
         prompt_tokens = feedback_result.get("prompt_tokens", 0)
@@ -235,7 +237,9 @@ async def session_quick_feedback(
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
             "total_tokens": total_tokens,
-            "estimated_cost_usd": total_tokens * 0.000001,
+            "estimated_cost_usd": feedback_result.get("estimated_cost_usd", total_tokens * 0.000001),
+            "model_name": feedback_result.get("model_name", "gemini-1.5-flash-latest"),
+            "provider": feedback_result.get("provider", "gemini"),
         }
         background_tasks.add_task(
             _log_analysis_background,
@@ -354,6 +358,7 @@ async def session_deep_analyze(
         logger.info(f"Deep analyze completed in {latency_ms}ms")
 
         # Schedule logging as background task
+        metadata = analysis_result.get("_metadata", {})
         result_data = {
             "analysis_type": "deep_analyze",
             "safety_level": analysis_result.get("safety_level", "green"),
@@ -366,6 +371,8 @@ async def session_deep_analyze(
                 "recent_transcript_length": len(recent_transcript),
                 "full_transcript_length": len(full_transcript),
                 "scenario": session.scenario,
+                "model_name": metadata.get("model_name", "gemini-1.5-flash-latest"),
+                "provider": metadata.get("provider", "gemini"),
             },
         }
         prompt_tokens = analysis_result.get("prompt_tokens", 0)
@@ -377,7 +384,9 @@ async def session_deep_analyze(
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
             "total_tokens": total_tokens,
-            "estimated_cost_usd": total_tokens * 0.000001,
+            "estimated_cost_usd": metadata.get("estimated_cost_usd", total_tokens * 0.000001),
+            "model_name": metadata.get("model_name", "gemini-1.5-flash-latest"),
+            "provider": metadata.get("provider", "gemini"),
         }
         background_tasks.add_task(
             _log_analysis_background,

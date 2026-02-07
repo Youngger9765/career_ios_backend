@@ -9,6 +9,67 @@
 
 ## [未發布]
 
+### 變更
+- **Dashboard UI 優化** (2026-02-07)：將模型分佈圖表替換為每日活躍用戶趨勢圖
+  - **原因**：模型分佈圖顯示固定比例（無洞察價值）；DAU 追蹤用戶參與度
+  - **新圖表**：顯示每日不重複用戶數量的折線圖
+    - 綠色配色（成長/正向趨勢）
+    - 平滑曲線加區域填充
+    - Y 軸僅顯示整數（無小數點）
+    - Tooltip 顯示「X 位用戶」格式
+  - **時間篩選支援**：
+    - 今天：每小時分解（HH:MM）
+    - 過去 7 天：每日分解（MM/DD）
+    - 過去 30 天：每日分解（MM/DD）
+  - **新增 API 端點**：`GET /api/v1/admin/dashboard/daily-active-users`
+    - 從 `SessionUsage` 表統計每個時段的 `DISTINCT counselor_id`
+    - 支援租戶篩選
+    - 返回 `{labels: ["2/1", "2/2", ...], data: [12, 15, 8, ...]}`
+  - **向後相容**：舊的 `/model-distribution` 端點保留（標記為已棄用）
+  - **修改檔案**：
+    - `app/api/v1/admin/dashboard.py` (+60 行)
+    - `app/templates/admin_dashboard.html` (圖表替換)
+
+### 修正
+- **分析日誌 Bug 修復** (2026-02-07)：修復分析日誌系統的兩個關鍵 bug
+  - **Bug 1 - 模型名稱記錄錯誤**：所有分析日誌錯誤地記錄 `model_name` 為 `"gemini-3-flash-preview"`，而非實際使用的模型
+    - **根本原因**：API 端點在呼叫 `SessionBillingService.save_analysis_log_and_usage()` 時，`_metadata` 未包含 `model_name`
+    - **影響**：Dashboard 分析顯示錯誤的模型使用情況；成本計算可能不準確
+    - **修復內容**：
+      - `EmotionAnalysisService` 現在在 `token_usage` dict 中返回 `model_name` 和 `provider`
+      - 所有 API 端點（`analyze_emotion_feedback`、`quick_feedback`、`deep_analyze`、`report`）現在將 `model_name` 傳遞給 `_metadata`
+      - `MetadataBuilder` 更新為正確的模型名稱：`gemini-flash-lite-latest`（情緒分析）、`gemini-1.5-flash-latest`（深度分析/報告）
+      - 在 `SessionBillingService._get_default_model_name()` 中新增防禦性 fallback 與警告日誌
+    - **修改檔案**：
+      - `app/services/analysis/emotion_service.py`（164-179 行）
+      - `app/api/sessions.py`（597-600 行）
+      - `app/api/session_analysis.py`（221-228、362-370 行）
+      - `app/services/analysis/keyword_analysis/metadata.py`（99、122、146-154 行）
+      - `app/services/analysis/session_billing_service.py`（38-48、120-122 行）
+  - **Bug 2 - 缺少 ElevenLabs STT 成本**：成本追蹤僅包含 Gemini LLM 成本，缺少 ElevenLabs Scribe v2 Realtime STT 成本（$0.40/小時 = 總成本的 68%）
+    - **根本原因**：`estimated_cost_usd` 僅計算 token 成本，未包含按小時計費的 STT 成本
+    - **影響**：Dashboard 顯示的成本比實際低約 8 倍（$0.073/小時 vs 預期 $0.535/小時）
+    - **成本結構**（每小時）：
+      - ElevenLabs Scribe v2 Realtime：$0.40（68%）
+      - Gemini Flash Lite（情緒分析）：$0.10（17%）
+      - Gemini Flash 1.5（報告生成）：$0.035（6%）
+      - 基礎設施（不追蹤）：$0.052（9%）
+      - **追蹤總計**：$0.535/小時
+    - **修復內容**：
+      - `SessionBillingService.save_analysis_log_and_usage()` 現在根據 session 時長計算 ElevenLabs 成本
+      - 公式：`elevenlabs_cost = (duration_seconds / 3600) * 0.40`
+      - 總成本：`gemini_cost + elevenlabs_cost`
+    - **修改檔案**：
+      - `app/services/analysis/session_billing_service.py`（168-191 行）
+      - `app/services/core/quick_feedback_service.py`（94-109 行）
+      - `app/services/analysis/parents_report_service.py`（83-100 行）
+  - **正確的模型定價**（修復中已更新）：
+    - Gemini Flash Lite Latest：輸入 $0.075/1M，輸出 $0.30/1M
+    - Gemini Flash 1.5 Latest：輸入 $0.50/1M，輸出 $3.00/1M（深度分析）
+    - Gemini Flash 1.5 Latest：輸入 $1.25/1M，輸出 $5.00/1M（報告生成）
+  - **測試覆蓋**：新增 `test_logging_unit.py` 包含 4 個完整測試（全部通過）
+  - **驗證**：單元測試確認 model_name 包含與 ElevenLabs 成本計算正確
+
 ### 新增
 - **多步驟密碼重設頁面與 Deeplink 支援** (2026-02-01)：為 iOS in-app browser 優化的忘記密碼頁面
   - 4 步驟單頁流程：輸入 Email → 驗證碼 → 新密碼 → 成功

@@ -35,6 +35,19 @@ class SessionBillingService:
             return datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
         return iso_string
 
+    def _get_default_model_name(self, metadata: Dict) -> str:
+        """
+        Get default model name with warning when missing from metadata.
+
+        This is a defensive fallback - model_name should always be provided.
+        """
+        logger.warning(
+            "⚠️  model_name missing from _metadata! Using fallback. "
+            "This indicates a bug in the analysis service. "
+            f"Analysis type: {metadata.get('mode', 'unknown')}"
+        )
+        return "gemini-1.5-flash-latest"  # Safe default
+
     def save_analysis_log_and_usage(
         self,
         session_id: UUID,
@@ -118,8 +131,9 @@ class SessionBillingService:
                 rag_search_time_ms=metadata.get("rag_search_time_ms"),
                 # Model metadata
                 provider=metadata.get("provider", "gemini"),
-                model_name=metadata.get("model_name", "gemini-3-flash-preview"),
-                model_version=metadata.get("model_version", "3.0"),
+                model_name=metadata.get("model_name")
+                or self._get_default_model_name(metadata),
+                model_version=metadata.get("model_version", "1.5"),
                 # Timing breakdown
                 start_time=start_time,
                 end_time=end_time,
@@ -165,11 +179,35 @@ class SessionBillingService:
                 .first()
             )
 
-            # Extract token usage
+            # Extract token usage and calculate costs
             prompt_tokens = token_usage_data.get("prompt_tokens", 0)
             completion_tokens = token_usage_data.get("completion_tokens", 0)
             total_tokens = token_usage_data.get("total_tokens", 0)
-            estimated_cost = Decimal(str(token_usage_data.get("estimated_cost_usd", 0)))
+
+            # Gemini LLM cost (from token_usage_data)
+            gemini_cost = Decimal(str(token_usage_data.get("estimated_cost_usd", 0)))
+
+            # ElevenLabs Scribe v2 Realtime STT cost (using centralized pricing)
+            from app.core.pricing import calculate_elevenlabs_cost
+
+            session_record = (
+                self.db.query(Session).filter(Session.id == session_id).first()
+            )
+            recordings = session_record.recordings if session_record else []
+            duration_seconds = sum(
+                r.get("duration_seconds", 0) for r in (recordings or [])
+            )
+            elevenlabs_cost = Decimal(str(calculate_elevenlabs_cost(duration_seconds)))
+
+            # Total cost = Gemini + ElevenLabs
+            estimated_cost = gemini_cost + elevenlabs_cost
+
+            logger.info(
+                f"Cost breakdown for session {session_id}: "
+                f"Gemini=${float(gemini_cost):.6f}, "
+                f"ElevenLabs=${float(elevenlabs_cost):.6f} ({duration_seconds}s), "
+                f"Total=${float(estimated_cost):.6f}"
+            )
 
             current_time = datetime.now(timezone.utc)
 
