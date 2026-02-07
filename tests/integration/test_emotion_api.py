@@ -20,10 +20,11 @@ from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
 
-# Tests enabled - emotion API bugs fixed
-# pytestmark = pytest.mark.skip(
-#     reason="Skipped in CI due to Gemini API usage (expensive)"
-# )
+# Skip in CI - requires Google Cloud credentials and makes expensive API calls
+# To run locally: pytest tests/integration/test_emotion_api.py -v
+pytestmark = pytest.mark.skip(
+    reason="Skipped in CI due to Gemini API usage (requires credentials, expensive)"
+)
 from app.main import app
 from app.models.case import Case, CaseStatus
 from app.models.client import Client

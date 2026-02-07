@@ -67,7 +67,7 @@ def get_summary(
     start_time = get_time_filter(time_range)
 
     # Calculate ElevenLabs cost from duration (not from estimated_cost_usd which contains total cost)
-    ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND = 0.40 / 3600.0  # $0.40 per hour
+    ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND = 0.40 / 3600.0  # noqa: N806 - Constant in function
 
     elevenlabs_query = select(
         func.coalesce(func.sum(SessionUsage.duration_seconds * ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND), 0).label("elevenlabs_cost")
@@ -897,7 +897,6 @@ def get_cost_per_user(
     - status: "normal", "high_cost", "test_account"
     - suggested_action: Recommended next step
     """
-    from sqlalchemy import case
 
     start_time = get_time_filter(time_range)
 
@@ -1003,7 +1002,6 @@ def get_user_segments(
     - churned_users: No activity in 30+ days
     """
     now = datetime.now(timezone.utc)
-    start_time = get_time_filter(time_range)
 
     # Get all users with activity
     base_query = (
@@ -1184,7 +1182,6 @@ def get_cost_prediction(
 
     # Calculate growth vs last month
     last_month_start = (month_start - timedelta(days=1)).replace(day=1)
-    last_month_end = month_start - timedelta(seconds=1)
 
     last_month_query = select(
         func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0).label("cost")
