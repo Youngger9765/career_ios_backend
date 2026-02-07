@@ -46,7 +46,6 @@ from app.services.external.openai_service import OpenAIService
 from app.services.external.gbq_service import GBQService, gbq_service
 from app.services.external.email_sender import EmailSenderService, email_sender
 from app.services.external.storage import StorageService
-from app.services.external.stt_service import STTService, stt_service
 
 # Core
 from app.services.core.session_service import SessionService
@@ -111,8 +110,6 @@ __all__ = [
     "EmailSenderService",
     "email_sender",
     "StorageService",
-    "STTService",
-    "stt_service",
     # Core
     "SessionService",
     "RecordingService",

@@ -10,7 +10,7 @@ Run with: `pytest tests/ -m "not slow"`
   - No external dependencies
   
 - **Service Tests** (25 tests in `tests/test_services.py` + `tests/test_main.py`)
-  - STTService, SanitizerService, ReportGenerationService
+  - SanitizerService, ReportGenerationService
   - Uses mocks for OpenAI/external APIs
 
 - **RAG Tests** (37 tests in `tests/rag/`)
