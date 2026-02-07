@@ -66,10 +66,11 @@ def get_summary(
     """
     start_time = get_time_filter(time_range)
 
-    # BUG FIX 2: Calculate total cost from BOTH sources
-    # 1. ElevenLabs cost from SessionUsage.estimated_cost_usd
+    # Calculate ElevenLabs cost from duration (not from estimated_cost_usd which contains total cost)
+    ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND = 0.40 / 3600.0  # $0.40 per hour
+
     elevenlabs_query = select(
-        func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0).label("elevenlabs_cost")
+        func.coalesce(func.sum(SessionUsage.duration_seconds * ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND), 0).label("elevenlabs_cost")
     ).select_from(SessionUsage).where(SessionUsage.created_at >= start_time)
 
     if tenant_id:
@@ -649,11 +650,11 @@ def get_top_users(
     query = (
         select(
             Counselor.email,
-            # Gemini Flash 3 tokens (from SessionAnalysisLog where model contains '1.5-flash')
+            # Gemini Flash tokens (includes both Flash 1.5 and Flash 3)
             func.coalesce(
                 func.sum(
                     case(
-                        (SessionAnalysisLog.model_name.like("%1.5-flash%"),
+                        (SessionAnalysisLog.model_name.in_(["gemini-1.5-flash-latest", "gemini-3-flash-preview"]),
                          SessionAnalysisLog.prompt_tokens + SessionAnalysisLog.completion_tokens),
                         else_=0
                     )
@@ -677,7 +678,11 @@ def get_top_users(
             ).label("elevenlabs_hours"),
 
             func.count(func.distinct(SessionUsage.session_id)).label("total_sessions"),
-            func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0).label("total_cost_usd"),
+            # Calculate total cost: ElevenLabs (from duration) + Gemini (from estimated_cost_usd)
+            (
+                func.coalesce(func.sum(SessionUsage.duration_seconds * 0.40 / 3600.0), 0) +
+                func.coalesce(func.sum(SessionAnalysisLog.estimated_cost_usd), 0)
+            ).label("total_cost_usd"),
             func.coalesce(func.sum(SessionUsage.duration_seconds), 0).label("total_seconds"),
         )
         .select_from(SessionUsage)
@@ -874,6 +879,359 @@ def get_overall_stats(
     }
 
 
+@router.get("/cost-per-user")
+def get_cost_per_user(
+    time_range: Literal["day", "week", "month"] = Query("month"),
+    tenant_id: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    current_user: Counselor = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> List[Dict]:
+    """
+    Get cost per user with anomaly detection
+
+    Returns users sorted by cost, with:
+    - total_cost_usd: Total cost for this user
+    - sessions: Number of sessions
+    - cost_per_session: Average cost per session
+    - status: "normal", "high_cost", "test_account"
+    - suggested_action: Recommended next step
+    """
+    from sqlalchemy import case
+
+    start_time = get_time_filter(time_range)
+
+    # Calculate total costs from both sources
+    query = (
+        select(
+            Counselor.email,
+            Counselor.full_name,
+            # Total cost = ElevenLabs + Gemini
+            (
+                func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0)
+            ).label("total_cost"),
+            func.count(func.distinct(SessionUsage.session_id)).label("sessions"),
+            func.coalesce(func.sum(SessionUsage.duration_seconds), 0).label("total_seconds"),
+        )
+        .select_from(SessionUsage)
+        .join(Counselor, SessionUsage.counselor_id == Counselor.id)
+        .where(SessionUsage.created_at >= start_time)
+        .group_by(Counselor.email, Counselor.full_name)
+        .order_by(desc("total_cost"))
+        .limit(limit)
+    )
+
+    if tenant_id:
+        query = query.where(SessionUsage.tenant_id == tenant_id)
+
+    results = db.execute(query).all()
+
+    # Add Gemini costs separately (from SessionAnalysisLog)
+    gemini_query = (
+        select(
+            Counselor.email,
+            func.coalesce(func.sum(SessionAnalysisLog.estimated_cost_usd), 0).label("gemini_cost")
+        )
+        .select_from(SessionAnalysisLog)
+        .join(Counselor, SessionAnalysisLog.counselor_id == Counselor.id)
+        .where(SessionAnalysisLog.analyzed_at >= start_time)
+        .group_by(Counselor.email)
+    )
+
+    if tenant_id:
+        gemini_query = gemini_query.where(SessionAnalysisLog.tenant_id == tenant_id)
+
+    gemini_results = db.execute(gemini_query).all()
+    gemini_costs = {row.email: float(row.gemini_cost) for row in gemini_results}
+
+    # Calculate platform average for comparison
+    total_cost = sum(float(row.total_cost) for row in results)
+    total_sessions = sum(int(row.sessions) for row in results)
+    platform_avg_cost_per_session = total_cost / total_sessions if total_sessions > 0 else 0
+
+    # Classify users and suggest actions
+    user_list = []
+    for row in results:
+        email = row.email
+        elevenlabs_cost = float(row.total_cost)
+        gemini_cost = gemini_costs.get(email, 0.0)
+        total_cost = elevenlabs_cost + gemini_cost
+        sessions = int(row.sessions)
+        cost_per_session = total_cost / sessions if sessions > 0 else 0
+
+        # Anomaly detection
+        status = "normal"
+        suggested_action = "-"
+
+        # Test account detection (many sessions, low cost per session)
+        if sessions > 100 and cost_per_session < platform_avg_cost_per_session * 0.5:
+            status = "test_account"
+            suggested_action = "Review and consider throttling"
+        # High cost user (2x platform average)
+        elif cost_per_session > platform_avg_cost_per_session * 2:
+            status = "high_cost"
+            suggested_action = "Contact for premium upgrade"
+
+        user_list.append({
+            "email": email,
+            "full_name": row.full_name,
+            "total_cost_usd": round(total_cost, 2),
+            "sessions": sessions,
+            "cost_per_session": round(cost_per_session, 2),
+            "total_minutes": round(float(row.total_seconds) / 60, 1),
+            "status": status,
+            "suggested_action": suggested_action,
+        })
+
+    return user_list
+
+
+@router.get("/user-segments")
+def get_user_segments(
+    time_range: Literal["day", "week", "month"] = Query("month"),
+    tenant_id: Optional[str] = Query(None),
+    current_user: Counselor = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Dict:
+    """
+    Get user segmentation: Power Users, Active, At-Risk, Churned
+
+    Returns:
+    - power_users: Top 10% by session count
+    - active_users: Used in last 7 days
+    - at_risk_users: No activity in 7+ days (but active in last 30)
+    - churned_users: No activity in 30+ days
+    """
+    now = datetime.now(timezone.utc)
+    start_time = get_time_filter(time_range)
+
+    # Get all users with activity
+    base_query = (
+        select(
+            Counselor.id,
+            Counselor.email,
+            func.count(func.distinct(SessionUsage.session_id)).label("sessions"),
+            func.max(SessionUsage.created_at).label("last_activity"),
+            # Calculate total cost: ElevenLabs (from duration) + Gemini (from estimated_cost_usd)
+            (
+                func.coalesce(func.sum(SessionUsage.duration_seconds * 0.40 / 3600.0), 0) +
+                func.coalesce(func.sum(SessionAnalysisLog.estimated_cost_usd), 0)
+            ).label("total_cost"),
+        )
+        .select_from(Counselor)
+        .outerjoin(SessionUsage, Counselor.id == SessionUsage.counselor_id)
+        .outerjoin(SessionAnalysisLog, SessionUsage.session_id == SessionAnalysisLog.session_id)
+        .where(Counselor.created_at < now - timedelta(days=7))  # Only users older than 7 days
+        .group_by(Counselor.id, Counselor.email)
+    )
+
+    if tenant_id:
+        base_query = base_query.where(Counselor.tenant_id == tenant_id)
+
+    all_users = db.execute(base_query).all()
+
+    # Segment users
+    power_users = []
+    active_users = []
+    at_risk_users = []
+    churned_users = []
+
+    # Calculate 90th percentile for power users
+    session_counts = [int(u.sessions) for u in all_users if u.sessions > 0]
+    p90_threshold = sorted(session_counts)[int(len(session_counts) * 0.9)] if session_counts else 0
+
+    for user in all_users:
+        sessions = int(user.sessions)
+        last_activity = user.last_activity
+        total_cost = float(user.total_cost)
+
+        # No activity at all
+        if last_activity is None:
+            churned_users.append({
+                "email": user.email,
+                "sessions": 0,
+                "last_activity": None,
+                "total_cost_usd": 0,
+            })
+            continue
+
+        days_inactive = (now - last_activity).days
+
+        # Power users (top 10%)
+        if sessions >= p90_threshold and sessions > 0:
+            power_users.append({
+                "email": user.email,
+                "sessions": sessions,
+                "last_activity": last_activity.strftime("%Y-%m-%d %H:%M"),
+                "total_cost_usd": round(total_cost, 2),
+            })
+        # At-risk users (7-30 days inactive)
+        elif 7 <= days_inactive < 30:
+            at_risk_users.append({
+                "email": user.email,
+                "sessions": sessions,
+                "last_activity": last_activity.strftime("%Y-%m-%d %H:%M"),
+                "days_inactive": days_inactive,
+            })
+        # Churned users (30+ days inactive)
+        elif days_inactive >= 30:
+            churned_users.append({
+                "email": user.email,
+                "sessions": sessions,
+                "last_activity": last_activity.strftime("%Y-%m-%d %H:%M"),
+                "days_inactive": days_inactive,
+            })
+        # Active users (< 7 days inactive)
+        else:
+            active_users.append({
+                "email": user.email,
+                "sessions": sessions,
+                "last_activity": last_activity.strftime("%Y-%m-%d %H:%M"),
+                "total_cost_usd": round(total_cost, 2),
+            })
+
+    # Calculate averages
+    avg_sessions_power = sum(u["sessions"] for u in power_users) / len(power_users) if power_users else 0
+    avg_cost_power = sum(u["total_cost_usd"] for u in power_users) / len(power_users) if power_users else 0
+    avg_sessions_active = sum(u["sessions"] for u in active_users) / len(active_users) if active_users else 0
+    avg_cost_active = sum(u["total_cost_usd"] for u in active_users) / len(active_users) if active_users else 0
+
+    return {
+        "power_users": {
+            "count": len(power_users),
+            "avg_sessions": round(avg_sessions_power, 1),
+            "avg_cost_usd": round(avg_cost_power, 2),
+            "suggested_action": "Upsell to premium tier",
+            "users": power_users[:10],  # Top 10 for display
+        },
+        "active_users": {
+            "count": len(active_users),
+            "avg_sessions": round(avg_sessions_active, 1),
+            "avg_cost_usd": round(avg_cost_active, 2),
+            "suggested_action": "Maintain engagement",
+            "users": active_users[:10],
+        },
+        "at_risk_users": {
+            "count": len(at_risk_users),
+            "suggested_action": "Send re-engagement email",
+            "users": at_risk_users[:10],
+        },
+        "churned_users": {
+            "count": len(churned_users),
+            "suggested_action": "Archive or remove",
+            "users": churned_users[:10],
+        },
+    }
+
+
+@router.get("/cost-prediction")
+def get_cost_prediction(
+    time_range: Literal["month"] = Query("month"),
+    tenant_id: Optional[str] = Query(None),
+    current_user: Counselor = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Dict:
+    """
+    Predict next month's cost based on current trend
+
+    Returns:
+    - current_month_cost: Cost so far this month
+    - days_elapsed: Days into current month
+    - days_remaining: Days left in month
+    - predicted_month_cost: Linear projection
+    - daily_average: Average cost per day
+    """
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # Calculate days in month
+    if now.month == 12:
+        next_month = now.replace(year=now.year + 1, month=1, day=1)
+    else:
+        next_month = now.replace(month=now.month + 1, day=1)
+
+    days_in_month = (next_month - month_start).days
+    days_elapsed = (now - month_start).days + 1
+    days_remaining = days_in_month - days_elapsed
+
+    # Get current month cost (ElevenLabs)
+    elevenlabs_query = select(
+        func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0).label("cost")
+    ).select_from(SessionUsage).where(SessionUsage.created_at >= month_start)
+
+    if tenant_id:
+        elevenlabs_query = elevenlabs_query.where(SessionUsage.tenant_id == tenant_id)
+
+    elevenlabs_result = db.execute(elevenlabs_query).first()
+    elevenlabs_cost = float(elevenlabs_result.cost) if elevenlabs_result else 0.0
+
+    # Get current month cost (Gemini)
+    gemini_query = select(
+        func.coalesce(func.sum(SessionAnalysisLog.estimated_cost_usd), 0).label("cost")
+    ).select_from(SessionAnalysisLog).where(SessionAnalysisLog.analyzed_at >= month_start)
+
+    if tenant_id:
+        gemini_query = gemini_query.where(SessionAnalysisLog.tenant_id == tenant_id)
+
+    gemini_result = db.execute(gemini_query).first()
+    gemini_cost = float(gemini_result.cost) if gemini_result else 0.0
+
+    current_month_cost = elevenlabs_cost + gemini_cost
+
+    # Simple linear projection
+    daily_average = current_month_cost / days_elapsed if days_elapsed > 0 else 0
+    predicted_month_cost = daily_average * days_in_month
+
+    # Calculate growth vs last month
+    last_month_start = (month_start - timedelta(days=1)).replace(day=1)
+    last_month_end = month_start - timedelta(seconds=1)
+
+    last_month_query = select(
+        func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0).label("cost")
+    ).select_from(SessionUsage).where(
+        and_(
+            SessionUsage.created_at >= last_month_start,
+            SessionUsage.created_at < month_start
+        )
+    )
+
+    if tenant_id:
+        last_month_query = last_month_query.where(SessionUsage.tenant_id == tenant_id)
+
+    last_month_result = db.execute(last_month_query).first()
+    last_month_cost = float(last_month_result.cost) if last_month_result else 0.0
+
+    # Add Gemini cost for last month
+    gemini_last_query = select(
+        func.coalesce(func.sum(SessionAnalysisLog.estimated_cost_usd), 0).label("cost")
+    ).select_from(SessionAnalysisLog).where(
+        and_(
+            SessionAnalysisLog.analyzed_at >= last_month_start,
+            SessionAnalysisLog.analyzed_at < month_start
+        )
+    )
+
+    if tenant_id:
+        gemini_last_query = gemini_last_query.where(SessionAnalysisLog.tenant_id == tenant_id)
+
+    gemini_last_result = db.execute(gemini_last_query).first()
+    last_month_cost += float(gemini_last_result.cost) if gemini_last_result else 0.0
+
+    growth_pct = 0.0
+    if last_month_cost > 0:
+        growth_pct = ((predicted_month_cost - last_month_cost) / last_month_cost) * 100
+
+    return {
+        "current_month_cost": round(current_month_cost, 2),
+        "days_elapsed": days_elapsed,
+        "days_remaining": days_remaining,
+        "daily_average": round(daily_average, 2),
+        "predicted_month_cost": round(predicted_month_cost, 2),
+        "last_month_cost": round(last_month_cost, 2),
+        "growth_pct": round(growth_pct, 1),
+    }
+
+
 @router.get("/export-csv")
 def export_csv(
     time_range: Literal["day", "week", "month"] = Query("month"),
@@ -901,11 +1259,11 @@ def export_csv(
                 Counselor.email,
                 Counselor.full_name,
                 Counselor.tenant_id,
-                # Gemini Flash 3 tokens
+                # Gemini Flash tokens (includes both Flash 1.5 and Flash 3)
                 func.coalesce(
                     func.sum(
                         case(
-                            (SessionAnalysisLog.model_name.like("%1.5-flash%"),
+                            (SessionAnalysisLog.model_name.in_(["gemini-1.5-flash-latest", "gemini-3-flash-preview"]),
                              SessionAnalysisLog.prompt_tokens + SessionAnalysisLog.completion_tokens),
                             else_=0
                         )
@@ -926,7 +1284,11 @@ def export_csv(
                     func.sum(SessionUsage.duration_seconds) / 3600.0, 0
                 ).label("elevenlabs_hours"),
                 func.count(func.distinct(SessionUsage.session_id)).label("total_sessions"),
-                func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0).label("total_cost_usd"),
+                # Calculate total cost: ElevenLabs (from duration) + Gemini (from estimated_cost_usd)
+                (
+                    func.coalesce(func.sum(SessionUsage.duration_seconds * 0.40 / 3600.0), 0) +
+                    func.coalesce(func.sum(SessionAnalysisLog.estimated_cost_usd), 0)
+                ).label("total_cost_usd"),
                 func.coalesce(func.sum(SessionUsage.duration_seconds), 0).label("total_seconds"),
             )
             .select_from(SessionUsage)
