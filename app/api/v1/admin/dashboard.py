@@ -10,7 +10,7 @@ from typing import Dict, List, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
@@ -642,7 +642,7 @@ def get_top_users(
         - total_cost_usd
         - total_minutes
     """
-    from sqlalchemy import case
+    from sqlalchemy import case, or_
 
     start_time = get_time_filter(time_range)
 
@@ -689,6 +689,12 @@ def get_top_users(
         .join(Counselor, SessionUsage.counselor_id == Counselor.id)
         .outerjoin(SessionAnalysisLog, SessionUsage.session_id == SessionAnalysisLog.session_id)
         .where(SessionUsage.created_at >= start_time)
+        .where(
+            or_(
+                SessionAnalysisLog.id.is_(None),  # Allow NULL from outerjoin
+                SessionAnalysisLog.analyzed_at >= start_time  # Filter non-NULL records
+            )
+        )
         .group_by(Counselor.email)
         .order_by(desc("total_cost_usd"))
         .limit(limit)
@@ -1001,7 +1007,10 @@ def get_user_segments(
     - at_risk_users: No activity in 7+ days (but active in last 30)
     - churned_users: No activity in 30+ days
     """
+    from sqlalchemy import or_
+
     now = datetime.now(timezone.utc)
+    start_time = get_time_filter(time_range)
 
     # Get all users with activity
     base_query = (
@@ -1020,6 +1029,18 @@ def get_user_segments(
         .outerjoin(SessionUsage, Counselor.id == SessionUsage.counselor_id)
         .outerjoin(SessionAnalysisLog, SessionUsage.session_id == SessionAnalysisLog.session_id)
         .where(Counselor.created_at < now - timedelta(days=7))  # Only users older than 7 days
+        .where(
+            or_(
+                SessionUsage.id.is_(None),  # Allow users with no sessions
+                SessionUsage.created_at >= start_time  # Filter sessions by time range
+            )
+        )
+        .where(
+            or_(
+                SessionAnalysisLog.id.is_(None),  # Allow NULL from outerjoin
+                SessionAnalysisLog.analyzed_at >= start_time  # Filter non-NULL records
+            )
+        )
         .group_by(Counselor.id, Counselor.email)
     )
 
@@ -1292,6 +1313,12 @@ def export_csv(
             .join(Counselor, SessionUsage.counselor_id == Counselor.id)
             .outerjoin(SessionAnalysisLog, SessionUsage.session_id == SessionAnalysisLog.session_id)
             .where(SessionUsage.created_at >= start_time)
+            .where(
+                or_(
+                    SessionAnalysisLog.id.is_(None),  # Allow NULL from outerjoin
+                    SessionAnalysisLog.analyzed_at >= start_time  # Filter non-NULL records
+                )
+            )
             .group_by(Counselor.email, Counselor.full_name, Counselor.tenant_id)
             .order_by(desc("total_cost_usd"))
         )

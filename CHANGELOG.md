@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Admin Dashboard Time Filtering** (2026-02-08): Fixed 3 critical bugs causing cost calculations to include all historical data
+  - **Bug #1 - `get_top_users`**: Missing `SessionAnalysisLog.analyzed_at` filter caused Gemini costs to include all history
+  - **Bug #2 - `get_user_segments`**: Function received `time_range` parameter but never used it (only checked registration date)
+  - **Bug #3 - `export_csv`**: Missing `SessionAnalysisLog.analyzed_at` filter caused CSV exports to include all historical costs
+  - **Impact**: Before fix, selecting "Today" would still show costs from weeks/months ago (1800% inflation in test data: 975 logs vs 51 logs)
+  - **Fix Pattern**: Added `or_(SessionAnalysisLog.id.is_(None), SessionAnalysisLog.analyzed_at >= start_time)` to preserve NULL handling while filtering by time
+  - **Files Modified**:
+    - `app/api/v1/admin/dashboard.py`: Fixed 3 endpoints, added `or_` import
+    - `tests/manual/test_dashboard_time_filtering.py`: Verification test showing 924 old records that were incorrectly included
+  - **Documentation**:
+    - `DASHBOARD_TIME_FILTER_FIXES.md`: Technical summary with test results
+    - `DASHBOARD_FIX_COMPARISON.md`: Before/after comparison with visual examples
+    - `sql/verify_dashboard_fix.sql`: SQL queries to manually verify the fix
+  - **Testing**: Linting passed, module imports successfully, manual test confirms fix
+
 ### Added
 - **App Config API Expansion** (2026-02-08): Extended `/api/v1/app/config/{tenant}` endpoint from 3 to 7 fields
   - **New URL Fields**:
