@@ -163,12 +163,27 @@ class EmotionAnalysisService:
             # Extract token usage from response metadata
             token_usage = {}
             if hasattr(response, "usage_metadata"):
+                from app.core.pricing import calculate_cost_for_model
+
                 usage = response.usage_metadata
+                prompt_tokens = getattr(usage, "prompt_token_count", 0) or 0
+                completion_tokens = getattr(usage, "candidates_token_count", 0) or 0
+                total_tokens = getattr(usage, "total_token_count", 0) or 0
+
+                # Calculate Gemini cost using centralized pricing
+                gemini_cost_usd = calculate_cost_for_model(
+                    model_name="gemini-flash-lite-latest",
+                    input_tokens=prompt_tokens,
+                    output_tokens=completion_tokens,
+                )
+
                 token_usage = {
-                    "prompt_tokens": getattr(usage, "prompt_token_count", 0) or 0,
-                    "completion_tokens": getattr(usage, "candidates_token_count", 0) or 0,
-                    "total_tokens": getattr(usage, "total_token_count", 0) or 0,
-                    "estimated_cost_usd": 0.0,
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": total_tokens,
+                    "estimated_cost_usd": gemini_cost_usd,
+                    "model_name": self.gemini_service.model_name,  # Include model name
+                    "provider": "gemini",
                 }
             else:
                 token_usage = {
@@ -176,6 +191,8 @@ class EmotionAnalysisService:
                     "completion_tokens": 0,
                     "total_tokens": 0,
                     "estimated_cost_usd": 0.0,
+                    "model_name": self.gemini_service.model_name,
+                    "provider": "gemini",
                 }
 
             return {

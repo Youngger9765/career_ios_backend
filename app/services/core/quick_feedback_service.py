@@ -91,6 +91,15 @@ class QuickFeedbackService:
 
             latency_ms = int((time.time() - start_time) * 1000)
 
+            # Calculate Gemini Flash 1.5 cost using centralized pricing
+            from app.core.pricing import calculate_cost_for_model
+
+            estimated_cost_usd = calculate_cost_for_model(
+                model_name="gemini-1.5-flash-latest",
+                input_tokens=prompt_tokens,
+                output_tokens=completion_tokens,
+            )
+
             return {
                 "message": message,
                 "type": "ai_generated",
@@ -99,6 +108,9 @@ class QuickFeedbackService:
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
                 "total_tokens": prompt_tokens + completion_tokens,
+                "estimated_cost_usd": estimated_cost_usd,
+                "model_name": self.gemini_service.model_name,
+                "provider": "gemini",
             }
 
         except Exception as e:

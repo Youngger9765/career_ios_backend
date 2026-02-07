@@ -60,7 +60,6 @@ def get_summary(
     Get summary statistics for dashboard
 
     Returns:
-        - total_tokens: Sum of all tokens used
         - total_cost_usd: Sum of estimated costs
         - total_sessions: Count of unique sessions
         - active_users: Count of unique counselors
@@ -72,9 +71,8 @@ def get_summary(
     if tenant_id:
         query = query.where(SessionUsage.tenant_id == tenant_id)
 
-    # Get aggregated statistics
+    # Get aggregated statistics (removed total_tokens)
     stats_query = select(
-        func.coalesce(func.sum(SessionUsage.total_tokens), 0).label("total_tokens"),
         func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0).label("total_cost"),
         func.count(func.distinct(SessionUsage.session_id)).label("total_sessions"),
         func.count(func.distinct(SessionUsage.counselor_id)).label("active_users"),
@@ -86,7 +84,6 @@ def get_summary(
     result = db.execute(stats_query).first()
 
     return {
-        "total_tokens": int(result.total_tokens) if result else 0,
         "total_cost_usd": float(result.total_cost) if result else 0.0,
         "total_sessions": int(result.total_sessions) if result else 0,
         "active_users": int(result.active_users) if result else 0,
@@ -221,32 +218,222 @@ def get_token_trend(
     }
 
 
+@router.get("/cost-breakdown")
+def get_cost_breakdown(
+    time_range: Literal["day", "week", "month"] = Query("day"),
+    tenant_id: Optional[str] = Query(None),
+    current_user: Counselor = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Dict:
+    """
+    Get cost breakdown by service
+
+    Returns:
+        {
+            "services": [
+                {
+                    "name": "ElevenLabs STT",
+                    "cost": 12.34,
+                    "percentage": 45.6,
+                    "usage": "123.4 hours"
+                },
+                ...
+            ],
+            "total_cost": 56.78
+        }
+    """
+    from app.core.pricing import (
+        ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND,
+        MODEL_PRICING_MAP,
+    )
+
+    start_time = get_time_filter(time_range)
+
+    # Get model-level costs from SessionAnalysisLog
+    model_query = (
+        select(
+            SessionAnalysisLog.model_name,
+            func.coalesce(func.sum(SessionAnalysisLog.prompt_tokens), 0).label("input_tokens"),
+            func.coalesce(func.sum(SessionAnalysisLog.completion_tokens), 0).label("output_tokens"),
+        )
+        .select_from(SessionAnalysisLog)
+        .where(SessionAnalysisLog.analyzed_at >= start_time)
+        .where(SessionAnalysisLog.model_name.isnot(None))
+        .group_by(SessionAnalysisLog.model_name)
+    )
+
+    if tenant_id:
+        model_query = model_query.where(SessionAnalysisLog.tenant_id == tenant_id)
+
+    model_results = db.execute(model_query).all()
+
+    # Calculate costs by service
+    services = []
+    total_cost = 0.0
+
+    # Process AI models
+    for row in model_results:
+        model_name = row.model_name
+        input_tokens = int(row.input_tokens)
+        output_tokens = int(row.output_tokens)
+
+        # Get pricing info
+        pricing = MODEL_PRICING_MAP.get(model_name)
+        if not pricing:
+            logger.warning(f"Unknown model in cost breakdown: {model_name}")
+            continue
+
+        # Calculate cost
+        from app.core.pricing import calculate_gemini_cost
+
+        cost = calculate_gemini_cost(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            input_price_per_1m=pricing["input_price"],
+            output_price_per_1m=pricing["output_price"],
+        )
+
+        services.append({
+            "name": pricing["display_name"],
+            "cost": round(cost, 4),
+            "percentage": 0,  # Will calculate later
+            "usage": f"{(input_tokens + output_tokens) / 1_000_000:.2f}M tokens"
+        })
+        total_cost += cost
+
+    # Get ElevenLabs STT costs (from SessionUsage duration)
+    duration_query = select(
+        func.coalesce(func.sum(SessionUsage.duration_seconds), 0).label("total_seconds")
+    ).select_from(SessionUsage).where(SessionUsage.created_at >= start_time)
+
+    if tenant_id:
+        duration_query = duration_query.where(SessionUsage.tenant_id == tenant_id)
+
+    duration_result = db.execute(duration_query).first()
+    total_seconds = float(duration_result.total_seconds) if duration_result else 0.0
+
+    elevenlabs_cost = total_seconds * ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND
+    if elevenlabs_cost > 0:
+        services.append({
+            "name": "ElevenLabs STT",
+            "cost": round(elevenlabs_cost, 4),
+            "percentage": 0,  # Will calculate later
+            "usage": f"{total_seconds / 3600:.1f} hours"
+        })
+        total_cost += elevenlabs_cost
+
+    # Calculate percentages
+    for service in services:
+        if total_cost > 0:
+            service["percentage"] = round((service["cost"] / total_cost) * 100, 1)
+
+    # Sort by cost descending
+    services.sort(key=lambda x: x["cost"], reverse=True)
+
+    return {
+        "services": services,
+        "total_cost": round(total_cost, 4)
+    }
+
+
+@router.get("/session-trend")
+def get_session_trend(
+    time_range: Literal["day", "week", "month"] = Query("day"),
+    tenant_id: Optional[str] = Query(None),
+    current_user: Counselor = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Dict:
+    """
+    Get daily session count trend
+
+    Returns:
+        {
+            "labels": ["2/1", "2/2", ...],
+            "sessions": [12, 15, 8, ...],
+            "duration_hours": [2.5, 3.1, 1.8, ...]
+        }
+    """
+    start_time = get_time_filter(time_range)
+
+    # Determine date truncation
+    if time_range == "day":
+        date_trunc = func.date_trunc("hour", SessionUsage.created_at)
+    else:
+        date_trunc = func.date_trunc("day", SessionUsage.created_at)
+
+    # Build query
+    query = (
+        select(
+            date_trunc.label("period"),
+            func.count(func.distinct(SessionUsage.session_id)).label("sessions"),
+            func.coalesce(func.sum(SessionUsage.duration_seconds), 0).label("total_seconds"),
+        )
+        .select_from(SessionUsage)
+        .where(SessionUsage.created_at >= start_time)
+        .group_by("period")
+        .order_by("period")
+    )
+
+    if tenant_id:
+        query = query.where(SessionUsage.tenant_id == tenant_id)
+
+    results = db.execute(query).all()
+
+    labels = []
+    sessions = []
+    duration_hours = []
+
+    for row in results:
+        if time_range == "day":
+            labels.append(row.period.strftime("%H:%M"))
+        else:
+            labels.append(row.period.strftime("%m/%d"))
+        sessions.append(int(row.sessions))
+        duration_hours.append(round(float(row.total_seconds) / 3600, 2))
+
+    return {
+        "labels": labels,
+        "sessions": sessions,
+        "duration_hours": duration_hours,
+    }
+
+
 @router.get("/model-distribution")
 def get_model_distribution(
     time_range: Literal["day", "week", "month"] = Query("day"),
     tenant_id: Optional[str] = Query(None),
     current_user: Counselor = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> Dict[str, int]:
+) -> Dict:
     """
-    Get model usage distribution
+    Get model usage distribution by cost (not token count)
+
+    DEPRECATED: Kept for backward compatibility.
+    Use /daily-active-users instead.
 
     Returns:
-        Dictionary mapping model names to usage counts
+        {
+            "labels": ["Gemini Flash Lite", "Gemini Flash 1.5", ...],
+            "costs": [12.34, 5.67, ...],
+            "tokens": [1234567, 567890, ...]
+        }
     """
+    from app.core.pricing import MODEL_PRICING_MAP, calculate_gemini_cost
+
     start_time = get_time_filter(time_range)
 
     # Build query
     query = (
         select(
             SessionAnalysisLog.model_name,
-            func.count(SessionAnalysisLog.id).label("count"),
+            func.coalesce(func.sum(SessionAnalysisLog.prompt_tokens), 0).label("input_tokens"),
+            func.coalesce(func.sum(SessionAnalysisLog.completion_tokens), 0).label("output_tokens"),
         )
         .select_from(SessionAnalysisLog)
         .where(SessionAnalysisLog.analyzed_at >= start_time)
         .where(SessionAnalysisLog.model_name.isnot(None))
         .group_by(SessionAnalysisLog.model_name)
-        .order_by(desc("count"))
+        .order_by(desc("input_tokens"))
     )
 
     if tenant_id:
@@ -254,7 +441,96 @@ def get_model_distribution(
 
     results = db.execute(query).all()
 
-    return {row.model_name: int(row.count) for row in results}
+    labels = []
+    costs = []
+    tokens = []
+
+    for row in results:
+        model_name = row.model_name
+        input_tokens = int(row.input_tokens)
+        output_tokens = int(row.output_tokens)
+        total_tokens = input_tokens + output_tokens
+
+        # Get pricing info
+        pricing = MODEL_PRICING_MAP.get(model_name)
+        if not pricing:
+            logger.warning(f"Unknown model in distribution: {model_name}")
+            continue
+
+        # Calculate cost
+        cost = calculate_gemini_cost(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            input_price_per_1m=pricing["input_price"],
+            output_price_per_1m=pricing["output_price"],
+        )
+
+        labels.append(pricing["display_name"])
+        costs.append(round(cost, 4))
+        tokens.append(total_tokens)
+
+    return {
+        "labels": labels,
+        "costs": costs,
+        "tokens": tokens,
+    }
+
+
+@router.get("/daily-active-users")
+def get_daily_active_users(
+    time_range: Literal["day", "week", "month"] = Query("day"),
+    tenant_id: Optional[str] = Query(None),
+    current_user: Counselor = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Dict:
+    """
+    Get daily active users trend
+
+    Returns:
+        {
+            "labels": ["2/1", "2/2", ...],
+            "data": [12, 15, 8, 20, ...]
+        }
+    """
+    start_time = get_time_filter(time_range)
+
+    # Determine date truncation based on time range
+    if time_range == "day":
+        date_trunc = func.date_trunc("hour", SessionUsage.created_at)
+    else:
+        date_trunc = func.date_trunc("day", SessionUsage.created_at)
+
+    # Build query - Count unique users per period
+    query = (
+        select(
+            date_trunc.label("period"),
+            func.count(func.distinct(SessionUsage.counselor_id)).label("user_count")
+        )
+        .select_from(SessionUsage)
+        .where(SessionUsage.created_at >= start_time)
+        .group_by("period")
+        .order_by("period")
+    )
+
+    if tenant_id:
+        query = query.where(SessionUsage.tenant_id == tenant_id)
+
+    results = db.execute(query).all()
+
+    labels = []
+    data = []
+
+    for row in results:
+        if time_range == "day":
+            labels.append(row.period.strftime("%H:%M"))
+        else:
+            labels.append(row.period.strftime("%m/%d"))
+        data.append(int(row.user_count))
+
+    return {
+        "labels": labels,
+        "data": data,
+    }
 
 
 @router.get("/safety-distribution")

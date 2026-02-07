@@ -9,6 +9,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Dashboard UI Enhancement** (2026-02-07): Replaced Model Distribution chart with Daily Active Users trend
+  - **Rationale**: Model Distribution showed fixed proportions (no insights); DAU tracks user engagement
+  - **New Chart**: Line chart showing daily unique user counts over time
+    - Green color scheme (growth/positive trend)
+    - Smooth curve with area fill
+    - Integer-only Y-axis (no decimals)
+    - Tooltip shows "X users" format
+  - **Time Filter Support**:
+    - Today: Hourly breakdown (HH:MM)
+    - 7 Days: Daily breakdown (MM/DD)
+    - 30 Days: Daily breakdown (MM/DD)
+  - **New API Endpoint**: `GET /api/v1/admin/dashboard/daily-active-users`
+    - Counts `DISTINCT counselor_id` per period from `SessionUsage` table
+    - Supports tenant filtering
+    - Returns `{labels: ["2/1", "2/2", ...], data: [12, 15, 8, ...]}`
+  - **Backward Compatibility**: Old `/model-distribution` endpoint kept (marked deprecated)
+  - **Files Modified**:
+    - `app/api/v1/admin/dashboard.py` (+60 lines)
+    - `app/templates/admin_dashboard.html` (chart replacement)
+
+### Fixed
+- **Analysis Logging Bug Fixes** (2026-02-07): Fixed two critical bugs in analysis logging system
+  - **Bug 1 - Model Name Recording**: All analysis logs incorrectly recorded `model_name` as `"gemini-3-flash-preview"` instead of actual model used
+    - **Root Cause**: API endpoints didn't include `model_name` in `_metadata` when calling `SessionBillingService.save_analysis_log_and_usage()`
+    - **Impact**: Dashboard analytics showed wrong model usage; cost calculations may have been inaccurate
+    - **Fix Applied**:
+      - `EmotionAnalysisService` now returns `model_name` and `provider` in `token_usage` dict
+      - All API endpoints (`analyze_emotion_feedback`, `quick_feedback`, `deep_analyze`, `report`) now pass `model_name` to `_metadata`
+      - `MetadataBuilder` updated with correct model names: `gemini-flash-lite-latest` (emotion), `gemini-1.5-flash-latest` (deep/report)
+      - Added defensive fallback in `SessionBillingService._get_default_model_name()` with warning log
+    - **Files Modified**:
+      - `app/services/analysis/emotion_service.py` (lines 164-179)
+      - `app/api/sessions.py` (lines 597-600)
+      - `app/api/session_analysis.py` (lines 221-228, 362-370)
+      - `app/services/analysis/keyword_analysis/metadata.py` (lines 99, 122, 146-154)
+      - `app/services/analysis/session_billing_service.py` (lines 38-48, 120-122)
+  - **Bug 2 - Missing ElevenLabs STT Cost**: Cost tracking only included Gemini LLM costs, missing ElevenLabs Scribe v2 Realtime STT cost ($0.40/hr = 68% of total)
+    - **Root Cause**: `estimated_cost_usd` only calculated token costs, didn't include per-hour STT costs
+    - **Impact**: Dashboard showed costs ~8x lower than actual ($0.073/hr vs expected $0.535/hr)
+    - **Cost Structure** (per hour):
+      - ElevenLabs Scribe v2 Realtime: $0.40 (68%)
+      - Gemini Flash Lite (Emotion): $0.10 (17%)
+      - Gemini Flash 1.5 (Report): $0.035 (6%)
+      - Infrastructure (not tracked): $0.052 (9%)
+      - **Total tracked**: $0.535/hr
+    - **Fix Applied**:
+      - `SessionBillingService.save_analysis_log_and_usage()` now calculates ElevenLabs cost based on session duration
+      - Formula: `elevenlabs_cost = (duration_seconds / 3600) * 0.40`
+      - Total cost: `gemini_cost + elevenlabs_cost`
+    - **Files Modified**:
+      - `app/services/analysis/session_billing_service.py` (lines 168-191)
+      - `app/services/core/quick_feedback_service.py` (lines 94-109)
+      - `app/services/analysis/parents_report_service.py` (lines 83-100)
+  - **Correct Model Pricing** (updated in fixes):
+    - Gemini Flash Lite Latest: Input $0.075/1M, Output $0.30/1M
+    - Gemini Flash 1.5 Latest: Input $0.50/1M, Output $3.00/1M (deep_analyze)
+    - Gemini Flash 1.5 Latest: Input $1.25/1M, Output $5.00/1M (report generation)
+  - **Test Coverage**: Added `test_logging_unit.py` with 4 comprehensive tests (all passing)
+  - **Verification**: Unit tests confirm model_name inclusion and ElevenLabs cost calculation
+
 ### Completed
 - **Domain & Deployment** (2026-02-04): All domain-related tasks completed
   - Landing Page deployed to comma.study (WordPress)

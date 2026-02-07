@@ -596,6 +596,10 @@ async def analyze_emotion_feedback(
                 "target": request.target,
                 "_metadata": {
                     "latency_ms": latency_ms,
+                    "model_name": result["token_usage"].get(
+                        "model_name", "models/gemini-flash-lite-latest"
+                    ),
+                    "provider": result["token_usage"].get("provider", "gemini"),
                 },
             },
             token_usage_data=result["token_usage"],
