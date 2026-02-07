@@ -219,8 +219,8 @@
                     throw new Error(data.detail || 'Login failed');
                 }
 
-                // Check if user is admin
-                if (data.user.role !== 'ADMIN') {
+                // Check if user is admin (case-insensitive)
+                if (data.user.role.toUpperCase() !== 'ADMIN') {
                     throw new Error('您沒有管理員權限');
                 }
 
