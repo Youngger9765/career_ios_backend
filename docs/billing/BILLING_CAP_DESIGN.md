@@ -346,19 +346,20 @@ API 成本 (3hr):      57 TWD ($1.77 USD)
 ### 8.8 GCP Billing Budget 設定（✅ 已完成）
 
 **設定日期**: 2026-02-07
-**Budget ID**: `faab94a6-382c-402f-a5a7-59e5910b23b4`
+**Budget ID**: `6c8955d8-f430-4d41-a6a0-7bb1a3f71599`
 **適用範圍**: GCP Project `groovy-iris-473015-h3`（包含 Vertex AI + Cloud Run + 所有 GCP 服務）
 
 | 層級 | 月度金額 (USD) | 觸發條件 | 動作 |
 |------|--------------|---------|------|
-| **提醒** | **$950** | 達 50% ($1,900 × 50%) | Email 通知到 `CC_BDS@careercreator.tw` + `dev02@careercreator.tw` |
-| **警告** | **$1,425** | 達 75% ($1,900 × 75%) | Email 通知（需人工審查用量） |
-| **危險** | **$1,900** | 達 100%（硬上限） | Email 通知（緊急審查，考慮限流） |
+| **提醒** | **$750** | 達 50% ($1,500 × 50%) | Email 通知到 `CC_BDS@careercreator.tw` + `dev02@careercreator.tw` |
+| **警告** | **$1,125** | 達 75% ($1,500 × 75%) | Email 通知（需人工審查用量） |
+| **危險** | **$1,500** | 達 100%（建議上限） | Email 通知（緊急審查，考慮限流） |
 
 **涵蓋服務**：
-- Vertex AI (Gemini Flash Lite + Gemini 3 Flash): 預估 $540/月，上限 $1,500
-- Cloud Run (FastAPI): 預估 $100/月，上限 $300
-- 其他 GCP 服務（網路、儲存等）: 預估 $20/月，上限 $100
+- Vertex AI (Gemini Flash Lite + Gemini 3 Flash): 預估 $540/月，建議上限 $1,000
+- Cloud Run (FastAPI): 預估 $100/月，建議上限 $200
+- 其他 GCP 服務（網路、儲存等）: 預估 $20/月，建議上限 $50
+- **合計**: 預估 $660/月，建議上限 $1,250，設定 $1,500（留 20% buffer）
 
 **不涵蓋服務**（需另外監控）：
 - ❌ ElevenLabs STT（獨立平台，見 8.11）
@@ -372,7 +373,7 @@ API 成本 (3hr):      57 TWD ($1.77 USD)
 
 **查詢指令**：
 ```bash
-gcloud beta billing budgets describe faab94a6-382c-402f-a5a7-59e5910b23b4 \
+gcloud beta billing budgets describe 6c8955d8-f430-4d41-a6a0-7bb1a3f71599 \
   --billing-account=01A2A2-486C62-38898F
 ```
 
