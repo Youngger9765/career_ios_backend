@@ -105,6 +105,9 @@ mlruns/
 # Note: Unit tests in tests/ directory should be committed per TDD requirements
 fix_*.py
 
+# Firebase
+.firebase/
+
 # Documentation
 docs/爬蟲-職遊-精選文章-Markdown 2/
 docs/培訓文件/
