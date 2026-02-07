@@ -708,7 +708,7 @@
                         <td>${user.total_tokens.toLocaleString()}</td>
                         <td>${user.total_sessions.toLocaleString()}</td>
                         <td>$${user.total_cost_usd.toFixed(2)}</td>
-                        <td>${user.total_minutes.toFixed(2)}</td>
+                        <td>${Math.round(user.total_minutes)}</td>
                     `;
                     tbody.appendChild(row);
                 });
