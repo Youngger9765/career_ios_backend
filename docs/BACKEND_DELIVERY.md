@@ -160,10 +160,10 @@ Terms:   https://career-app-api-staging-978304030758.us-central1.run.app/island-
 Privacy: https://career-app-api-staging-978304030758.us-central1.run.app/island-parents/privacy
 ```
 
-**Production URL**（網域購買後）：
+**Production URL**（Firebase Hosting）：
 ```
-Terms:   https://{網域}/island-parents/terms
-Privacy: https://{網域}/island-parents/privacy
+Terms:   https://island-parents-app.web.app/island-parents/terms
+Privacy: https://island-parents-app.web.app/island-parents/privacy
 ```
 
 ---

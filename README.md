@@ -180,8 +180,7 @@ career_ios_backend/
 │   │   ├── agent.py
 │   │   └── ...
 │   │
-│   ├── services/          # 服務層（11 個）
-│   │   ├── stt_service.py        # Speech-to-Text
+│   ├── services/          # 服務層（10 個）
 │   │   ├── sanitizer_service.py  # 文字脫敏
 │   │   ├── report_service.py     # 報告生成（RAG）
 │   │   ├── keyword_analysis_service.py  # 關鍵字分析

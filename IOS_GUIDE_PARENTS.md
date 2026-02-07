@@ -1,9 +1,11 @@
 # Island Parents iOS App 開發指南
 
-> **版本**: v1.12
+> **版本**: v1.13
 > **適用對象**: iOS 開發者
 > **後端版本**: career_ios_backend
-> **最後更新**: 2026-02-06
+> **最後更新**: 2026-02-07
+
+> **Production Base URL**: `https://island-parents-app.web.app` (Firebase Hosting - 推薦用於所有 PROD 環境的 Web 頁面連結)
 
 ---
 
@@ -358,7 +360,7 @@ struct LoginRequest: Codable {
 2. **系統自動發送驗證信**
    - Email 包含驗證連結
    - 連結格式：`https://{APP_URL}/{tenant}/verify-email?token=xxx`
-   - 例如：`https://career-app-api-978304030758.us-central1.run.app/island-parents/verify-email?token=xxx`
+   - 例如：`https://island-parents-app.web.app/island-parents/verify-email?token=xxx`
    - ⚠️ 這是 **GET** 請求，由瀏覽器開啟（非 iOS App 呼叫）
    - 有效期限：24 小時
 

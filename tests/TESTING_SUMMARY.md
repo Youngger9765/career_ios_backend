@@ -94,12 +94,6 @@ pytest tests/test_cases.py -v
 
 #### `test_services.py` - Service Unit Tests
 
-**Class: TestSTTService**
-- `test_transcribe_audio_success` - Mock OpenAI Whisper API
-- `test_transcribe_audio_with_timestamps` - Timestamped transcription
-- `test_transcribe_audio_file_not_found` - File error handling
-- `test_supported_formats` - Format compatibility (.m4a, .mp3, .wav, etc.)
-
 **Class: TestSanitizerService**
 - `test_sanitize_id_card` - Taiwan ID card pattern
 - `test_sanitize_phone` - Mobile phone pattern
@@ -120,7 +114,7 @@ pytest tests/test_cases.py -v
 - `test_generate_report_without_agent` - Default agent fallback
 
 **Class: TestServiceIntegration**
-- `test_full_service_pipeline` - STT → Sanitize → Report
+- `test_full_service_pipeline` - Sanitize -> Report
 
 ### Key Test Scenarios Covered
 
@@ -262,7 +256,6 @@ pytest tests/test_cases.py -v -k "upload or approve or reject"
 | Cases API | ❌ Partial | ❌ Partial | ❌ Partial |
 | Sessions API | ✅ Good | ✅ Good | ✅ Good |
 | Reports API | ✅ Good | ✅ Good | ✅ Good |
-| STT Service | ✅ Complete | - | - |
 | Sanitizer | ✅ Complete | - | - |
 | Report Service | ✅ Complete | ✅ Good | - |
 | RAG Integration | ✅ Mocked | ❌ Missing | ❌ Missing |

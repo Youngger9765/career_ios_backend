@@ -1,102 +1,13 @@
 """
 Service layer tests for Career Counseling API
-Tests for STT, Sanitizer, and Report Generation services
+Tests for Sanitizer and Report Generation services
 """
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.services.analysis.sanitizer_service import SanitizerService
-from app.services.external.stt_service import STTService
 from app.services.reporting.report_service import ReportGenerationService
-
-
-class TestSTTService:
-    """Test Speech-to-Text service"""
-
-    @pytest.fixture
-    def stt_service(self):
-        return STTService()
-
-    @pytest.mark.asyncio
-    async def test_transcribe_audio_success(self, stt_service):
-        """Test successful audio transcription"""
-        mock_audio_path = "/tmp/test_audio.m4a"
-
-        with patch("os.path.exists", return_value=True):
-            with patch.object(
-                stt_service.client.audio.transcriptions,
-                "create",
-                new_callable=AsyncMock,
-            ) as mock_create:
-                mock_create.return_value = "這是測試逐字稿內容"
-
-                with patch("builtins.open", create=True) as mock_open:
-                    mock_open.return_value.__enter__.return_value = MagicMock()
-
-                    result = await stt_service.transcribe_audio(
-                        mock_audio_path, language="zh"
-                    )
-
-                    assert isinstance(result, str)
-                    assert len(result) > 0
-                    mock_create.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_transcribe_audio_with_timestamps(self, stt_service):
-        """Test transcription with timestamps"""
-        mock_audio_path = "/tmp/test_audio.m4a"
-
-        with patch("os.path.exists", return_value=True):
-            with patch.object(
-                stt_service.client.audio.transcriptions,
-                "create",
-                new_callable=AsyncMock,
-            ) as mock_create:
-                # Create a mock response object with attributes
-                mock_segment_1 = MagicMock(start=0.0, end=2.5, text="這是")
-                mock_segment_2 = MagicMock(start=2.5, end=5.0, text="測試內容")
-                mock_response = MagicMock(
-                    text="這是測試內容",
-                    segments=[mock_segment_1, mock_segment_2],
-                    language="zh",
-                    duration=5.0,
-                )
-                mock_create.return_value = mock_response
-
-                with patch("builtins.open", create=True):
-                    result = await stt_service.transcribe_with_timestamps(
-                        mock_audio_path
-                    )
-
-                    assert "text" in result
-                    assert "segments" in result
-
-    @pytest.mark.asyncio
-    async def test_transcribe_audio_file_not_found(self, stt_service):
-        """Test transcription with non-existent file"""
-        with pytest.raises(FileNotFoundError):
-            await stt_service.transcribe_audio("/nonexistent/audio.m4a")
-
-    @pytest.mark.asyncio
-    async def test_supported_formats(self, stt_service):
-        """Test various supported audio formats"""
-        supported_formats = [".m4a", ".mp3", ".wav", ".webm", ".mp4", ".mpeg"]
-
-        for format_ext in supported_formats:
-            mock_path = f"/tmp/test_audio{format_ext}"
-
-            with patch.object(
-                stt_service.client.audio.transcriptions,
-                "create",
-                new_callable=AsyncMock,
-            ) as mock_create:
-                mock_create.return_value = "測試內容"
-                with patch("builtins.open", create=True), patch(
-                    "os.path.exists", return_value=True
-                ):
-                    result = await stt_service.transcribe_audio(mock_path)
-                    assert isinstance(result, str)
 
 
 class TestSanitizerService:
@@ -413,22 +324,11 @@ class TestServiceIntegration:
 
     @pytest.mark.asyncio
     async def test_full_service_pipeline(self):
-        """Test complete pipeline: STT → Sanitize → Report"""
+        """Test complete pipeline: Sanitize -> Report"""
         # This is a conceptual test showing the full flow
 
-        # Mock audio file path
-        audio_path = "/tmp/test_audio.m4a"
-
-        # Step 1: STT
-        stt_service = STTService()
-        with patch.object(
-            stt_service.client.audio.transcriptions, "create", new_callable=AsyncMock
-        ) as mock_stt:
-            mock_stt.return_value = "來訪者：我的電話是 0912345678，我遇到職涯問題"
-            with patch("builtins.open", create=True), patch(
-                "os.path.exists", return_value=True
-            ):
-                transcript = await stt_service.transcribe_audio(audio_path)
+        # Step 1: Input transcript (simulating STT output)
+        transcript = "來訪者：我的電話是 0912345678，我遇到職涯問題"
 
         # Step 2: Sanitize
         sanitizer_service = SanitizerService()
