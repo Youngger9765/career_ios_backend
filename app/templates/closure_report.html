@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>島嶼家長 - 專案結案報告</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif;
+            background: #faf9f7;
+            color: #3d3833;
+            line-height: 1.7;
+        }
+        .page { max-width: 840px; margin: 0 auto; padding: 32px 24px 64px; }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 48px 0 40px;
+            border-bottom: 2px solid #e8dfd3;
+            margin-bottom: 48px;
+        }
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2d6a4f;
+            margin-bottom: 8px;
+        }
+        .header .subtitle {
+            font-size: 18px;
+            color: #6b7280;
+        }
+        .header .badge {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 6px 20px;
+            background: #d4edda;
+            color: #2d6a4f;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Sections */
+        .section {
+            margin-bottom: 48px;
+        }
+        .section-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #2d6a4f;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #c8e6c9;
+        }
+        .section-title span {
+            font-size: 16px;
+            color: #888;
+            font-weight: 400;
+            margin-left: 8px;
+        }
+
+        /* Summary card */
+        .summary-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 28px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .summary-row {
+            display: flex;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0ebe4;
+        }
+        .summary-row:last-child { border-bottom: none; }
+        .summary-label {
+            width: 140px;
+            font-weight: 600;
+            color: #6b7280;
+            flex-shrink: 0;
+        }
+        .summary-value { color: #3d3833; }
+
+        /* Story section */
+        .story {
+            background: #fff;
+            border-radius: 12px;
+            padding: 28px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .story-step {
+            position: relative;
+            padding-left: 36px;
+            margin-bottom: 24px;
+        }
+        .story-step:last-child { margin-bottom: 0; }
+        .story-step::before {
+            content: '';
+            position: absolute;
+            left: 12px;
+            top: 28px;
+            bottom: -24px;
+            width: 2px;
+            background: #c8e6c9;
+        }
+        .story-step:last-child::before { display: none; }
+        .story-dot {
+            position: absolute;
+            left: 4px;
+            top: 6px;
+            width: 18px;
+            height: 18px;
+            background: #2d6a4f;
+            border-radius: 50%;
+            border: 3px solid #d4edda;
+        }
+        .story-step h4 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2d6a4f;
+            margin-bottom: 4px;
+        }
+        .story-step p {
+            font-size: 15px;
+            color: #555;
+        }
+
+        /* Deliverables */
+        .deliverable-group {
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px 28px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .deliverable-group h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: #5a4a3a;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0ebe4;
+        }
+        .check-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 5px 0;
+            font-size: 15px;
+        }
+        .check-icon {
+            color: #2d6a4f;
+            font-weight: bold;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        /* Environment table */
+        .env-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .env-table th {
+            background: #2d6a4f;
+            color: #fff;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .env-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0ebe4;
+            font-size: 14px;
+        }
+        .env-table tr:last-child td { border-bottom: none; }
+        .env-table a { color: #2d6a4f; text-decoration: none; }
+        .env-table a:hover { text-decoration: underline; }
+
+        /* Architecture diagram */
+        .arch-box {
+            background: #fff;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            text-align: center;
+        }
+        .arch-flow {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+        }
+        .arch-node {
+            background: #e8f5e9;
+            border: 2px solid #a5d6a7;
+            border-radius: 10px;
+            padding: 14px 20px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #2d6a4f;
+        }
+        .arch-node.ai {
+            background: #fff3e0;
+            border-color: #ffcc80;
+            color: #e65100;
+        }
+        .arch-arrow {
+            font-size: 22px;
+            color: #aaa;
+        }
+
+        /* Stats grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+        }
+        .stat-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .stat-number {
+            font-size: 32px;
+            font-weight: 800;
+            color: #2d6a4f;
+        }
+        .stat-label {
+            font-size: 13px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        /* Warnings / notes */
+        .note-list {
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px 28px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .note-item {
+            padding: 8px 0;
+            font-size: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .note-icon { flex-shrink: 0; font-size: 16px; }
+
+        /* Apple review info */
+        .review-card {
+            background: #f9f5ed;
+            border: 1px solid #e0d6c2;
+            border-radius: 12px;
+            padding: 20px 28px;
+            margin-top: 16px;
+        }
+        .review-card h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #5a4a3a;
+            margin-bottom: 8px;
+        }
+        .review-card code {
+            background: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #d63384;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 56px;
+            padding-top: 24px;
+            border-top: 2px solid #e8dfd3;
+            color: #aaa;
+            font-size: 13px;
+        }
+
+        /* Print */
+        @media print {
+            body { background: #fff; }
+            .page { padding: 0; }
+            .section { break-inside: avoid; }
+        }
+
+        /* Mobile */
+        @media (max-width: 640px) {
+            .page { padding: 16px 12px 40px; }
+            .header h1 { font-size: 24px; }
+            .summary-row { flex-direction: column; }
+            .summary-label { width: auto; margin-bottom: 2px; }
+            .arch-flow { flex-direction: column; }
+            .arch-arrow { transform: rotate(90deg); }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <!-- Header -->
+    <div class="header">
+        <h1>島嶼家長 Island Parents</h1>
+        <div class="subtitle">親子輔導 AI 助手 — 專案結案報告</div>
+        <div class="badge">專案已交付</div>
+    </div>
+
+    <!-- 1. 專案摘要 -->
+    <div class="section">
+        <div class="section-title">1. 專案摘要</div>
+        <div class="summary-card">
+            <div class="summary-row">
+                <div class="summary-label">專案名稱</div>
+                <div class="summary-value">島嶼家長 (Island Parents) — 親子輔導 AI 助手</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">專案說明</div>
+                <div class="summary-value">為親子輔導師提供即時 AI 分析、安全評估、諮詢報告的後端系統</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">開發期間</div>
+                <div class="summary-value">2025/09 ~ 2026/02（約 5 個月）</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">技術架構</div>
+                <div class="summary-value">FastAPI 後端 + Supabase 資料庫 + Google Gemini AI + Cloud Run 雲端部署</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 專案演進故事 -->
+    <div class="section">
+        <div class="section-title">2. 專案演進故事</div>
+        <div class="story">
+            <div class="story-step">
+                <div class="story-dot"></div>
+                <h4>起初 — 通用職涯諮詢平台</h4>
+                <p>最初設計為通用「職涯諮詢平台」，包含 RAG 知識庫、文件上傳、報告生成等功能，目標是服務多種諮詢場景。</p>
+            </div>
+            <div class="story-step">
+                <div class="story-dot"></div>
+                <h4>轉變 — 聚焦親子輔導</h4>
+                <p>隨著需求逐漸明確，決定聚焦於親子輔導場景，加入即時語音分析、安全等級判斷等專屬功能。</p>
+            </div>
+            <div class="story-step">
+                <div class="story-dot"></div>
+                <h4>收斂 — Island Parents 誕生</h4>
+                <p>最終產品定名為「島嶼家長 Island Parents」，專為親子輔導師設計的 AI 助手，從大而全的平台收斂為精準的垂直應用。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 交付成果清單 -->
+    <div class="section">
+        <div class="section-title">3. 交付成果清單</div>
+
+        <div class="deliverable-group">
+            <h3>帳號與安全</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 註冊 API（含密碼規則驗證）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 登入 API（JWT Token + 90 天有效期）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 密碼重設（6 碼驗證碼 + Email 寄送）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Email 驗證系統（JWT-based）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 速率限制（防止暴力破解）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Apple Review 審核帳號</div>
+        </div>
+
+        <div class="deliverable-group">
+            <h3>諮詢核心功能</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Client（個案）管理 CRUD</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Case（案件）管理 CRUD</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Session（諮詢紀錄）管理</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 錄音片段上傳與管理</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 即時 AI 分析（Quick Feedback + Deep Analyze）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 安全等級判斷（綠 / 黃 / 紅 三級）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 親職教養理論標籤（8 大學派）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 諮詢報告自動生成</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 情緒分析回饋 API</div>
+        </div>
+
+        <div class="deliverable-group">
+            <h3>計費與使用量</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 雙計費模式（訂閱制 / 預付制）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 月度使用量追蹤（360 分鐘/月）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 使用量統計 API</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> RevenueCat 訂閱整合（iOS 端）</div>
+        </div>
+
+        <div class="deliverable-group">
+            <h3>管理後台</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Admin Portal（諮詢師管理、點數管理）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 密碼重設管理</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 動態欄位 Schema（多租戶適配）</div>
+        </div>
+
+        <div class="deliverable-group">
+            <h3>基礎設施</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> CI/CD 自動化（GitHub Actions &rarr; Cloud Run）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Staging / Production 雙環境</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Firebase Hosting 反向代理（品牌 URL）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 服務條款 &amp; 隱私政策頁面</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> iOS 開發文檔 (IOS_GUIDE_PARENTS.md, 3500+ 行)</div>
+        </div>
+
+        <div class="deliverable-group">
+            <h3>品質保證</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 432+ 自動化測試</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Pre-commit hooks (Ruff linting)</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 整合測試涵蓋所有 API</div>
+        </div>
+    </div>
+
+    <!-- 4. 系統環境 -->
+    <div class="section">
+        <div class="section-title">4. 系統環境</div>
+        <table class="env-table">
+            <thead>
+                <tr>
+                    <th>環境</th>
+                    <th>URL</th>
+                    <th>用途</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Production</strong></td>
+                    <td><a href="https://island-parents-app.web.app" target="_blank">island-parents-app.web.app</a></td>
+                    <td>正式環境</td>
+                </tr>
+                <tr>
+                    <td><strong>Staging</strong></td>
+                    <td><a href="https://island-parents-staging.web.app" target="_blank">island-parents-staging.web.app</a></td>
+                    <td>測試環境</td>
+                </tr>
+                <tr>
+                    <td><strong>API Console</strong></td>
+                    <td><a href="https://island-parents-staging.web.app/web/console" target="_blank">island-parents-staging.web.app/web/console</a></td>
+                    <td>互動測試工具</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="review-card">
+            <h4>Apple Review 審核帳號</h4>
+            <p>Email: <code>apple_review@islandparents.app</code></p>
+            <p>Password: <code>Island2026</code></p>
+            <p>Tenant: <code>island_parents</code></p>
+        </div>
+    </div>
+
+    <!-- 5. 系統架構 -->
+    <div class="section">
+        <div class="section-title">5. 系統架構</div>
+        <div class="arch-box">
+            <div class="arch-flow">
+                <div class="arch-node">iOS App</div>
+                <div class="arch-arrow">&rarr;</div>
+                <div class="arch-node">Firebase Hosting</div>
+                <div class="arch-arrow">&rarr;</div>
+                <div class="arch-node">Cloud Run (FastAPI)</div>
+                <div class="arch-arrow">&rarr;</div>
+                <div class="arch-node">Supabase DB</div>
+            </div>
+            <div style="margin-top: 20px;">
+                <div class="arch-flow">
+                    <div class="arch-node ai">Google Gemini AI</div>
+                    <div class="arch-arrow">&harr;</div>
+                    <div class="arch-node">Cloud Run (FastAPI)</div>
+                    <div class="arch-arrow">&harr;</div>
+                    <div class="arch-node ai">ElevenLabs (語音轉文字)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. 專案數據 -->
+    <div class="section">
+        <div class="section-title">6. 專案數據</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">787</div>
+                <div class="stat-label">Total Commits</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">432+</div>
+                <div class="stat-label">自動化測試</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">40+</div>
+                <div class="stat-label">API Endpoints</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3,500+</div>
+                <div class="stat-label">iOS Guide 行數</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">238</div>
+                <div class="stat-label">月度峰值 Commits (2025/12)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. 已知限制 & 後續建議 -->
+    <div class="section">
+        <div class="section-title">7. 已知限制 &amp; 後續建議</div>
+        <div class="note-list">
+            <div class="note-item">
+                <span class="note-icon" style="color:#e65100;">&#9888;</span>
+                <span>PROD 與 Staging 目前共用同一個資料庫（建議 1-2 週內分離）</span>
+            </div>
+            <div class="note-item">
+                <span class="note-icon" style="color:#e65100;">&#9888;</span>
+                <span>使用量軟上限尚未設定（需要產品層面的決策）</span>
+            </div>
+            <div class="note-item">
+                <span class="note-icon" style="color:#e65100;">&#9888;</span>
+                <span>AI 監控 Dashboard 尚未建立</span>
+            </div>
+            <div class="note-item">
+                <span class="note-icon" style="color:#1976d2;">&#128161;</span>
+                <span>建議：iOS 端切換 Base URL 至 Firebase Hosting（品牌 URL）</span>
+            </div>
+            <div class="note-item">
+                <span class="note-icon" style="color:#1976d2;">&#128161;</span>
+                <span>建議：建立獨立的 Staging 資料庫</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>報告產出日期：2026-02-07</p>
+        <p style="margin-top:4px;">Co-Authored-By: Claude Code (AI Assistant)</p>
+    </div>
+
+</div>
+</body>
+</html>

@@ -318,6 +318,18 @@ async def admin_page(request: Request) -> Response:
     )
 
 
+@app.get("/closure-report", response_class=HTMLResponse)
+async def closure_report_page(request: Request) -> Response:
+    """Island Parents - Project Closure Report (結案報告)"""
+    return templates.TemplateResponse("closure_report.html", {"request": request})
+
+
+@app.get("/qa-checklist", response_class=HTMLResponse)
+async def qa_checklist_page(request: Request) -> Response:
+    """Island Parents - QA Testing Checklist (驗收測試)"""
+    return templates.TemplateResponse("qa_checklist.html", {"request": request})
+
+
 # =====================
 # Island Parents Routes (浮島親子) - 保留作為向後兼容
 # =====================
