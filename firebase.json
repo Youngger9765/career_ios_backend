@@ -1,0 +1,32 @@
+{
+  "hosting": [
+    {
+      "site": "island-parents-app",
+      "public": "firebase-hosting",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        {
+          "source": "**",
+          "run": {
+            "serviceId": "career-app-api-prod",
+            "region": "us-central1"
+          }
+        }
+      ]
+    },
+    {
+      "site": "groovy-iris-473015-h3",
+      "public": "firebase-hosting",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        {
+          "source": "**",
+          "run": {
+            "serviceId": "career-app-api-prod",
+            "region": "us-central1"
+          }
+        }
+      ]
+    }
+  ]
+}
