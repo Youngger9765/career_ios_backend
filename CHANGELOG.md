@@ -9,7 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Dashboard Data Accuracy Fixes** (2026-02-08): Fixed 4 critical bugs in admin dashboard
+  - **Bug 1 - Cost Breakdown Duplicates**: Standardized model name grouping
+    - **Issue**: Model names like `models/gemini-flash-lite-latest` and `gemini-flash-lite-latest` appeared as separate entries
+    - **Fix**: Used SQL `CASE WHEN` to normalize model names to display names before grouping
+    - **Impact**: Cost Breakdown now shows 2-3 services instead of 4-5 duplicate entries
+  - **Bug 2 - Incorrect Total Cost**: Added Gemini costs to summary
+    - **Issue**: Total Cost only included ElevenLabs STT costs (from `SessionUsage`), missing Gemini costs (from `SessionAnalysisLog`)
+    - **Fix**: Query both tables and sum costs: `total_cost = elevenlabs_cost + gemini_cost`
+    - **Impact**: Total Cost increased from $0.22 to $0.66 (correct value)
+  - **Bug 3 - Meaningless Avg Tokens/Day**: Replaced with Avg Cost/Day
+    - **Issue**: Average token count has no business value (different tokens have different costs)
+    - **Fix**: Calculate average cost per day instead: `avg_cost_per_day = total_cost / num_days`
+    - **Frontend**: Updated label from "Avg Tokens/Day" to "Avg Cost/Day", displays as "$0.0212"
+  - **Bug 4 - Incomplete Time Range Charts**: Fill missing dates with zeros
+    - **Issue**: "Past 7 Days" chart only showed dates with data, skipping days with no activity
+    - **Fix**: Generate complete date range and fill missing dates with 0 values
+    - **Impact**: Charts now show consistent 7-day or 30-day timelines
+  - **Files Modified**:
+    - `app/api/v1/admin/dashboard.py`: 4 endpoints modified (summary, cost-breakdown, overall-stats, daily-active-users)
+    - `app/templates/admin_dashboard.html`: Updated "Avg Tokens/Day" to "Avg Cost/Day"
+
 ### Changed
+- **Dashboard Top Users Token Split** (2026-02-08): Split "Total Tokens" into three service-specific columns
+  - **Rationale**: Provide visibility into token usage by different AI services (Gemini Flash 3, Gemini Lite, ElevenLabs)
+  - **New Table Columns**:
+    - Gemini Flash 3 (tokens): Report generation usage
+    - Gemini Lite (tokens): Emotion feedback usage
+    - ElevenLabs (hours): STT audio transcription duration
+  - **Backend Changes**:
+    - Modified `GET /api/v1/admin/dashboard/top-users` to query `SessionAnalysisLog` table
+    - Used SQLAlchemy `case()` expressions to separate tokens by model type
+    - Changed ordering from `total_tokens` to `total_cost_usd`
+    - Updated CSV export with new columns
+  - **Frontend Changes**:
+    - Updated table headers with service names and units
+    - Added color-coded backgrounds: Purple (Flash 3), Green (Lite), Blue (ElevenLabs)
+    - Format: Flash/Lite tokens with commas (1,234), ElevenLabs as "9.7h"
+  - **Files Modified**:
+    - `app/api/v1/admin/dashboard.py` (lines 572-656, 777-850)
+    - `app/templates/admin_dashboard.html` (table structure, JS, CSS)
+  - **Documentation**: See `DASHBOARD_TOKENS_SPLIT.md` for complete implementation details
+
 - **Dashboard UI Enhancement** (2026-02-07): Replaced Model Distribution chart with Daily Active Users trend
   - **Rationale**: Model Distribution showed fixed proportions (no insights); DAU tracks user engagement
   - **New Chart**: Line chart showing daily unique user counts over time

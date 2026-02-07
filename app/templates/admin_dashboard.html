@@ -334,6 +334,26 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Top Users Table Styling */
+        .top-users-table th:nth-child(2),
+        .top-users-table th:nth-child(3),
+        .top-users-table th:nth-child(4) {
+            min-width: 100px;
+        }
+
+        /* Highlight different services with subtle background */
+        .top-users-table tbody tr td:nth-child(2) {
+            background-color: rgba(139, 92, 246, 0.05); /* Purple for Flash 3 */
+        }
+
+        .top-users-table tbody tr td:nth-child(3) {
+            background-color: rgba(16, 185, 129, 0.05); /* Green for Lite */
+        }
+
+        .top-users-table tbody tr td:nth-child(4) {
+            background-color: rgba(59, 130, 246, 0.05); /* Blue for ElevenLabs */
+        }
     </style>
 </head>
 <body>
@@ -421,8 +441,8 @@
             <!-- Overall Stats -->
             <div class="stats-cards" id="overall-stats-cards">
                 <div class="card">
-                    <h3>Avg Tokens/Day</h3>
-                    <div class="value" id="avg-tokens-day">-</div>
+                    <h3>Avg Cost/Day</h3>
+                    <div class="value" id="avg-cost-day">-</div>
                 </div>
                 <div class="card">
                     <h3>Avg Sessions/Day</h3>
@@ -445,11 +465,13 @@
                     </div>
                 </div>
                 <div class="table-container">
-                    <table>
+                    <table class="top-users-table">
                         <thead>
                             <tr>
                                 <th>Email</th>
-                                <th>Total Tokens</th>
+                                <th>Gemini Flash 3<br><small>(tokens)</small></th>
+                                <th>Gemini Lite<br><small>(tokens)</small></th>
+                                <th>ElevenLabs<br><small>(hours)</small></th>
                                 <th>Total Sessions</th>
                                 <th>Total Cost (USD)</th>
                                 <th>Total Minutes</th>
@@ -457,7 +479,7 @@
                         </thead>
                         <tbody id="top-users-table">
                             <tr>
-                                <td colspan="5" class="loading">
+                                <td colspan="7" class="loading">
                                     <div class="spinner"></div>
                                     Loading...
                                 </td>
@@ -814,7 +836,7 @@
                 tbody.innerHTML = '';
 
                 if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #64748b;">No data available</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #64748b;">No data available</td></tr>';
                     return;
                 }
 
@@ -822,7 +844,9 @@
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${user.email}</td>
-                        <td>${user.total_tokens.toLocaleString()}</td>
+                        <td>${user.gemini_flash_tokens.toLocaleString()}</td>
+                        <td>${user.gemini_lite_tokens.toLocaleString()}</td>
+                        <td>${user.elevenlabs_hours.toFixed(1)}h</td>
                         <td>${user.total_sessions.toLocaleString()}</td>
                         <td>$${user.total_cost_usd.toFixed(2)}</td>
                         <td>${Math.round(user.total_minutes)}</td>
@@ -840,7 +864,8 @@
             });
 
             if (data) {
-                document.getElementById('avg-tokens-day').textContent = data.avg_tokens_per_day.toLocaleString();
+                // BUG FIX 3: Display avg cost per day instead of avg tokens
+                document.getElementById('avg-cost-day').textContent = '$' + data.avg_cost_per_day.toFixed(4);
                 document.getElementById('avg-sessions-day').textContent = data.avg_sessions_per_day.toFixed(1);
                 const growth = data.monthly_growth_pct;
                 const growthEl = document.getElementById('monthly-growth');

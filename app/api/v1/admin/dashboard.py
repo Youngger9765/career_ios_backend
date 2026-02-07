@@ -60,20 +60,37 @@ def get_summary(
     Get summary statistics for dashboard
 
     Returns:
-        - total_cost_usd: Sum of estimated costs
+        - total_cost_usd: Sum of estimated costs (ElevenLabs + Gemini)
         - total_sessions: Count of unique sessions
         - active_users: Count of unique counselors
     """
     start_time = get_time_filter(time_range)
 
-    # Build base query
-    query = select(SessionUsage).where(SessionUsage.created_at >= start_time)
-    if tenant_id:
-        query = query.where(SessionUsage.tenant_id == tenant_id)
+    # BUG FIX 2: Calculate total cost from BOTH sources
+    # 1. ElevenLabs cost from SessionUsage.estimated_cost_usd
+    elevenlabs_query = select(
+        func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0).label("elevenlabs_cost")
+    ).select_from(SessionUsage).where(SessionUsage.created_at >= start_time)
 
-    # Get aggregated statistics (removed total_tokens)
+    if tenant_id:
+        elevenlabs_query = elevenlabs_query.where(SessionUsage.tenant_id == tenant_id)
+
+    elevenlabs_result = db.execute(elevenlabs_query).first()
+    elevenlabs_cost = float(elevenlabs_result.elevenlabs_cost) if elevenlabs_result else 0.0
+
+    # 2. Gemini cost from SessionAnalysisLog.estimated_cost_usd
+    gemini_query = select(
+        func.coalesce(func.sum(SessionAnalysisLog.estimated_cost_usd), 0).label("gemini_cost")
+    ).select_from(SessionAnalysisLog).where(SessionAnalysisLog.analyzed_at >= start_time)
+
+    if tenant_id:
+        gemini_query = gemini_query.where(SessionAnalysisLog.tenant_id == tenant_id)
+
+    gemini_result = db.execute(gemini_query).first()
+    gemini_cost = float(gemini_result.gemini_cost) if gemini_result else 0.0
+
+    # 3. Session counts and active users
     stats_query = select(
-        func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0).label("total_cost"),
         func.count(func.distinct(SessionUsage.session_id)).label("total_sessions"),
         func.count(func.distinct(SessionUsage.counselor_id)).label("active_users"),
     ).select_from(SessionUsage).where(SessionUsage.created_at >= start_time)
@@ -84,7 +101,7 @@ def get_summary(
     result = db.execute(stats_query).first()
 
     return {
-        "total_cost_usd": float(result.total_cost) if result else 0.0,
+        "total_cost_usd": round(elevenlabs_cost + gemini_cost, 4),
         "total_sessions": int(result.total_sessions) if result else 0,
         "active_users": int(result.active_users) if result else 0,
     }
@@ -242,24 +259,31 @@ def get_cost_breakdown(
             "total_cost": 56.78
         }
     """
+    from sqlalchemy import case
+
     from app.core.pricing import (
         ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND,
-        MODEL_PRICING_MAP,
+        calculate_gemini_cost,
     )
 
     start_time = get_time_filter(time_range)
 
-    # Get model-level costs from SessionAnalysisLog
+    # BUG FIX 1: Standardize model names using CASE WHEN to avoid duplicates
+    # Group by display_name instead of raw model_name
     model_query = (
         select(
-            SessionAnalysisLog.model_name,
+            case(
+                (SessionAnalysisLog.model_name.like("%flash-lite%"), "Gemini Flash Lite"),
+                (SessionAnalysisLog.model_name.like("%1.5-flash%"), "Gemini Flash 1.5"),
+                else_="Other"
+            ).label("display_name"),
             func.coalesce(func.sum(SessionAnalysisLog.prompt_tokens), 0).label("input_tokens"),
             func.coalesce(func.sum(SessionAnalysisLog.completion_tokens), 0).label("output_tokens"),
         )
         .select_from(SessionAnalysisLog)
         .where(SessionAnalysisLog.analyzed_at >= start_time)
         .where(SessionAnalysisLog.model_name.isnot(None))
-        .group_by(SessionAnalysisLog.model_name)
+        .group_by("display_name")
     )
 
     if tenant_id:
@@ -267,25 +291,40 @@ def get_cost_breakdown(
 
     model_results = db.execute(model_query).all()
 
+    # Map display names to pricing
+    display_name_pricing = {
+        "Gemini Flash Lite": {
+            "input_price": 0.075,
+            "output_price": 0.30,
+        },
+        "Gemini Flash 1.5": {
+            "input_price": 0.50,
+            "output_price": 3.00,
+        },
+    }
+
     # Calculate costs by service
     services = []
     total_cost = 0.0
 
     # Process AI models
     for row in model_results:
-        model_name = row.model_name
+        display_name = row.display_name
         input_tokens = int(row.input_tokens)
         output_tokens = int(row.output_tokens)
 
+        # Skip "Other" category
+        if display_name == "Other":
+            logger.warning("Skipping unknown model category: Other")
+            continue
+
         # Get pricing info
-        pricing = MODEL_PRICING_MAP.get(model_name)
+        pricing = display_name_pricing.get(display_name)
         if not pricing:
-            logger.warning(f"Unknown model in cost breakdown: {model_name}")
+            logger.warning(f"Unknown display name in cost breakdown: {display_name}")
             continue
 
         # Calculate cost
-        from app.core.pricing import calculate_gemini_cost
-
         cost = calculate_gemini_cost(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -294,7 +333,7 @@ def get_cost_breakdown(
         )
 
         services.append({
-            "name": pricing["display_name"],
+            "name": display_name,
             "cost": round(cost, 4),
             "percentage": 0,  # Will calculate later
             "usage": f"{(input_tokens + output_tokens) / 1_000_000:.2f}M tokens"
@@ -493,6 +532,7 @@ def get_daily_active_users(
         }
     """
     start_time = get_time_filter(time_range)
+    end_time = datetime.now(timezone.utc)
 
     # Determine date truncation based on time range
     if time_range == "day":
@@ -517,15 +557,26 @@ def get_daily_active_users(
 
     results = db.execute(query).all()
 
+    # BUG FIX 4: Fill missing dates/hours with zeros
+    data_dict = {row.period: int(row.user_count) for row in results}
+
     labels = []
     data = []
 
-    for row in results:
-        if time_range == "day":
-            labels.append(row.period.strftime("%H:%M"))
-        else:
-            labels.append(row.period.strftime("%m/%d"))
-        data.append(int(row.user_count))
+    if time_range == "day":
+        # Fill hourly data for past 24 hours
+        current = start_time.replace(minute=0, second=0, microsecond=0)
+        while current <= end_time:
+            labels.append(current.strftime("%H:%M"))
+            data.append(data_dict.get(current, 0))
+            current += timedelta(hours=1)
+    else:
+        # Fill daily data for week/month
+        current = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
+        while current.date() <= end_time.date():
+            labels.append(current.strftime("%m/%d"))
+            data.append(data_dict.get(current, 0))
+            current += timedelta(days=1)
 
     return {
         "labels": labels,
@@ -583,27 +634,58 @@ def get_top_users(
     Returns:
         List of users with:
         - email
-        - total_tokens
+        - gemini_flash_tokens (Gemini 1.5 Flash tokens)
+        - gemini_lite_tokens (Gemini Flash Lite tokens)
+        - elevenlabs_hours (ElevenLabs duration in hours)
         - total_sessions
         - total_cost_usd
         - total_minutes
     """
+    from sqlalchemy import case
+
     start_time = get_time_filter(time_range)
 
-    # Build query
+    # Build query with separate token counts per model
     query = (
         select(
             Counselor.email,
-            func.coalesce(func.sum(SessionUsage.total_tokens), 0).label("total_tokens"),
+            # Gemini Flash 3 tokens (from SessionAnalysisLog where model contains '1.5-flash')
+            func.coalesce(
+                func.sum(
+                    case(
+                        (SessionAnalysisLog.model_name.like("%1.5-flash%"),
+                         SessionAnalysisLog.prompt_tokens + SessionAnalysisLog.completion_tokens),
+                        else_=0
+                    )
+                ), 0
+            ).label("gemini_flash_tokens"),
+
+            # Gemini Lite tokens (from SessionAnalysisLog where model contains 'flash-lite')
+            func.coalesce(
+                func.sum(
+                    case(
+                        (SessionAnalysisLog.model_name.like("%flash-lite%"),
+                         SessionAnalysisLog.prompt_tokens + SessionAnalysisLog.completion_tokens),
+                        else_=0
+                    )
+                ), 0
+            ).label("gemini_lite_tokens"),
+
+            # ElevenLabs duration in hours (from SessionUsage)
+            func.coalesce(
+                func.sum(SessionUsage.duration_seconds) / 3600.0, 0
+            ).label("elevenlabs_hours"),
+
             func.count(func.distinct(SessionUsage.session_id)).label("total_sessions"),
             func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0).label("total_cost_usd"),
             func.coalesce(func.sum(SessionUsage.duration_seconds), 0).label("total_seconds"),
         )
         .select_from(SessionUsage)
         .join(Counselor, SessionUsage.counselor_id == Counselor.id)
+        .outerjoin(SessionAnalysisLog, SessionUsage.session_id == SessionAnalysisLog.session_id)
         .where(SessionUsage.created_at >= start_time)
         .group_by(Counselor.email)
-        .order_by(desc("total_tokens"))
+        .order_by(desc("total_cost_usd"))
         .limit(limit)
     )
 
@@ -615,7 +697,9 @@ def get_top_users(
     return [
         {
             "email": row.email,
-            "total_tokens": int(row.total_tokens),
+            "gemini_flash_tokens": int(row.gemini_flash_tokens),
+            "gemini_lite_tokens": int(row.gemini_lite_tokens),
+            "elevenlabs_hours": round(float(row.elevenlabs_hours), 1),
             "total_sessions": int(row.total_sessions),
             "total_cost_usd": float(row.total_cost_usd),
             "total_minutes": round(float(row.total_seconds) / 60, 2),
@@ -689,19 +773,20 @@ def get_overall_stats(
     Get overall statistics
 
     Returns:
-        - avg_tokens_per_day
-        - avg_sessions_per_day
-        - peak_date
-        - peak_value (tokens)
-        - monthly_growth_pct
+        - avg_cost_per_day: Average cost per day in USD
+        - avg_sessions_per_day: Average sessions per day
+        - peak_date: Date with highest cost
+        - peak_value: Cost on peak date (USD)
+        - monthly_growth_pct: Month-over-month growth percentage
     """
     start_time = get_time_filter(time_range)
 
-    # Get daily statistics
+    # BUG FIX 3: Use cost instead of tokens
+    # Get daily statistics with cost from both sources
     query = (
         select(
             func.date_trunc("day", SessionUsage.created_at).label("date"),
-            func.coalesce(func.sum(SessionUsage.total_tokens), 0).label("tokens"),
+            func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0).label("elevenlabs_cost"),
             func.count(func.distinct(SessionUsage.session_id)).label("sessions"),
         )
         .select_from(SessionUsage)
@@ -713,45 +798,78 @@ def get_overall_stats(
     if tenant_id:
         query = query.where(SessionUsage.tenant_id == tenant_id)
 
-    results = db.execute(query).all()
+    usage_results = db.execute(query).all()
 
-    if not results:
+    # Get Gemini costs by day
+    gemini_query = (
+        select(
+            func.date_trunc("day", SessionAnalysisLog.analyzed_at).label("date"),
+            func.coalesce(func.sum(SessionAnalysisLog.estimated_cost_usd), 0).label("gemini_cost"),
+        )
+        .select_from(SessionAnalysisLog)
+        .where(SessionAnalysisLog.analyzed_at >= start_time)
+        .group_by("date")
+        .order_by("date")
+    )
+
+    if tenant_id:
+        gemini_query = gemini_query.where(SessionAnalysisLog.tenant_id == tenant_id)
+
+    gemini_results = db.execute(gemini_query).all()
+
+    # Merge results by date
+    gemini_costs_by_date = {row.date: float(row.gemini_cost) for row in gemini_results}
+
+    daily_data = []
+    for row in usage_results:
+        date = row.date
+        elevenlabs_cost = float(row.elevenlabs_cost)
+        gemini_cost = gemini_costs_by_date.get(date, 0.0)
+        total_cost = elevenlabs_cost + gemini_cost
+
+        daily_data.append({
+            "date": date,
+            "cost": total_cost,
+            "sessions": int(row.sessions),
+        })
+
+    if not daily_data:
         return {
-            "avg_tokens_per_day": 0,
+            "avg_cost_per_day": 0.0,
             "avg_sessions_per_day": 0,
             "peak_date": None,
-            "peak_value": 0,
-            "monthly_growth_pct": 0,
+            "peak_value": 0.0,
+            "monthly_growth_pct": 0.0,
         }
 
     # Calculate averages
-    total_tokens = sum(row.tokens for row in results)
-    total_sessions = sum(row.sessions for row in results)
-    num_days = len(results)
+    total_cost = sum(day["cost"] for day in daily_data)
+    total_sessions = sum(day["sessions"] for day in daily_data)
+    num_days = len(daily_data)
 
-    avg_tokens_per_day = total_tokens / num_days if num_days > 0 else 0
+    avg_cost_per_day = total_cost / num_days if num_days > 0 else 0.0
     avg_sessions_per_day = total_sessions / num_days if num_days > 0 else 0
 
     # Find peak day
-    peak_row = max(results, key=lambda r: r.tokens)
-    peak_date = peak_row.date.strftime("%Y-%m-%d")
-    peak_value = int(peak_row.tokens)
+    peak_day = max(daily_data, key=lambda d: d["cost"])
+    peak_date = peak_day["date"].strftime("%Y-%m-%d")
+    peak_value = peak_day["cost"]
 
     # Calculate monthly growth (compare first week vs last week)
-    monthly_growth_pct = 0
+    monthly_growth_pct = 0.0
     if time_range == "month" and num_days >= 14:
-        first_week = results[:7]
-        last_week = results[-7:]
-        first_week_avg = sum(r.tokens for r in first_week) / 7
-        last_week_avg = sum(r.tokens for r in last_week) / 7
+        first_week = daily_data[:7]
+        last_week = daily_data[-7:]
+        first_week_avg = sum(d["cost"] for d in first_week) / 7
+        last_week_avg = sum(d["cost"] for d in last_week) / 7
         if first_week_avg > 0:
             monthly_growth_pct = ((last_week_avg - first_week_avg) / first_week_avg) * 100
 
     return {
-        "avg_tokens_per_day": round(avg_tokens_per_day, 2),
+        "avg_cost_per_day": round(avg_cost_per_day, 4),
         "avg_sessions_per_day": round(avg_sessions_per_day, 2),
         "peak_date": peak_date,
-        "peak_value": peak_value,
+        "peak_value": round(peak_value, 4),
         "monthly_growth_pct": round(monthly_growth_pct, 2),
     }
 
@@ -775,29 +893,55 @@ def export_csv(
     output = io.StringIO()
 
     if data_type == "users":
-        # Export user summary
+        # Export user summary with separate token columns
+        from sqlalchemy import case
+
         query = (
             select(
                 Counselor.email,
                 Counselor.full_name,
                 Counselor.tenant_id,
-                func.coalesce(func.sum(SessionUsage.total_tokens), 0).label("total_tokens"),
+                # Gemini Flash 3 tokens
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (SessionAnalysisLog.model_name.like("%1.5-flash%"),
+                             SessionAnalysisLog.prompt_tokens + SessionAnalysisLog.completion_tokens),
+                            else_=0
+                        )
+                    ), 0
+                ).label("gemini_flash_tokens"),
+                # Gemini Lite tokens
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (SessionAnalysisLog.model_name.like("%flash-lite%"),
+                             SessionAnalysisLog.prompt_tokens + SessionAnalysisLog.completion_tokens),
+                            else_=0
+                        )
+                    ), 0
+                ).label("gemini_lite_tokens"),
+                # ElevenLabs hours
+                func.coalesce(
+                    func.sum(SessionUsage.duration_seconds) / 3600.0, 0
+                ).label("elevenlabs_hours"),
                 func.count(func.distinct(SessionUsage.session_id)).label("total_sessions"),
                 func.coalesce(func.sum(SessionUsage.estimated_cost_usd), 0).label("total_cost_usd"),
                 func.coalesce(func.sum(SessionUsage.duration_seconds), 0).label("total_seconds"),
             )
             .select_from(SessionUsage)
             .join(Counselor, SessionUsage.counselor_id == Counselor.id)
+            .outerjoin(SessionAnalysisLog, SessionUsage.session_id == SessionAnalysisLog.session_id)
             .where(SessionUsage.created_at >= start_time)
             .group_by(Counselor.email, Counselor.full_name, Counselor.tenant_id)
-            .order_by(desc("total_tokens"))
+            .order_by(desc("total_cost_usd"))
         )
 
         results = db.execute(query).all()
 
         writer = csv.DictWriter(
             output,
-            fieldnames=["email", "full_name", "tenant_id", "total_tokens", "total_sessions", "total_cost_usd", "total_minutes"],
+            fieldnames=["email", "full_name", "tenant_id", "gemini_flash_tokens", "gemini_lite_tokens", "elevenlabs_hours", "total_sessions", "total_cost_usd", "total_minutes"],
         )
         writer.writeheader()
 
@@ -806,9 +950,11 @@ def export_csv(
                 "email": row.email,
                 "full_name": row.full_name,
                 "tenant_id": row.tenant_id,
-                "total_tokens": int(row.total_tokens),
+                "gemini_flash_tokens": int(row.gemini_flash_tokens),
+                "gemini_lite_tokens": int(row.gemini_lite_tokens),
+                "elevenlabs_hours": f"{row.elevenlabs_hours:.1f}",
                 "total_sessions": int(row.total_sessions),
-                "total_cost_usd": float(row.total_cost_usd),
+                "total_cost_usd": f"{row.total_cost_usd:.2f}",
                 "total_minutes": round(float(row.total_seconds) / 60, 2),
             })
 
