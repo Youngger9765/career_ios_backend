@@ -510,9 +510,239 @@
         </div>
     </div>
 
-    <!-- 7. 已知限制 & 後續建議 -->
+    <!-- 7. 資訊安全報告 -->
     <div class="section">
-        <div class="section-title">7. 已知限制 &amp; 後續建議</div>
+        <div class="section-title">7. 資訊安全報告</div>
+
+        <div class="deliverable-group">
+            <h3>認證與存取控制</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 密碼使用 bcrypt 單向雜湊（無法被反解）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> JWT Token 認證（90 天過期自動失效）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 速率限制：註冊 3次/時、登入 5次/分、密碼重設 3次/時</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 帳號鎖定：密碼重設驗證碼錯誤 5 次後鎖定 15 分鐘</div>
+        </div>
+
+        <div class="deliverable-group">
+            <h3>資料保護</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Row Level Security (RLS)：每位諮詢師只能存取自己的資料</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 多租戶隔離：不同租戶的資料完全分離</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 資料庫連線使用 SSL 加密</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 所有 API 強制 HTTPS（Firebase Hosting + Cloud Run）</div>
+        </div>
+
+        <div class="deliverable-group">
+            <h3>程式碼安全</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> SQL Injection 防護（使用 ORM，不直接拼接 SQL）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 輸入驗證（Pydantic schema 驗證所有請求）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Secrets 管理（GitHub Secrets，不硬編碼於程式碼）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Pre-commit hooks 自動檢測（Ruff linting + Gitleaks）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> CORS 設定限制允許的來源</div>
+        </div>
+    </div>
+
+    <!-- 8. 基礎設施與成本 -->
+    <div class="section">
+        <div class="section-title">8. 基礎設施與成本</div>
+
+        <div class="summary-card" style="margin-bottom: 16px;">
+            <div class="summary-row">
+                <div class="summary-label">雲端平台</div>
+                <div class="summary-value">Google Cloud Platform (GCP)</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">運算服務</div>
+                <div class="summary-value">Cloud Run (us-central1, 1 vCPU, 1GB RAM)</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">資料庫</div>
+                <div class="summary-value">Supabase PostgreSQL (Free Tier, 500MB)</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">反向代理</div>
+                <div class="summary-value">Firebase Hosting (Free Tier, 10GB/月)</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">AI 引擎</div>
+                <div class="summary-value">Google Gemini 3 Flash</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">語音轉文字</div>
+                <div class="summary-value">ElevenLabs Scribe</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">CI/CD</div>
+                <div class="summary-value">GitHub Actions (Free Tier, 2000 分鐘/月)</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">版本控制</div>
+                <div class="summary-value">GitHub Private Repository</div>
+            </div>
+        </div>
+
+        <table class="env-table" style="margin-bottom: 16px;">
+            <thead>
+                <tr>
+                    <th>服務</th>
+                    <th>方案</th>
+                    <th>預估月費</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Cloud Run</td>
+                    <td>Pay-per-use (min-instances=1)</td>
+                    <td>$5-15</td>
+                </tr>
+                <tr>
+                    <td>Supabase</td>
+                    <td>Free Tier</td>
+                    <td>$0</td>
+                </tr>
+                <tr>
+                    <td>Firebase Hosting</td>
+                    <td>Free Tier</td>
+                    <td>$0</td>
+                </tr>
+                <tr>
+                    <td>Gemini API</td>
+                    <td>Pay-per-use</td>
+                    <td>$5-20</td>
+                </tr>
+                <tr>
+                    <td>ElevenLabs</td>
+                    <td>Pay-per-use</td>
+                    <td>$5-15</td>
+                </tr>
+                <tr>
+                    <td>GitHub Actions</td>
+                    <td>Free Tier</td>
+                    <td>$0</td>
+                </tr>
+                <tr>
+                    <td><strong>合計</strong></td>
+                    <td></td>
+                    <td><strong>$15-50/月</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="note-list">
+            <div class="note-item">
+                <span class="note-icon" style="color:#1976d2;">&#128161;</span>
+                <span>以上為低用量階段預估（10-50 位用戶）。隨用戶增長，Cloud Run 和 AI API 費用會按比例增加。Supabase 超過 500MB 後需升級至 Pro 方案（$25/月）。</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 9. 測試覆蓋率 -->
+    <div class="section">
+        <div class="section-title">9. 測試覆蓋率</div>
+
+        <div class="stats-grid" style="margin-bottom: 16px;">
+            <div class="stat-card">
+                <div class="stat-number">432+</div>
+                <div class="stat-label">自動化測試數量</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">CI/CD 通過率</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">40+</div>
+                <div class="stat-label">測試涵蓋 API 端點</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">每次部署</div>
+                <div class="stat-label">自動執行全部測試</div>
+            </div>
+        </div>
+
+        <div class="deliverable-group">
+            <h3>認證與安全測試</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 註冊流程（含密碼規則驗證）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 登入流程（含錯誤密碼、不存在帳號）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 密碼重設（含驗證碼、鎖定機制）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Email 驗證（含過期 Token）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 速率限制（超過頻率返回 429）</div>
+        </div>
+
+        <div class="deliverable-group">
+            <h3>業務邏輯測試</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> Client / Case / Session CRUD 完整流程</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 錄音上傳與管理</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> AI 分析（Quick Feedback + Deep Analyze）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 報告生成與查詢</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 計費與使用量追蹤</div>
+        </div>
+
+        <div class="deliverable-group">
+            <h3>基礎設施測試</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> API 端點回應格式驗證</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 錯誤處理（400/401/403/404/422/429）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 多租戶資料隔離</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 資料庫連線與交易</div>
+        </div>
+
+        <div class="note-list">
+            <div class="note-item">
+                <span class="note-icon" style="color:#1976d2;">&#128161;</span>
+                <span>所有測試在每次程式碼推送時自動執行。任何測試失敗都會阻擋部署，確保正式環境永遠是測試通過的版本。</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 10. 維護與移交指南 -->
+    <div class="section">
+        <div class="section-title">10. 維護與移交指南</div>
+
+        <div class="deliverable-group">
+            <h3>日常維護</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 程式碼更新：推送至 staging 分支 &rarr; 自動測試 &rarr; 合併至 main &rarr; 自動部署 PROD</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 監控方式：GitHub Actions 面板可查看每次部署狀態</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 日誌查看：Google Cloud Console &rarr; Cloud Run &rarr; Logs</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 資料庫管理：Supabase Dashboard (app.supabase.com)</div>
+        </div>
+
+        <div class="deliverable-group">
+            <h3>緊急處理</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 服務異常：Cloud Run 自動重啟失敗的容器</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 需要回滾：在 GitHub Actions 中重新執行上一次成功的部署</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 資料庫問題：Supabase 提供每日自動備份（Free Tier 保留 7 天）</div>
+        </div>
+
+        <div class="deliverable-group">
+            <h3>移交清單</h3>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 原始碼：GitHub Repository (Youngger9765/career_ios_backend)</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 環境變數：GitHub Secrets（已設定完成）</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> iOS 開發文檔：IOS_GUIDE_PARENTS.md (3,500+ 行)</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> API 互動測試工具：/web/console</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> 結案報告：/closure-report</div>
+            <div class="check-item"><span class="check-icon">&#10003;</span> QA 驗收測試：/qa-checklist</div>
+        </div>
+
+        <div class="note-list">
+            <div class="note-item">
+                <span class="note-icon" style="color:#1976d2;">&#128161;</span>
+                <span>建議每月檢查一次 Cloud Run 和 AI API 的使用量與費用</span>
+            </div>
+            <div class="note-item">
+                <span class="note-icon" style="color:#1976d2;">&#128161;</span>
+                <span>建議每季度更新一次 Python 依賴套件（安全性修補）</span>
+            </div>
+            <div class="note-item">
+                <span class="note-icon" style="color:#1976d2;">&#128161;</span>
+                <span>Supabase 資料庫接近 500MB 時需評估是否升級</span>
+            </div>
+            <div class="note-item">
+                <span class="note-icon" style="color:#e65100;">&#9888;</span>
+                <span>切勿直接修改 Production 資料庫，請透過 Staging 環境測試後再部署</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 11. 已知限制 & 後續建議 -->
+    <div class="section">
+        <div class="section-title">11. 已知限制 &amp; 後續建議</div>
         <div class="note-list">
             <div class="note-item">
                 <span class="note-icon" style="color:#e65100;">&#9888;</span>
