@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **User Segmentation Dashboard Improvements** (2026-02-09): Enhanced user table with duration metrics and Chinese localization
+  - **New Columns**:
+    - 總時長 (Total Duration): Shows cumulative session time per user
+    - 使用天數 (Days Used): Shows unique active days per user
+  - **Chinese Headers**: All table headers now in Traditional Chinese for better UX
+  - **Default Filter**: "全部用戶" (All Users) filter pre-selected to show all users by default
+  - **Backend Changes**: Updated `/api/v1/admin/dashboard/user-segmentation` to provide `total_duration_seconds` and `days_used` fields
+  - **Files Modified**:
+    - `app/api/v1/admin/dashboard.py`: Added SQL aggregations for duration/days metrics
+    - `app/templates/admin_dashboard.html`: Added new columns, translated headers, updated filter default
+  - **Documentation**: Added detailed before/after comparison in `docs/DASHBOARD_BEFORE_AFTER_COMPARISON.md`
+
 ### Fixed
 - **Model Name Logging for Reports** (2026-02-09): Fixed bug where report generation always logged `gemini-1.5-flash-latest` instead of actual model used
   - **Issue**: `SessionBillingService.save_analysis_log_and_usage()` only checked `metadata` dict for `model_name`, but `ParentsReportService` passed it in `token_usage_data` dict
