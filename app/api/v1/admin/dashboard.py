@@ -461,7 +461,6 @@ def get_model_distribution(
     from app.core.pricing import (
         MODEL_PRICING_MAP,
         calculate_gemini_cost,
-        normalize_model_name,
     )
 
     start_time = get_time_filter(time_range)
