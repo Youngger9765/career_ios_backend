@@ -466,17 +466,20 @@ def get_model_distribution(
 
     start_time = get_time_filter(time_range)
 
+    # Normalize model name in SQL to group "gemini-*" and "models/gemini-*" together
+    normalized_model = func.replace(SessionAnalysisLog.model_name, "models/", "").label("normalized_model")
+
     # Build query
     query = (
         select(
-            SessionAnalysisLog.model_name,
+            normalized_model,
             func.coalesce(func.sum(SessionAnalysisLog.prompt_tokens), 0).label("input_tokens"),
             func.coalesce(func.sum(SessionAnalysisLog.completion_tokens), 0).label("output_tokens"),
         )
         .select_from(SessionAnalysisLog)
         .where(SessionAnalysisLog.analyzed_at >= start_time)
         .where(SessionAnalysisLog.model_name.isnot(None))
-        .group_by(SessionAnalysisLog.model_name)
+        .group_by(normalized_model)
         .order_by(desc("input_tokens"))
     )
 
@@ -490,15 +493,15 @@ def get_model_distribution(
     tokens = []
 
     for row in results:
-        model_name = row.model_name
+        normalized_model = row.normalized_model
         input_tokens = int(row.input_tokens)
         output_tokens = int(row.output_tokens)
         total_tokens = input_tokens + output_tokens
 
-        # Get pricing info (normalize model name to handle both "models/gemini-*" and "gemini-*" formats)
-        pricing = MODEL_PRICING_MAP.get(normalize_model_name(model_name))
+        # Get pricing info (model name is already normalized by SQL)
+        pricing = MODEL_PRICING_MAP.get(normalized_model)
         if not pricing:
-            logger.warning(f"Unknown model in distribution: {model_name}")
+            logger.warning(f"Unknown model in distribution: {normalized_model}")
             continue
 
         # Calculate cost
