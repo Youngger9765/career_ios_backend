@@ -1027,8 +1027,11 @@ class TestAdminDashboardAPI:
     # 13. GET /user-segments - User Segmentation
     # =========================================================================
 
-    def test_get_user_segments(self, admin_headers, test_data):
+    def test_get_user_segments(self, db_session: Session, admin_headers, test_data):
         """Test user segments endpoint"""
+        if db_session.bind.dialect.name == "sqlite":
+            pytest.skip("Requires PostgreSQL (date_trunc function)")
+
         with TestClient(app) as client:
             response = client.get(
                 "/api/v1/admin/dashboard/user-segments?time_range=month",
