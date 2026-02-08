@@ -458,7 +458,11 @@ def get_model_distribution(
             "tokens": [1234567, 567890, ...]
         }
     """
-    from app.core.pricing import MODEL_PRICING_MAP, calculate_gemini_cost, normalize_model_name
+    from app.core.pricing import (
+        MODEL_PRICING_MAP,
+        calculate_gemini_cost,
+        normalize_model_name,
+    )
 
     start_time = get_time_filter(time_range)
 
