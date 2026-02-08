@@ -276,6 +276,7 @@ def get_cost_breakdown(
             case(
                 (SessionAnalysisLog.model_name.like("%flash-lite%"), "Gemini Flash Lite"),
                 (SessionAnalysisLog.model_name.like("%1.5-flash%"), "Gemini Flash 1.5"),
+                (SessionAnalysisLog.model_name.like("%gemini-3%"), "Gemini Flash 3"),
                 else_="Other"
             ).label("display_name"),
             func.coalesce(func.sum(SessionAnalysisLog.prompt_tokens), 0).label("input_tokens"),
@@ -299,6 +300,10 @@ def get_cost_breakdown(
             "output_price": 0.30,
         },
         "Gemini Flash 1.5": {
+            "input_price": 0.50,
+            "output_price": 3.00,
+        },
+        "Gemini Flash 3": {
             "input_price": 0.50,
             "output_price": 3.00,
         },
