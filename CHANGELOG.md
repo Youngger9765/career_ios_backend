@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Gemini 3 Flash Pricing Configuration** (2026-02-08): Added missing pricing configuration for `gemini-3-flash-preview` model
+  - **Issue**: `app/core/pricing.py` was missing pricing for `gemini-3-flash-preview`, causing `KeyError` when calculating costs
+  - **Impact**: Dashboard cost calculations failed, report generation costs not tracked, potential API failures
+  - **Fix**: Added pricing constants and model mapping entries
+    - Input: $0.50 per 1M tokens
+    - Output: $3.00 per 1M tokens
+    - Both `gemini-3-flash-preview` and `models/gemini-3-flash-preview` variants supported
+  - **Files Modified**:
+    - `app/core/pricing.py`: Added `GEMINI_3_FLASH_INPUT_USD_PER_1M_TOKENS`, `GEMINI_3_FLASH_OUTPUT_USD_PER_1M_TOKENS`, and model mappings
+  - **Testing**: Test script verified pricing lookup and cost calculations work correctly
+  - **Used In**: `app/core/config.py` (GEMINI_CHAT_MODEL), report generation, session analysis, dashboard
+
 - **Admin Dashboard Time Filtering** (2026-02-08): Fixed 3 critical bugs causing cost calculations to include all historical data
   - **Bug #1 - `get_top_users`**: Missing `SessionAnalysisLog.analyzed_at` filter caused Gemini costs to include all history
   - **Bug #2 - `get_user_segments`**: Function received `time_range` parameter but never used it (only checked registration date)

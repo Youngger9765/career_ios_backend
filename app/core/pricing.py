@@ -41,6 +41,11 @@ GEMINI_1_5_FLASH_OUTPUT_USD_PER_1M_TOKENS = 3.00
 GEMINI_1_5_FLASH_REPORT_INPUT_USD_PER_1M_TOKENS = 1.25
 GEMINI_1_5_FLASH_REPORT_OUTPUT_USD_PER_1M_TOKENS = 5.00
 
+# Gemini 3 Flash (gemini-3-flash-preview)
+# Used for: Report Generation, Deep Analysis
+GEMINI_3_FLASH_INPUT_USD_PER_1M_TOKENS = 0.50
+GEMINI_3_FLASH_OUTPUT_USD_PER_1M_TOKENS = 3.00
+
 # ============================================================================
 # Model Name to Pricing Mapping
 # ============================================================================
@@ -66,6 +71,16 @@ MODEL_PRICING_MAP = {
         "input_price": GEMINI_1_5_FLASH_INPUT_USD_PER_1M_TOKENS,
         "output_price": GEMINI_1_5_FLASH_OUTPUT_USD_PER_1M_TOKENS,
         "display_name": "Gemini Flash 1.5",
+    },
+    "models/gemini-3-flash-preview": {
+        "input_price": GEMINI_3_FLASH_INPUT_USD_PER_1M_TOKENS,
+        "output_price": GEMINI_3_FLASH_OUTPUT_USD_PER_1M_TOKENS,
+        "display_name": "Gemini 3 Flash",
+    },
+    "gemini-3-flash-preview": {
+        "input_price": GEMINI_3_FLASH_INPUT_USD_PER_1M_TOKENS,
+        "output_price": GEMINI_3_FLASH_OUTPUT_USD_PER_1M_TOKENS,
+        "display_name": "Gemini 3 Flash",
     },
 }
 

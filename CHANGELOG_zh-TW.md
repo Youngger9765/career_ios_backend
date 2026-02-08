@@ -9,6 +9,19 @@
 
 ## [未發布]
 
+### 修正
+- **Gemini 3 Flash 定價配置** (2026-02-08)：新增缺少的 `gemini-3-flash-preview` 模型定價配置
+  - **問題**：`app/core/pricing.py` 缺少 `gemini-3-flash-preview` 定價，導致計算成本時發生 `KeyError`
+  - **影響**：Dashboard 成本計算失敗、報告生成成本未追蹤、潛在 API 故障
+  - **修復**：新增定價常數與模型映射項目
+    - 輸入：每百萬 token $0.50
+    - 輸出：每百萬 token $3.00
+    - 支援 `gemini-3-flash-preview` 和 `models/gemini-3-flash-preview` 兩種格式
+  - **修改檔案**：
+    - `app/core/pricing.py`：新增 `GEMINI_3_FLASH_INPUT_USD_PER_1M_TOKENS`、`GEMINI_3_FLASH_OUTPUT_USD_PER_1M_TOKENS` 與模型映射
+  - **測試**：測試腳本驗證定價查詢與成本計算正確運作
+  - **使用位置**：`app/core/config.py` (GEMINI_CHAT_MODEL)、報告生成、會話分析、儀表板
+
 ### 變更
 - **Dashboard UI 優化** (2026-02-07)：將模型分佈圖表替換為每日活躍用戶趨勢圖
   - **原因**：模型分佈圖顯示固定比例（無洞察價值）；DAU 追蹤用戶參與度
