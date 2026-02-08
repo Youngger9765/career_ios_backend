@@ -23,6 +23,8 @@ from app.core.pricing import (
     ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND,
     GEMINI_1_5_FLASH_INPUT_USD_PER_1M_TOKENS,
     GEMINI_1_5_FLASH_OUTPUT_USD_PER_1M_TOKENS,
+    GEMINI_3_FLASH_INPUT_USD_PER_1M_TOKENS,
+    GEMINI_3_FLASH_OUTPUT_USD_PER_1M_TOKENS,
     GEMINI_FLASH_LITE_INPUT_USD_PER_1M_TOKENS,
     GEMINI_FLASH_LITE_OUTPUT_USD_PER_1M_TOKENS,
 )
@@ -246,10 +248,49 @@ class TestAdminDashboardAPI:
             analyzed_at=twenty_days_ago,
         )
 
+        # Session 4: 10 days ago (within month range, test Gemini 3 Flash)
+        ten_days_ago = now - timedelta(days=10)
+        session4_id = uuid4()
+        session4_usage = SessionUsage(
+            id=uuid4(),
+            session_id=session4_id,
+            counselor_id=admin_user.id,
+            tenant_id="career",
+            duration_seconds=900,
+            status="completed",
+            total_prompt_tokens=8000,
+            total_completion_tokens=3000,
+            total_tokens=11000,
+            estimated_cost_usd=900 * ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND,
+            created_at=ten_days_ago,
+        )
+
+        # Calculate Gemini cost for Flash 3
+        gemini4_cost = (
+            (8000 / 1_000_000) * GEMINI_3_FLASH_INPUT_USD_PER_1M_TOKENS +
+            (3000 / 1_000_000) * GEMINI_3_FLASH_OUTPUT_USD_PER_1M_TOKENS
+        )
+
+        session4_analysis = SessionAnalysisLog(
+            id=uuid4(),
+            session_id=session4_id,
+            counselor_id=admin_user.id,
+            tenant_id="career",
+            analysis_type="report_generation",
+            model_name="gemini-3-flash-preview",
+            prompt_tokens=8000,
+            completion_tokens=3000,
+            total_tokens=11000,
+            estimated_cost_usd=gemini4_cost,
+            safety_level="green",
+            analyzed_at=ten_days_ago,
+        )
+
         db_session.add_all([
             session1_usage, session1_analysis,
             session2_usage, session2_analysis,
             session3_usage, session3_analysis,
+            session4_usage, session4_analysis,
         ])
         db_session.commit()
 
@@ -274,6 +315,13 @@ class TestAdminDashboardAPI:
                 "elevenlabs_cost": 1800 * ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND,
                 "gemini_cost": gemini3_cost,
                 "total_cost": (1800 * ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND) + gemini3_cost,
+            },
+            "session4": {
+                "usage": session4_usage,
+                "analysis": session4_analysis,
+                "elevenlabs_cost": 900 * ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND,
+                "gemini_cost": gemini4_cost,
+                "total_cost": (900 * ELEVENLABS_SCRIBE_V2_REALTIME_USD_PER_SECOND) + gemini4_cost,
             },
         }
 
@@ -352,14 +400,15 @@ class TestAdminDashboardAPI:
             assert response.status_code == 200
             data = response.json()
 
-            # Should include all 3 sessions
+            # Should include all 4 sessions
             expected_cost = (
                 test_data["session1"]["total_cost"] +
                 test_data["session2"]["total_cost"] +
-                test_data["session3"]["total_cost"]
+                test_data["session3"]["total_cost"] +
+                test_data["session4"]["total_cost"]
             )
             assert abs(data["total_cost_usd"] - expected_cost) < 0.0001
-            assert data["total_sessions"] == 3
+            assert data["total_sessions"] == 4
             assert data["active_users"] == 1
 
     def test_get_summary_empty_data(self, db_session: Session, admin_headers):
@@ -634,8 +683,11 @@ class TestAdminDashboardAPI:
             assert "costs" in data
             assert "tokens" in data
 
-            # Should have at least 2 models (Flash Lite and Flash 1.5)
-            assert len(data["labels"]) >= 2
+            # Should have 3 models (Flash Lite, Flash 1.5, Flash 3)
+            assert len(data["labels"]) >= 3
+            # Verify all expected models are present (after normalization)
+            expected_models = {"Gemini Flash Lite", "Gemini Flash 1.5", "Gemini 3 Flash"}
+            assert set(data["labels"]) == expected_models
 
     # =========================================================================
     # 7. GET /daily-active-users - Daily Active Users Trend
@@ -697,8 +749,8 @@ class TestAdminDashboardAPI:
             assert "yellow" in data
             assert "red" in data
 
-            # Each should have count of 1
-            assert data["green"] == 1
+            # Updated for 4 sessions: green=2 (session1, session4), yellow=1 (session2), red=1 (session3)
+            assert data["green"] == 2
             assert data["yellow"] == 1
             assert data["red"] == 1
 
@@ -742,12 +794,13 @@ class TestAdminDashboardAPI:
             assert response.status_code == 200
             data = response.json()
 
-            # Admin user should have total cost from all 3 sessions
+            # Admin user should have total cost from all 4 sessions
             admin_user = data[0]
             expected_cost = (
                 test_data["session1"]["total_cost"] +
                 test_data["session2"]["total_cost"] +
-                test_data["session3"]["total_cost"]
+                test_data["session3"]["total_cost"] +
+                test_data["session4"]["total_cost"]
             )
             assert abs(admin_user["total_cost_usd"] - expected_cost) < 0.01
 
