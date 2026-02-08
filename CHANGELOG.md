@@ -9,7 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Pricing Module Refactoring** (2026-02-08): Eliminated duplicate model entries in `app/core/pricing.py`
+  - **Problem**: `MODEL_PRICING_MAP` had 6 entries (3 models × 2 formats each) - unprefixed (`gemini-*`) and prefixed (`models/gemini-*`)
+  - **Solution**: Added `normalize_model_name()` function to remove "models/" prefix before lookup
+  - **Result**: Reduced `MODEL_PRICING_MAP` from 6 entries to 3 entries (50% reduction)
+  - **Backward Compatibility**: Both formats still work - `get_model_pricing("gemini-1.5-flash-latest")` and `get_model_pricing("models/gemini-1.5-flash-latest")` return identical results
+  - **Benefits**:
+    - Eliminates code duplication (one source of truth per model)
+    - Reduces maintenance burden (update pricing in one place, not two)
+    - Prevents inconsistencies between duplicate entries
+    - Handles both Google Gemini API formats (Vertex AI returns "models/*", Generative AI SDK returns unprefixed)
+  - **Files Modified**:
+    - `app/core/pricing.py`: Added `normalize_model_name()`, removed duplicate entries, updated `get_model_pricing()` and `calculate_cost_for_model()` docstrings
+  - **Testing**: All integration tests pass (9 passed, 4 skipped), custom verification script confirmed both formats work identically
+  - **Impact**: No breaking changes - existing code using either format continues to work
+
 ### Fixed
+- **Gemini 3 Flash Pricing Configuration** (2026-02-08): Added missing pricing configuration for `gemini-3-flash-preview` model
+  - **Issue**: `app/core/pricing.py` was missing pricing for `gemini-3-flash-preview`, causing `KeyError` when calculating costs
+  - **Impact**: Dashboard cost calculations failed, report generation costs not tracked, potential API failures
+  - **Fix**: Added pricing constants and model mapping entries
+    - Input: $0.50 per 1M tokens
+    - Output: $3.00 per 1M tokens
+    - Both `gemini-3-flash-preview` and `models/gemini-3-flash-preview` variants supported
+  - **Files Modified**:
+    - `app/core/pricing.py`: Added `GEMINI_3_FLASH_INPUT_USD_PER_1M_TOKENS`, `GEMINI_3_FLASH_OUTPUT_USD_PER_1M_TOKENS`, and model mappings
+  - **Testing**: Test script verified pricing lookup and cost calculations work correctly
+  - **Used In**: `app/core/config.py` (GEMINI_CHAT_MODEL), report generation, session analysis, dashboard
+
 - **Admin Dashboard Time Filtering** (2026-02-08): Fixed 3 critical bugs causing cost calculations to include all historical data
   - **Bug #1 - `get_top_users`**: Missing `SessionAnalysisLog.analyzed_at` filter caused Gemini costs to include all history
   - **Bug #2 - `get_user_segments`**: Function received `time_range` parameter but never used it (only checked registration date)
@@ -50,19 +78,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `GET /cost-per-user`: Cost anomaly detection with status classification (normal/high_cost/test_account)
     - `GET /user-segments`: User cohort analysis (Power Users, Active, At-Risk, Churned)
     - `GET /cost-prediction`: Monthly cost forecasting with growth rate analysis
-  - **New Dashboard UI** (`app/templates/admin_dashboard_v2.html`):
+  - **New Dashboard UI** (`app/templates/admin_dashboard.html` - V2 directly replaced V1):
     - **Section 1 - Cost Control Center**: Cost prediction, anomaly alerts, cost trend chart
     - **Section 2 - User Health**: User segmentation cards, engagement metrics, suggested actions
     - **Section 3 - Operational Efficiency**: Summary metrics, cost breakdown by service
   - **Design Principles**: Action-oriented (every metric suggests next step), comparison-rich (trends), predictive (forecast future), segmented (user cohorts)
   - **Business Impact**: Projected savings of $71/month (identify waste $45, prevent churn $16, upsell $10)
   - **Time Savings**: 87% reduction in weekly cost review time (15 min → 2 min)
+  - **Implementation Strategy**: Direct replacement (no V1 fallback) - V2 replaces V1 at `/admin/dashboard` route
   - **Documentation**:
     - `docs/dashboard-redesign-product-strategy.md`: Product vision, Jobs-to-be-Done, user personas
     - `docs/dashboard-redesign-implementation-guide.md`: Step-by-step implementation, testing, deployment
     - `docs/DASHBOARD_V2_SUMMARY.md`: Executive summary, key metrics, success criteria
     - `docs/DASHBOARD_BEFORE_AFTER.md`: Visual comparison, ROI analysis, workflow improvements
-  - **Status**: Design complete, ready for stakeholder approval and implementation
+  - **Status**: ✅ Implemented - V2 deployed to staging, awaiting production deployment and stakeholder feedback
 
 ### Fixed
 - **Dashboard Data Accuracy Fixes** (2026-02-08): Fixed 4 critical bugs in admin dashboard

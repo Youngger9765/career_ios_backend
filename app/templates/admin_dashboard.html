@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Monitoring Dashboard</title>
+    <title>AI 成本與用戶管理 Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {
@@ -20,7 +20,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
 
@@ -45,50 +45,6 @@
             display: flex;
             gap: 20px;
             align-items: center;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 16px;
-            background: #f8fafc;
-            border-radius: 8px;
-        }
-
-        .user-info .email {
-            font-size: 14px;
-            color: #475569;
-        }
-
-        .logout-btn {
-            padding: 8px 16px;
-            background: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .logout-btn:hover {
-            background: #dc2626;
-        }
-
-        .controls {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .time-range-selector {
-            display: flex;
-            gap: 8px;
-            background: #f1f5f9;
-            border-radius: 10px;
-            padding: 4px;
         }
 
         .time-btn {
@@ -118,72 +74,49 @@
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
 
+        .logout-btn {
+            padding: 8px 16px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+
         .content {
             padding: 40px;
         }
 
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-
-        .cost-breakdown {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            margin-bottom: 40px;
-        }
-
-        .cost-breakdown h2 {
-            font-size: 20px;
-            color: #1e293b;
-            margin-bottom: 20px;
-        }
-
-        .service-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .service-item:last-child {
-            border-bottom: none;
-        }
-
-        .service-name {
-            font-weight: 600;
-            color: #334155;
-        }
-
-        .service-stats {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .service-cost {
-            font-size: 18px;
+        .section-title {
+            font-size: 24px;
+            color: white;
             font-weight: 700;
-            color: #667eea;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .service-percentage {
-            font-size: 14px;
-            color: #64748b;
+        .section {
+            margin-bottom: 60px;
         }
 
-        .service-usage {
-            font-size: 12px;
-            color: #94a3b8;
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
         .card {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
             padding: 24px;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -203,56 +136,53 @@
             color: #1e293b;
         }
 
-        .charts-section {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 30px;
-            margin-bottom: 40px;
-        }
-
-        .chart-card {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .chart-card h2 {
-            font-size: 18px;
-            color: #1e293b;
-            margin-bottom: 20px;
-        }
-
-        .chart-filters {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .chart-filters select {
-            padding: 8px 12px;
-            border: 2px solid #e2e8f0;
-            border-radius: 6px;
+        .card .change {
             font-size: 14px;
-            cursor: pointer;
+            margin-top: 8px;
         }
 
-        .users-section {
+        .change.positive {
+            color: #10b981;
+        }
+
+        .change.negative {
+            color: #ef4444;
+        }
+
+        .card .subtitle {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .alert-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 8px;
+            background: #fef3c7;
+            color: #92400e;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .alert-badge.critical {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .white-card {
             background: white;
             padding: 24px;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
 
-        .users-section h2 {
+        .white-card h2 {
             font-size: 20px;
             color: #1e293b;
-            margin-bottom: 20px;
-        }
-
-        .table-container {
-            overflow-x: auto;
             margin-bottom: 20px;
         }
 
@@ -284,34 +214,52 @@
             background: #f8fafc;
         }
 
-        .export-btn {
-            padding: 10px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge.normal {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-badge.critical {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            background: #667eea;
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
         }
 
-        .export-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        .action-btn:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
         }
 
-        .user-detail-section {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #e2e8f0;
-        }
-
-        .stats-cards {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 40px;
+        .chart-container {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
         }
 
         .loading {
@@ -335,149 +283,117 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Top Users Table Styling */
-        .top-users-table th:nth-child(2),
-        .top-users-table th:nth-child(3),
-        .top-users-table th:nth-child(4) {
-            min-width: 100px;
+        .segment-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
-        /* Highlight different services with subtle background */
-        .top-users-table tbody tr td:nth-child(2) {
-            background-color: rgba(139, 92, 246, 0.05); /* Purple for Flash 3 */
+        .segment-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
-        .top-users-table tbody tr td:nth-child(3) {
-            background-color: rgba(16, 185, 129, 0.05); /* Green for Lite */
+        .segment-card h3 {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 12px;
+            text-transform: uppercase;
         }
 
-        .top-users-table tbody tr td:nth-child(4) {
-            background-color: rgba(59, 130, 246, 0.05); /* Blue for ElevenLabs */
+        .segment-card .count {
+            font-size: 36px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .segment-card .action-text {
+            font-size: 13px;
+            color: #475569;
+            margin-top: 8px;
+        }
+
+        .export-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🤖 AI Monitoring Dashboard</h1>
+            <h1>AI 成本與用戶管理 Dashboard</h1>
             <div class="header-right">
                 <div class="time-selector">
-                    <button class="time-btn active" data-range="day">今天</button>
+                    <button class="time-btn" data-range="day">今天</button>
                     <button class="time-btn" data-range="week">過去7天</button>
-                    <button class="time-btn" data-range="month">過去30天</button>
+                    <button class="time-btn active" data-range="month">過去30天</button>
                 </div>
-                <div class="user-info">
-                    <span class="email" id="user-email">-</span>
-                </div>
+                <span id="user-email" style="color: #475569; font-size: 14px;">-</span>
                 <button class="logout-btn" id="logout-btn">登出</button>
             </div>
         </div>
 
         <div class="content">
-            <!-- Summary Cards (removed Total Tokens) -->
-            <div class="summary-cards">
-                <div class="card">
-                    <h3>Total Cost</h3>
-                    <div class="value" id="total-cost">-</div>
-                </div>
-                <div class="card">
-                    <h3>Total Sessions</h3>
-                    <div class="value" id="total-sessions">-</div>
-                </div>
-                <div class="card">
-                    <h3>Active Users</h3>
-                    <div class="value" id="active-users">-</div>
-                </div>
-            </div>
+            <!-- Section 1: 成本控制中心 -->
+            <div class="section">
+                <div class="section-title">💰 成本控制中心</div>
 
-            <!-- Cost Breakdown by Service -->
-            <div class="cost-breakdown">
-                <h2>💰 Cost Breakdown by Service</h2>
-                <div id="cost-breakdown-list">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        Loading...
+                <div class="cards-grid">
+                    <div class="card">
+                        <h3>本月累計成本</h3>
+                        <div class="value" id="current-cost">-</div>
+                        <div class="change" id="cost-change">-</div>
+                    </div>
+                    <div class="card">
+                        <h3>本月預測成本</h3>
+                        <div class="value" id="predicted-cost">-</div>
+                        <div class="subtitle" id="prediction-basis">基於目前趨勢</div>
+                    </div>
+                    <div class="card">
+                        <h3>成本警告</h3>
+                        <div class="value" id="alert-count">-</div>
+                        <div class="subtitle" id="alert-detail">-</div>
+                    </div>
+                    <div class="card">
+                        <h3>平均每次對話成本</h3>
+                        <div class="value" id="avg-cost-session">-</div>
+                        <div class="change" id="efficiency-change">-</div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Charts Section -->
-            <div class="charts-section">
-                <!-- Cost Trend Chart -->
-                <div class="chart-card">
-                    <h2>Cost Trend</h2>
-                    <div class="chart-filters">
-                        <select id="tenant-filter">
-                            <option value="">All Tenants</option>
-                            <option value="career">Career</option>
-                            <option value="island_parents">Island Parents</option>
-                        </select>
-                        <select id="model-filter">
-                            <option value="">All Models</option>
-                        </select>
-                    </div>
-                    <canvas id="cost-trend-chart"></canvas>
-                </div>
-
-                <!-- Session Trend Chart (replaced Token Usage Trend) -->
-                <div class="chart-card">
-                    <h2>📈 Daily Session Trend</h2>
-                    <canvas id="session-trend-chart"></canvas>
-                </div>
-
-                <!-- Daily Active Users Chart -->
-                <div class="chart-card">
-                    <h2>👥 Daily Active Users</h2>
-                    <canvas id="daily-active-users-chart"></canvas>
-                </div>
-
-                <!-- Safety Level Distribution Chart -->
-                <div class="chart-card">
-                    <h2>Safety Level Distribution</h2>
-                    <canvas id="safety-distribution-chart"></canvas>
-                </div>
-            </div>
-
-            <!-- Overall Stats -->
-            <div class="stats-cards" id="overall-stats-cards">
-                <div class="card">
-                    <h3>Avg Cost/Day</h3>
-                    <div class="value" id="avg-cost-day">-</div>
-                </div>
-                <div class="card">
-                    <h3>Avg Sessions/Day</h3>
-                    <div class="value" id="avg-sessions-day">-</div>
-                </div>
-                <div class="card">
-                    <h3>Monthly Growth</h3>
-                    <div class="value" id="monthly-growth">-</div>
-                </div>
-            </div>
-
-            <!-- Users Section -->
-            <div class="users-section">
-                <h2>Top Users</h2>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <div></div>
-                    <div>
-                        <button class="export-btn" onclick="exportCSV('users')">Export Users CSV</button>
-                        <button class="export-btn" onclick="exportCSV('sessions')" style="margin-left: 10px;">Export Sessions CSV</button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="top-users-table">
+                <!-- Cost Anomaly Table -->
+                <div class="white-card">
+                    <h2>⚠️ 成本異常用戶（需要關注）</h2>
+                    <table id="cost-anomaly-table">
                         <thead>
                             <tr>
                                 <th>Email</th>
-                                <th>Gemini Flash 3<br><small>(tokens)</small></th>
-                                <th>Gemini Lite<br><small>(tokens)</small></th>
-                                <th>ElevenLabs<br><small>(hours)</small></th>
-                                <th>Total Sessions</th>
-                                <th>Total Cost (USD)</th>
-                                <th>Total Minutes</th>
+                                <th>本月成本</th>
+                                <th>Sessions</th>
+                                <th>$/Session</th>
+                                <th>分鐘數</th>
+                                <th>狀態</th>
+                                <th>建議行動</th>
                             </tr>
                         </thead>
-                        <tbody id="top-users-table">
+                        <tbody id="cost-anomaly-tbody">
                             <tr>
                                 <td colspan="7" class="loading">
                                     <div class="spinner"></div>
@@ -487,18 +403,112 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Cost Trend Chart -->
+                <div class="chart-container">
+                    <h2>📈 成本趨勢（含預測）</h2>
+                    <canvas id="cost-trend-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Section 2: 用戶健康度 -->
+            <div class="section">
+                <div class="section-title">👥 用戶健康度</div>
+
+                <div class="segment-row">
+                    <div class="segment-card">
+                        <h3>Power Users (Top 10%)</h3>
+                        <div class="count" id="power-user-count">-</div>
+                        <div class="action-text">✅ 建議：升級到付費方案</div>
+                        <div class="subtitle" id="power-user-stats">-</div>
+                    </div>
+                    <div class="segment-card">
+                        <h3>Active Users</h3>
+                        <div class="count" id="active-user-count">-</div>
+                        <div class="action-text">✅ 建議：維持參與度</div>
+                        <div class="subtitle" id="active-user-stats">-</div>
+                    </div>
+                    <div class="segment-card">
+                        <h3>At-Risk Users (7天未登入)</h3>
+                        <div class="count" id="at-risk-count">-</div>
+                        <div class="action-text">⚠️ 建議：發送挽留Email</div>
+                    </div>
+                    <div class="segment-card">
+                        <h3>Churned Users (30天未登入)</h3>
+                        <div class="count" id="churned-count">-</div>
+                        <div class="action-text">❌ 建議：考慮下線</div>
+                    </div>
+                </div>
+
+                <!-- User Segmentation Details -->
+                <div class="white-card">
+                    <h2>用戶分群詳情</h2>
+                    <div style="margin-bottom: 20px;">
+                        <button class="export-btn" onclick="showSegment('power')">Power Users</button>
+                        <button class="export-btn" onclick="showSegment('active')">Active Users</button>
+                        <button class="export-btn" onclick="showSegment('at_risk')">At-Risk</button>
+                        <button class="export-btn" onclick="showSegment('churned')">Churned</button>
+                    </div>
+                    <table id="segment-detail-table">
+                        <thead id="segment-detail-thead">
+                            <tr>
+                                <th>Email</th>
+                                <th>Sessions</th>
+                                <th>Last Activity</th>
+                                <th>Total Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody id="segment-detail-tbody">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: #64748b;">請選擇一個用戶分群</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section 3: 營運效率 -->
+            <div class="section">
+                <div class="section-title">⚙️ 營運效率</div>
+
+                <div class="cards-grid">
+                    <div class="card">
+                        <h3>總 Sessions</h3>
+                        <div class="value" id="total-sessions">-</div>
+                    </div>
+                    <div class="card">
+                        <h3>活躍用戶</h3>
+                        <div class="value" id="active-users">-</div>
+                    </div>
+                    <div class="card">
+                        <h3>平均 Session 時長</h3>
+                        <div class="value" id="avg-duration">-</div>
+                    </div>
+                    <div class="card">
+                        <h3>每日平均成本</h3>
+                        <div class="value" id="daily-avg-cost">-</div>
+                    </div>
+                </div>
+
+                <!-- Cost Breakdown by Service -->
+                <div class="white-card">
+                    <h2>💰 成本分布（按服務）</h2>
+                    <div id="cost-breakdown-list">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            Loading...
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Global state
-        let currentTimeRange = 'day';
-        let currentTenant = '';
-        let currentModel = '';
+        let currentTimeRange = 'month';
+        let userSegments = null;
         let charts = {};
 
-        // Get auth token from localStorage or redirect to login
         function getAuthToken() {
             const token = localStorage.getItem('admin_token');
             if (!token) {
@@ -508,21 +518,16 @@
             return token;
         }
 
-        // API helper
         async function apiCall(endpoint, params = {}) {
             const token = getAuthToken();
-            if (!token) {
-                return null;
-            }
+            if (!token) return null;
 
             const queryString = new URLSearchParams(params).toString();
             const url = `/api/v1/admin/dashboard/${endpoint}${queryString ? '?' + queryString : ''}`;
 
             try {
                 const response = await fetch(url, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
+                    headers: { 'Authorization': `Bearer ${token}` },
                 });
 
                 if (!response.ok) {
@@ -543,54 +548,178 @@
             }
         }
 
-        // Load summary data (removed total_tokens)
-        async function loadSummary() {
-            const data = await apiCall('summary', {
-                time_range: currentTimeRange,
-                tenant_id: currentTenant,
-            });
+        async function loadCostPrediction() {
+            const data = await apiCall('cost-prediction', { time_range: 'month' });
 
             if (data) {
-                document.getElementById('total-cost').textContent = '$' + data.total_cost_usd.toFixed(2);
+                document.getElementById('current-cost').textContent = '$' + data.current_month_cost.toFixed(2);
+                document.getElementById('predicted-cost').textContent = '$' + data.predicted_month_cost.toFixed(2);
+
+                const growthEl = document.getElementById('cost-change');
+                const growth = data.growth_pct;
+                growthEl.textContent = (growth >= 0 ? '↑' : '↓') + Math.abs(growth).toFixed(1) + '% vs 上個月';
+                growthEl.className = 'change ' + (growth >= 0 ? 'positive' : 'negative');
+
+                document.getElementById('prediction-basis').textContent =
+                    `已過 ${data.days_elapsed} 天，剩餘 ${data.days_remaining} 天`;
+
+                document.getElementById('daily-avg-cost').textContent = '$' + data.daily_average.toFixed(2);
+            }
+        }
+
+        async function loadCostAnomalyUsers() {
+            const data = await apiCall('cost-per-user', { time_range: currentTimeRange, limit: 20 });
+
+            if (data) {
+                const tbody = document.getElementById('cost-anomaly-tbody');
+                tbody.innerHTML = '';
+
+                let alertCount = 0;
+                let testAccountCount = 0;
+
+                data.forEach(user => {
+                    const row = document.createElement('tr');
+
+                    let statusClass = 'normal';
+                    let statusText = '✅ 正常';
+
+                    if (user.status === 'test_account') {
+                        statusClass = 'warning';
+                        statusText = '🧪 疑似測試帳號';
+                        testAccountCount++;
+                    } else if (user.status === 'high_cost') {
+                        statusClass = 'critical';
+                        statusText = '⚠️ 高成本';
+                        alertCount++;
+                    }
+
+                    row.innerHTML = `
+                        <td>${user.email}</td>
+                        <td>$${user.total_cost_usd.toFixed(2)}</td>
+                        <td>${user.sessions}</td>
+                        <td>$${user.cost_per_session.toFixed(2)}</td>
+                        <td>${user.total_minutes.toFixed(1)}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>${user.suggested_action}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                document.getElementById('alert-count').textContent = alertCount + testAccountCount;
+                document.getElementById('alert-detail').textContent =
+                    `${alertCount} 個高成本用戶，${testAccountCount} 個測試帳號`;
+
+                // Calculate avg cost per session
+                if (data.length > 0) {
+                    const avgCost = data.reduce((sum, u) => sum + u.cost_per_session, 0) / data.length;
+                    document.getElementById('avg-cost-session').textContent = '$' + avgCost.toFixed(2);
+                }
+            }
+        }
+
+        async function loadUserSegments() {
+            const data = await apiCall('user-segments', { time_range: currentTimeRange });
+
+            if (data) {
+                userSegments = data;
+
+                document.getElementById('power-user-count').textContent = data.power_users.count;
+                document.getElementById('power-user-stats').textContent =
+                    `平均 ${data.power_users.avg_sessions.toFixed(1)} sessions, $${data.power_users.avg_cost_usd.toFixed(2)}/人`;
+
+                document.getElementById('active-user-count').textContent = data.active_users.count;
+                document.getElementById('active-user-stats').textContent =
+                    `平均 ${data.active_users.avg_sessions.toFixed(1)} sessions, $${data.active_users.avg_cost_usd.toFixed(2)}/人`;
+
+                document.getElementById('at-risk-count').textContent = data.at_risk_users.count;
+                document.getElementById('churned-count').textContent = data.churned_users.count;
+            }
+        }
+
+        function showSegment(type) {
+            if (!userSegments) return;
+
+            const tbody = document.getElementById('segment-detail-tbody');
+            const thead = document.getElementById('segment-detail-thead');
+            tbody.innerHTML = '';
+
+            let users = [];
+            let headers = ['Email', 'Sessions', 'Last Activity', 'Total Cost'];
+
+            if (type === 'power') {
+                users = userSegments.power_users.users;
+            } else if (type === 'active') {
+                users = userSegments.active_users.users;
+            } else if (type === 'at_risk') {
+                users = userSegments.at_risk_users.users;
+                headers = ['Email', 'Sessions', 'Last Activity', 'Days Inactive'];
+            } else if (type === 'churned') {
+                users = userSegments.churned_users.users;
+                headers = ['Email', 'Sessions', 'Last Activity', 'Days Inactive'];
+            }
+
+            // Update thead
+            thead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                if (type === 'at_risk' || type === 'churned') {
+                    row.innerHTML = `
+                        <td>${user.email}</td>
+                        <td>${user.sessions}</td>
+                        <td>${user.last_activity || 'Never'}</td>
+                        <td>${user.days_inactive || '-'} 天</td>
+                    `;
+                } else {
+                    row.innerHTML = `
+                        <td>${user.email}</td>
+                        <td>${user.sessions}</td>
+                        <td>${user.last_activity}</td>
+                        <td>$${(user.total_cost_usd || 0).toFixed(2)}</td>
+                    `;
+                }
+                tbody.appendChild(row);
+            });
+
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #64748b;">暫無數據</td></tr>';
+            }
+        }
+
+        async function loadSummary() {
+            const data = await apiCall('summary', { time_range: currentTimeRange });
+
+            if (data) {
                 document.getElementById('total-sessions').textContent = data.total_sessions.toLocaleString();
                 document.getElementById('active-users').textContent = data.active_users.toLocaleString();
             }
         }
 
-        // Load cost breakdown
         async function loadCostBreakdown() {
-            const data = await apiCall('cost-breakdown', {
-                time_range: currentTimeRange,
-                tenant_id: currentTenant,
-            });
+            const data = await apiCall('cost-breakdown', { time_range: currentTimeRange });
 
             if (data) {
                 const container = document.getElementById('cost-breakdown-list');
                 if (data.services.length === 0) {
-                    container.innerHTML = '<p style="color: #64748b;">No data available</p>';
+                    container.innerHTML = '<p style="color: #64748b;">暫無數據</p>';
                     return;
                 }
 
                 container.innerHTML = data.services.map(service => `
-                    <div class="service-item">
-                        <span class="service-name">${service.name}</span>
-                        <div class="service-stats">
-                            <span class="service-cost">$${service.cost.toFixed(4)}</span>
-                            <span class="service-percentage">${service.percentage}%</span>
-                            <span class="service-usage">${service.usage}</span>
+                    <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                        <span style="font-weight: 600; color: #334155;">${service.name}</span>
+                        <div style="display: flex; gap: 20px; align-items: center;">
+                            <span style="font-size: 18px; font-weight: 700; color: #667eea;">$${service.cost.toFixed(4)}</span>
+                            <span style="font-size: 14px; color: #64748b;">${service.percentage}%</span>
+                            <span style="font-size: 12px; color: #94a3b8;">${service.usage}</span>
                         </div>
                     </div>
                 `).join('');
             }
         }
 
-        // Load cost trend
         async function loadCostTrend() {
-            const data = await apiCall('cost-trend', {
-                time_range: currentTimeRange,
-                tenant_id: currentTenant,
-                model: currentModel,
-            });
+            const data = await apiCall('cost-trend', { time_range: currentTimeRange });
 
             if (data) {
                 if (charts.costTrend) {
@@ -629,275 +758,14 @@
             }
         }
 
-        // Load session trend (replaced token trend)
-        async function loadSessionTrend() {
-            const data = await apiCall('session-trend', {
-                time_range: currentTimeRange,
-                tenant_id: currentTenant,
-            });
-
-            if (data) {
-                if (charts.sessionTrend) {
-                    charts.sessionTrend.destroy();
-                }
-
-                const ctx = document.getElementById('session-trend-chart').getContext('2d');
-                charts.sessionTrend = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: data.labels,
-                        datasets: [
-                            {
-                                label: 'Sessions',
-                                data: data.sessions,
-                                borderColor: '#667eea',
-                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                tension: 0.4,
-                                fill: true,
-                                yAxisID: 'y',
-                            },
-                            {
-                                label: 'Duration (hours)',
-                                data: data.duration_hours,
-                                borderColor: '#10b981',
-                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                tension: 0.4,
-                                fill: true,
-                                yAxisID: 'y1',
-                            },
-                        ],
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        },
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                            },
-                        },
-                        scales: {
-                            y: {
-                                type: 'linear',
-                                display: true,
-                                position: 'left',
-                                beginAtZero: true,
-                                ticks: {
-                                    stepSize: 5,
-                                },
-                            },
-                            y1: {
-                                type: 'linear',
-                                display: true,
-                                position: 'right',
-                                beginAtZero: true,
-                                grid: {
-                                    drawOnChartArea: false,
-                                },
-                            },
-                        },
-                    },
-                });
-            }
-        }
-
-        // Load daily active users trend
-        async function loadDailyActiveUsers() {
-            const data = await apiCall('daily-active-users', {
-                time_range: currentTimeRange,
-                tenant_id: currentTenant,
-            });
-
-            if (data) {
-                if (charts.dailyActiveUsers) {
-                    charts.dailyActiveUsers.destroy();
-                }
-
-                const ctx = document.getElementById('daily-active-users-chart').getContext('2d');
-                charts.dailyActiveUsers = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: data.labels,
-                        datasets: [{
-                            label: 'Active Users',
-                            data: data.data,
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            tension: 0.4,
-                            fill: true,
-                            pointRadius: 4,
-                            pointHoverRadius: 6,
-                        }],
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: {
-                                display: false,
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return context.parsed.y + ' users';
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    stepSize: 5,
-                                    callback: function(value) {
-                                        return Math.floor(value);
-                                    }
-                                },
-                                title: {
-                                    display: true,
-                                    text: 'Users'
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Date'
-                                }
-                            }
-                        },
-                    },
-                });
-            }
-        }
-
-        // Load safety distribution
-        async function loadSafetyDistribution() {
-            const data = await apiCall('safety-distribution', {
-                time_range: currentTimeRange,
-                tenant_id: currentTenant,
-            });
-
-            if (data) {
-                if (charts.safetyDistribution) {
-                    charts.safetyDistribution.destroy();
-                }
-
-                const labels = Object.keys(data);
-                const values = Object.values(data);
-                const colors = labels.map(level => {
-                    if (level === 'green') return '#10b981';
-                    if (level === 'yellow') return '#f59e0b';
-                    if (level === 'red') return '#ef4444';
-                    return '#64748b';
-                });
-
-                const ctx = document.getElementById('safety-distribution-chart').getContext('2d');
-                charts.safetyDistribution = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Count',
-                            data: values,
-                            backgroundColor: colors,
-                        }],
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: {
-                                display: false,
-                            },
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                            },
-                        },
-                    },
-                });
-            }
-        }
-
-        // Load top users
-        async function loadTopUsers() {
-            const data = await apiCall('top-users', {
-                time_range: currentTimeRange,
-                tenant_id: currentTenant,
-                limit: 20,
-            });
-
-            if (data) {
-                const tbody = document.getElementById('top-users-table');
-                tbody.innerHTML = '';
-
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #64748b;">No data available</td></tr>';
-                    return;
-                }
-
-                data.forEach(user => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${user.email}</td>
-                        <td>${user.gemini_flash_tokens.toLocaleString()}</td>
-                        <td>${user.gemini_lite_tokens.toLocaleString()}</td>
-                        <td>${user.elevenlabs_hours.toFixed(1)}h</td>
-                        <td>${user.total_sessions.toLocaleString()}</td>
-                        <td>$${user.total_cost_usd.toFixed(2)}</td>
-                        <td>${Math.round(user.total_minutes)}</td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            }
-        }
-
-        // Load overall stats
-        async function loadOverallStats() {
-            const data = await apiCall('overall-stats', {
-                time_range: currentTimeRange,
-                tenant_id: currentTenant,
-            });
-
-            if (data) {
-                // BUG FIX 3: Display avg cost per day instead of avg tokens
-                document.getElementById('avg-cost-day').textContent = '$' + data.avg_cost_per_day.toFixed(4);
-                document.getElementById('avg-sessions-day').textContent = data.avg_sessions_per_day.toFixed(1);
-                const growth = data.monthly_growth_pct;
-                const growthEl = document.getElementById('monthly-growth');
-                growthEl.textContent = (growth >= 0 ? '+' : '') + growth.toFixed(1) + '%';
-                growthEl.style.color = growth >= 0 ? '#10b981' : '#ef4444';
-            }
-        }
-
-        // Export CSV
-        async function exportCSV(dataType) {
-            const token = getAuthToken();
-            if (!token) return;
-
-            const params = new URLSearchParams({
-                time_range: currentTimeRange,
-                data_type: dataType,
-            });
-
-            window.location.href = `/api/v1/admin/dashboard/export-csv?${params.toString()}`;
-        }
-
-        // Load all data (updated with new endpoints)
         async function loadAllData() {
             await Promise.all([
+                loadCostPrediction(),
+                loadCostAnomalyUsers(),
+                loadUserSegments(),
                 loadSummary(),
                 loadCostBreakdown(),
                 loadCostTrend(),
-                loadSessionTrend(),
-                loadDailyActiveUsers(),
-                loadSafetyDistribution(),
-                loadTopUsers(),
-                loadOverallStats(),
             ]);
         }
 
@@ -911,30 +779,18 @@
             });
         });
 
-        document.getElementById('tenant-filter').addEventListener('change', function() {
-            currentTenant = this.value;
-            loadAllData();
-        });
-
-        document.getElementById('model-filter').addEventListener('change', function() {
-            currentModel = this.value;
-            loadCostTrend();
-        });
-
         // Load user info
-        function loadUserInfo() {
-            const userStr = localStorage.getItem('admin_user');
-            if (userStr) {
-                try {
-                    const user = JSON.parse(userStr);
-                    document.getElementById('user-email').textContent = user.email;
-                } catch (e) {
-                    console.error('Failed to parse user info:', e);
-                }
+        const userStr = localStorage.getItem('admin_user');
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                document.getElementById('user-email').textContent = user.email;
+            } catch (e) {
+                console.error('Failed to parse user info:', e);
             }
         }
 
-        // Logout handler
+        // Logout
         document.getElementById('logout-btn').addEventListener('click', function() {
             if (confirm('確定要登出嗎？')) {
                 localStorage.removeItem('admin_token');
@@ -944,7 +800,6 @@
         });
 
         // Initialize
-        loadUserInfo();
         loadAllData();
     </script>
 </body>
