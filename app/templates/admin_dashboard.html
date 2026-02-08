@@ -41,6 +41,14 @@
             font-weight: 700;
         }
 
+        .tenant-label {
+            font-size: 16px;
+            color: #667eea;
+            font-weight: 600;
+            margin-top: 8px;
+            display: block;
+        }
+
         .header-right {
             display: flex;
             gap: 20px;
@@ -338,7 +346,10 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>AI 成本與用戶管理 Dashboard</h1>
+            <div>
+                <h1>AI 成本與用戶管理 Dashboard</h1>
+                <span class="tenant-label">浮島親子 (Island Parents)</span>
+            </div>
             <div class="header-right">
                 <div class="time-selector">
                     <button class="time-btn" data-range="day">今天</button>
@@ -357,7 +368,7 @@
 
                 <div class="cards-grid">
                     <div class="card">
-                        <h3>本月累計成本</h3>
+                        <h3 id="current-cost-title">累計成本</h3>
                         <div class="value" id="current-cost">-</div>
                         <div class="change" id="cost-change">-</div>
                     </div>
@@ -408,6 +419,12 @@
                 <div class="chart-container">
                     <h2>📈 成本趨勢（含預測）</h2>
                     <canvas id="cost-trend-chart"></canvas>
+                </div>
+
+                <!-- Model Distribution Chart -->
+                <div class="chart-container">
+                    <h2>🤖 AI 模型成本分布</h2>
+                    <canvas id="model-distribution-chart"></canvas>
                 </div>
             </div>
 
@@ -549,21 +566,36 @@
         }
 
         async function loadCostPrediction() {
-            const data = await apiCall('cost-prediction', { time_range: 'month' });
+            // Always get calendar month prediction
+            const predictionData = await apiCall('cost-prediction', { time_range: 'month' });
 
-            if (data) {
-                document.getElementById('current-cost').textContent = '$' + data.current_month_cost.toFixed(2);
-                document.getElementById('predicted-cost').textContent = '$' + data.predicted_month_cost.toFixed(2);
+            // Get cost for selected time range (for current cost display)
+            const summaryData = await apiCall('summary', { time_range: currentTimeRange });
+
+            if (predictionData && summaryData) {
+                // Update title based on selected time range
+                const titleMap = {
+                    'day': '今日累計成本',
+                    'week': '過去7天累計成本',
+                    'month': '過去30天累計成本'
+                };
+                document.getElementById('current-cost-title').textContent = titleMap[currentTimeRange];
+
+                // Show cost for selected time range
+                document.getElementById('current-cost').textContent = '$' + summaryData.total_cost_usd.toFixed(4);
+
+                // Show predicted cost for calendar month
+                document.getElementById('predicted-cost').textContent = '$' + predictionData.predicted_month_cost.toFixed(2);
 
                 const growthEl = document.getElementById('cost-change');
-                const growth = data.growth_pct;
+                const growth = predictionData.growth_pct;
                 growthEl.textContent = (growth >= 0 ? '↑' : '↓') + Math.abs(growth).toFixed(1) + '% vs 上個月';
                 growthEl.className = 'change ' + (growth >= 0 ? 'positive' : 'negative');
 
                 document.getElementById('prediction-basis').textContent =
-                    `已過 ${data.days_elapsed} 天，剩餘 ${data.days_remaining} 天`;
+                    `已過 ${predictionData.days_elapsed} 天，剩餘 ${predictionData.days_remaining} 天`;
 
-                document.getElementById('daily-avg-cost').textContent = '$' + data.daily_average.toFixed(2);
+                document.getElementById('daily-avg-cost').textContent = '$' + predictionData.daily_average.toFixed(2);
             }
         }
 
@@ -758,6 +790,72 @@
             }
         }
 
+        async function loadModelDistribution() {
+            const data = await apiCall('model-distribution', { time_range: currentTimeRange });
+
+            if (data) {
+                if (charts.modelDistribution) {
+                    charts.modelDistribution.destroy();
+                }
+
+                const ctx = document.getElementById('model-distribution-chart').getContext('2d');
+                charts.modelDistribution = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Cost (USD)',
+                            data: data.costs,
+                            backgroundColor: [
+                                'rgba(102, 126, 234, 0.8)',
+                                'rgba(118, 75, 162, 0.8)',
+                                'rgba(237, 100, 166, 0.8)',
+                                'rgba(255, 154, 158, 0.8)',
+                            ],
+                            borderColor: [
+                                'rgba(102, 126, 234, 1)',
+                                'rgba(118, 75, 162, 1)',
+                                'rgba(237, 100, 166, 1)',
+                                'rgba(255, 154, 158, 1)',
+                            ],
+                            borderWidth: 2,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false,
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const cost = context.parsed.y;
+                                        const tokens = data.tokens[context.dataIndex];
+                                        return [
+                                            `Cost: $${cost.toFixed(4)}`,
+                                            `Tokens: ${tokens.toLocaleString()}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toFixed(4);
+                                    }
+                                }
+                            },
+                        },
+                    },
+                });
+            }
+        }
+
         async function loadAllData() {
             await Promise.all([
                 loadCostPrediction(),
@@ -766,6 +864,7 @@
                 loadSummary(),
                 loadCostBreakdown(),
                 loadCostTrend(),
+                loadModelDistribution(),
             ]);
         }
 
