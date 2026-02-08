@@ -9,6 +9,19 @@
 
 ## [未發布]
 
+### 新增
+- **用戶分群表優化** (2026-02-09)：新增時長指標欄位與中文化介面
+  - **新欄位**：
+    - 總時長：顯示每位用戶累積的會話時間
+    - 使用天數：顯示每位用戶的活躍天數（不重複）
+  - **中文表頭**：所有欄位標題改為繁體中文，提升使用體驗
+  - **預設篩選**：「全部用戶」篩選器預設選中，顯示所有用戶資料
+  - **後端變更**：更新 `/api/v1/admin/dashboard/user-segmentation` 提供 `total_duration_seconds` 與 `days_used` 欄位
+  - **修改檔案**：
+    - `app/api/v1/admin/dashboard.py`：新增時長/天數的 SQL 聚合運算
+    - `app/templates/admin_dashboard.html`：新增欄位、翻譯表頭、更新篩選預設值
+  - **文件**：新增 `docs/DASHBOARD_BEFORE_AFTER_COMPARISON.md` 詳細前後對比
+
 ### 修正
 - **報告模型名稱記錄修復** (2026-02-09)：修復報告生成時總是記錄 `gemini-1.5-flash-latest` 而非實際使用模型的 bug
   - **問題**：`SessionBillingService.save_analysis_log_and_usage()` 僅檢查 `metadata` 字典中的 `model_name`，但 `ParentsReportService` 將其放在 `token_usage_data` 字典中

@@ -1028,6 +1028,7 @@ def get_user_segments(
         select(
             Counselor.id,
             Counselor.email,
+            Counselor.created_at,
             func.count(func.distinct(SessionUsage.session_id)).label("sessions"),
             func.max(SessionUsage.created_at).label("last_activity"),
             # Calculate total cost: ElevenLabs (from duration) + Gemini (from estimated_cost_usd)
@@ -1035,6 +1036,10 @@ def get_user_segments(
                 func.coalesce(func.sum(SessionUsage.duration_seconds * 0.40 / 3600.0), 0) +
                 func.coalesce(func.sum(SessionAnalysisLog.estimated_cost_usd), 0)
             ).label("total_cost"),
+            # Total duration in seconds
+            func.coalesce(func.sum(SessionUsage.duration_seconds), 0).label("total_duration_seconds"),
+            # Days used (count distinct days with activity)
+            func.count(func.distinct(func.date_trunc("day", SessionUsage.created_at))).label("days_used"),
         )
         .select_from(Counselor)
         .outerjoin(SessionUsage, Counselor.id == SessionUsage.counselor_id)
@@ -1052,7 +1057,7 @@ def get_user_segments(
                 SessionAnalysisLog.analyzed_at >= start_time  # Filter non-NULL records
             )
         )
-        .group_by(Counselor.id, Counselor.email)
+        .group_by(Counselor.id, Counselor.email, Counselor.created_at)
     )
 
     if tenant_id:
@@ -1074,6 +1079,8 @@ def get_user_segments(
         sessions = int(user.sessions)
         last_activity = user.last_activity
         total_cost = float(user.total_cost)
+        total_duration_minutes = round(float(user.total_duration_seconds) / 60, 1)
+        days_used = int(user.days_used)
 
         # No activity at all
         if last_activity is None:
@@ -1082,6 +1089,8 @@ def get_user_segments(
                 "sessions": 0,
                 "last_activity": None,
                 "total_cost_usd": 0,
+                "total_duration_minutes": 0,
+                "days_used": 0,
             })
             continue
 
@@ -1094,6 +1103,8 @@ def get_user_segments(
                 "sessions": sessions,
                 "last_activity": last_activity.strftime("%Y-%m-%d %H:%M"),
                 "total_cost_usd": round(total_cost, 2),
+                "total_duration_minutes": total_duration_minutes,
+                "days_used": days_used,
             })
         # At-risk users (7-30 days inactive)
         elif 7 <= days_inactive < 30:
@@ -1102,6 +1113,8 @@ def get_user_segments(
                 "sessions": sessions,
                 "last_activity": last_activity.strftime("%Y-%m-%d %H:%M"),
                 "days_inactive": days_inactive,
+                "total_duration_minutes": total_duration_minutes,
+                "days_used": days_used,
             })
         # Churned users (30+ days inactive)
         elif days_inactive >= 30:
@@ -1110,6 +1123,8 @@ def get_user_segments(
                 "sessions": sessions,
                 "last_activity": last_activity.strftime("%Y-%m-%d %H:%M"),
                 "days_inactive": days_inactive,
+                "total_duration_minutes": total_duration_minutes,
+                "days_used": days_used,
             })
         # Active users (< 7 days inactive)
         else:
@@ -1118,6 +1133,8 @@ def get_user_segments(
                 "sessions": sessions,
                 "last_activity": last_activity.strftime("%Y-%m-%d %H:%M"),
                 "total_cost_usd": round(total_cost, 2),
+                "total_duration_minutes": total_duration_minutes,
+                "days_used": days_used,
             })
 
     # Calculate averages

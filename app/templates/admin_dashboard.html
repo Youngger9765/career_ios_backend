@@ -461,23 +461,29 @@
                 <div class="white-card">
                     <h2>用戶分群詳情</h2>
                     <div style="margin-bottom: 20px;">
-                        <button class="export-btn" onclick="showSegment('power')">Power Users</button>
-                        <button class="export-btn" onclick="showSegment('active')">Active Users</button>
-                        <button class="export-btn" onclick="showSegment('at_risk')">At-Risk</button>
-                        <button class="export-btn" onclick="showSegment('churned')">Churned</button>
+                        <button class="export-btn" onclick="showSegment('all')" id="btn-all">全部用戶</button>
+                        <button class="export-btn" onclick="showSegment('power')" id="btn-power">Power Users</button>
+                        <button class="export-btn" onclick="showSegment('active')" id="btn-active">Active Users</button>
+                        <button class="export-btn" onclick="showSegment('at_risk')" id="btn-at-risk">At-Risk</button>
+                        <button class="export-btn" onclick="showSegment('churned')" id="btn-churned">Churned</button>
                     </div>
                     <table id="segment-detail-table">
                         <thead id="segment-detail-thead">
                             <tr>
                                 <th>Email</th>
-                                <th>Sessions</th>
-                                <th>Last Activity</th>
-                                <th>Total Cost</th>
+                                <th>對話次數</th>
+                                <th>最後活動</th>
+                                <th>總成本</th>
+                                <th>總時長</th>
+                                <th>使用天數</th>
                             </tr>
                         </thead>
                         <tbody id="segment-detail-tbody">
                             <tr>
-                                <td colspan="4" style="text-align: center; color: #64748b;">請選擇一個用戶分群</td>
+                                <td colspan="6" class="loading">
+                                    <div class="spinner"></div>
+                                    Loading...
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -665,6 +671,9 @@
 
                 document.getElementById('at-risk-count').textContent = data.at_risk_users.count;
                 document.getElementById('churned-count').textContent = data.churned_users.count;
+
+                // Show all users by default
+                showSegment('all');
             }
         }
 
@@ -675,19 +684,35 @@
             const thead = document.getElementById('segment-detail-thead');
             tbody.innerHTML = '';
 
-            let users = [];
-            let headers = ['Email', 'Sessions', 'Last Activity', 'Total Cost'];
+            // Remove active class from all buttons
+            ['btn-all', 'btn-power', 'btn-active', 'btn-at-risk', 'btn-churned'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.style.opacity = '0.7';
+            });
 
-            if (type === 'power') {
+            // Set active button
+            const activeBtn = document.getElementById(`btn-${type}`);
+            if (activeBtn) activeBtn.style.opacity = '1';
+
+            let users = [];
+            let headers = ['Email', '對話次數', '最後活動', '總成本', '總時長', '使用天數'];
+
+            if (type === 'all') {
+                // Combine all users
+                users = [
+                    ...userSegments.power_users.users,
+                    ...userSegments.active_users.users,
+                    ...userSegments.at_risk_users.users,
+                    ...userSegments.churned_users.users,
+                ];
+            } else if (type === 'power') {
                 users = userSegments.power_users.users;
             } else if (type === 'active') {
                 users = userSegments.active_users.users;
             } else if (type === 'at_risk') {
                 users = userSegments.at_risk_users.users;
-                headers = ['Email', 'Sessions', 'Last Activity', 'Days Inactive'];
             } else if (type === 'churned') {
                 users = userSegments.churned_users.users;
-                headers = ['Email', 'Sessions', 'Last Activity', 'Days Inactive'];
             }
 
             // Update thead
@@ -695,26 +720,24 @@
 
             users.forEach(user => {
                 const row = document.createElement('tr');
-                if (type === 'at_risk' || type === 'churned') {
-                    row.innerHTML = `
-                        <td>${user.email}</td>
-                        <td>${user.sessions}</td>
-                        <td>${user.last_activity || 'Never'}</td>
-                        <td>${user.days_inactive || '-'} 天</td>
-                    `;
-                } else {
-                    row.innerHTML = `
-                        <td>${user.email}</td>
-                        <td>${user.sessions}</td>
-                        <td>${user.last_activity}</td>
-                        <td>$${(user.total_cost_usd || 0).toFixed(2)}</td>
-                    `;
-                }
+                const lastActivity = user.last_activity || 'Never';
+                const totalCost = (user.total_cost_usd !== undefined) ? `$${user.total_cost_usd.toFixed(2)}` : '-';
+                const totalDuration = (user.total_duration_minutes !== undefined) ? `${user.total_duration_minutes} 分鐘` : '-';
+                const daysUsed = (user.days_used !== undefined) ? `${user.days_used} 天` : '-';
+
+                row.innerHTML = `
+                    <td>${user.email}</td>
+                    <td>${user.sessions}</td>
+                    <td>${lastActivity}</td>
+                    <td>${totalCost}</td>
+                    <td>${totalDuration}</td>
+                    <td>${daysUsed}</td>
+                `;
                 tbody.appendChild(row);
             });
 
             if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #64748b;">暫無數據</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #64748b;">暫無數據</td></tr>';
             }
         }
 
