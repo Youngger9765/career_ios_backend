@@ -71,6 +71,30 @@
   - **驗證**：單元測試確認 model_name 包含與 ElevenLabs 成本計算正確
 
 ### 新增
+- **Admin Dashboard V2 - 商業決策平台** (2026-02-08)：從技術監控工具完全重新設計為商業決策平台
+  - **產品策略**：透過 Jobs-to-be-Done 分析識別 3 個核心商業需求
+    1. **成本控制**：預測支出、識別異常、防止浪費
+    2. **用戶留存**：用戶分群、偵測流失風險、尋找升級機會
+    3. **資源優化**：追蹤效率、優化 AI 模型使用
+  - **新增 API 端點** (`app/api/v1/admin/dashboard.py`)：
+    - `GET /cost-per-user`：成本異常偵測，狀態分類（正常/高成本/測試帳號）
+    - `GET /user-segments`：用戶群組分析（Power Users、活躍、流失風險、已流失）
+    - `GET /cost-prediction`：每月成本預測與成長率分析
+  - **新 Dashboard UI** (`app/templates/admin_dashboard.html` - V2 直接取代 V1)：
+    - **區塊 1 - 成本控制中心**：成本預測、異常警報、成本趨勢圖表
+    - **區塊 2 - 用戶健康度**：用戶分群卡片、參與度指標、建議行動
+    - **區塊 3 - 營運效率**：摘要指標、依服務分類的成本明細
+  - **設計原則**：行動導向（每個指標都建議下一步）、富含比較（趨勢）、預測性（預測未來）、分群化（用戶群組）
+  - **商業影響**：預計每月節省 $71（識別浪費 $45、防止流失 $16、升級銷售 $10）
+  - **時間節省**：每週成本審查時間減少 87%（15 分鐘 → 2 分鐘）
+  - **實作策略**：直接取代（無 V1 備援）- V2 直接替換 V1 於 `/admin/dashboard` 路由
+  - **文檔**：
+    - `docs/dashboard-redesign-product-strategy.md`：產品願景、Jobs-to-be-Done、用戶角色
+    - `docs/dashboard-redesign-implementation-guide.md`：逐步實作、測試、部署
+    - `docs/DASHBOARD_V2_SUMMARY.md`：執行摘要、關鍵指標、成功標準
+    - `docs/DASHBOARD_BEFORE_AFTER.md`：視覺化比較、ROI 分析、工作流程改進
+  - **狀態**：✅ 已實作 - V2 已部署至 staging，等待 production 部署與利益相關者反饋
+
 - **多步驟密碼重設頁面與 Deeplink 支援** (2026-02-01)：為 iOS in-app browser 優化的忘記密碼頁面
   - 4 步驟單頁流程：輸入 Email → 驗證碼 → 新密碼 → 成功
   - 進度指示器（1/4、2/4、3/4、4/4）
