@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Pricing Module Refactoring** (2026-02-08): Eliminated duplicate model entries in `app/core/pricing.py`
+  - **Problem**: `MODEL_PRICING_MAP` had 6 entries (3 models × 2 formats each) - unprefixed (`gemini-*`) and prefixed (`models/gemini-*`)
+  - **Solution**: Added `normalize_model_name()` function to remove "models/" prefix before lookup
+  - **Result**: Reduced `MODEL_PRICING_MAP` from 6 entries to 3 entries (50% reduction)
+  - **Backward Compatibility**: Both formats still work - `get_model_pricing("gemini-1.5-flash-latest")` and `get_model_pricing("models/gemini-1.5-flash-latest")` return identical results
+  - **Benefits**:
+    - Eliminates code duplication (one source of truth per model)
+    - Reduces maintenance burden (update pricing in one place, not two)
+    - Prevents inconsistencies between duplicate entries
+    - Handles both Google Gemini API formats (Vertex AI returns "models/*", Generative AI SDK returns unprefixed)
+  - **Files Modified**:
+    - `app/core/pricing.py`: Added `normalize_model_name()`, removed duplicate entries, updated `get_model_pricing()` and `calculate_cost_for_model()` docstrings
+  - **Testing**: All integration tests pass (9 passed, 4 skipped), custom verification script confirmed both formats work identically
+  - **Impact**: No breaking changes - existing code using either format continues to work
+
 ### Fixed
 - **Gemini 3 Flash Pricing Configuration** (2026-02-08): Added missing pricing configuration for `gemini-3-flash-preview` model
   - **Issue**: `app/core/pricing.py` was missing pricing for `gemini-3-flash-preview`, causing `KeyError` when calculating costs
