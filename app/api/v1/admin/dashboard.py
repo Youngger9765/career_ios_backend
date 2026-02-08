@@ -458,7 +458,11 @@ def get_model_distribution(
             "tokens": [1234567, 567890, ...]
         }
     """
-    from app.core.pricing import MODEL_PRICING_MAP, calculate_gemini_cost
+    from app.core.pricing import (
+        MODEL_PRICING_MAP,
+        calculate_gemini_cost,
+        normalize_model_name,
+    )
 
     start_time = get_time_filter(time_range)
 
@@ -491,8 +495,8 @@ def get_model_distribution(
         output_tokens = int(row.output_tokens)
         total_tokens = input_tokens + output_tokens
 
-        # Get pricing info
-        pricing = MODEL_PRICING_MAP.get(model_name)
+        # Get pricing info (normalize model name to handle both "models/gemini-*" and "gemini-*" formats)
+        pricing = MODEL_PRICING_MAP.get(normalize_model_name(model_name))
         if not pricing:
             logger.warning(f"Unknown model in distribution: {model_name}")
             continue
