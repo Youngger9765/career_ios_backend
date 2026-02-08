@@ -130,8 +130,9 @@ class SessionBillingService:
                 rag_similarity_threshold=metadata.get("rag_similarity_threshold"),
                 rag_search_time_ms=metadata.get("rag_search_time_ms"),
                 # Model metadata
-                provider=metadata.get("provider", "gemini"),
-                model_name=metadata.get("model_name")
+                provider=token_usage_data.get("provider") or metadata.get("provider", "gemini"),
+                model_name=token_usage_data.get("model_name")
+                or metadata.get("model_name")
                 or self._get_default_model_name(metadata),
                 model_version=metadata.get("model_version", "1.5"),
                 # Timing breakdown

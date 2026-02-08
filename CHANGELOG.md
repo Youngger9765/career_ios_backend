@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Model Name Logging for Reports** (2026-02-09): Fixed bug where report generation always logged `gemini-1.5-flash-latest` instead of actual model used
+  - **Issue**: `SessionBillingService.save_analysis_log_and_usage()` only checked `metadata` dict for `model_name`, but `ParentsReportService` passed it in `token_usage_data` dict
+  - **Impact**:
+    - Production reports using `gemini-3-flash-preview` were incorrectly logged as `gemini-1.5-flash-latest`
+    - Dashboard model distribution showed incorrect data
+    - Cost calculations used wrong pricing (though close enough to not immediately notice)
+  - **Root Cause**: Fallback value `"gemini-1.5-flash-latest"` masked the bug by being a valid model
+  - **Fix**: Modified `session_billing_service.py` to check `token_usage_data` first, then `metadata`, then fallback
+  - **Files Modified**:
+    - `app/services/analysis/session_billing_service.py` (Lines 133-136): Added `token_usage_data.get("model_name")` as first priority
+  - **Verification**: Generated test report in production, confirmed `gemini-3-flash-preview` now correctly logged
+  - **Testing**: All 466 integration tests pass
+  - **Affects**: Report generation, Quick Feedback, Deep Analyze - all analysis types using `save_analysis_log_and_usage()`
+
 ### Changed
 - **Pricing Module Refactoring** (2026-02-08): Eliminated duplicate model entries in `app/core/pricing.py`
   - **Problem**: `MODEL_PRICING_MAP` had 6 entries (3 models × 2 formats each) - unprefixed (`gemini-*`) and prefixed (`models/gemini-*`)

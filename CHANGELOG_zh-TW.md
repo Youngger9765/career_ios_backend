@@ -10,6 +10,21 @@
 ## [未發布]
 
 ### 修正
+- **報告模型名稱記錄修復** (2026-02-09)：修復報告生成時總是記錄 `gemini-1.5-flash-latest` 而非實際使用模型的 bug
+  - **問題**：`SessionBillingService.save_analysis_log_and_usage()` 僅檢查 `metadata` 字典中的 `model_name`，但 `ParentsReportService` 將其放在 `token_usage_data` 字典中
+  - **影響**：
+    - 使用 `gemini-3-flash-preview` 的生產環境報告被錯誤記錄為 `gemini-1.5-flash-latest`
+    - Dashboard 模型分佈顯示錯誤數據
+    - 成本計算使用錯誤定價（雖然接近到不易察覺）
+  - **根本原因**：Fallback 值 `"gemini-1.5-flash-latest"` 是合法模型，掩蓋了 bug
+  - **修復**：修改 `session_billing_service.py`，優先檢查 `token_usage_data`，再檢查 `metadata`，最後 fallback
+  - **修改檔案**：
+    - `app/services/analysis/session_billing_service.py` (第 133-136 行)：新增 `token_usage_data.get("model_name")` 為第一優先級
+  - **驗證**：在生產環境生成測試報告，確認現在正確記錄 `gemini-3-flash-preview`
+  - **測試**：全部 466 項整合測試通過
+  - **影響範圍**：報告生成、Quick Feedback、Deep Analyze - 所有使用 `save_analysis_log_and_usage()` 的分析類型
+
+### 修正
 - **Gemini 3 Flash 定價配置** (2026-02-08)：新增缺少的 `gemini-3-flash-preview` 模型定價配置
   - **問題**：`app/core/pricing.py` 缺少 `gemini-3-flash-preview` 定價，導致計算成本時發生 `KeyError`
   - **影響**：Dashboard 成本計算失敗、報告生成成本未追蹤、潛在 API 故障
