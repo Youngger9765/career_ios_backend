@@ -170,7 +170,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 async def root(request: Request) -> Response:
     """Root endpoint - Landing Page for end users"""
     return templates.TemplateResponse(
-        "landing.html",
+        "landing_scroll.html",
         {
             "request": request,
             "version": settings.APP_VERSION,
