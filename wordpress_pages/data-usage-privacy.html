@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>浮島親子 App 資料使用說明</title>
+</head>
+<body>
+    <!-- 🆕 複製到 WordPress 按鈕 -->
+    <button id="copyPageBtn" class="copy-page-button">📋 複製到 WordPress</button>
+
+    <div class="island-parents-page">
+        <style>
+            /* 複製按鈕樣式 */
+            .copy-page-button {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+
+                background: #667eea;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 20px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                transition: all 0.3s ease;
+            }
+
+            .copy-page-button:hover {
+                background: #5568d3;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+            }
+
+            .copy-page-button:active {
+                transform: translateY(0);
+            }
+
+            .copy-page-button.copied {
+                background: #10b981;
+            }
+
+            @media (max-width: 768px) {
+                .copy-page-button {
+                    top: 10px;
+                    right: 10px;
+                    padding: 10px 16px;
+                    font-size: 14px;
+                }
+            }
+
+        <style>
+            .island-parents-page {
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 40px 20px;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
+                color: #2d3748;
+                line-height: 1.6;
+            }
+
+            .island-parents-page h1 {
+                font-size: 32px;
+                font-weight: 700;
+                color: #667eea;
+                margin-bottom: 30px;
+                border-bottom: 3px solid #667eea;
+                padding-bottom: 10px;
+            }
+
+            .island-parents-page h2 {
+                font-size: 24px;
+                font-weight: 600;
+                margin-top: 40px;
+                margin-bottom: 20px;
+                color: #4a5568;
+            }
+
+            .island-parents-page h3 {
+                font-size: 20px;
+                font-weight: 600;
+                margin-top: 30px;
+                margin-bottom: 15px;
+                color: #4a5568;
+            }
+
+            .island-parents-page p {
+                margin-bottom: 15px;
+                line-height: 1.8;
+            }
+
+            .island-parents-page ul,
+            .island-parents-page ol {
+                margin-left: 25px;
+                margin-bottom: 20px;
+            }
+
+            .island-parents-page li {
+                margin-bottom: 10px;
+                line-height: 1.8;
+            }
+
+            .island-parents-page a {
+                color: #667eea;
+                text-decoration: none;
+                border-bottom: 1px solid transparent;
+                transition: border-color 0.3s;
+            }
+
+            .island-parents-page a:hover {
+                border-bottom-color: #667eea;
+            }
+
+            .island-parents-page strong {
+                font-weight: 600;
+                color: #2d3748;
+            }
+
+            .island-parents-page .highlight-box {
+                background: #f7fafc;
+                padding: 20px;
+                border-left: 4px solid #667eea;
+                border-radius: 8px;
+                margin: 20px 0;
+            }
+
+            @media (max-width: 768px) {
+                .island-parents-page {
+                    padding: 20px 15px;
+                }
+
+                .island-parents-page h1 {
+                    font-size: 24px;
+                }
+
+                .island-parents-page h2 {
+                    font-size: 20px;
+                }
+
+                .island-parents-page h3 {
+                    font-size: 18px;
+                }
+            }
+        </style>
+
+        <h1>浮島親子 App 資料使用說明</h1>
+
+        <div class="highlight-box">
+            <p><strong>核心承諾：</strong>我們不販售、不出租、不交換任何使用者資料，且承諾不進行廣告投放或建構兒童行為檔案。</p>
+        </div>
+
+        <h2>一、資料收集原則</h2>
+        <p>浮島親子 App 遵循「<strong>最低必要資料</strong>」與「<strong>使用者完全可控</strong>」的原則，我們只收集維持服務運作所必需的資料，並確保您對自己的資料擁有完整控制權。</p>
+
+        <h2>二、我們收集的資料類型</h2>
+
+        <h3>1. 帳號資料</h3>
+        <ul>
+            <li><strong>電子郵件：</strong>用於帳號登入驗證與重要通知</li>
+            <li><strong>裝置識別資訊：</strong>用於系統安全與防止濫用</li>
+        </ul>
+
+        <h3>2. 使用行為資料</h3>
+        <ul>
+            <li><strong>應用程式使用次數：</strong>幫助我們了解功能使用頻率</li>
+            <li><strong>功能狀態：</strong>用於優化使用者體驗與功能設計</li>
+        </ul>
+        <p><em>註：這些資料僅供內部功能優化使用，不會與第三方分享。</em></p>
+
+        <h3>3. 互動內容</h3>
+        <ul>
+            <li><strong>對話紀錄：</strong>您與應用程式的互動內容</li>
+            <li><strong>回饋意見：</strong>您主動提供的建議與回饋</li>
+        </ul>
+        <p><strong>預設完全私密：</strong>所有互動內容預設為私密狀態，不會用於 AI 訓練或研究用途。</p>
+
+        <h2>三、我們「不做」的事</h2>
+
+        <div class="highlight-box">
+            <ul>
+                <li>❌ <strong>不將資料提供給廣告平台</strong></li>
+                <li>❌ <strong>不追蹤跨平台行為</strong></li>
+                <li>❌ <strong>不建立個人化廣告推薦</strong></li>
+                <li>❌ <strong>不建構兒童行為檔案</strong></li>
+                <li>❌ <strong>不販售或交換使用者資料</strong></li>
+            </ul>
+        </div>
+
+        <h2>四、兒童隱私保護</h2>
+        <p>浮島親子 App 特別重視兒童隱私：</p>
+        <ul>
+            <li>應用程式僅供<strong>家長或照顧者</strong>使用，兒童不直接操作</li>
+            <li>所有涉及兒童的資料均由家長完全控制</li>
+            <li>家長可隨時刪除或匿名化相關資料</li>
+        </ul>
+
+        <h2>五、您的資料權利</h2>
+        <p>您對自己的資料擁有以下權利：</p>
+
+        <h3>資料存取權</h3>
+        <p>您可以隨時在應用程式內查看自己的所有資料。</p>
+
+        <h3>資料刪除權</h3>
+        <p>您可以隨時申請刪除帳號與相關資料。刪除後：</p>
+        <ul>
+            <li>系統將移除所有可識別您的個人資料</li>
+            <li>已匿名化的統計資料可能保留用於服務改善</li>
+            <li>刪除操作<strong>無法復原</strong>，請謹慎操作</li>
+        </ul>
+
+        <h3>資料可攜權</h3>
+        <p>您可以申請匯出自己的資料副本。</p>
+
+        <h2>六、資料安全措施</h2>
+        <p>我們採取以下措施保護您的資料安全：</p>
+        <ul>
+            <li>使用業界標準的加密技術保護資料傳輸</li>
+            <li>定期進行安全性檢測與更新</li>
+            <li>嚴格限制內部人員資料存取權限</li>
+            <li>採用安全的雲端服務供應商（符合國際資料保護標準）</li>
+        </ul>
+
+        <h2>七、資料保存期限</h2>
+        <ul>
+            <li><strong>帳號資料：</strong>保存至您刪除帳號為止</li>
+            <li><strong>互動內容：</strong>保存至您刪除帳號或主動刪除特定內容為止</li>
+            <li><strong>匿名統計資料：</strong>可能長期保存用於服務改善</li>
+        </ul>
+
+        <h2>八、政策更新</h2>
+        <p>我們可能會不定期更新本隱私政策。重大變更時，我們會透過以下方式通知您：</p>
+        <ul>
+            <li>在應用程式內顯示更新通知</li>
+            <li>透過註冊電子郵件發送通知</li>
+            <li>在官方網站公告</li>
+        </ul>
+
+        <h2>九、聯絡我們</h2>
+        <p>如果您對本隱私政策或資料使用有任何疑問，歡迎透過以下方式聯繫我們：</p>
+        <div class="highlight-box">
+            <p><strong>客服信箱：</strong><a href="mailto:cc_bds@careercreator.tw">cc_bds@careercreator.tw</a></p>
+        </div>
+
+        <p style="margin-top: 40px; font-size: 14px; color: #718096;">最後更新日期：2025 年 2 月</p>
+    </div>
+
+    <!-- 🆕 複製功能的 JavaScript -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const copyBtn = document.getElementById('copyPageBtn');
+
+        copyBtn.addEventListener('click', async function() {
+            try {
+                // 複製前先移除按鈕本身（避免 WordPress 頁面也有按鈕）
+                const cleanHtml = document.documentElement.cloneNode(true);
+                const btnInClone = cleanHtml.querySelector('#copyPageBtn');
+                if (btnInClone) btnInClone.remove();
+
+                // 取得整個頁面的 HTML（包含 DOCTYPE）
+                const htmlContent = '<!DOCTYPE html>\n' + cleanHtml.outerHTML;
+
+                // 複製到剪貼簿
+                await navigator.clipboard.writeText(htmlContent);
+
+                // 顯示成功提示
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✅ 已複製！';
+                copyBtn.classList.add('copied');
+
+                // 3 秒後恢復
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.classList.remove('copied');
+                }, 3000);
+
+            } catch (err) {
+                // 如果 Clipboard API 不支援，使用 fallback
+                fallbackCopyTextToClipboard();
+            }
+        });
+
+        // Fallback 方法（相容舊瀏覽器）
+        function fallbackCopyTextToClipboard() {
+            const cleanHtml = document.documentElement.cloneNode(true);
+            const btnInClone = cleanHtml.querySelector('#copyPageBtn');
+            if (btnInClone) btnInClone.remove();
+
+            const htmlContent = '<!DOCTYPE html>\n' + cleanHtml.outerHTML;
+
+            const textArea = document.createElement('textarea');
+            textArea.value = htmlContent;
+            textArea.style.position = 'fixed';
+            textArea.style.top = '0';
+            textArea.style.left = '0';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                document.execCommand('copy');
+                copyBtn.textContent = '✅ 已複製！';
+                copyBtn.classList.add('copied');
+
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 複製到 WordPress';
+                    copyBtn.classList.remove('copied');
+                }, 3000);
+            } catch (err) {
+                alert('複製失敗，請手動選取並複製頁面內容');
+            }
+
+            document.body.removeChild(textArea);
+        }
+    });
+    </script>
+</body>
+</html>
