@@ -1885,7 +1885,7 @@ Content-Type: application/json
 }
 ```
 
-> `password` 欄位為選填，目前不做驗證。
+> **`password` 欄位為選填，目前不做驗證。** 用戶已通過 Bearer Token 認證（已登入），身份已確認，因此不需要再次輸入密碼。iOS 端可傳 `null`、省略、或傳空 JSON `{}`，效果皆相同。
 
 **Response (200):**
 ```json
