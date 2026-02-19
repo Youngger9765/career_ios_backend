@@ -589,11 +589,70 @@ func isEmailVerified(token: String) -> Bool {
 
 ---
 
-### 2.3 忘記密碼（4 步驟驗證碼流程）
+### 2.3 Delete Account (刪除帳號)
+
+**Endpoint**: `POST /api/auth/delete-account`
+**認證**: Bearer Token required
+
+#### Request
+
+```json
+{
+  "password": "optional_string_or_null"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "message": "Account deleted successfully"
+}
+```
+
+#### Swift 範例
+
+```swift
+func deleteAccount() async throws {
+    guard let token = UserDefaults.standard.string(forKey: "access_token") else {
+        throw AuthError.notAuthenticated
+    }
+
+    var request = URLRequest(url: URL(string: "\(baseURL)/api/auth/delete-account")!)
+    request.httpMethod = "POST"
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.httpBody = "{}".data(using: .utf8)
+
+    let (_, response) = try await URLSession.shared.data(for: request)
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200 else {
+        throw AuthError.deleteFailed
+    }
+
+    // Clear local data
+    UserDefaults.standard.removeObject(forKey: "access_token")
+}
+```
+
+#### Error Codes
+
+| Status | 說明 |
+|--------|------|
+| 200 | 帳號刪除成功 |
+| 401 | Token 無效或過期 |
+| 403 | 未登入 |
+| 500 | 伺服器錯誤 |
+
+> **Note**: 此為 Soft Delete，帳號資料保留可恢復。刪除後 Token 立即失效。如需恢復帳號，請聯繫管理員。
+
+---
+
+### 2.4 忘記密碼（4 步驟驗證碼流程）
 
 **⚠️ iOS 開發重點：使用 SFSafariViewController 開啟 Web 頁面處理，成功後自動 Deeplink 返回 App**
 
-#### 2.3.1 忘記密碼頁面 URL
+#### 2.4.1 忘記密碼頁面 URL
 
 **Staging 環境**：
 ```
@@ -642,7 +701,7 @@ class LoginViewController: UIViewController {
 }
 ```
 
-#### 2.3.2 完整 4 步驟驗證碼流程（給 PM 參考）
+#### 2.4.2 完整 4 步驟驗證碼流程（給 PM 參考）
 
 ```mermaid
 sequenceDiagram
@@ -693,7 +752,7 @@ sequenceDiagram
     User->>iOS: 25. 用新密碼登入 ✅
 ```
 
-#### 2.3.3 4 步驟流程說明
+#### 2.4.3 4 步驟流程說明
 
 **新版密碼重設流程使用驗證碼而非 Token，提供更安全且即時的體驗：**
 
@@ -727,7 +786,7 @@ sequenceDiagram
 - 如果 3 秒內 App 未接收 Deeplink（如 App 被關閉）
 - 頁面自動跳轉到網頁登入頁面 `/island-parents`
 
-#### 2.3.4 iOS Deeplink 整合
+#### 2.4.4 iOS Deeplink 整合
 
 **1. 註冊 URL Scheme (Info.plist)**
 
@@ -836,7 +895,7 @@ class ForgotPasswordViewController: UIViewController {
 }
 ```
 
-#### 2.3.5 新舊版本差異
+#### 2.4.5 新舊版本差異
 
 | 項目 | 舊版（Token-based） | 新版（Verification Code） |
 |------|------------------|-------------------------|
@@ -853,7 +912,7 @@ class ForgotPasswordViewController: UIViewController {
 - ✅ **更流暢**：自動 Deeplink 返回 App，無需手動操作
 - ✅ **更直觀**：4 步驟進度條，清楚知道目前進度
 
-#### 2.3.6 測試方式
+#### 2.4.6 測試方式
 
 **手動測試**：
 1. 在 iOS 模擬器或實機開啟 App
@@ -876,21 +935,21 @@ class ForgotPasswordViewController: UIViewController {
 
 ---
 
-### 2.4 Token 使用
+### 2.5 Token 使用
 所有需認證的 API 都需要在 Header 加上：
 ```
 Authorization: Bearer <access_token>
 ```
 
-### 2.5 Token 有效期
+### 2.6 Token 有效期
 - **有效期**: 90 天 (7776000 秒)
 - **建議**: 儲存於 Keychain，到期前自動更新
 
 ---
 
-## 2.6 Client & Case 管理 (Island Parents)
+## 2.7 Client & Case 管理 (Island Parents)
 
-### 2.6.1 創建孩子與案例
+### 2.7.1 創建孩子與案例
 
 **用途**: 在開始錄音前，必須先建立孩子（Client）與案例（Case）
 
@@ -1066,7 +1125,7 @@ do {
 }
 ```
 
-### 2.6.2 列出所有孩子
+### 2.7.2 列出所有孩子
 
 **用途**: 首頁顯示所有孩子列表、切換不同孩子的對話歷史
 
@@ -1192,9 +1251,9 @@ func listClientCases(skip: Int = 0, limit: Int = 20) async throws -> ClientCaseL
 
 ---
 
-## 2.7 使用量統計 API
+## 2.8 使用量統計 API
 
-### 2.7.1 取得使用量統計
+### 2.8.1 取得使用量統計
 
 **端點:** `GET /api/v1/usage/stats`
 
