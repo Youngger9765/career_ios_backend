@@ -28,6 +28,8 @@ from app.models.counselor import Counselor
 from app.schemas.auth import (
     CounselorInfo,
     CounselorUpdate,
+    DeleteAccountRequest,
+    DeleteAccountResponse,
     LoginRequest,
     LoginResponse,
     RegisterRequest,
@@ -421,3 +423,46 @@ async def resend_verification(
     )
 
     return ResendVerificationResponse(message="Verification email sent")
+
+
+@router.post("/delete-account", response_model=DeleteAccountResponse)
+def delete_account(
+    data: DeleteAccountRequest,
+    request: Request,
+    current_user: Counselor = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> DeleteAccountResponse:
+    """
+    Soft delete account by anonymizing user data
+
+    Args:
+        data: Delete account request (password optional, not validated)
+        request: FastAPI request
+        current_user: Current authenticated counselor
+        db: Database session
+
+    Returns:
+        DeleteAccountResponse with success message
+
+    Raises:
+        HTTPException: 500 if deletion fails
+    """
+    try:
+        timestamp = int(datetime.now(timezone.utc).timestamp())
+        current_user.email = f"deleted_{timestamp}_{current_user.email}"
+        current_user.username = None
+        current_user.full_name = None
+        current_user.phone = None
+        current_user.is_active = False
+        current_user.deleted_at = datetime.now(timezone.utc)
+
+        db.commit()
+
+        return DeleteAccountResponse(message="Account deleted successfully")
+
+    except Exception as e:
+        db.rollback()
+        raise InternalServerError(
+            detail=f"Failed to delete account: {str(e)}",
+            instance=str(request.url.path),
+        )

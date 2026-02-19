@@ -517,3 +517,131 @@ class TestAuthAPI:
             )
 
             assert response.status_code == 422  # Validation error
+
+    def test_delete_account_success(self, db_session: Session):
+        """Test successful account deletion soft deletes user data"""
+        with TestClient(app) as client:
+            # Create test counselor
+            counselor = Counselor(
+                id=uuid4(),
+                email="deleteme@example.com",
+                username="deletemeuser",
+                full_name="Delete Me",
+                phone="+1234567890",
+                hashed_password=hash_password("ValidP@ssw0rd123"),
+                tenant_id="career",
+                role="counselor",
+                is_active=True,
+            )
+            db_session.add(counselor)
+            db_session.commit()
+
+            # Login to get token
+            login_response = client.post(
+                "/api/auth/login",
+                json={
+                    "email": "deleteme@example.com",
+                    "password": "ValidP@ssw0rd123",
+                    "tenant_id": "career",
+                },
+            )
+            token = login_response.json()["access_token"]
+
+            # Delete account
+            response = client.post(
+                "/api/auth/delete-account",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"password": "ValidP@ssw0rd123"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["message"] == "Account deleted successfully"
+
+            # Verify in database
+            from sqlalchemy import select
+
+            db_session.expire_all()
+            result = db_session.execute(
+                select(Counselor).where(Counselor.id == counselor.id)
+            )
+            updated_counselor = result.scalar_one_or_none()
+            assert updated_counselor is not None
+            assert updated_counselor.email.startswith("deleted_")
+            assert "deleteme@example.com" in updated_counselor.email
+            assert updated_counselor.username is None
+            assert updated_counselor.full_name is None
+            assert updated_counselor.phone is None
+            assert updated_counselor.is_active is False
+            assert updated_counselor.deleted_at is not None
+            assert updated_counselor.hashed_password is not None
+
+    def test_delete_account_no_token(self):
+        """Test delete account without token returns 403"""
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/auth/delete-account",
+                json={"password": "ValidP@ssw0rd123"},
+            )
+
+            assert response.status_code == 403
+
+    def test_delete_account_invalid_token(self):
+        """Test delete account with invalid token returns 401"""
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/auth/delete-account",
+                headers={"Authorization": "Bearer invalid_token_here"},
+                json={"password": "ValidP@ssw0rd123"},
+            )
+
+            assert response.status_code == 401
+
+    def test_delete_account_cannot_login_after(self, db_session: Session):
+        """Test that deleted account cannot login again"""
+        with TestClient(app) as client:
+            # Create test counselor
+            counselor = Counselor(
+                id=uuid4(),
+                email="deletenologin@example.com",
+                username="deletenologin",
+                full_name="Delete No Login",
+                hashed_password=hash_password("ValidP@ssw0rd123"),
+                tenant_id="career",
+                role="counselor",
+                is_active=True,
+            )
+            db_session.add(counselor)
+            db_session.commit()
+
+            # Login to get token
+            login_response = client.post(
+                "/api/auth/login",
+                json={
+                    "email": "deletenologin@example.com",
+                    "password": "ValidP@ssw0rd123",
+                    "tenant_id": "career",
+                },
+            )
+            token = login_response.json()["access_token"]
+
+            # Delete account
+            delete_response = client.post(
+                "/api/auth/delete-account",
+                headers={"Authorization": f"Bearer {token}"},
+                json={},
+            )
+            assert delete_response.status_code == 200
+
+            # Try to login again with original credentials (should fail because email was changed)
+            login_again_response = client.post(
+                "/api/auth/login",
+                json={
+                    "email": "deletenologin@example.com",
+                    "password": "ValidP@ssw0rd123",
+                    "tenant_id": "career",
+                },
+            )
+
+            assert login_again_response.status_code == 401
+            assert "Incorrect email, password, or tenant ID" in login_again_response.json()["detail"]
