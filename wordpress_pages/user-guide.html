@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>浮島親子 APP｜使用指南</title>
+</head>
+<body>
+    <!-- 🆕 複製到 WordPress 按鈕 -->
+    <button id="copyPageBtn" class="copy-page-button">📋 複製到 WordPress</button>
+
+    <div class="island-parents-page">
+        <style>
+            /* 複製按鈕樣式 */
+            .copy-page-button {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+
+                background: #667eea;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 12px 20px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                transition: all 0.3s ease;
+            }
+
+            .copy-page-button:hover {
+                background: #5568d3;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+            }
+
+            .copy-page-button:active {
+                transform: translateY(0);
+            }
+
+            .copy-page-button.copied {
+                background: #10b981;
+            }
+
+            @media (max-width: 768px) {
+                .copy-page-button {
+                    top: 10px;
+                    right: 10px;
+                    padding: 10px 16px;
+                    font-size: 14px;
+                }
+            }
+
+        <style>
+            .island-parents-page {
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 40px 20px;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
+                color: #2d3748;
+                line-height: 1.6;
+            }
+
+            .island-parents-page h1 {
+                font-size: 32px;
+                font-weight: 700;
+                color: #667eea;
+                margin-bottom: 30px;
+                border-bottom: 3px solid #667eea;
+                padding-bottom: 10px;
+            }
+
+            .island-parents-page .subtitle {
+                font-size: 18px;
+                color: #718096;
+                font-style: italic;
+                margin-top: -20px;
+                margin-bottom: 40px;
+            }
+
+            .island-parents-page h2 {
+                font-size: 24px;
+                font-weight: 600;
+                margin-top: 40px;
+                margin-bottom: 20px;
+                color: #4a5568;
+            }
+
+            .island-parents-page h3 {
+                font-size: 20px;
+                font-weight: 600;
+                margin-top: 30px;
+                margin-bottom: 15px;
+                color: #4a5568;
+            }
+
+            .island-parents-page p {
+                margin-bottom: 15px;
+                line-height: 1.8;
+            }
+
+            .island-parents-page ul,
+            .island-parents-page ol {
+                margin-left: 25px;
+                margin-bottom: 20px;
+            }
+
+            .island-parents-page li {
+                margin-bottom: 10px;
+                line-height: 1.8;
+            }
+
+            .island-parents-page a {
+                color: #667eea;
+                text-decoration: none;
+                border-bottom: 1px solid transparent;
+                transition: border-color 0.3s;
+            }
+
+            .island-parents-page a:hover {
+                border-bottom-color: #667eea;
+            }
+
+            .island-parents-page strong {
+                font-weight: 600;
+                color: #2d3748;
+            }
+
+            .island-parents-page .highlight-box {
+                background: #f7fafc;
+                padding: 20px;
+                border-left: 4px solid #667eea;
+                border-radius: 8px;
+                margin: 20px 0;
+            }
+
+            .island-parents-page .step-box {
+                background: #fff;
+                padding: 20px;
+                border: 2px solid #e2e8f0;
+                border-radius: 8px;
+                margin: 15px 0;
+            }
+
+            .island-parents-page .step-number {
+                display: inline-block;
+                width: 30px;
+                height: 30px;
+                background: #667eea;
+                color: white;
+                border-radius: 50%;
+                text-align: center;
+                line-height: 30px;
+                font-weight: bold;
+                margin-right: 10px;
+            }
+
+            .island-parents-page .color-indicator {
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                border-radius: 4px;
+                margin-right: 8px;
+                vertical-align: middle;
+            }
+
+            .island-parents-page .color-green {
+                background: #48bb78;
+            }
+
+            .island-parents-page .color-orange {
+                background: #ed8936;
+            }
+
+            .island-parents-page .color-red {
+                background: #f56565;
+            }
+
+            @media (max-width: 768px) {
+                .island-parents-page {
+                    padding: 20px 15px;
+                }
+
+                .island-parents-page h1 {
+                    font-size: 24px;
+                }
+
+                .island-parents-page h2 {
+                    font-size: 20px;
+                }
+
+                .island-parents-page h3 {
+                    font-size: 18px;
+                }
+
+                .island-parents-page .subtitle {
+                    font-size: 16px;
+                }
+            }
+        </style>
+
+        <h1>浮島親子 APP｜使用指南</h1>
+        <p class="subtitle">"陪你與孩子，一起建立穩定、溫柔而真實的關係"</p>
+
+        <h2>一、浮島是什麼？</h2>
+        <p>浮島親子 App 是一款<strong>專為家長設計的親子對話陪伴工具</strong>，幫助您在親子互動中：</p>
+        <ul>
+            <li><strong>覺察情緒：</strong>辨識當下的情緒狀態，避免情緒失控</li>
+            <li><strong>調整回應：</strong>提供溫和而有效的溝通建議</li>
+            <li><strong>累積正向互動：</strong>建立穩定、信任的親子關係</li>
+        </ul>
+
+        <div class="highlight-box">
+            <p><strong>「情緒緩衝島」的概念：</strong></p>
+            <p>就像在洶湧的海面上有一座小島，讓您可以暫時停下來、深呼吸、重新調整，再以更好的狀態回應孩子。</p>
+        </div>
+
+        <h2>二、適合誰使用？</h2>
+        <p>浮島親子 App 適合：</p>
+        <ul>
+            <li><strong>0-12 歲孩童的父母或主要照顧者</strong></li>
+            <li>在親子溝通上感到挫折或困擾的家長</li>
+            <li>希望改善親子關係、建立更好溝通模式的照顧者</li>
+            <li>想要在育兒路上獲得即時支持的家長</li>
+        </ul>
+
+        <h2>三、開始使用：三步驟上手</h2>
+
+        <div class="step-box">
+            <h3><span class="step-number">1</span>下載與註冊</h3>
+            <ul>
+                <li>前往 App Store 搜尋「浮島親子」</li>
+                <li>使用電子郵件註冊帳號</li>
+                <li>享有 <strong>30 天免費試用期</strong></li>
+            </ul>
+        </div>
+
+        <div class="step-box">
+            <h3><span class="step-number">2</span>進入對話介面</h3>
+            <ul>
+                <li>開啟 App，點選「開始對話」</li>
+                <li>直接描述您遇到的親子情境</li>
+                <li>例如：「孩子不想寫作業，一直拖延怎麼辦？」</li>
+            </ul>
+        </div>
+
+        <div class="step-box">
+            <h3><span class="step-number">3</span>開始練習</h3>
+            <ul>
+                <li>閱讀 App 提供的建議與回應範例</li>
+                <li>嘗試在實際情境中應用</li>
+                <li>持續記錄與調整，累積正向經驗</li>
+            </ul>
+        </div>
+
+        <h2>四、核心功能介紹</h2>
+
+        <h3>1. 即時對話輔助</h3>
+        <p>當您遇到親子溝通困境時，浮島提供：</p>
+        <ul>
+            <li><strong>語氣調整建議：</strong>將可能激化衝突的話語，轉化為溫和而有效的表達</li>
+            <li><strong>關鍵字提醒：</strong>辨識可能傷害關係的用詞（如：責備、比較、威脅）</li>
+            <li><strong>替代表達方式：</strong>提供具體、可操作的溝通範例</li>
+        </ul>
+
+        <h3>2. 顏色提示系統</h3>
+        <p>浮島使用直覺的顏色系統，幫助您快速判斷回應的安全程度：</p>
+        <ul>
+            <li><span class="color-indicator color-green"></span><strong>綠色：</strong>安全的表達方式，可以直接使用</li>
+            <li><span class="color-indicator color-orange"></span><strong>橘色：</strong>需要注意語氣或時機，建議稍作調整</li>
+            <li><span class="color-indicator color-red"></span><strong>紅色：</strong>可能激化衝突，建議重新思考表達方式</li>
+        </ul>
+
+        <h3>3. 個人設定與紀錄</h3>
+        <ul>
+            <li><strong>對話紀錄：</strong>所有互動內容自動儲存，方便回顧</li>
+            <li><strong>個人化設定：</strong>可依需求調整提醒方式與頻率</li>
+            <li><strong>隱私保護：</strong>所有紀錄完全私密，僅您可見</li>
+        </ul>
+
+        <h2>五、實際使用情境</h2>
+
+        <h3>情境一：孩子情緒爆發時</h3>
+        <div class="highlight-box">
+            <p><strong>您的困擾：</strong>「孩子因為不能看電視而大哭大鬧，我快要失去耐心了。」</p>
+            <p><strong>浮島建議：</strong></p>
+            <ul>
+                <li>先辨識您自己的情緒（焦慮？疲憊？挫折？）</li>
+                <li>提供情緒同理的表達方式：「我知道你很想看電視，不能看讓你很難過。」</li>
+                <li>建議溫和而堅定的界線：「但是現在是睡覺時間，明天我們可以一起看。」</li>
+            </ul>
+        </div>
+
+        <h3>情境二：日常溝通卡關時</h3>
+        <div class="highlight-box">
+            <p><strong>您的困擾：</strong>「每次叫孩子做事，他都說『等一下』，然後就忘記了。」</p>
+            <p><strong>浮島建議：</strong></p>
+            <ul>
+                <li>分析可能的原因（孩子正投入其他事情？不清楚時間概念？）</li>
+                <li>提供具體溝通技巧：設定明確時間點、使用計時器、提前預告</li>
+                <li>建議替代表達：「5 分鐘後鬧鐘響，我們就去洗澡喔！」</li>
+            </ul>
+        </div>
+
+        <h2>六、使用原則與提醒</h2>
+
+        <h3>浮島是「輔助工具」，不是替代品</h3>
+        <ul>
+            <li>浮島提供建議與支持，但<strong>不能取代真實的親子互動</strong></li>
+            <li>建議僅供參考，請依實際情況彈性調整</li>
+            <li>重大議題或持續困擾，建議尋求專業諮商協助</li>
+        </ul>
+
+        <h3>使用頻率建議</h3>
+        <p>浮島的設計理念是<strong>「陪伴，而不是打卡」</strong>：</p>
+        <ul>
+            <li>不需要每天使用，有需要時再開啟</li>
+            <li>沒有強制的使用頻率或任務</li>
+            <li>您可以自由決定使用的節奏與方式</li>
+        </ul>
+
+        <h3>合理使用範圍</h3>
+        <ul>
+            <li>設有合理使用上限，避免過度依賴</li>
+            <li>超過上限時服務會暫停，下個週期自動恢復</li>
+            <li>超額<strong>不會另行收費</strong></li>
+        </ul>
+
+        <h2>七、訂閱說明</h2>
+        <ul>
+            <li><strong>免費試用：</strong>新用戶享有 30 天完整功能體驗</li>
+            <li><strong>訂閱制度：</strong>試用期後自動轉為月訂閱制</li>
+            <li><strong>取消方式：</strong>可隨時在 App Store 訂閱管理中取消</li>
+            <li><strong>退款政策：</strong>依 Apple App Store 退款政策辦理</li>
+        </ul>
+
+        <h2>八、浮島的設計哲學</h2>
+        <p>我們相信：</p>
+        <div class="highlight-box">
+            <ul>
+                <li><strong>關係比技巧重要：</strong>再好的溝通技巧，也需要建立在真誠的關係之上</li>
+                <li><strong>陪伴比完美重要：</strong>不需要成為完美父母，只需要持續陪伴與調整</li>
+                <li><strong>過程比結果重要：</strong>親子關係是長期經營，每一次互動都是累積</li>
+            </ul>
+        </div>
+
+        <p>浮島不會讓您變成「完美父母」，但可以陪伴您成為「夠好的父母」——在育兒路上，您不孤單。</p>
+
+        <p style="margin-top: 40px; font-size: 14px; color: #718096;">最後更新日期：2025 年 2 月</p>
+    </div>
+
+    <!-- 🆕 複製功能的 JavaScript -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const copyBtn = document.getElementById('copyPageBtn');
+
+        copyBtn.addEventListener('click', async function() {
+            try {
+                // 複製前先移除按鈕本身（避免 WordPress 頁面也有按鈕）
+                const cleanHtml = document.documentElement.cloneNode(true);
+                const btnInClone = cleanHtml.querySelector('#copyPageBtn');
+                if (btnInClone) btnInClone.remove();
+
+                // 取得整個頁面的 HTML（包含 DOCTYPE）
+                const htmlContent = '<!DOCTYPE html>\n' + cleanHtml.outerHTML;
+
+                // 複製到剪貼簿
+                await navigator.clipboard.writeText(htmlContent);
+
+                // 顯示成功提示
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✅ 已複製！';
+                copyBtn.classList.add('copied');
+
+                // 3 秒後恢復
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.classList.remove('copied');
+                }, 3000);
+
+            } catch (err) {
+                // 如果 Clipboard API 不支援，使用 fallback
+                fallbackCopyTextToClipboard();
+            }
+        });
+
+        // Fallback 方法（相容舊瀏覽器）
+        function fallbackCopyTextToClipboard() {
+            const cleanHtml = document.documentElement.cloneNode(true);
+            const btnInClone = cleanHtml.querySelector('#copyPageBtn');
+            if (btnInClone) btnInClone.remove();
+
+            const htmlContent = '<!DOCTYPE html>\n' + cleanHtml.outerHTML;
+
+            const textArea = document.createElement('textarea');
+            textArea.value = htmlContent;
+            textArea.style.position = 'fixed';
+            textArea.style.top = '0';
+            textArea.style.left = '0';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                document.execCommand('copy');
+                copyBtn.textContent = '✅ 已複製！';
+                copyBtn.classList.add('copied');
+
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 複製到 WordPress';
+                    copyBtn.classList.remove('copied');
+                }, 3000);
+            } catch (err) {
+                alert('複製失敗，請手動選取並複製頁面內容');
+            }
+
+            document.body.removeChild(textArea);
+        }
+    });
+    </script>
+</body>
+</html>

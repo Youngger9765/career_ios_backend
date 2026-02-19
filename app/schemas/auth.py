@@ -215,5 +215,15 @@ class ResendVerificationResponse(BaseModel):
     message: str
 
 
+class DeleteAccountRequest(BaseModel):
+    """Delete account request - password is optional, not validated"""
+    password: Optional[str] = None
+
+
+class DeleteAccountResponse(BaseModel):
+    """Delete account response"""
+    message: str
+
+
 # Resolve forward references for LoginResponse
 LoginResponse.model_rebuild()

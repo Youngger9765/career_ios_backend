@@ -11,6 +11,17 @@
 | Linting | ruff (auto-fix) |
 | Hooks | pre-commit |
 
+## GCP Configuration
+
+| Field | Value |
+|-------|-------|
+| gcloud config | `career-ios-app` |
+| Account | `dev02@careercreator.tw` |
+| GCP Project | `career-creator-card` |
+| Region | `asia-east1` |
+
+> Hook auto-switches. If permission error → `gcloud config configurations activate career-ios-app`
+
 ## Project Type
 
 - **Prototype Backend API**

@@ -1,4 +1,15 @@
-<!-- 隱私權政策 - WordPress Elementor 版本 -->
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隱私權政策 - 浮島親子</title>
+</head>
+<body style="margin: 0; padding: 0; background: #f9fafb;">
+    <!-- 🆕 複製到 WordPress 按鈕 -->
+    <button id="copyPageBtn" class="copy-page-button">📋 複製到 WordPress</button>
+
+    <!-- 隱私權政策 - WordPress Elementor 版本 -->
 <!-- 直接複製貼到 Elementor HTML Widget -->
 
 <div style="max-width: 900px; margin: 0 auto; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.7; color: #333;">
@@ -237,3 +248,122 @@
   </div>
 
 </div>
+
+
+    <style>
+    /* 複製按鈕樣式 */
+    .copy-page-button {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 20px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    .copy-page-button:hover {
+        background: #5568d3;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+
+    .copy-page-button:active {
+        transform: translateY(0);
+    }
+
+    .copy-page-button.copied {
+        background: #10b981;
+    }
+
+    @media (max-width: 768px) {
+        .copy-page-button {
+            top: 10px;
+            right: 10px;
+            padding: 10px 16px;
+            font-size: 14px;
+        }
+    }
+    </style>
+
+    <!-- 🆕 複製功能的 JavaScript -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const copyBtn = document.getElementById('copyPageBtn');
+
+        copyBtn.addEventListener('click', async function() {
+            try {
+                // 複製前先移除按鈕本身（避免 WordPress 頁面也有按鈕）
+                const cleanHtml = document.documentElement.cloneNode(true);
+                const btnInClone = cleanHtml.querySelector('#copyPageBtn');
+                if (btnInClone) btnInClone.remove();
+
+                // 取得整個頁面的 HTML（包含 DOCTYPE）
+                const htmlContent = '<!DOCTYPE html>\\n' + cleanHtml.outerHTML;
+
+                // 複製到剪貼簿
+                await navigator.clipboard.writeText(htmlContent);
+
+                // 顯示成功提示
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✅ 已複製！';
+                copyBtn.classList.add('copied');
+
+                // 3 秒後恢復
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.classList.remove('copied');
+                }, 3000);
+
+            } catch (err) {
+                // 如果 Clipboard API 不支援，使用 fallback
+                fallbackCopyTextToClipboard();
+            }
+        });
+
+        // Fallback 方法（相容舊瀏覽器）
+        function fallbackCopyTextToClipboard() {
+            const cleanHtml = document.documentElement.cloneNode(true);
+            const btnInClone = cleanHtml.querySelector('#copyPageBtn');
+            if (btnInClone) btnInClone.remove();
+
+            const htmlContent = '<!DOCTYPE html>\\n' + cleanHtml.outerHTML;
+
+            const textArea = document.createElement('textarea');
+            textArea.value = htmlContent;
+            textArea.style.position = 'fixed';
+            textArea.style.top = '0';
+            textArea.style.left = '0';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                document.execCommand('copy');
+                copyBtn.textContent = '✅ 已複製！';
+                copyBtn.classList.add('copied');
+
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 複製到 WordPress';
+                    copyBtn.classList.remove('copied');
+                }, 3000);
+            } catch (err) {
+                alert('複製失敗，請手動選取並複製頁面內容');
+            }
+
+            document.body.removeChild(textArea);
+        }
+    });
+    </script>
+</body>
+</html>
