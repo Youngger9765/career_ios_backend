@@ -54,6 +54,28 @@
 - 📝 CHANGELOG.md - 完整變更記錄
 - 🧪 tests/unit/test_usage_limit_middleware.py - 更新後的測試
 
+### 🔄 Issue #53: RevenueCat DELETE API on Account Deletion (2026-02-25)
+**Status**: ✅ Complete | **Type**: Feature
+
+**功能說明**: 當用戶刪除帳號時，自動呼叫 RevenueCat DELETE subscribers API 清除 customer record，確保訂閱資料不殘留
+
+**實作內容**:
+- ✅ 新增 `revenuecat_service.delete_customer()` — 呼叫 `DELETE /subscribers/{app_user_id}`
+- ✅ `app_user_id` 格式：`email|uuid`（URL-encoded），與 iOS SDK 一致
+- ✅ 在帳號匿名化前擷取 email/user_id，DB commit 後呼叫 RevenueCat
+- ✅ RevenueCat 失敗只記 log，不影響刪除帳號 HTTP response
+- ✅ 新增 `REVENUECAT_SECRET_KEY` 設定（已在 `.env.example`）
+- ✅ 11 個單元測試（success、API errors、network errors、missing key、URL encoding）
+
+**架構說明**:
+- RevenueCat 失敗不 block 用戶 → 刪帳號永遠成功
+- 若金鑰未設定 → 跳過並 log warning（graceful degradation）
+- app_user_id 使用 `urllib.parse.quote()` URL-encode，確保特殊字元安全傳送
+
+**相關文件**:
+- 📝 CHANGELOG.md - 完整變更記錄
+- 🧪 tests/unit/test_revenuecat_service.py - 11 個單元測試
+
 ### ✅ Issue #5: Multi-tenant App Config API (2026-01-31) - COMPLETED
 **Status**: ✅ Complete | **PR**: Merged to staging
 

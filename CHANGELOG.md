@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **RevenueCat DELETE API Integration on Account Deletion** (2026-02-25): Automatically clean up RevenueCat customer record when a user deletes their account (Issue #53)
+  - **New Service**: `app/services/external/revenuecat_service.py` - calls RevenueCat DELETE subscribers API
+  - **app_user_id Construction**: Constructs `email|uuid` format (URL-encoded) to match the iOS SDK's app user ID
+  - **Failure Isolation**: RevenueCat errors are logged but never block the delete-account HTTP response
+  - **Config**: Added `REVENUECAT_SECRET_KEY: Optional[str]` to `app/core/config.py` (already in `.env.example`)
+  - **Files Modified**:
+    - `app/core/config.py`: Added `REVENUECAT_SECRET_KEY` setting
+    - `app/services/external/revenuecat_service.py`: New RevenueCat service module
+    - `app/api/auth.py`: Updated `delete_account` to capture email/user_id before anonymization and call RevenueCat after DB commit
+  - **Testing**: 11 unit tests covering success, API errors (4xx/5xx), network errors, missing key, and URL encoding edge cases
+  - **Test File**: `tests/unit/test_revenuecat_service.py`
+
 - **User Segmentation Dashboard Improvements** (2026-02-09): Enhanced user table with duration metrics and Chinese localization
   - **New Columns**:
     - 總時長 (Total Duration): Shows cumulative session time per user

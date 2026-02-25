@@ -47,9 +47,15 @@ class Settings(BaseSettings):
     VERIFICATION_CODE_RESEND_COOLDOWN_SECONDS: int = 60
 
     # Rate Limiting (always enabled for security)
-    RATE_LIMIT_REGISTER_PER_HOUR: int = 100 if DEBUG else 3  # Registration attempts per IP per hour
-    RATE_LIMIT_LOGIN_PER_MINUTE: int = 20 if DEBUG else 5  # Login attempts per IP per minute
-    RATE_LIMIT_PASSWORD_RESET_PER_HOUR: int = 20 if DEBUG else 3  # Password reset requests per IP per hour
+    RATE_LIMIT_REGISTER_PER_HOUR: int = (
+        100 if DEBUG else 3
+    )  # Registration attempts per IP per hour
+    RATE_LIMIT_LOGIN_PER_MINUTE: int = (
+        20 if DEBUG else 5
+    )  # Login attempts per IP per minute
+    RATE_LIMIT_PASSWORD_RESET_PER_HOUR: int = (
+        20 if DEBUG else 3
+    )  # Password reset requests per IP per hour
 
     # OpenAI (用於 Embeddings, Whisper STT, RAG Chat)
     OPENAI_API_KEY: Optional[str] = "sk-test-key-for-ci"  # Override in .env
@@ -96,7 +102,14 @@ class Settings(BaseSettings):
     GCS_PROJECT: Optional[str] = None
 
     # Internal Portal
-    INTERNAL_PORTAL_PASSWORD: Optional[str] = None  # Password for /internal route (set in .env)
+    INTERNAL_PORTAL_PASSWORD: Optional[
+        str
+    ] = None  # Password for /internal route (set in .env)
+
+    # RevenueCat
+    REVENUECAT_SECRET_KEY: Optional[
+        str
+    ] = None  # RevenueCat secret key for subscriber management
 
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
@@ -120,14 +133,26 @@ class Settings(BaseSettings):
 
     # App Config (for iOS client) - Multi-tenant
     # Island Parents tenant
-    ISLAND_PARENTS_TERMS_URL: str = "https://www.comma.study/island_parents_terms_of_service/"
-    ISLAND_PARENTS_PRIVACY_URL: str = "https://www.comma.study/island_parents_privacy_policy/"
-    ISLAND_PARENTS_LANDING_PAGE_URL: str = "https://www.comma.study/island_parents_landing/"
-    ISLAND_PARENTS_DATA_USAGE_URL: str = "https://www.comma.study/island_parents_data_usage/"
+    ISLAND_PARENTS_TERMS_URL: str = (
+        "https://www.comma.study/island_parents_terms_of_service/"
+    )
+    ISLAND_PARENTS_PRIVACY_URL: str = (
+        "https://www.comma.study/island_parents_privacy_policy/"
+    )
+    ISLAND_PARENTS_LANDING_PAGE_URL: str = (
+        "https://www.comma.study/island_parents_landing/"
+    )
+    ISLAND_PARENTS_DATA_USAGE_URL: str = (
+        "https://www.comma.study/island_parents_data_usage/"
+    )
     ISLAND_PARENTS_HELP_URL: str = "https://www.comma.study/island_parents_help/"
     ISLAND_PARENTS_FAQ_URL: str = "https://www.comma.study/island_parents_faq/"
-    ISLAND_PARENTS_CONTACT_URL: str = "https://www.comma.study/island_parents_contact_us/"
-    ISLAND_PARENTS_FORGOT_PASSWORD_URL: str = "https://duodian.com/career/forgot-password"
+    ISLAND_PARENTS_CONTACT_URL: str = (
+        "https://www.comma.study/island_parents_contact_us/"
+    )
+    ISLAND_PARENTS_FORGOT_PASSWORD_URL: str = (
+        "https://duodian.com/career/forgot-password"
+    )
 
     # Legacy/Career tenant (backward compatibility)
     APP_TERMS_URL: str = "https://duodian.com/career/terms"
