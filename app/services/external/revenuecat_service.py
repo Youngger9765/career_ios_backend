@@ -10,25 +10,27 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-REVENUECAT_API_BASE = "https://api.revenuecat.com/v1"
+REVENUECAT_API_BASE = "https://api.revenuecat.com/v2"
 REQUEST_TIMEOUT = 10  # seconds
 
 
 def delete_customer(email: str, user_id: str) -> bool:
     """
-    Delete a RevenueCat subscriber by calling the DELETE subscribers API.
+    Delete a RevenueCat customer by calling the V2 DELETE customers API.
 
-    The app_user_id is constructed as ``{email}|{user_id}`` and URL-encoded
-    before being embedded in the request path.
+    The customer_id (app_user_id) is constructed as ``{email}|{user_id}`` and
+    URL-encoded before being embedded in the request path.
+
+    V2 endpoint: DELETE /v2/projects/{project_id}/customers/{customer_id}
 
     Args:
         email: The counselor's original (pre-anonymization) email address.
         user_id: The counselor's UUID as a string.
 
     Returns:
-        True if the subscriber was deleted successfully (HTTP 200/204).
-        False if the secret key is missing, the API returned an error, or any
-        exception occurred.  Failures are logged but never propagate.
+        True if the customer was deleted successfully (HTTP 200/204).
+        False if the secret key or project ID is missing, the API returned an
+        error, or any exception occurred.  Failures are logged but never propagate.
     """
     secret_key = settings.REVENUECAT_SECRET_KEY
     if not secret_key:
@@ -37,9 +39,16 @@ def delete_customer(email: str, user_id: str) -> bool:
         )
         return False
 
+    project_id = settings.REVENUECAT_PROJECT_ID
+    if not project_id:
+        logger.warning(
+            "REVENUECAT_PROJECT_ID is not configured; skipping RevenueCat delete"
+        )
+        return False
+
     app_user_id = f"{email}|{user_id}"
-    encoded_app_user_id = quote(app_user_id, safe="")
-    url = f"{REVENUECAT_API_BASE}/subscribers/{encoded_app_user_id}"
+    encoded_customer_id = quote(app_user_id, safe="")
+    url = f"{REVENUECAT_API_BASE}/projects/{project_id}/customers/{encoded_customer_id}"
 
     headers = {
         "Authorization": f"Bearer {secret_key}",
@@ -52,7 +61,7 @@ def delete_customer(email: str, user_id: str) -> bool:
 
         if response.status_code in (200, 204):
             logger.info(
-                "RevenueCat subscriber deleted successfully for user_id=%s", user_id
+                "RevenueCat customer deleted successfully for user_id=%s", user_id
             )
             return True
 
