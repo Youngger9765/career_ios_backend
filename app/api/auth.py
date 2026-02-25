@@ -1,6 +1,7 @@
 """
 Authentication API endpoints
 """
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request, status
@@ -39,7 +40,10 @@ from app.schemas.auth import (
     VerifyEmailRequest,
     VerifyEmailResponse,
 )
+from app.services.external import revenuecat_service
 from app.services.external.email_sender import EmailSenderService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -365,9 +369,7 @@ def verify_email(
             raise UnauthorizedError("Invalid verification token")
 
         if counselor.is_active and counselor.email_verified:
-            return VerifyEmailResponse(
-                message="Email already verified", email=email
-            )
+            return VerifyEmailResponse(message="Email already verified", email=email)
 
         counselor.is_active = True
         counselor.email_verified = True
@@ -448,6 +450,10 @@ def delete_account(
         HTTPException: 500 if deletion fails
     """
     try:
+        # Capture original email and user_id before anonymization
+        original_email = current_user.email
+        user_id = str(current_user.id)
+
         timestamp = int(datetime.now(timezone.utc).timestamp())
         current_user.email = f"deleted_{timestamp}_{current_user.email}"
         current_user.username = None
@@ -457,6 +463,17 @@ def delete_account(
         current_user.deleted_at = datetime.now(timezone.utc)
 
         db.commit()
+
+        # Call RevenueCat DELETE API after successful DB commit.
+        # Failure must NOT block the main response — log and continue.
+        rc_success = revenuecat_service.delete_customer(original_email, user_id)
+        if rc_success:
+            logger.info("RevenueCat subscriber deleted for user_id=%s", user_id)
+        else:
+            logger.warning(
+                "RevenueCat subscriber deletion failed or skipped for user_id=%s",
+                user_id,
+            )
 
         return DeleteAccountResponse(message="Account deleted successfully")
 
