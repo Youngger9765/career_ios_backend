@@ -1,5 +1,5 @@
 """
-Unit tests for RevenueCat service
+Unit tests for RevenueCat service (V2 API)
 """
 # Import directly from the module file to avoid triggering app/services/__init__.py
 # which would try to connect to the database.
@@ -19,7 +19,7 @@ _HTTPX_CLIENT_PATCH = "app.services.external.revenuecat_service.httpx.Client"
 
 
 class TestRevenueCatDeleteCustomer:
-    """Tests for revenuecat_service.delete_customer"""
+    """Tests for revenuecat_service.delete_customer (V2 API)"""
 
     # ------------------------------------------------------------------
     # Happy path
@@ -31,7 +31,8 @@ class TestRevenueCatDeleteCustomer:
         mock_response.status_code = 200
 
         mock_settings = MagicMock()
-        mock_settings.REVENUECAT_SECRET_KEY = "rc_secret_key_test"
+        mock_settings.REVENUECAT_SECRET_KEY = "sk_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = "proj_test_123"
 
         with patch(_SETTINGS_PATCH, mock_settings), patch(
             _HTTPX_CLIENT_PATCH
@@ -55,7 +56,8 @@ class TestRevenueCatDeleteCustomer:
         mock_response.status_code = 204
 
         mock_settings = MagicMock()
-        mock_settings.REVENUECAT_SECRET_KEY = "rc_secret_key_test"
+        mock_settings.REVENUECAT_SECRET_KEY = "sk_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = "proj_test_123"
 
         with patch(_SETTINGS_PATCH, mock_settings), patch(
             _HTTPX_CLIENT_PATCH
@@ -74,6 +76,77 @@ class TestRevenueCatDeleteCustomer:
         assert result is True
 
     # ------------------------------------------------------------------
+    # V2 API endpoint verification
+    # ------------------------------------------------------------------
+
+    def test_delete_customer_uses_v2_endpoint(self):
+        """Verify the request goes to V2 endpoint: /v2/projects/{project_id}/customers/{customer_id}."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+
+        mock_settings = MagicMock()
+        mock_settings.REVENUECAT_SECRET_KEY = "sk_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = "proj_test_123"
+
+        with patch(_SETTINGS_PATCH, mock_settings), patch(
+            _HTTPX_CLIENT_PATCH
+        ) as mock_client_cls:
+            mock_client_instance = MagicMock()
+            mock_client_cls.return_value.__enter__ = MagicMock(
+                return_value=mock_client_instance
+            )
+            mock_client_cls.return_value.__exit__ = MagicMock(return_value=False)
+            mock_client_instance.delete.return_value = mock_response
+
+            delete_customer("allen@example.com", "a1b2c3d4-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+
+            call_args = mock_client_instance.delete.call_args
+            called_url = call_args[0][0]
+
+        assert "/v2/" in called_url, f"Expected V2 endpoint, got: {called_url}"
+        assert (
+            "/v1/" not in called_url
+        ), f"Should NOT use V1 endpoint, got: {called_url}"
+        assert "proj_test_123" in called_url, f"Project ID missing in URL: {called_url}"
+        assert "/customers/" in called_url, f"Expected /customers/ in URL: {called_url}"
+
+    def test_delete_customer_v2_url_structure(self):
+        """Verify V2 URL structure: https://api.revenuecat.com/v2/projects/{id}/customers/{customer_id}."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        captured_urls: list = []
+
+        def capture_delete(url, **kwargs):
+            captured_urls.append(url)
+            return mock_response
+
+        mock_settings = MagicMock()
+        mock_settings.REVENUECAT_SECRET_KEY = "sk_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = "proj6aee0ef8"
+
+        with patch(_SETTINGS_PATCH, mock_settings), patch(
+            _HTTPX_CLIENT_PATCH
+        ) as mock_client_cls:
+            mock_client_instance = MagicMock()
+            mock_client_cls.return_value.__enter__ = MagicMock(
+                return_value=mock_client_instance
+            )
+            mock_client_cls.return_value.__exit__ = MagicMock(return_value=False)
+            mock_client_instance.delete.side_effect = capture_delete
+
+            delete_customer("user@test.com", "uuid-1234")
+
+        assert len(captured_urls) == 1
+        url = captured_urls[0]
+        decoded_url = unquote(url)
+        assert decoded_url.startswith(
+            "https://api.revenuecat.com/v2/projects/proj6aee0ef8/customers/"
+        ), f"URL does not match V2 structure: {decoded_url}"
+        assert decoded_url.endswith(
+            "user@test.com|uuid-1234"
+        ), f"customer_id at end of URL is wrong: {decoded_url}"
+
+    # ------------------------------------------------------------------
     # API error responses
     # ------------------------------------------------------------------
 
@@ -84,7 +157,8 @@ class TestRevenueCatDeleteCustomer:
         mock_response.text = "Not found"
 
         mock_settings = MagicMock()
-        mock_settings.REVENUECAT_SECRET_KEY = "rc_secret_key_test"
+        mock_settings.REVENUECAT_SECRET_KEY = "sk_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = "proj_test_123"
 
         with patch(_SETTINGS_PATCH, mock_settings), patch(
             _HTTPX_CLIENT_PATCH
@@ -109,7 +183,8 @@ class TestRevenueCatDeleteCustomer:
         mock_response.text = "Internal Server Error"
 
         mock_settings = MagicMock()
-        mock_settings.REVENUECAT_SECRET_KEY = "rc_secret_key_test"
+        mock_settings.REVENUECAT_SECRET_KEY = "sk_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = "proj_test_123"
 
         with patch(_SETTINGS_PATCH, mock_settings), patch(
             _HTTPX_CLIENT_PATCH
@@ -134,7 +209,8 @@ class TestRevenueCatDeleteCustomer:
     def test_delete_customer_network_error(self):
         """Network error (httpx exception) — should return False, not raise."""
         mock_settings = MagicMock()
-        mock_settings.REVENUECAT_SECRET_KEY = "rc_secret_key_test"
+        mock_settings.REVENUECAT_SECRET_KEY = "sk_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = "proj_test_123"
 
         with patch(_SETTINGS_PATCH, mock_settings), patch(
             _HTTPX_CLIENT_PATCH
@@ -157,7 +233,8 @@ class TestRevenueCatDeleteCustomer:
     def test_delete_customer_timeout_error(self):
         """Timeout error — should return False, not raise."""
         mock_settings = MagicMock()
-        mock_settings.REVENUECAT_SECRET_KEY = "rc_secret_key_test"
+        mock_settings.REVENUECAT_SECRET_KEY = "sk_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = "proj_test_123"
 
         with patch(_SETTINGS_PATCH, mock_settings), patch(
             _HTTPX_CLIENT_PATCH
@@ -185,6 +262,7 @@ class TestRevenueCatDeleteCustomer:
         """REVENUECAT_SECRET_KEY is None — should return False without making HTTP call."""
         mock_settings = MagicMock()
         mock_settings.REVENUECAT_SECRET_KEY = None
+        mock_settings.REVENUECAT_PROJECT_ID = "proj_test_123"
 
         with patch(_SETTINGS_PATCH, mock_settings), patch(
             _HTTPX_CLIENT_PATCH
@@ -200,6 +278,43 @@ class TestRevenueCatDeleteCustomer:
         """REVENUECAT_SECRET_KEY is empty string — should return False without making HTTP call."""
         mock_settings = MagicMock()
         mock_settings.REVENUECAT_SECRET_KEY = ""
+        mock_settings.REVENUECAT_PROJECT_ID = "proj_test_123"
+
+        with patch(_SETTINGS_PATCH, mock_settings), patch(
+            _HTTPX_CLIENT_PATCH
+        ) as mock_client_cls:
+            result = delete_customer(
+                "allen@example.com", "a1b2c3d4-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            )
+
+        mock_client_cls.assert_not_called()
+        assert result is False
+
+    # ------------------------------------------------------------------
+    # Missing project ID (graceful degradation)
+    # ------------------------------------------------------------------
+
+    def test_delete_customer_missing_project_id_none(self):
+        """REVENUECAT_PROJECT_ID is None — should return False without making HTTP call."""
+        mock_settings = MagicMock()
+        mock_settings.REVENUECAT_SECRET_KEY = "sk_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = None
+
+        with patch(_SETTINGS_PATCH, mock_settings), patch(
+            _HTTPX_CLIENT_PATCH
+        ) as mock_client_cls:
+            result = delete_customer(
+                "allen@example.com", "a1b2c3d4-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            )
+
+        mock_client_cls.assert_not_called()
+        assert result is False
+
+    def test_delete_customer_missing_project_id_empty_string(self):
+        """REVENUECAT_PROJECT_ID is empty string — should return False without making HTTP call."""
+        mock_settings = MagicMock()
+        mock_settings.REVENUECAT_SECRET_KEY = "sk_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = ""
 
         with patch(_SETTINGS_PATCH, mock_settings), patch(
             _HTTPX_CLIENT_PATCH
@@ -216,12 +331,13 @@ class TestRevenueCatDeleteCustomer:
     # ------------------------------------------------------------------
 
     def test_delete_customer_url_encoding(self):
-        """app_user_id is URL-encoded in the request path (@ → %40, | → %7C)."""
+        """customer_id (app_user_id) is URL-encoded in the request path (@ -> %40, | -> %7C)."""
         mock_response = MagicMock()
         mock_response.status_code = 200
 
         mock_settings = MagicMock()
-        mock_settings.REVENUECAT_SECRET_KEY = "rc_secret_key_test"
+        mock_settings.REVENUECAT_SECRET_KEY = "sk_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = "proj_test_123"
 
         with patch(_SETTINGS_PATCH, mock_settings), patch(
             _HTTPX_CLIENT_PATCH
@@ -238,7 +354,7 @@ class TestRevenueCatDeleteCustomer:
             call_args = mock_client_instance.delete.call_args
             called_url = call_args[0][0]  # first positional arg
 
-        # '@' → %40, '|' → %7C
+        # '@' -> %40, '|' -> %7C
         assert (
             "%40" in called_url
         ), f"Expected '@' to be encoded as %40 in URL: {called_url}"
@@ -259,7 +375,8 @@ class TestRevenueCatDeleteCustomer:
             return mock_response
 
         mock_settings = MagicMock()
-        mock_settings.REVENUECAT_SECRET_KEY = "rc_secret_key_test"
+        mock_settings.REVENUECAT_SECRET_KEY = "sk_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = "proj_test_123"
 
         with patch(_SETTINGS_PATCH, mock_settings), patch(
             _HTTPX_CLIENT_PATCH
@@ -278,7 +395,7 @@ class TestRevenueCatDeleteCustomer:
         # The decoded URL should end with the un-encoded app_user_id
         assert decoded_url.endswith(
             "user@test.com|uuid-1234"
-        ), f"Decoded URL did not end with expected app_user_id: {decoded_url}"
+        ), f"Decoded URL did not end with expected customer_id: {decoded_url}"
 
     def test_delete_customer_correct_authorization_header(self):
         """The Authorization header uses 'Bearer {secret_key}'."""
@@ -287,6 +404,7 @@ class TestRevenueCatDeleteCustomer:
 
         mock_settings = MagicMock()
         mock_settings.REVENUECAT_SECRET_KEY = "my_test_secret"
+        mock_settings.REVENUECAT_PROJECT_ID = "proj_test_123"
 
         with patch(_SETTINGS_PATCH, mock_settings), patch(
             _HTTPX_CLIENT_PATCH

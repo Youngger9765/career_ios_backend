@@ -110,6 +110,9 @@ class Settings(BaseSettings):
     REVENUECAT_SECRET_KEY: Optional[
         str
     ] = None  # RevenueCat secret key for subscriber management
+    REVENUECAT_PROJECT_ID: Optional[
+        str
+    ] = None  # RevenueCat project ID for V2 API (e.g. proj6aee0ef8)
 
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
