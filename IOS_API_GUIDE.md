@@ -1868,7 +1868,7 @@ func updateCounselor(token: String, fullName: String?, username: String?) async 
 
 **Endpoint:** `POST /api/auth/delete-account`
 
-**描述:** 軟刪除帳號。清除個人資料（email prefix、username、full_name、phone），帳號標記為停用。資料保留可由管理員恢復。
+**描述:** 軟刪除帳號，並進入 14 天猶豫期。PII 暫時保留，14 天後由排程 Job 匿名化。期間可再次登入恢復帳號。
 
 **⚠️ 為什麼用 POST 不用 DELETE**: iOS HTTP client 的 request body 相容性
 
@@ -1890,33 +1890,77 @@ Content-Type: application/json
 **Response (200):**
 ```json
 {
-  "message": "Account deleted successfully"
+  "message": "Account scheduled for deletion. You can restore it by logging in within 14 days."
 }
 ```
 
-**Soft Delete 行為:**
+**14 天猶豫期行為:**
 
-| 欄位 | 刪除前 | 刪除後 |
+| 時間點 | 行為 |
+|--------|------|
+| 刪除當下 | 帳號停用（`is_active=false`），PII 保留不匿名化 |
+| 14天內登入 | 帳號自動恢復，Login Response 帶 `account_restored: true` |
+| 14天後 | 排程 Job 匿名化 PII + 呼叫 RevenueCat delete |
+| 14天後登入 | 403 "Account has been permanently deleted" |
+
+**DB 欄位變化（刪除當下）:**
+
+| 欄位 | 刪除前 | 刪除後（猶豫期） |
 |------|--------|--------|
-| email | `user@example.com` | `deleted_{timestamp}_user@example.com` |
-| username | `john` | `null` |
-| full_name | `John Doe` | `null` |
-| phone | `+886912345678` | `null` |
+| email | `user@example.com` | `user@example.com`（保留） |
 | is_active | `true` | `false` |
-| deleted_at | `null` | `2026-02-19T10:00:00Z` |
-| hashed_password | (保留) | (保留，供恢復用) |
+| deleted_at | `null` | `2026-02-26T10:00:00Z` |
+
+**14 天內登入 Response（多出 account_restored）:**
+```json
+{
+  "access_token": "eyJ...",
+  "token_type": "bearer",
+  "expires_in": 7776000,
+  "user": { ... },
+  "account_restored": true
+}
+```
+
+**14 天後登入 Response:**
+```json
+{
+  "type": "https://api.career-counseling.app/errors/forbidden",
+  "title": "Forbidden",
+  "status": 403,
+  "detail": "Account has been permanently deleted.",
+  "instance": "/api/auth/login"
+}
+```
 
 **錯誤回應:**
 
 | Status | 說明 |
 |--------|------|
-| 200 | 帳號刪除成功 |
+| 200 | 帳號排定刪除（14 天猶豫期） |
 | 401 | Token 無效或過期 |
 | 403 | 未登入 |
 | 500 | 伺服器錯誤 |
 
 **Swift 範例:**
 ```swift
+// Login Response (updated with account_restored)
+struct LoginResponse: Codable {
+    let accessToken: String
+    let tokenType: String
+    let expiresIn: Int
+    let user: CounselorInfo
+    let accountRestored: Bool?  // true = 帳號剛恢復, null = 正常登入
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case tokenType = "token_type"
+        case expiresIn = "expires_in"
+        case user
+        case accountRestored = "account_restored"
+    }
+}
+
 func deleteAccount(token: String) async throws {
     let url = URL(string: "\(baseURL)/api/auth/delete-account")!
     var request = URLRequest(url: url)
@@ -1933,10 +1977,18 @@ func deleteAccount(token: String) async throws {
 
     // 清除本地 token
     UserDefaults.standard.removeObject(forKey: "access_token")
+    // 顯示提示：「帳號將在 14 天後永久刪除，期間再次登入可恢復」
+}
+
+// 登入時處理帳號恢復
+func handleLoginResponse(_ response: LoginResponse) {
+    if response.accountRestored == true {
+        showAlert(title: "帳號已恢復", message: "歡迎回來！你的帳號已成功恢復。")
+    }
 }
 ```
 
-> **Note:** 刪除後同一 email 可重新註冊。如需恢復帳號，請聯繫管理員。
+> **Note:** 刪除後有 14 天猶豫期，期間資料完整保留，再次登入即自動恢復。14 天後資料將被去識別化（匿名化）且無法恢復。
 
 ---
 

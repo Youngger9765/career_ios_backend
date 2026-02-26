@@ -76,6 +76,27 @@
 - 📝 CHANGELOG.md - 完整變更記錄
 - 🧪 tests/unit/test_revenuecat_service.py - 11 個單元測試
 
+### 🔄 Issue #59: 14 天帳號刪除猶豫期 (2026-02-26)
+**Status**: ✅ Complete | **Type**: Feature
+
+**需求**: 客戶要求用戶刪除帳號後 14 天內再次登入可以恢復帳號。
+
+**流程**:
+1. **用戶刪除帳號** → 設定 `deleted_at` + `is_active=false`，PII 保留不匿名化
+2. **14 天內登入** → 帳號自動恢復（`deleted_at=null`, `is_active=true`），Login Response 帶 `account_restored: true`
+3. **14 天後** → 排程 Job 匿名化 PII + 呼叫 RevenueCat delete
+4. **14 天後登入** → 回傳 403 "Account has been permanently deleted"
+
+**技術細節**:
+- Purge endpoint: `POST /api/internal/purge-deleted-accounts`（需 `X-Internal-Key` header）
+- 排程: GCP Cloud Scheduler 每日呼叫
+- RevenueCat: 延遲到 14 天後才呼叫 delete（不可逆）
+- Config: `ACCOUNT_DELETION_GRACE_PERIOD_DAYS = 14`
+
+**相關文件**:
+- 📝 CHANGELOG.md - 完整變更記錄
+- 🧪 tests/integration/test_grace_period_e2e.py - 9 個 e2e 測試
+
 ### ✅ Issue #5: Multi-tenant App Config API (2026-01-31) - COMPLETED
 **Status**: ✅ Complete | **PR**: Merged to staging
 

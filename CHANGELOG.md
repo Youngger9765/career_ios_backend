@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **14-Day Account Deletion Grace Period** (2026-02-26): Users can restore deleted accounts by logging in within 14 days (Issue #59)
+  - **Delete Account**: No longer anonymizes PII immediately — only sets `deleted_at` + `is_active=false`
+  - **Login Restore**: Login within 14 days auto-restores account, returns `account_restored: true` in response
+  - **Expired Login**: Login after 14 days returns 403 "Account has been permanently deleted"
+  - **Purge Endpoint**: `POST /api/internal/purge-deleted-accounts` — scheduled job anonymizes expired accounts + calls RevenueCat delete
+  - **RevenueCat**: Delete deferred to purge job (14 days later), since RevenueCat delete is permanent and irreversible
+  - **Config**: Added `INTERNAL_API_KEY`, `ACCOUNT_DELETION_GRACE_PERIOD_DAYS` (default: 14)
+  - **Testing**: 9 e2e test scenarios covering all grace period flows
+  - **Files Modified**: `app/api/auth.py`, `app/schemas/auth.py`, `app/core/config.py`, `app/main.py`
+  - **Files Added**: `app/api/internal.py`, `tests/integration/test_grace_period_e2e.py`
+
 - **RevenueCat DELETE API Integration on Account Deletion** (2026-02-25): Automatically clean up RevenueCat customer record when a user deletes their account (Issue #53)
   - **New Service**: `app/services/external/revenuecat_service.py` - calls RevenueCat DELETE subscribers API
   - **app_user_id Construction**: Constructs `email|uuid` format (URL-encoded) to match the iOS SDK's app user ID

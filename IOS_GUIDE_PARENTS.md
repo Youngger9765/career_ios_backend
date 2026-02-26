@@ -594,6 +594,16 @@ func isEmailVerified(token: String) -> Bool {
 **Endpoint**: `POST /api/auth/delete-account`
 **認證**: Bearer Token required
 
+#### 14 天猶豫期（Grace Period）
+
+刪除帳號後有 **14 天猶豫期**，期間再次登入可自動恢復帳號：
+
+| 時間點 | 行為 |
+|--------|------|
+| 刪除當下 | 帳號停用，PII 保留（不匿名化） |
+| 14天內登入 | 帳號自動恢復，正常使用 |
+| 14天後 | 帳號永久匿名化（去識別化），無法恢復 |
+
 #### Request
 
 ```json
@@ -602,19 +612,70 @@ func isEmailVerified(token: String) -> Bool {
 }
 ```
 
-> **`password` 欄位為選填，目前不做驗證。** 用戶已通過 Bearer Token 認證（已登入），身份已確認，因此不需要再次輸入密碼。iOS 端可傳 `null`、省略、或傳空 JSON `{}`，效果皆相同。
+> **`password` 欄位為選填，目前不做驗證。** 用戶已通過 Bearer Token 認證（已登入），身份已確認。iOS 端可傳 `null`、省略、或傳空 JSON `{}`。
 
 #### Response (200)
 
 ```json
 {
-  "message": "Account deleted successfully"
+  "message": "Account scheduled for deletion. You can restore it by logging in within 14 days."
+}
+```
+
+#### 14 天內登入恢復
+
+Login Response 會多一個 `account_restored` 欄位：
+
+```json
+{
+  "access_token": "eyJ...",
+  "token_type": "bearer",
+  "expires_in": 7776000,
+  "user": { ... },
+  "account_restored": true
+}
+```
+
+> `account_restored: true` 表示帳號剛從刪除狀態恢復。iOS 端可據此顯示「歡迎回來！你的帳號已恢復」提示。
+> 正常登入時 `account_restored` 為 `null`。
+
+#### 14 天後登入
+
+```json
+{
+  "type": "https://api.career-counseling.app/errors/forbidden",
+  "title": "Forbidden",
+  "status": 403,
+  "detail": "Account has been permanently deleted.",
+  "instance": "/api/auth/login"
 }
 ```
 
 #### Swift 範例
 
 ```swift
+// Delete Account Response
+struct DeleteAccountResponse: Codable {
+    let message: String
+}
+
+// Login Response (updated with account_restored)
+struct LoginResponse: Codable {
+    let accessToken: String
+    let tokenType: String
+    let expiresIn: Int
+    let user: CounselorInfo
+    let accountRestored: Bool?  // true = 帳號剛恢復, null = 正常登入
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case tokenType = "token_type"
+        case expiresIn = "expires_in"
+        case user
+        case accountRestored = "account_restored"
+    }
+}
+
 func deleteAccount() async throws {
     guard let token = UserDefaults.standard.string(forKey: "access_token") else {
         throw AuthError.notAuthenticated
@@ -634,6 +695,16 @@ func deleteAccount() async throws {
 
     // Clear local data
     UserDefaults.standard.removeObject(forKey: "access_token")
+
+    // 顯示提示：「帳號將在 14 天後永久刪除，期間再次登入可恢復」
+}
+
+// 登入時處理帳號恢復
+func handleLoginResponse(_ response: LoginResponse) {
+    if response.accountRestored == true {
+        // 顯示「歡迎回來！你的帳號已恢復」提示
+        showAlert(title: "帳號已恢復", message: "歡迎回來！你的帳號已成功恢復。")
+    }
 }
 ```
 
@@ -641,12 +712,12 @@ func deleteAccount() async throws {
 
 | Status | 說明 |
 |--------|------|
-| 200 | 帳號刪除成功 |
+| 200 | 帳號排定刪除（14 天猶豫期） |
 | 401 | Token 無效或過期 |
 | 403 | 未登入 |
 | 500 | 伺服器錯誤 |
 
-> **Note**: 此為 Soft Delete，帳號資料保留可恢復。刪除後 Token 立即失效。如需恢復帳號，請聯繫管理員。
+> **Note**: 刪除後有 14 天猶豫期。期間帳號資料完整保留，再次登入即自動恢復。14 天後資料將被去識別化（匿名化），但 DB row 不刪除。
 
 ---
 
@@ -2328,9 +2399,9 @@ func showForgotPassword() {
     let baseURL = "https://career-app-api-staging-978304030758.us-central1.run.app"
     let tenantURL = "island-parents"  // URL 使用連字號（kebab-case）
     let urlString = "\(baseURL)/\(tenantURL)/forgot-password"
-    
+
     guard let url = URL(string: urlString) else { return }
-    
+
     let safariVC = SFSafariViewController(url: url)
     present(safariVC, animated: true)
 }
