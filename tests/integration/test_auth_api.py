@@ -2,6 +2,7 @@
 Integration tests for authentication API
 TDD - Write tests first
 """
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -217,11 +218,11 @@ class TestAuthAPI:
             assert data["is_active"] is True
 
     def test_get_me_no_token(self):
-        """Test GET /me without token returns 403"""
+        """Test GET /me without token returns 401"""
         with TestClient(app) as client:
             response = client.get("/api/auth/me")
 
-            assert response.status_code == 403
+            assert response.status_code == 401
 
     def test_get_me_invalid_token(self):
         """Test GET /me with invalid token returns 401"""
@@ -278,14 +279,14 @@ class TestAuthAPI:
             assert data["email"] == "update@example.com"  # Email should not change
 
     def test_update_me_no_token(self):
-        """Test PATCH /me without token returns 403"""
+        """Test PATCH /me without token returns 401"""
         with TestClient(app) as client:
             response = client.patch(
                 "/api/auth/me",
                 json={"full_name": "New Name"},
             )
 
-            assert response.status_code == 403
+            assert response.status_code == 401
 
     def test_update_me_invalid_token(self):
         """Test PATCH /me with invalid token returns 401"""
@@ -338,7 +339,9 @@ class TestAuthAPI:
             assert counselor.full_name is None  # Full name is optional now
             assert counselor.is_active is True
 
-    def test_register_success_with_optional_fields(self, db_session: Session, monkeypatch):
+    def test_register_success_with_optional_fields(
+        self, db_session: Session, monkeypatch
+    ):
         """Test successful registration with optional username and full_name (backward compatibility)"""
         # Disable email verification for this legacy test
         from app.core.config import settings
@@ -519,7 +522,7 @@ class TestAuthAPI:
             assert response.status_code == 422  # Validation error
 
     def test_delete_account_success(self, db_session: Session):
-        """Test successful account deletion soft deletes user data"""
+        """Test successful account deletion schedules for deletion with 14-day grace period"""
         with TestClient(app) as client:
             # Create test counselor
             counselor = Counselor(
@@ -556,9 +559,9 @@ class TestAuthAPI:
 
             assert response.status_code == 200
             data = response.json()
-            assert data["message"] == "Account deleted successfully"
+            assert "14 days" in data["message"]
 
-            # Verify in database
+            # Verify in database — grace period: email/username/full_name preserved
             from sqlalchemy import select
 
             db_session.expire_all()
@@ -567,24 +570,24 @@ class TestAuthAPI:
             )
             updated_counselor = result.scalar_one_or_none()
             assert updated_counselor is not None
-            assert updated_counselor.email.startswith("deleted_")
-            assert "deleteme@example.com" in updated_counselor.email
-            assert updated_counselor.username is None
-            assert updated_counselor.full_name is None
-            assert updated_counselor.phone is None
+            # Email NOT anonymized yet (grace period active)
+            assert updated_counselor.email == "deleteme@example.com"
+            # Username and full_name preserved during grace period
+            assert updated_counselor.username == "deletemeuser"
+            assert updated_counselor.full_name == "Delete Me"
             assert updated_counselor.is_active is False
             assert updated_counselor.deleted_at is not None
             assert updated_counselor.hashed_password is not None
 
     def test_delete_account_no_token(self):
-        """Test delete account without token returns 403"""
+        """Test delete account without token returns 401"""
         with TestClient(app) as client:
             response = client.post(
                 "/api/auth/delete-account",
                 json={"password": "ValidP@ssw0rd123"},
             )
 
-            assert response.status_code == 403
+            assert response.status_code == 401
 
     def test_delete_account_invalid_token(self):
         """Test delete account with invalid token returns 401"""
@@ -597,15 +600,17 @@ class TestAuthAPI:
 
             assert response.status_code == 401
 
-    def test_delete_account_cannot_login_after(self, db_session: Session):
-        """Test that deleted account cannot login again"""
+    def test_delete_account_login_restores_within_grace_period(
+        self, db_session: Session
+    ):
+        """Test that login within 14-day grace period restores the account"""
         with TestClient(app) as client:
             # Create test counselor
             counselor = Counselor(
                 id=uuid4(),
-                email="deletenologin@example.com",
-                username="deletenologin",
-                full_name="Delete No Login",
+                email="gracelogin@example.com",
+                username="gracelogin",
+                full_name="Grace Login",
                 hashed_password=hash_password("ValidP@ssw0rd123"),
                 tenant_id="career",
                 role="counselor",
@@ -618,7 +623,7 @@ class TestAuthAPI:
             login_response = client.post(
                 "/api/auth/login",
                 json={
-                    "email": "deletenologin@example.com",
+                    "email": "gracelogin@example.com",
                     "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
@@ -633,15 +638,173 @@ class TestAuthAPI:
             )
             assert delete_response.status_code == 200
 
-            # Try to login again with original credentials (should fail because email was changed)
+            # Login again within grace period — should succeed and restore account
             login_again_response = client.post(
                 "/api/auth/login",
                 json={
-                    "email": "deletenologin@example.com",
+                    "email": "gracelogin@example.com",
                     "password": "ValidP@ssw0rd123",
                     "tenant_id": "career",
                 },
             )
 
-            assert login_again_response.status_code == 401
-            assert "Incorrect email, password, or tenant ID" in login_again_response.json()["detail"]
+            assert login_again_response.status_code == 200
+            data = login_again_response.json()
+            assert data["account_restored"] is True
+            assert "access_token" in data
+
+            # Verify account is restored in database
+            from sqlalchemy import select
+
+            db_session.expire_all()
+            result = db_session.execute(
+                select(Counselor).where(Counselor.id == counselor.id)
+            )
+            restored = result.scalar_one_or_none()
+            assert restored is not None
+            assert restored.is_active is True
+            assert restored.deleted_at is None
+
+    def test_delete_account_login_fails_after_grace_period(self, db_session: Session):
+        """Test that login after 14-day grace period returns 403 permanently deleted"""
+        from datetime import timedelta
+
+        with TestClient(app) as client:
+            # Create test counselor already in expired grace period state
+            counselor = Counselor(
+                id=uuid4(),
+                email="expiredgrace@example.com",
+                username="expiredgrace",
+                full_name="Expired Grace",
+                hashed_password=hash_password("ValidP@ssw0rd123"),
+                tenant_id="career",
+                role="counselor",
+                is_active=False,
+                deleted_at=datetime.now(timezone.utc) - timedelta(days=15),
+            )
+            db_session.add(counselor)
+            db_session.commit()
+
+            # Login should fail — grace period expired
+            login_response = client.post(
+                "/api/auth/login",
+                json={
+                    "email": "expiredgrace@example.com",
+                    "password": "ValidP@ssw0rd123",
+                    "tenant_id": "career",
+                },
+            )
+
+            assert login_response.status_code == 403
+            assert "permanently deleted" in login_response.json()["detail"]
+
+    def test_delete_account_no_anonymization_immediately(self, db_session: Session):
+        """Test that deletion does NOT anonymize email/username/full_name immediately"""
+        from sqlalchemy import select
+
+        with TestClient(app) as client:
+            # Create test counselor
+            counselor = Counselor(
+                id=uuid4(),
+                email="noanon@example.com",
+                username="noanonuser",
+                full_name="No Anon User",
+                phone="+1234567890",
+                hashed_password=hash_password("ValidP@ssw0rd123"),
+                tenant_id="career",
+                role="counselor",
+                is_active=True,
+            )
+            db_session.add(counselor)
+            db_session.commit()
+
+            # Login to get token
+            login_response = client.post(
+                "/api/auth/login",
+                json={
+                    "email": "noanon@example.com",
+                    "password": "ValidP@ssw0rd123",
+                    "tenant_id": "career",
+                },
+            )
+            token = login_response.json()["access_token"]
+
+            # Delete account
+            delete_response = client.post(
+                "/api/auth/delete-account",
+                headers={"Authorization": f"Bearer {token}"},
+                json={},
+            )
+            assert delete_response.status_code == 200
+
+            # Verify DB: PII NOT anonymized during grace period
+            db_session.expire_all()
+            result = db_session.execute(
+                select(Counselor).where(Counselor.id == counselor.id)
+            )
+            updated = result.scalar_one_or_none()
+            assert updated is not None
+            assert updated.email == "noanon@example.com"  # NOT anonymized
+            assert updated.username == "noanonuser"  # NOT cleared
+            assert updated.full_name == "No Anon User"  # NOT cleared
+            assert updated.is_active is False
+            assert updated.deleted_at is not None
+
+    def test_restored_account_works_normally(self, db_session: Session):
+        """Test that a restored account can use the API normally after grace period restore"""
+        with TestClient(app) as client:
+            # Create test counselor
+            counselor = Counselor(
+                id=uuid4(),
+                email="restoredworks@example.com",
+                username="restoredworks",
+                full_name="Restored Works",
+                hashed_password=hash_password("ValidP@ssw0rd123"),
+                tenant_id="career",
+                role="counselor",
+                is_active=True,
+            )
+            db_session.add(counselor)
+            db_session.commit()
+
+            # Login to get initial token
+            login_response = client.post(
+                "/api/auth/login",
+                json={
+                    "email": "restoredworks@example.com",
+                    "password": "ValidP@ssw0rd123",
+                    "tenant_id": "career",
+                },
+            )
+            token = login_response.json()["access_token"]
+
+            # Delete account
+            delete_response = client.post(
+                "/api/auth/delete-account",
+                headers={"Authorization": f"Bearer {token}"},
+                json={},
+            )
+            assert delete_response.status_code == 200
+
+            # Restore via login within grace period
+            restore_response = client.post(
+                "/api/auth/login",
+                json={
+                    "email": "restoredworks@example.com",
+                    "password": "ValidP@ssw0rd123",
+                    "tenant_id": "career",
+                },
+            )
+            assert restore_response.status_code == 200
+            assert restore_response.json()["account_restored"] is True
+            new_token = restore_response.json()["access_token"]
+
+            # Use /me endpoint with restored token — should work normally
+            me_response = client.get(
+                "/api/auth/me",
+                headers={"Authorization": f"Bearer {new_token}"},
+            )
+            assert me_response.status_code == 200
+            me_data = me_response.json()
+            assert me_data["email"] == "restoredworks@example.com"
+            assert me_data["is_active"] is True

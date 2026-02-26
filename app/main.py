@@ -23,6 +23,7 @@ from app.api import (
     comparison,
     evaluation_testsets,
     field_schemas,
+    internal,
     rag_agents,
     rag_chat,
     rag_evaluation,
@@ -96,6 +97,9 @@ app.add_exception_handler(Exception, generic_exception_handler)
 
 # Include auth routes
 app.include_router(auth.router, prefix="/api")
+
+# Include internal routes (for scheduled jobs, not exposed to public)
+app.include_router(internal.router, prefix="/api")
 
 # Include password reset routes (v1 API)
 app.include_router(password_reset.router, prefix="/api/v1")
@@ -388,7 +392,9 @@ async def island_parents_terms(request: Request) -> Response:
 @app.get("/island-parents/privacy", response_class=HTMLResponse)
 async def island_parents_privacy(request: Request) -> Response:
     """Island Parents - Privacy Policy page"""
-    return templates.TemplateResponse("island_parents/privacy.html", {"request": request})
+    return templates.TemplateResponse(
+        "island_parents/privacy.html", {"request": request}
+    )
 
 
 # =====================
@@ -586,7 +592,9 @@ def tenant_verify_email(
     except Exception:
         db.rollback()
         return HTMLResponse(
-            content=_error_html("An unexpected error occurred. Please try again later."),
+            content=_error_html(
+                "An unexpected error occurred. Please try again later."
+            ),
             status_code=500,
         )
     finally:
@@ -785,11 +793,15 @@ async def db_diagnostic():
         results["alembic_version"] = result.scalar()
 
         # Check 2: billingmode enum exists?
-        result = db.execute(text("""
+        result = db.execute(
+            text(
+                """
             SELECT typname, typcategory
             FROM pg_type
             WHERE typname = 'billingmode'
-        """))
+        """
+            )
+        )
         enum_info = result.fetchone()
         results["billingmode_enum_exists"] = enum_info is not None
         if enum_info:
@@ -797,32 +809,46 @@ async def db_diagnostic():
 
         # Check 3: Enum values
         if enum_info:
-            result = db.execute(text("""
+            result = db.execute(
+                text(
+                    """
                 SELECT e.enumlabel
                 FROM pg_enum e
                 JOIN pg_type t ON e.enumtypid = t.oid
                 WHERE t.typname = 'billingmode'
                 ORDER BY e.enumsortorder
-            """))
+            """
+                )
+            )
             results["billingmode_values"] = [row[0] for row in result.fetchall()]
 
         # Check 4: Counselors table columns
-        result = db.execute(text("""
+        result = db.execute(
+            text(
+                """
             SELECT column_name, data_type, is_nullable, column_default
             FROM information_schema.columns
             WHERE table_name = 'counselors'
             AND column_name IN ('billing_mode', 'email_verified', 'monthly_usage_limit_minutes')
             ORDER BY column_name
-        """))
-        results["counselors_columns"] = [dict(row._mapping) for row in result.fetchall()]
+        """
+            )
+        )
+        results["counselors_columns"] = [
+            dict(row._mapping) for row in result.fetchall()
+        ]
 
         # Check 5: Sample counselor data (billing-test@example.com)
-        result = db.execute(text("""
+        result = db.execute(
+            text(
+                """
             SELECT billing_mode, email_verified, monthly_usage_limit_minutes, available_credits, email
             FROM counselors
             WHERE email = 'billing-test@example.com' AND tenant_id = 'career'
             LIMIT 1
-        """))
+        """
+            )
+        )
         row = result.fetchone()
         if row:
             results["billing_test_user"] = dict(row._mapping)
@@ -830,13 +856,17 @@ async def db_diagnostic():
             results["billing_test_user"] = None
 
         # Check 6: Latest counselor (any user)
-        result = db.execute(text("""
+        result = db.execute(
+            text(
+                """
             SELECT billing_mode, email_verified, monthly_usage_limit_minutes, available_credits, email, created_at
             FROM counselors
             WHERE tenant_id = 'career'
             ORDER BY created_at DESC
             LIMIT 1
-        """))
+        """
+            )
+        )
         row = result.fetchone()
         if row:
             results["latest_counselor"] = dict(row._mapping)
@@ -846,6 +876,7 @@ async def db_diagnostic():
     except Exception as e:
         results["error"] = str(e)
         import traceback
+
         results["traceback"] = traceback.format_exc()
     finally:
         db.close()

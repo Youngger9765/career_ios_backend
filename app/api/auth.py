@@ -2,7 +2,7 @@
 Authentication API endpoints
 """
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Request, status
 from jose import JWTError
@@ -40,7 +40,6 @@ from app.schemas.auth import (
     VerifyEmailRequest,
     VerifyEmailResponse,
 )
-from app.services.external import revenuecat_service
 from app.services.external.email_sender import EmailSenderService
 
 logger = logging.getLogger(__name__)
@@ -200,12 +199,38 @@ def login(
             instance=str(request.url.path),
         )
 
+    # Track whether the account was restored during this login
+    account_restored = None
+
     # Check if account is active
     if not counselor.is_active:
-        raise ForbiddenError(
-            detail="Account is not active. Please contact support.",
-            instance=str(request.url.path),
-        )
+        # Check if account is in deletion grace period
+        if counselor.deleted_at:
+            # Normalize deleted_at to timezone-aware (SQLite returns naive datetimes)
+            deleted_at = counselor.deleted_at
+            if deleted_at.tzinfo is None:
+                deleted_at = deleted_at.replace(tzinfo=timezone.utc)
+            grace_deadline = deleted_at + timedelta(
+                days=settings.ACCOUNT_DELETION_GRACE_PERIOD_DAYS
+            )
+            if datetime.now(timezone.utc) <= grace_deadline:
+                # Restore account — commit happens below with last_login update
+                counselor.deleted_at = None
+                counselor.is_active = True
+                account_restored = True
+                logger.info(
+                    "Account restored during grace period for user %s", counselor.email
+                )
+            else:
+                raise ForbiddenError(
+                    detail="Account has been permanently deleted.",
+                    instance=str(request.url.path),
+                )
+        else:
+            raise ForbiddenError(
+                detail="Account is not active. Please contact support.",
+                instance=str(request.url.path),
+            )
 
     # Check if email is verified when email verification is enabled
     if settings.ENABLE_EMAIL_VERIFICATION and not counselor.email_verified:
@@ -215,7 +240,7 @@ def login(
         )
 
     try:
-        # Update last_login
+        # Update last_login (also commits any account restoration changes)
         counselor.last_login = datetime.now(timezone.utc)
         db.commit()
 
@@ -232,6 +257,7 @@ def login(
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
             user=CounselorInfo.model_validate(counselor),
+            account_restored=account_restored,
         )
 
     except Exception:
@@ -450,32 +476,17 @@ def delete_account(
         HTTPException: 500 if deletion fails
     """
     try:
-        # Capture original email and user_id before anonymization
-        original_email = current_user.email
-        user_id = str(current_user.id)
-
-        timestamp = int(datetime.now(timezone.utc).timestamp())
-        current_user.email = f"deleted_{timestamp}_{current_user.email}"
-        current_user.username = None
-        current_user.full_name = None
-        current_user.phone = None
+        # Mark account as inactive and record deletion timestamp.
+        # Anonymization and RevenueCat deletion happen after the 14-day grace period
+        # via the /api/internal/purge-deleted-accounts scheduled job.
         current_user.is_active = False
         current_user.deleted_at = datetime.now(timezone.utc)
 
         db.commit()
 
-        # Call RevenueCat DELETE API after successful DB commit.
-        # Failure must NOT block the main response — log and continue.
-        rc_success = revenuecat_service.delete_customer(original_email, user_id)
-        if rc_success:
-            logger.info("RevenueCat subscriber deleted for user_id=%s", user_id)
-        else:
-            logger.warning(
-                "RevenueCat subscriber deletion failed or skipped for user_id=%s",
-                user_id,
-            )
-
-        return DeleteAccountResponse(message="Account deleted successfully")
+        return DeleteAccountResponse(
+            message="Account scheduled for deletion. You can restore it by logging in within 14 days."
+        )
 
     except Exception as e:
         db.rollback()
