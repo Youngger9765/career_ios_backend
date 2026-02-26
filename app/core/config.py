@@ -114,6 +114,14 @@ class Settings(BaseSettings):
         str
     ] = None  # RevenueCat project ID for V2 API (e.g. proj6aee0ef8)
 
+    # Internal API
+    INTERNAL_API_KEY: str = ""  # Key for internal endpoints (e.g. purge job)
+
+    # Account Deletion Grace Period
+    ACCOUNT_DELETION_GRACE_PERIOD_DAYS: int = (
+        14  # Days before account is permanently deleted
+    )
+
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
 
