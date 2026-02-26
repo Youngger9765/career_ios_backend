@@ -218,11 +218,11 @@ class TestAuthAPI:
             assert data["is_active"] is True
 
     def test_get_me_no_token(self):
-        """Test GET /me without token returns 401"""
+        """Test GET /me without token returns 403"""
         with TestClient(app) as client:
             response = client.get("/api/auth/me")
 
-            assert response.status_code == 401
+            assert response.status_code == 403
 
     def test_get_me_invalid_token(self):
         """Test GET /me with invalid token returns 401"""
@@ -279,14 +279,14 @@ class TestAuthAPI:
             assert data["email"] == "update@example.com"  # Email should not change
 
     def test_update_me_no_token(self):
-        """Test PATCH /me without token returns 401"""
+        """Test PATCH /me without token returns 403"""
         with TestClient(app) as client:
             response = client.patch(
                 "/api/auth/me",
                 json={"full_name": "New Name"},
             )
 
-            assert response.status_code == 401
+            assert response.status_code == 403
 
     def test_update_me_invalid_token(self):
         """Test PATCH /me with invalid token returns 401"""
@@ -580,14 +580,14 @@ class TestAuthAPI:
             assert updated_counselor.hashed_password is not None
 
     def test_delete_account_no_token(self):
-        """Test delete account without token returns 401"""
+        """Test delete account without token returns 403"""
         with TestClient(app) as client:
             response = client.post(
                 "/api/auth/delete-account",
                 json={"password": "ValidP@ssw0rd123"},
             )
 
-            assert response.status_code == 401
+            assert response.status_code == 403
 
     def test_delete_account_invalid_token(self):
         """Test delete account with invalid token returns 401"""
