@@ -1,0 +1,123 @@
+name: Cleanup Artifact Registry
+
+on:
+  # Daily at Taiwan 3:00 AM (UTC 19:00 previous day)
+  schedule:
+    - cron: '0 19 * * *'
+
+  # Manual trigger with dry_run option
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run - only show what would be deleted'
+        required: false
+        default: 'false'
+        type: boolean
+      keep_count:
+        description: 'Number of recent images to keep'
+        required: false
+        default: '5'
+        type: string
+
+jobs:
+  cleanup:
+    name: Clean up old Docker images
+    runs-on: ubuntu-latest
+    # For workflow_run: only run on success; for schedule/dispatch: always run
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - name: Authenticate to Google Cloud with WIF
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: 'projects/978304030758/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+        service_account: 'github-actions-sa@groovy-iris-473015-h3.iam.gserviceaccount.com'
+        token_format: 'access_token'
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Clean up old Docker images
+      run: |
+        REPO="us-central1-docker.pkg.dev/groovy-iris-473015-h3/career-app/app"
+        KEEP="${{ github.event.inputs.keep_count || '5' }}"
+        DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
+
+        echo "════════════════════════════════════════"
+        echo "🧹 Artifact Registry Cleanup"
+        echo "   Registry: $REPO"
+        echo "   Keep newest: $KEEP images"
+        echo "   Dry run: $DRY_RUN"
+        echo "════════════════════════════════════════"
+
+        # List all image digests, newest first
+        DIGESTS=$(gcloud artifacts docker images list "$REPO" \
+          --sort-by="~CREATE_TIME" \
+          --format="value(digest)" \
+          --project=groovy-iris-473015-h3 2>/dev/null)
+
+        if [ -z "$DIGESTS" ]; then
+          echo "📦 No images found in registry"
+          exit 0
+        fi
+
+        TOTAL=$(echo "$DIGESTS" | grep -c "sha256:" || true)
+        echo ""
+        echo "📦 Total images: $TOTAL"
+
+        if [ "$TOTAL" -le "$KEEP" ]; then
+          echo "✅ Only $TOTAL images exist (keeping $KEEP). Nothing to clean up."
+          exit 0
+        fi
+
+        TO_DELETE=$((TOTAL - KEEP))
+        echo "🗑️  Will delete: $TO_DELETE old images"
+        echo ""
+
+        # Show what we're keeping
+        echo "📌 Keeping newest $KEEP images:"
+        echo "$DIGESTS" | head -n "$KEEP" | while read -r D; do
+          echo "   ✅ $D"
+        done
+        echo ""
+
+        # Process deletions
+        DELETED=0
+        FAILED=0
+        echo "🗑️  Images to delete:"
+        echo "$DIGESTS" | tail -n +$((KEEP + 1)) | while read -r DIGEST; do
+          if [ -n "$DIGEST" ]; then
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "   [DRY RUN] Would delete: $REPO@$DIGEST"
+            else
+              echo "   Deleting: ${DIGEST:0:20}..."
+              if gcloud artifacts docker images delete "$REPO@$DIGEST" \
+                --quiet --delete-tags \
+                --project=groovy-iris-473015-h3 2>/dev/null; then
+                DELETED=$((DELETED + 1))
+              else
+                echo "   ⚠️  Failed to delete: $DIGEST"
+                FAILED=$((FAILED + 1))
+              fi
+            fi
+          fi
+        done
+
+        echo ""
+        echo "════════════════════════════════════════"
+        if [ "$DRY_RUN" = "true" ]; then
+          echo "🔍 DRY RUN complete"
+          echo "   Would keep: $KEEP images"
+          echo "   Would delete: $TO_DELETE images"
+        else
+          echo "🧹 Cleanup complete"
+          echo "   Kept: $KEEP newest images"
+          echo "   Targeted: $TO_DELETE old images"
+        fi
+        echo "════════════════════════════════════════"

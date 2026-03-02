@@ -181,6 +181,49 @@ jobs:
         echo "❤️ Health Check: ${SERVICE_URL}/health"
         echo "🌿 Branch: ${{ github.ref_name }}"
 
+    - name: Clean up old Artifact Registry images
+      run: |
+        echo "🧹 Cleaning up old Docker images..."
+        REPO="us-central1-docker.pkg.dev/groovy-iris-473015-h3/career-app/app"
+        KEEP=3
+
+        # List all image digests, newest first
+        DIGESTS=$(gcloud artifacts docker images list "$REPO" \
+          --sort-by="~CREATE_TIME" \
+          --format="value(digest)" \
+          --project=groovy-iris-473015-h3 2>/dev/null)
+
+        TOTAL=$(echo "$DIGESTS" | grep -c "sha256:" || true)
+        echo "📦 Total images: $TOTAL (keeping newest $KEEP)"
+
+        if [ "$TOTAL" -le "$KEEP" ]; then
+          echo "✅ Nothing to clean up"
+          exit 0
+        fi
+
+        # Delete all except the newest KEEP images
+        DELETED=0
+        FAILED=0
+        echo "$DIGESTS" | tail -n +$((KEEP + 1)) | while read -r DIGEST; do
+          if [ -n "$DIGEST" ]; then
+            echo "🗑️  Deleting: $REPO@$DIGEST"
+            if gcloud artifacts docker images delete "$REPO@$DIGEST" \
+              --quiet --delete-tags \
+              --project=groovy-iris-473015-h3 2>/dev/null; then
+              DELETED=$((DELETED + 1))
+            else
+              echo "⚠️  Failed to delete: $DIGEST"
+              FAILED=$((FAILED + 1))
+            fi
+          fi
+        done
+
+        echo "────────────────────────────────"
+        echo "🧹 Cleanup complete"
+        echo "   Kept: $KEEP newest images"
+        echo "   Deleted: images older than newest $KEEP"
+        echo "────────────────────────────────"
+
   deploy-prod:
     name: Deploy to Production
     runs-on: ubuntu-latest
@@ -268,3 +311,46 @@ jobs:
         echo "📚 API Docs: ${SERVICE_URL}/docs"
         echo "❤️ Health Check: ${SERVICE_URL}/health"
         echo "🌿 Branch: ${{ github.ref_name }}"
+
+    - name: Clean up old Artifact Registry images
+      run: |
+        echo "🧹 Cleaning up old Docker images..."
+        REPO="us-central1-docker.pkg.dev/groovy-iris-473015-h3/career-app/app"
+        KEEP=3
+
+        # List all image digests, newest first
+        DIGESTS=$(gcloud artifacts docker images list "$REPO" \
+          --sort-by="~CREATE_TIME" \
+          --format="value(digest)" \
+          --project=groovy-iris-473015-h3 2>/dev/null)
+
+        TOTAL=$(echo "$DIGESTS" | grep -c "sha256:" || true)
+        echo "📦 Total images: $TOTAL (keeping newest $KEEP)"
+
+        if [ "$TOTAL" -le "$KEEP" ]; then
+          echo "✅ Nothing to clean up"
+          exit 0
+        fi
+
+        # Delete all except the newest KEEP images
+        DELETED=0
+        FAILED=0
+        echo "$DIGESTS" | tail -n +$((KEEP + 1)) | while read -r DIGEST; do
+          if [ -n "$DIGEST" ]; then
+            echo "🗑️  Deleting: $REPO@$DIGEST"
+            if gcloud artifacts docker images delete "$REPO@$DIGEST" \
+              --quiet --delete-tags \
+              --project=groovy-iris-473015-h3 2>/dev/null; then
+              DELETED=$((DELETED + 1))
+            else
+              echo "⚠️  Failed to delete: $DIGEST"
+              FAILED=$((FAILED + 1))
+            fi
+          fi
+        done
+
+        echo "────────────────────────────────"
+        echo "🧹 Cleanup complete"
+        echo "   Kept: $KEEP newest images"
+        echo "   Deleted: images older than newest $KEEP"
+        echo "────────────────────────────────"
